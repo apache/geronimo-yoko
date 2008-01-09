@@ -1,0 +1,67 @@
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+<project name="ORB Hello World Demo" default="build" basedir=".">
+
+    <property environment="env"/>
+    <property name="build.dir" location ="${basedir}/build"/>
+    <property name="build.src.dir" location ="${basedir}/build/src"/>
+    <property name="build.classes.dir" location ="${build.dir}/classes"/>
+    
+    <!-- Determine yoko.home, either from the environment variable YOKO_HOME
+       - or using ../..
+    -->
+    <condition property="yoko.home" value="${env.YOKO_HOME}">
+        <isset property="env.YOKO_HOME"/>
+    </condition>
+    <property name="yoko.home" location="../../../"/>
+
+    <target name="init">
+        <mkdir dir="build/src"/>
+	<mkdir dir="build/classes"/>
+    </target>
+ 
+    <target name="build" depends="init, generate.server.code, generate.client.code">
+        <javac destdir="${build.classes.dir}" debug="true">
+            <src path="${basedir}/src"/>
+            <src path="${build.src.dir}"/>
+            <classpath>
+		<path path="${yoko.home}/lib/yoko-core-1.0-incubating-SNAPSHOT.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="generate.client.code">
+        <echo level="info" message="Generating client code using idlj..."/>
+        <exec executable="idlj" dir=".">
+            <arg line="-fall -td ${build.src.dir} -pkgPrefix HelloWorld corba.client ../resources/HelloWorld.idl"/>
+        </exec>
+    </target>
+
+    <target name="generate.server.code">
+        <echo level="info" message="Generating server code using idlj..."/>
+        <exec executable="idlj" dir=".">
+            <arg line="-fall -td ${build.src.dir} -pkgPrefix HelloWorld corba.server ../resources/HelloWorld.idl"/>
+        </exec>
+    </target>
+
+    <target name="clean">
+        <delete dir="${build.classes.dir}"/>
+        <delete dir="${build.src.dir}"/>
+    </target>
+</project>

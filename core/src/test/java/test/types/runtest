@@ -1,0 +1,75 @@
+#
+#  Licensed to the Apache Software Foundation (ASF) under one or more
+#  contributor license agreements.  See the NOTICE file distributed with
+#  this work for additional information regarding copyright ownership.
+#  The ASF licenses this file to You under the Apache License, Version 2.0
+#  (the "License"); you may not use this file except in compliance with
+#  the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+#
+
+#
+# Try to find top-level directory
+#
+if test -f ob/src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=ob
+elif test -f src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=.
+elif test -f ../src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=..
+elif test -f ../../src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=../..
+elif test -f ../../../src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=../../..
+elif test -f ../../../../src/com/ooc/CORBA/ORB.java
+then
+    top_srcdir=../../../..
+else
+    $echo "$0: can't find top-level directory"
+    exit
+fi
+
+#
+# Run standard init script
+#
+. $top_srcdir/config/sh.init
+. $top_srcdir/config/testutil.sh
+
+#
+# Set Java CLASSPATH
+#
+CLASSPATH="$top_srcdir/lib${SEPARATOR}$CLASSPATH"
+export CLASSPATH
+
+#
+# Set the "java.endorsed.dirs" property
+#
+set_java_endorsed_dirs
+
+#
+# Delete old log files
+#
+rm -f types.log
+
+#
+# Run the tests
+#
+$echo
+$JAVA test.types.TestConst 2>&1 | tee -a types.log
+$JAVA test.types.TestTypeCode 2>&1 | tee -a types.log
+$JAVA test.types.TestAny 2>&1 | tee -a types.log
+$JAVA test.types.TestDynAny 2>&1 | tee -a types.log
+$JAVA test.types.TestUnion 2>&1 | tee -a types.log
+$JAVA test.types.TestPortableTypes 2>&1 | tee -a types.log

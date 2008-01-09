@@ -1,0 +1,138 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+#ifndef DYN_ANY_TYPES_IDL
+#define DYN_ANY_TYPES_IDL
+
+#include <TypeCode.idl>
+
+//
+// We need the repository IDs of these types to match their class names,
+// because valuetype factory and helper classes are loaded dynamically
+// based on the repository ID.
+//
+module test
+{
+module types
+{
+module DynAnyTypes
+{
+
+enum TestEnum { red, green, blue };
+
+exception TestEmptyException {};
+
+exception TestException
+{
+    string reason;
+    long code;
+};
+
+struct TestStruct
+{
+    short shortVal;
+    unsigned short ushortVal;
+    long longVal;
+    unsigned long ulongVal;
+    float floatVal;
+    double doubleVal;
+    boolean boolVal;
+    char charVal;
+    octet octetVal;
+    any anyVal;
+    CORBA::TypeCode tcVal;
+    Object objectVal;
+    string stringVal;
+    long long longlongVal;
+    unsigned long long ulonglongVal;
+    //long double longdoubleVal;  // Not supported on Windows
+    wchar wcharVal;
+    wstring wstringVal;
+};
+
+union TestUnion1 switch(short)
+{
+case 0:
+case 1: long a;
+
+case 3: float b;
+
+default: string c;
+};
+
+union TestUnion2 switch(boolean)
+{
+case TRUE: long a;
+};
+
+union TestUnion3 switch(TestEnum)
+{
+case red:   long a;
+case green: double b;
+case blue:  char c;
+};
+
+union TestUnion4 switch(short)
+{
+default: long a;
+case 99: float b;
+};
+
+typedef sequence<short> TestShortSeq;
+typedef string<12> TestBoundedString;
+typedef sequence<TestBoundedString,10> TestBoundedString10Seq;
+typedef sequence<any> TestAnySeq;
+
+typedef string TestStringArray[10];
+
+valuetype TestStructBox TestStruct;
+valuetype TestStringBox string;
+
+valuetype TestValue1
+{
+    // empty valuetype
+};
+
+valuetype TestValue2
+{
+    public short shortVal;
+    public long longVal;
+    public string stringVal;
+};
+
+valuetype TestValue3 : TestValue2
+{
+    public TestUnion4 unionVal;
+};
+
+valuetype TestValue4 : truncatable TestValue2
+{
+    public char charVal;
+    public long long longlongVal;
+};
+
+struct TestValueStruct
+{
+    string name;
+    TestValue2 value;
+};
+
+}; // End module DynAnyTypes
+}; // End module types
+}; // End module test
+
+#endif

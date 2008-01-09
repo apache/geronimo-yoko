@@ -1,0 +1,85 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+#ifndef URL_TEST_IDL
+#define URL_TEST_IDL
+
+/**
+ * Module for testing CORBA URLs
+ */
+module URLTest 
+{
+    /**
+     * interface for testing CORBA URLs using iiop protocol
+     */
+    interface IIOPAddress
+    {
+        /**
+         * Get the corbaloc key the object is advertised with.
+         * More than one object may return the same corbaloc key
+         */
+        string getKey();
+        
+        /**
+         * Get the port this object is listening on
+         */
+        unsigned short getPort();
+        
+        /**
+         * Get the hostname / address this object is listening on
+         */
+        string getHost();
+
+        /**
+         * Get the object's corabloc iiop address
+         * such as ":555objs.com:34"
+         */        string getIIOPAddress();
+
+        /**
+         * Get the object's full URL string.
+         * "corbaloc::555objs.com:34/Key"
+         */
+        string getCorbalocURL();
+        
+        /**
+         * Destroy this object. This allows fault tolerance testing
+         * if this object is referenced in a multi-profile IOR.
+         */
+        void destroy();
+
+        /**
+         * Set arbitrary text string 
+         * @param textStr The text string to set
+         * @see getString
+         */
+        void setString(in string textStr);
+        
+        /**
+         * Retrieve any text set for this object
+         * returns a zero-length string if no string
+         * has been set
+         */
+        string getString();
+
+        /**
+         * Deactivate this server (via orb shutdown)
+         */
+        void deactivate();
+    };
+};
+
+#endif

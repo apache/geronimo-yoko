@@ -1,0 +1,59 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package test.types;
+
+//
+// IDL:TestStruct1:1.0
+//
+/***/
+
+final public class TestStruct1 implements org.omg.CORBA.portable.IDLEntity
+{
+    private static final String _ob_id = "IDL:TestStruct1:1.0";
+
+    public
+    TestStruct1()
+    {
+    }
+
+    public
+    TestStruct1(short s,
+                int l,
+                double d,
+                boolean b,
+                char c,
+                byte o,
+                String str)
+    {
+        this.s = s;
+        this.l = l;
+        this.d = d;
+        this.b = b;
+        this.c = c;
+        this.o = o;
+        this.str = str;
+    }
+
+    public short s;
+    public int l;
+    public double d;
+    public boolean b;
+    public char c;
+    public byte o;
+    public String str;
+}

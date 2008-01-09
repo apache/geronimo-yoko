@@ -1,0 +1,129 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+#include <OB/IOP.idl>
+
+interface TestInterface
+{
+    //
+    // Method call with no arguments
+    //
+    void noargs();
+
+    //
+    // Oneway method call with no arguments
+    //
+    oneway void noargs_oneway();
+
+    //
+    // Method always throws a SystemException
+    //
+    void systemexception();
+
+    exception user 
+    {
+    };
+
+    //
+    // Method always throws a UserException
+    //
+    void userexception() raises(user);
+    
+    //
+    // Method does a location forward
+    //
+    void location_forward();
+
+    //
+    // Method for testing request and reply service contexts
+    //
+    void test_service_context();
+
+    //
+    // Test simple attribute
+    //
+    attribute string string_attrib;
+
+    //
+    // Test in, inout and out simple parameters
+    //
+    void one_string_in(in string param);
+    void one_string_inout(inout string param);
+    void one_string_out(out string param);
+    string one_string_return();
+
+    struct s
+    {
+        string sval;
+    };
+
+    //
+    // Test struct attribute
+    //
+    attribute s struct_attrib;
+    
+    //
+    // Test in, inout and out struct parameters
+    //
+    void one_struct_in(in s param);
+    void one_struct_inout(inout s param);
+    void one_struct_out(out s param);
+    s one_struct_return();
+
+    // --------------------------------------------------
+    //
+    // Deactivate the implementation
+    //
+    void deactivate();
+};
+
+//
+// For use with the codec test
+//
+struct foo
+{
+    long l;
+};
+
+//
+// Service context identifiers and structures for testing request and
+// reply service contexts
+//
+const IOP::ServiceId REQUEST_CONTEXT_ID = 100;
+
+struct RequestContext
+{
+    string data;
+    long val;
+};
+
+const IOP::ServiceId REPLY_CONTEXT_1_ID = 101;
+const IOP::ServiceId REPLY_CONTEXT_2_ID = 102;
+const IOP::ServiceId REPLY_CONTEXT_3_ID = 103;
+const IOP::ServiceId REPLY_CONTEXT_4_ID = 104;
+
+struct ReplyContext
+{
+    string data;
+    long val;
+};
+
+const IOP::ComponentId MY_COMPONENT_ID = 100;
+struct MyComponent
+{
+    long val;
+};

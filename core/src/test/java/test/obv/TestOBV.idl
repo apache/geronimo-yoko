@@ -1,0 +1,379 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+abstract valuetype TestAbsValue1
+{
+    void ping1();
+};
+
+abstract valuetype TestAbsValue2
+{
+    void ping2();
+};
+
+valuetype TestValue : TestAbsValue1
+{
+    public long count;
+
+    factory create(in long l);
+};
+
+valuetype TestValueSub : TestValue, TestAbsValue2
+{
+    public string name;
+
+    factory create_sub(in long l, in string s);
+};
+
+valuetype TestTruncBase
+{
+    public float cost;
+};
+
+valuetype TestTrunc1 : truncatable TestTruncBase
+{
+    public boolean boolVal;
+    public TestAbsValue1 v;
+    public short shortVal;
+};
+
+valuetype TestTrunc2 : truncatable TestTruncBase
+{
+    public TestTruncBase t;
+    public TestAbsValue1 a;
+    public TestValue v;
+    public TestTruncBase b;
+};
+
+custom valuetype TestCustom : TestAbsValue1
+{
+    public short shortVal;
+    public long longVal;
+    public string stringVal;
+    public double doubleVal;
+
+    factory create(in short s, in long l, in string str, in double d);
+};
+
+abstract interface TestAbstract
+{
+    void abstract_op();
+};
+
+interface TestAbstractSub : TestAbstract
+{
+    void sub_op();
+};
+
+valuetype TestValueAI supports TestAbstract
+{
+    public long count;
+
+    void value_op();
+
+    factory create(in long l);
+};
+
+valuetype TestNode
+{
+    public TestNode left;
+    public TestNode right;
+    private unsigned long count;
+
+    unsigned long compute_count();
+
+    factory create(in unsigned long n);
+    factory create_lr(in unsigned long n, in TestNode l, in TestNode r);
+};
+
+interface TestInterface
+{
+    long get_count();
+};
+
+valuetype TestValueInterface supports TestInterface
+{
+    public long count;
+
+    void value_op();
+
+    factory create(in long l);
+};
+
+valuetype TestStringBox string;
+valuetype TestULongBox unsigned long;
+
+struct TestFixStruct
+{
+    long x;
+    long y;
+    double radius;
+};
+valuetype TestFixStructBox TestFixStruct;
+
+struct TestVarStruct
+{
+    string name;
+    string email;
+};
+valuetype TestVarStructBox TestVarStruct;
+
+union TestFixUnion switch(boolean)
+{
+    case TRUE: octet o;
+    case FALSE: double d;
+};
+valuetype TestFixUnionBox TestFixUnion;
+
+union TestVarUnion switch(long)
+{
+    case 0: string s;
+    case 9: TestFixStruct fs;
+};
+valuetype TestVarUnionBox TestVarUnion;
+
+valuetype TestAnonSeqBox sequence<short>;
+
+typedef sequence<string> TestStringSeq;
+valuetype TestStringSeqBox TestStringSeq;
+
+struct TestStringBoxStruct
+{
+    TestStringBox a;
+    TestStringBox b;
+};
+
+interface TestOBV
+{
+    //
+    // Test null ValueBase
+    //
+    ValueBase get_null_valuebase();
+    void set_null_valuebase(in ValueBase v);
+
+    //
+    // Test null TestValueSub
+    //
+    TestValueSub get_null_valuesub();
+    void set_null_valuesub(in TestValueSub v);
+
+    //
+    // Test abstract valuetypes
+    //
+    TestAbsValue1 get_abs_value1();
+    void set_abs_value1(in TestAbsValue1 v);
+    TestAbsValue2 get_abs_value2();
+    void set_abs_value2(in TestAbsValue2 v);
+
+    //
+    // Test TestValue
+    //
+    TestValue get_value();
+    void set_value(in TestValue v);
+
+    //
+    // Test TestValueSub
+    //
+    TestValueSub get_valuesub();
+    void set_valuesub(in TestValueSub v);
+
+    //
+    // Test derived marshalling
+    //
+    TestValue get_valuesub_as_value();
+    void set_valuesub_as_value(in TestValue v);
+
+    //
+    // Test value sharing (use the same value for both parameters) - tests
+    // valuetype indirection
+    //
+    void get_two_values(out TestValue v1, out TestValue v2);
+    void set_two_values(in TestValue v1, in TestValue v2);
+
+    //
+    // Test repository ID indirection by passing two different TestValueSub
+    // values
+    //
+    void get_two_valuesubs_as_values(out TestValue v1, out TestValue v2);
+    void set_two_valuesubs_as_values(in TestValue v1, in TestValue v2);
+
+    //
+    // Test custom marshalling
+    //
+    TestCustom get_custom();
+    void set_custom(in TestCustom v);
+
+    //
+    // Test custom marshalling using the abstract base type
+    //
+    TestAbsValue1 get_abs_custom();
+    void set_abs_custom(in TestAbsValue1 v);
+
+    //
+    // Test valuetype graph
+    //
+    void get_node(out TestNode v, out unsigned long count);
+    void set_node(in TestNode v);
+
+    //
+    // Test string value box
+    //
+    TestStringBox get_string_box(in string value);
+    void set_string_box(in TestStringBox b, in string value);
+
+    //
+    // Test primitive value box
+    //
+    TestULongBox get_ulong_box(in unsigned long value);
+    void set_ulong_box(in TestULongBox b, in unsigned long value);
+
+    //
+    // Test fixed struct value box
+    //
+    TestFixStructBox get_fix_struct_box(in TestFixStruct value);
+    void set_fix_struct_box(in TestFixStructBox b, in TestFixStruct value);
+
+    //
+    // Test variable struct value box
+    //
+    TestVarStructBox get_var_struct_box(in TestVarStruct value);
+    void set_var_struct_box(in TestVarStructBox b, in TestVarStruct value);
+
+    //
+    // Test fixed union value box
+    //
+    TestFixUnionBox get_fix_union_box(in TestFixUnion value);
+    void set_fix_union_box(in TestFixUnionBox b, in TestFixUnion value);
+
+    //
+    // Test variable union value box
+    //
+    TestVarUnionBox get_var_union_box(in TestVarUnion value);
+    void set_var_union_box(in TestVarUnionBox b, in TestVarUnion value);
+
+    //
+    // Test anonymous sequence value box
+    //
+    TestAnonSeqBox get_anon_seq_box(in unsigned long length);
+    void set_anon_seq_box(in TestAnonSeqBox b, in unsigned long length);
+
+    //
+    // Test string sequence value box
+    //
+    TestStringSeqBox get_string_seq_box(in TestStringSeq value);
+    void set_string_seq_box(in TestStringSeqBox b, in TestStringSeq value);
+
+    //
+    // Test abstract interface (using a regular interface)
+    //
+    TestAbstract get_ai_interface();
+    void set_ai_interface(in TestAbstract a);
+
+    //
+    // Test abstract interface in an any (using a regular interface)
+    //
+    any get_ai_interface_any();
+    void set_ai_interface_any(in any a);
+
+    //
+    // Test abstract interface (using a valuetype)
+    //
+    TestAbstract get_ai_value();
+    void set_ai_value(in TestAbstract a);
+
+    //
+    // Test abstract interface in an any (using a valuetype)
+    //
+    any get_ai_value_any();
+    void set_ai_value_any(in any a);
+
+    //
+    // Test truncatable valuetypes
+    //
+    TestTruncBase get_trunc1();
+    TestTruncBase get_trunc2();
+
+    //
+    // Test valuetypes in an any
+    //
+    any get_value_any();
+    any get_valuesub_any();
+    any get_valuesub_as_value_any();
+    any get_custom_any();
+    any get_trunc1_any();
+    any get_trunc1_as_base_any();
+    any get_trunc2_any();
+    any get_trunc2_as_base_any();
+    void remarshal_any(in any a);
+
+    //
+    // Test valuetype sharing across anys
+    //
+    void get_two_value_anys(out any a1, out any a2);
+    void set_two_value_anys(in any a1, in any a2);
+
+    //
+    // Test supported interface
+    //
+    TestValueInterface get_value_as_value();
+    TestInterface get_value_as_interface();
+
+    void deactivate();
+};
+
+//
+// Used only to test collocated valuetype parameter handling
+//
+interface TestOBVColo
+{
+    struct SV
+    {
+        string str;
+        TestValue val;
+    };
+
+    union UV switch(boolean)
+    {
+    case TRUE: string str;
+    case FALSE: TestValue val;
+    };
+
+    typedef sequence<TestValue> VSeq;
+
+    void set_expected_count(in long l);
+
+    attribute TestValue test_value_attribute;
+
+    TestValue test_value_op(in TestValue v1, inout TestValue v2,
+                            out TestValue v3);
+
+    attribute SV test_value_struct_attribute;
+
+    SV test_value_struct_op(in SV s1, inout SV s2, out SV s3);
+
+    attribute UV test_value_union_attribute;
+
+    UV test_value_union_op(in UV u1, inout UV u2, out UV u3);
+
+    attribute VSeq test_value_seq_attribute;
+
+    VSeq test_value_seq_op(in VSeq s1, inout VSeq s2, out VSeq s3);
+
+    attribute TestAbstract test_abstract_attribute;
+
+    void test_abstract_op(in TestAbstract a);
+};

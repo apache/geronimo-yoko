@@ -1,0 +1,63 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+enum Measurement { FEET, METERS, FURLONGS };
+const Measurement ConstEnum = FURLONGS;
+
+const long ConstLong = -1234;
+const long long ConstLongLong = ConstLong * ConstLong;
+const long long ConstLongLongMin = -9223372036854775808;
+const long long ConstLongLongMax = 9223372036854775807;
+const unsigned long ConstULong = (5432 + ConstLong) * 100 % 124;
+const unsigned long long ConstULongLong = ConstULong + (ConstULong << 20);
+const unsigned long long ConstULongLongMax = 18446744073709551615;
+const double ConstDouble = 50.23 - 1532.718 * 0.029;
+const float ConstFloat = ConstDouble * 1.11;
+const short ConstShort = -23 % 10;
+const boolean ConstBoolean = TRUE;
+const octet ConstOctet = 254;
+const fixed ConstFixed = 275.189d * 1.163D + 48.0093d;
+const string ConstString = "This is ConstString";
+const string ConstEmptyString = "";
+const wstring ConstWString = L"This is ConstWString";
+const wstring ConstEmptyWString = L"";
+
+module TestConstModule
+{
+const long ConstLong = 12345678;
+const double ConstDouble = ::ConstDouble / 2.0;
+const boolean ConstBoolean = FALSE;
+const string ConstString = "This is ConstString in a module";
+const wstring ConstWString = L"This is ConstWString in a module";
+const Measurement ConstEnum = METERS;
+};
+
+interface TestConstInterface
+{
+    const long ConstLong = (0xf | 0xf000) & 0xfffe;
+    const unsigned long ConstULong = 0xFFFFFFFF;
+    const char ConstChar0 = '\000';
+    const char ConstChar1 = 'c';
+    const char ConstChar2 = '\n';
+    const char ConstChar3 = '\377';
+    const char ConstChar4 = '\x88';
+    const char ConstChar5 = '\'';
+    const wchar ConstWChar = L'Z';
+    const string ConstString = "\n\t\v\b\r\f\a\\\?\'\"\xff\377\7";
+    const wstring ConstWString = L"\n\t\v\b\r\f\a\\\?\'\"\xff\377\7";
+    const Measurement ConstEnum = FEET;
+};

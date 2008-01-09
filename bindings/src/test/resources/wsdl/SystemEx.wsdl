@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+-->
+<wsdl:definitions targetNamespace="http://schemas.apache.org/yoko/idl/SystemEx" xmlns:tns="http://schemas.apache.org/yoko/idl/SystemEx" xmlns:corba="http://schemas.apache.org/yoko/bindings/corba" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <corba:typeMapping targetNamespace="http://schemas.apache.org/yoko/idl/SystemEx/typemap" />
+  <wsdl:types>
+    <xs:schema attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://schemas.apache.org/yoko/idl/SystemEx" xmlns="http://schemas.apache.org/yoko/idl/SystemEx" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="testSystemException">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="exId" type="xs:int">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSystemExceptionResponse">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="testSystemException">
+    <wsdl:part name="inparameter" element="tns:testSystemException">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:message name="testSystemExceptionResponse">
+    <wsdl:part name="outparameter" element="tns:testSystemExceptionResponse">
+    </wsdl:part>
+  </wsdl:message>
+  <wsdl:portType name="SystemExceptionTester">
+    <wsdl:operation name="testSystemException">
+      <wsdl:input name="testSystemExceptionRequest" message="tns:testSystemException">
+    </wsdl:input>
+      <wsdl:output name="testSystemExceptionResponse" message="tns:testSystemExceptionResponse">
+    </wsdl:output>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="SystemExceptionTesterCORBABinding" type="tns:SystemExceptionTester">
+    <corba:binding repositoryID="IDL:SystemExceptionTester:1.0" />
+    <wsdl:operation name="testSystemException">
+      <corba:operation name="testSystemException">
+        <corba:param mode="in" name="exId" idltype="corba:long" />
+      </corba:operation>
+      <wsdl:input name="testSystemExceptionRequest">
+      </wsdl:input>
+      <wsdl:output name="testSystemExceptionResponse">
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="SystemExceptionTesterCORBAService">
+    <wsdl:port name="SystemExceptionTesterCORBAPort" binding="tns:SystemExceptionTesterCORBABinding">
+      <corba:address location="corbaloc::localhost:43210/SystemExTest" />
+    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

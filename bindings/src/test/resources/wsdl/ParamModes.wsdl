@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!--
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+-->
+
+<wsdl:definitions targetNamespace="http://schemas.apache.org/yoko/idl/ParamModes" xmlns:tns="http://schemas.apache.org/yoko/idl/ParamModes" xmlns:corba="http://schemas.apache.org/yoko/bindings/corba" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/" xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+<corba:typeMapping targetNamespace="http://schemas.apache.org/yoko/idl/ParamModes/typemap" />  <wsdl:types>
+    <xs:schema attributeFormDefault="unqualified" elementFormDefault="unqualified" targetNamespace="http://schemas.apache.org/yoko/idl/ParamModes" xmlns="http://schemas.apache.org/yoko/idl/ParamModes" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+      <xs:element name="testSingleInParam">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInParamResponse">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleOutParam">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleOutParamResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInOutParam">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInOutParamResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInParams">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInParamsResponse">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleOutParams">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleOutParamsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInOutParams">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInOutParamsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleMixedParams">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p3" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleMixedParamsResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+            <xs:element name="p3" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInParamWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInParamWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleOutParamWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleOutParamWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInOutParamWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testSingleInOutParamWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+            <xs:element name="p" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInParamsWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInParamsWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleOutParamsWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleOutParamsWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInOutParamsWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleInOutParamsWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleMixedParamsWithReturn">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="p1" type="xs:short">
+            </xs:element>
+            <xs:element name="p3" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testMultipleMixedParamsWithReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+            <xs:element name="p2" type="xs:short">
+            </xs:element>
+            <xs:element name="p3" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testReturn">
+        <xs:complexType>
+          <xs:sequence>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+      <xs:element name="testReturnResponse">
+        <xs:complexType>
+          <xs:sequence>
+            <xs:element name="return" type="xs:short">
+            </xs:element>
+          </xs:sequence>
+        </xs:complexType>
+      </xs:element>
+    </xs:schema>
+  </wsdl:types>
+  <wsdl:message name="testSingleOutParamResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleOutParamResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInParamsWithReturn">
+    <wsdl:part name="inparameter" element="tns:testMultipleInParamsWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleMixedParams">
+    <wsdl:part name="inparameter" element="tns:testMultipleMixedParams"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInParam">
+    <wsdl:part name="inparameter" element="tns:testSingleInParam"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInParamWithReturn">
+    <wsdl:part name="inparameter" element="tns:testSingleInParamWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInOutParams">
+    <wsdl:part name="inparameter" element="tns:testMultipleInOutParams"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInOutParamResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleInOutParamResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInParamsResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleInParamsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleMixedParamsWithReturn">
+    <wsdl:part name="inparameter" element="tns:testMultipleMixedParamsWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInParams">
+    <wsdl:part name="inparameter" element="tns:testMultipleInParams"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleOutParamsWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleOutParamsWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInOutParamWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleInOutParamWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInOutParamWithReturn">
+    <wsdl:part name="inparameter" element="tns:testSingleInOutParamWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleOutParam">
+    <wsdl:part name="inparameter" element="tns:testSingleOutParam"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInOutParamsResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleInOutParamsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleOutParamWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleOutParamWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleMixedParamsResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleMixedParamsResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInParamWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleInParamWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testReturn">
+    <wsdl:part name="inparameter" element="tns:testReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInOutParam">
+    <wsdl:part name="inparameter" element="tns:testSingleInOutParam"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleInParamResponse">
+    <wsdl:part name="outparameter" element="tns:testSingleInParamResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleOutParams">
+    <wsdl:part name="inparameter" element="tns:testMultipleOutParams"/>
+  </wsdl:message>
+  <wsdl:message name="testSingleOutParamWithReturn">
+    <wsdl:part name="inparameter" element="tns:testSingleOutParamWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInOutParamsWithReturn">
+    <wsdl:part name="inparameter" element="tns:testMultipleInOutParamsWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInOutParamsWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleInOutParamsWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleInParamsWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleInParamsWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleMixedParamsWithReturnResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleMixedParamsWithReturnResponse"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleOutParamsWithReturn">
+    <wsdl:part name="inparameter" element="tns:testMultipleOutParamsWithReturn"/>
+  </wsdl:message>
+  <wsdl:message name="testMultipleOutParamsResponse">
+    <wsdl:part name="outparameter" element="tns:testMultipleOutParamsResponse"/>
+  </wsdl:message>
+  <wsdl:portType name="ParamModes">
+    <wsdl:operation name="testSingleInParam">
+      <wsdl:input name="testSingleInParamRequest" message="tns:testSingleInParam"/>
+      <wsdl:output name="testSingleInParamResponse" message="tns:testSingleInParamResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleOutParam">
+      <wsdl:input name="testSingleOutParamRequest" message="tns:testSingleOutParam"/>
+      <wsdl:output name="testSingleOutParamResponse" message="tns:testSingleOutParamResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInOutParam">
+      <wsdl:input name="testSingleInOutParamRequest" message="tns:testSingleInOutParam"/>
+      <wsdl:output name="testSingleInOutParamResponse" message="tns:testSingleInOutParamResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInParams">
+      <wsdl:input name="testMultipleInParamsRequest" message="tns:testMultipleInParams"/>
+      <wsdl:output name="testMultipleInParamsResponse" message="tns:testMultipleInParamsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleOutParams">
+      <wsdl:input name="testMultipleOutParamsRequest" message="tns:testMultipleOutParams"/>
+      <wsdl:output name="testMultipleOutParamsResponse" message="tns:testMultipleOutParamsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInOutParams">
+      <wsdl:input name="testMultipleInOutParamsRequest" message="tns:testMultipleInOutParams"/>
+      <wsdl:output name="testMultipleInOutParamsResponse" message="tns:testMultipleInOutParamsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleMixedParams">
+      <wsdl:input name="testMultipleMixedParamsRequest" message="tns:testMultipleMixedParams"/>
+      <wsdl:output name="testMultipleMixedParamsResponse" message="tns:testMultipleMixedParamsResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInParamWithReturn">
+      <wsdl:input name="testSingleInParamWithReturnRequest" message="tns:testSingleInParamWithReturn"/>
+      <wsdl:output name="testSingleInParamWithReturnResponse" message="tns:testSingleInParamWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleOutParamWithReturn">
+      <wsdl:input name="testSingleOutParamWithReturnRequest" message="tns:testSingleOutParamWithReturn"/>
+      <wsdl:output name="testSingleOutParamWithReturnResponse" message="tns:testSingleOutParamWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInOutParamWithReturn">
+      <wsdl:input name="testSingleInOutParamWithReturnRequest" message="tns:testSingleInOutParamWithReturn"/>
+      <wsdl:output name="testSingleInOutParamWithReturnResponse" message="tns:testSingleInOutParamWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInParamsWithReturn">
+      <wsdl:input name="testMultipleInParamsWithReturnRequest" message="tns:testMultipleInParamsWithReturn"/>
+      <wsdl:output name="testMultipleInParamsWithReturnResponse" message="tns:testMultipleInParamsWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleOutParamsWithReturn">
+      <wsdl:input name="testMultipleOutParamsWithReturnRequest" message="tns:testMultipleOutParamsWithReturn"/>
+      <wsdl:output name="testMultipleOutParamsWithReturnResponse" message="tns:testMultipleOutParamsWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInOutParamsWithReturn">
+      <wsdl:input name="testMultipleInOutParamsWithReturnRequest" message="tns:testMultipleInOutParamsWithReturn"/>
+      <wsdl:output name="testMultipleInOutParamsWithReturnResponse" message="tns:testMultipleInOutParamsWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleMixedParamsWithReturn">
+      <wsdl:input name="testMultipleMixedParamsWithReturnRequest" message="tns:testMultipleMixedParamsWithReturn"/>
+      <wsdl:output name="testMultipleMixedParamsWithReturnResponse" message="tns:testMultipleMixedParamsWithReturnResponse"/>
+    </wsdl:operation>
+    <wsdl:operation name="testReturn">
+      <wsdl:input name="testReturnRequest" message="tns:testReturn"/>
+      <wsdl:output name="testReturnResponse" message="tns:testReturnResponse"/>
+    </wsdl:operation>
+  </wsdl:portType>
+  <wsdl:binding name="ParamModesCORBABinding" type="tns:ParamModes">
+<corba:binding repositoryID="IDL:ParamModes:1.0" />    <wsdl:operation name="testSingleInParam">
+<corba:operation name="testSingleInParam"><corba:param mode="in" name="p" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleInParamRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleInParamResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleOutParam">
+<corba:operation name="testSingleOutParam"><corba:param mode="out" name="p" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleOutParamRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleOutParamResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInOutParam">
+<corba:operation name="testSingleInOutParam"><corba:param mode="inout" name="p" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleInOutParamRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleInOutParamResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInParams">
+<corba:operation name="testMultipleInParams"><corba:param mode="in" name="p1" idltype="corba:short" /><corba:param mode="in" name="p2" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleInParamsRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleInParamsResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleOutParams">
+<corba:operation name="testMultipleOutParams"><corba:param mode="out" name="p1" idltype="corba:short" /><corba:param mode="out" name="p2" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleOutParamsRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleOutParamsResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInOutParams">
+<corba:operation name="testMultipleInOutParams"><corba:param mode="inout" name="p1" idltype="corba:short" /><corba:param mode="inout" name="p2" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleInOutParamsRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleInOutParamsResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleMixedParams">
+<corba:operation name="testMultipleMixedParams"><corba:param mode="in" name="p1" idltype="corba:short" /><corba:param mode="out" name="p2" idltype="corba:short" /><corba:param mode="inout" name="p3" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleMixedParamsRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleMixedParamsResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInParamWithReturn">
+<corba:operation name="testSingleInParamWithReturn"><corba:param mode="in" name="p" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleInParamWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleInParamWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleOutParamWithReturn">
+<corba:operation name="testSingleOutParamWithReturn"><corba:param mode="out" name="p" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleOutParamWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleOutParamWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testSingleInOutParamWithReturn">
+<corba:operation name="testSingleInOutParamWithReturn"><corba:param mode="inout" name="p" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testSingleInOutParamWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testSingleInOutParamWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInParamsWithReturn">
+<corba:operation name="testMultipleInParamsWithReturn"><corba:param mode="in" name="p1" idltype="corba:short" /><corba:param mode="in" name="p2" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleInParamsWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleInParamsWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleOutParamsWithReturn">
+<corba:operation name="testMultipleOutParamsWithReturn"><corba:param mode="out" name="p1" idltype="corba:short" /><corba:param mode="out" name="p2" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleOutParamsWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleOutParamsWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleInOutParamsWithReturn">
+<corba:operation name="testMultipleInOutParamsWithReturn"><corba:param mode="inout" name="p1" idltype="corba:short" /><corba:param mode="inout" name="p2" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleInOutParamsWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleInOutParamsWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testMultipleMixedParamsWithReturn">
+<corba:operation name="testMultipleMixedParamsWithReturn"><corba:param mode="in" name="p1" idltype="corba:short" /><corba:param mode="out" name="p2" idltype="corba:short" /><corba:param mode="inout" name="p3" idltype="corba:short" /><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testMultipleMixedParamsWithReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testMultipleMixedParamsWithReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+    <wsdl:operation name="testReturn">
+<corba:operation name="testReturn"><corba:return name="return" idltype="corba:short" /></corba:operation>      <wsdl:input name="testReturnRequest">
+      </wsdl:input>
+      <wsdl:output name="testReturnResponse">
+      </wsdl:output>
+    </wsdl:operation>
+  </wsdl:binding>
+  <wsdl:service name="ParamModesCORBAService">
+    <wsdl:port name="ParamModesCORBAPort" binding="tns:ParamModesCORBABinding">
+<corba:address location="IOR:" />    </wsdl:port>
+  </wsdl:service>
+</wsdl:definitions>

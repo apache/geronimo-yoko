@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+-->
+<assembly>
+  <id>runtime-bin</id>
+  <formats>
+    <format>tar.gz</format>
+    <format>zip</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+  <fileSets>
+    <fileSet>
+      <directory>../yoko-spec-corba</directory>
+      <outputDirectory>yoko-incubating-runtime-bin-1.0</outputDirectory>
+      <includes>
+        <include>README*</include>
+        <include>LICENSE*</include>
+        <include>NOTICE*</include>
+        <include>DISCLAIMER*</include>
+      </includes>
+    </fileSet>
+    <fileSet>
+        <directory>src/main/bin</directory>
+        <outputDirectory>yoko-incubating-runtime-bin-1.0/bin</outputDirectory>
+        <fileMode>775</fileMode>
+    </fileSet>
+    <fileSet>
+        <directory>../etc/third_party_licenses</directory>
+        <outputDirectory>yoko-incubating-runtime-bin-1.0/etc/third_party_licenses</outputDirectory>
+        <includes>
+            <include>apache*.txt</include>
+        </includes>
+    </fileSet>
+  </fileSets>
+  <files>
+      <file>
+          <source>${basedir}/target/yoko-distribution-${version}.jar</source>
+          <outputDirectory>yoko-incubating-runtime-bin-1.0/lib</outputDirectory>
+          <destName>yoko-${version}.jar</destName>
+          <!-- TODO - assembly 2.2 will change this to octal -->
+          <fileMode>436</fileMode>
+      </file>
+  </files>
+
+  <dependencySets>
+      <dependencySet>
+          <outputDirectory>yoko-incubating-runtime-bin-1.0/lib</outputDirectory>
+          <outputFileNameMapping>${artifactId}-${baseVersion}.${extension}</outputFileNameMapping>
+          <unpack>false</unpack>
+          <scope>runtime</scope>
+          <includes>
+              <include>org.apache.yoko:yoko-core:jar</include>
+              <include>org.apache.yoko:yoko-rmi-spec:jar</include>
+              <include>org.apache.yoko:yoko-spec-corba:jar</include>
+              <include>org.apache.yoko:yoko-rmi-impl:jar</include>
+              <include>org.apache.yoko:yoko-api:jar</include>
+              <include>org.apache.yoko:yoko-bindings:jar</include>
+              <include>org.apache.bcel:bcel:jar</include>
+              <include>jakarta-regexp:jakarta-regexp:jar</include>
+          </includes>
+      </dependencySet>
+  </dependencySets>
+</assembly>
