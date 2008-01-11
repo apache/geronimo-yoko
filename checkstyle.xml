@@ -25,7 +25,7 @@
 Checks to make sure the code meets the Yoko coding guidelines
 http://java.sun.com/docs/codeconv/index.html
 
-It also enforces aa bunch of other "BestPractices like method
+It also enforces a bunch of other "BestPractices" like method
 lengths, if/try depths, etc...
                         
 -->
