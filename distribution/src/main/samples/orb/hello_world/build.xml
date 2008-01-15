@@ -41,7 +41,7 @@ under the License.
             <src path="${basedir}/src"/>
             <src path="${build.src.dir}"/>
             <classpath>
-		<path path="${yoko.home}/lib/yoko-core-1.0-incubating-SNAPSHOT.jar"/>
+		<path path="${yoko.home}/lib/yoko-core-1.0-SNAPSHOT.jar"/>
             </classpath>
         </javac>
     </target>

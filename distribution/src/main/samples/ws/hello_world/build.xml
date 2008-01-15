@@ -34,7 +34,7 @@
 
     <path id="yoko.classpath">
         <pathelement location="${build.classes.dir}"/>
-        <pathelement location="${yoko.home}/lib/yoko-1.0-incubating-SNAPSHOT.jar"/>
+        <pathelement location="${yoko.home}/lib/yoko-1.0-SNAPSHOT.jar"/>
     </path>
 
     <target name="build" depends="generate.server.code, generate.client.code, generate.idl.server.code, generate.idl.client.code">
@@ -50,7 +50,7 @@
             <src path="${basedir}/src"/>
             <src path="${build.src.dir}"/>
             <classpath>
-                <path path="${yoko.home}/core/target/yoko-core-1.0-incubating-SNAPSHOT.jar"/>
+                <path path="${yoko.home}/core/target/yoko-core-1.0-SNAPSHOT.jar"/>
             </classpath>
         </javac>
     </target>
