@@ -108,6 +108,7 @@ public class TransientNameService {
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
         props.put("yoko.orb.oa.endpoint", "iiop --host " + host + " --port " + port);
+        props.put("yoko.orb.poamanager.TNameService.endpoint", "iiop --host " + host);
 
 	    createdOrb = ORB.init((String[])null, props) ;
 
@@ -128,6 +129,10 @@ public class TransientNameService {
             // get the root POA.  We're going to re
             POA rootPOA = (POA) orb.resolve_initial_references("RootPOA");
             rootPOA.the_POAManager().activate();
+            
+            org.omg.PortableServer.POAManagerFactory factory = rootPOA.the_POAManagerFactory();
+            org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory = org.apache.yoko.orb.OBPortableServer.POAManagerFactoryHelper
+                    .narrow(factory);
 
             // we need to create a POA to manage this named instance, and then activate
             // a context on it.

@@ -224,6 +224,7 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
                     rootStr = props.getProperty("yoko.orb.oa.endpoint");
                 String propName = "yoko.orb.poamanager." + id + ".endpoint";
                 paramStr = props.getProperty(propName);
+                
                 if (paramStr == null && rootStr == null)
                     paramStr = "iiop";
                 else if (paramStr == null)

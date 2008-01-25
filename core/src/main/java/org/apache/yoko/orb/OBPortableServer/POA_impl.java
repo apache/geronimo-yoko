@@ -670,7 +670,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                                     .resolveInitialReferences("POAManagerFactory"));
                     org.omg.CORBA.Policy[] emptyPl = new org.omg.CORBA.Policy[0];
                     obmanager = (org.apache.yoko.orb.OBPortableServer.POAManager) factory
-                            .create_POAManager("", emptyPl);
+                            .create_POAManager(adapter, emptyPl);
                 } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
                     org.apache.yoko.orb.OB.Assert._OB_assert(ex);
                 } catch (org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists ex) {
