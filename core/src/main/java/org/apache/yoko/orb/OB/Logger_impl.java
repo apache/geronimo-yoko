@@ -20,16 +20,10 @@ package org.apache.yoko.orb.OB;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.WLogger;
-
-public class Logger_impl extends org.omg.CORBA.LocalObject implements WLogger {
+public class Logger_impl implements org.apache.yoko.orb.OB.Logger {
 
     // the real logger backing instance.
     static final Logger logger = Logger.getLogger(ORBInstance.class.getName());
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public void info(String msg) {
         logger.info(msg);
@@ -37,14 +31,6 @@ public class Logger_impl extends org.omg.CORBA.LocalObject implements WLogger {
 
     public void info(String msg, Throwable e) {
         logger.log(Level.INFO, msg, e);
-    }
-
-    public void winfo(String msg) {
-        info(msg);
-    }
-
-    public void winfo(String msg, Throwable e) {
-        info(msg, e); 
     }
 
     public void error(String msg) {
@@ -55,28 +41,12 @@ public class Logger_impl extends org.omg.CORBA.LocalObject implements WLogger {
         logger.log(Level.SEVERE, msg, e);
     }
 
-    public void werror(String msg) {
-        error(msg);
-    }
-
-    public void werror(String msg, Throwable e) {
-        error(msg, e);
-    }
-
     public void warning(String msg) {
         logger.warning(msg);
     }
 
     public void warning(String msg, Throwable e) {
         logger.log(Level.WARNING, msg, e);
-    }
-
-    public void wwarning(String msg) {
-        warning(msg);
-    }
-
-    public void wwarning(String msg, Throwable e) {
-        warning(msg, e);
     }
 
     public void debug(String msg) {
@@ -89,14 +59,6 @@ public class Logger_impl extends org.omg.CORBA.LocalObject implements WLogger {
     
     public boolean isDebugEnabled() {
         return logger.isLoggable(Level.FINE); 
-    }
-
-    public void wdebug(String msg) {
-        debug(msg);
-    }
-
-    public void wdebug(String msg, Throwable e) {
-        debug(msg, e);
     }
 
     public void trace(String category, String msg) {
@@ -112,10 +74,6 @@ public class Logger_impl extends org.omg.CORBA.LocalObject implements WLogger {
         s += msg.substring(start);
         s += " ]";
         logger.log(Level.FINE, msg);
-    }
-
-    public void wtrace(String category, String msg) {
-        trace(category, msg);
     }
 
     /**

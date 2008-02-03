@@ -17,16 +17,151 @@
 
 package org.apache.yoko.orb.OB;
 
-//
-// IDL:orb.yoko.apache.org/OB/Logger:1.0
-//
+import java.util.logging.Level;
+
 /**
  *
  * The Yoko message logger interface.
  *
  **/
-
-public interface Logger extends LoggerOperations,
-                                org.omg.CORBA.Object
+public interface Logger
 {
+    /**
+     * Log an informational message.
+     * 
+     * @param msg    The message.
+     * @param e      An exception associated with the error.
+     */
+    void
+    info(String msg, Throwable e);
+
+    /**
+     *
+     * Log an informational message.
+     *
+     * @param msg The message.
+     *
+     **/
+    void
+    info(String msg);
+
+    /**
+     *
+     * Log an error message.
+     *
+     * @param msg The error message.
+     *
+     **/
+    void
+    error(String msg);
+    
+    
+    /**
+     * Log an error message.
+     * 
+     * @param msg    The error message.
+     * @param e      An exception associated with the error.
+     */
+    void
+    error(String msg, Throwable e);
+
+    /**
+     *
+     * Log a warning message.
+     *
+     * @param msg The warning message.
+     *
+     **/
+    void
+    warning(String msg);
+    
+    
+    /**
+     *
+     * Log a warning message.
+     *
+     * @param msg The warning message.
+     * @param e      An exception associated with the warning.
+     *
+     **/
+    void
+    warning(String msg, Throwable e);
+
+    /**
+     *
+     * Log a debug message.
+     *
+     * @param msg The debug message.
+     *
+     **/
+    void
+    debug(String msg);
+    
+    /**
+     *
+     * Log a debug message.
+     *
+     * @param msg The debug message.
+     * @param e      An exception associated with the warning.
+     *
+     **/
+    void
+    debug(String msg, Throwable e);
+    
+    
+    /**
+     * Test if debug output is enabled for this logger.
+     * 
+     * @return True if debug logging is enabled, false if debug 
+     *         output is not enabled.
+     */
+    boolean isDebugEnabled();     
+
+    /**
+     *
+     * Log a trace message.
+     *
+     * @param category The trace category.
+     *
+     * @param msg The trace message.
+     *
+     **/
+    void
+    trace(String category,
+          String msg);
+
+    /**
+     * Log a message of the indicated level.
+     *
+     * @param level  The message level.
+     * @param msg    The logged message.
+     */
+    void log(Level level, String msg);
+
+    /**
+     * Log a message of the indicated level.
+     *
+     * @param level  The message level.
+     * @param msg    The logged message.
+     * @param param  A single parameter object included with the message.
+     */
+    void log(Level level, String msg, Object param);
+
+    /**
+     * Log a message of the indicated level.
+     *
+     * @param level  The message level.
+     * @param msg    The logged message.
+     * @param params An array of parameter objects logged with the message.
+     */
+    void log(Level level, String msg, Object[] params);
+
+    /**
+     * Log a message of the indicated level.
+     *
+     * @param level  The message level.
+     * @param msg    The logged message.
+     * @param thrown An exception object included in the log.
+     */
+    void log(Level level, String msg, Throwable thrown);
 }
