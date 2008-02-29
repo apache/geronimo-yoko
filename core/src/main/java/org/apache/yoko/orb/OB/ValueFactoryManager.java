@@ -17,7 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 public final class ValueFactoryManager {
+    static final Logger logger = Logger.getLogger(ValueFactoryManager.class.getName());
     //
     // The set of registered valuetype factories
     //
@@ -149,19 +153,24 @@ public final class ValueFactoryManager {
 
         org.omg.CORBA.portable.ValueFactory result;
 
+        logger.fine("Looking up value factory for class " + id);
         //
         // Check the registered factories
         //
         result = (org.omg.CORBA.portable.ValueFactory) factories_.get(id);
-        if (result != null)
+        if (result != null) {
+            logger.finer("Returning registered value factory " + result.getClass().getName());
             return result;
+        }
 
         //
         // Check the cached factories
         //
         result = (org.omg.CORBA.portable.ValueFactory) classFactories_.get(id);
-        if (result != null)
+        if (result != null) {
+            logger.finer("Returning cached value factory " + result.getClass().getName());
             return result;
+        }
 
         //
         // Try to convert the repository ID into a class name.
@@ -169,6 +178,7 @@ public final class ValueFactoryManager {
         Class c = Util.idToClass(id, "DefaultFactory");
         if (c != null) {
             try {
+                logger.finer("Attempting to create value factory from class " + c.getName());
                 //
                 // Instantiate the factory
                 //

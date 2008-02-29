@@ -17,11 +17,16 @@
 
 package org.apache.yoko.orb.CORBA;
  
+import java.util.logging.Logger;
+import java.util.logging.Level;
+ 
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.Object;
 
 final public class Any extends org.omg.CORBA.Any {
+    static final Logger logger = Logger.getLogger(Any.class.getName());
+    
     private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
 
     private org.omg.CORBA.TypeCode type_;
@@ -93,6 +98,7 @@ final public class Any extends org.omg.CORBA.Any {
     private void readValue(org.omg.CORBA.portable.InputStream in) {
         int kind = origType_.kind().value();
 
+        logger.fine("Reading ANY value of kind " + kind); 
         //
         // Spec says that calling read_value when a Streamable has
         // previously been inserted will update the Streamable
@@ -196,6 +202,11 @@ final public class Any extends org.omg.CORBA.Any {
         case org.omg.CORBA.TCKind._tk_abstract_interface: {
             try {
                 InputStream is = (InputStream) in;
+// this is a useful tracepoint, but produces a lot of data, so turn on only 
+// if really needed. 
+//              if (logger.isLoggable(Level.FINEST)) {
+//                  logger.finest("Reading value from \n\n" + is.dumpData()); 
+//              }
                 is.read_value(this, type_);
             } catch (ClassCastException ex) {
                 try {

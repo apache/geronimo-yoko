@@ -177,7 +177,9 @@ public abstract class FieldDescriptor extends ModelElement implements
 
             } else if (java.io.Serializable.class.isAssignableFrom(type)) {
                 return new ValueFieldDescriptor(owner, type, name, f);
-
+            } else if (type.isInterface() && type.getMethods().length > 0) {
+                // interface classes that define methods 
+                return new ValueFieldDescriptor(owner, type, name, f);
             } else {
                 return new ObjectFieldDescriptor(owner, type, name, f);
             }
@@ -862,6 +864,7 @@ class IntFieldDescriptor extends FieldDescriptor {
         }
         try {
             int value = reader.readInt();
+            logger.finest("Read int field value " + value); 
             field.setInt(obj, value);
         } catch (IllegalAccessException ex) {
             throw (IOException)new IOException(ex.getMessage()).initCause(ex);
@@ -934,6 +937,7 @@ class LongFieldDescriptor extends FieldDescriptor {
         }
         try {
             long value = reader.readLong();
+            logger.finest("Read long field value " + value); 
             field.setLong(obj, value);
         } catch (IllegalAccessException ex) {
             throw (IOException)new IOException(ex.getMessage()).initCause(ex);

@@ -17,7 +17,12 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream {
+    static final Logger logger = Logger.getLogger(OutputStream.class.getName());
+    
     private org.apache.yoko.orb.OB.ORBInstance orbInstance_; // Java only
 
     public org.apache.yoko.orb.OCI.Buffer buf_;
@@ -55,6 +60,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     // Write a gap of four bytes (ulong aligned), avoids byte shifts
     private int writeGap() {
+        logger.finest("Writing a gap value"); 
         addCapacity(4, 4);
         int result = buf_.pos_;
         buf_.pos_ += 4;
@@ -63,6 +69,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private void writeLength(int start) {
         int length = buf_.pos_ - (start + 4);
+        logger.finest("Writing a length value of " + length + " at offset " + start); 
 
         buf_.data_[start++] = (byte) (length >>> 24);
         buf_.data_[start++] = (byte) (length >>> 16);
@@ -95,6 +102,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 return;
             }
         }
+        
+        logger.finest("Writing a type code of type " + tc.kind().value()); 
 
         //
         // For performance reasons, handle the primitive TypeCodes first
@@ -129,6 +138,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (indirectionPos != null) {
             write_long(-1);
             int offs = indirectionPos.intValue() - buf_.pos_;
+            logger.finest("Writing an indirect type code for offset " + offs); 
             write_long(offs);
         } else {
             write_ulong(tc.kind().value());
@@ -410,15 +420,17 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // to write new data. We must first check if we need to start a
             // chunk, which may result in a recursive call to addCapacity().
             //
-            if (buf_.pos_ == buf_.len_ && valueWriter_ != null)
+            if (buf_.pos_ == buf_.len_ && valueWriter_ != null) {
                 checkBeginChunk();
+            }
 
             //
             // If there isn't enough room, then reallocate the buffer
             //
             final int len = buf_.pos_ + size;
-            if (len > buf_.len_)
+            if (len > buf_.len_) {
                 buf_.realloc(len);
+            }
         }
     }
 
@@ -431,8 +443,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // to write new data. We must first check if we need to start a
         // chunk, which may result in a recursive call to addCapacity().
         //
-        if (buf_.pos_ == buf_.len_ && valueWriter_ != null)
+        if (buf_.pos_ == buf_.len_ && valueWriter_ != null) {
             checkBeginChunk();
+        }
 
         //
         // If alignNext_ is set, then use the larger of alignNext_ and align
@@ -453,8 +466,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // If there isn't enough room, then reallocate the buffer
         //
         final int len = newPos + size;
-        if (len > buf_.len_)
+        if (len > buf_.len_) {
             buf_.realloc(len);
+        }
     }
 
     //
@@ -715,6 +729,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         final char[] arr = value.toCharArray();
         final int len = arr.length;
 
+        logger.finest("Writing wstring value " + value); 
         //
         // get converter/writer instance
         //
@@ -843,6 +858,12 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 buf_.len_);
         if (buf_.len_ > 0)
             System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.len_);
+        
+// this is a useful tracepoint, but produces a lot of data, so turn on only 
+// if really needed. 
+//      if (logger.isLoggable(Level.FINEST)) {
+//          logger.fine("new input stream created:\n" + buf.dumpData()); 
+//      }
 
         InputStream in = new InputStream(buf, 0, false, codeConverters_,
                 GIOPVersion_);
@@ -937,6 +958,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_string(String value) {
+        logger.finest("Writing string value " + value); 
         final char[] arr = value.toCharArray();
         int len = arr.length;
         int capacity = len + 1;
@@ -1165,6 +1187,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_Object(org.omg.CORBA.Object value) {
         if (value == null) {
+            logger.finest("Writing a null CORBA object value"); 
             org.omg.IOP.IOR ior = new org.omg.IOP.IOR();
             ior.type_id = "";
             ior.profiles = new org.omg.IOP.TaggedProfile[0];
@@ -1201,6 +1224,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_any(org.omg.CORBA.Any value) {
+        logger.finest("Writing an ANY value of type " + value.type().kind()); 
         write_TypeCode(value.type());
         value.write_value(this);
     }
@@ -1297,6 +1321,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
 
         try {
+            logger.fine("writing a value of type " + tc.kind().value()); 
+            
             switch (tc.kind().value()) {
             case org.omg.CORBA.TCKind._tk_null:
             case org.omg.CORBA.TCKind._tk_void:
@@ -1355,12 +1381,13 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // An indirection is not permitted at this level
                 //
-                if (kind == -1)
+                if (kind == -1) {
                     throw new org.omg.CORBA.MARSHAL(
                             org.apache.yoko.orb.OB.MinorCodes
                                     .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection),
                             org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection,
                             org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                }
 
                 write_ulong(kind);
 

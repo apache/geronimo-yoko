@@ -75,8 +75,10 @@ public class ValueHandlerImpl implements ValueHandler {
         try {
             return readValue0(in, offset, clz, repid, codebase);
         } catch (Error ex) {
+            logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
             throw ex;
         } catch (RuntimeException ex) {
+            logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
             throw ex;
         }
     }

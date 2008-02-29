@@ -572,7 +572,6 @@ public class ValueDescriptor extends TypeDescriptor {
     protected void defaultWriteValue(ObjectWriter writer,
             java.io.Serializable val) throws java.io.IOException {
         logger.finer("writing fields for " + getJavaClass());
-
         FieldDescriptor[] fields = _fields;
 
         if (fields == null) {
@@ -738,7 +737,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
         for (int i = 0; i < _fields.length; i++) {
 
-            logger.fine("reading field " + _fields[i].getJavaName());
+            logger.fine("reading field " + _fields[i].getJavaName() + " of type " + _fields[i].getType().getName() + " using " + _fields[i].getClass().getName());
 
             try {
                 _fields[i].read(reader, value);

@@ -25,6 +25,7 @@ import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.HashMap;
+import java.util.Vector;
 
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Util;
@@ -139,12 +140,13 @@ public class ClientMain extends Assert {
                     SampleSerializable ser2 = (SampleSerializable)sample.sendReceiveSerializable(ser); 
                     assertEquals(10, ser2.getInt()); 
 
+
                     Serializable[] sA = new Serializable[] { ser };
                     sA = sample.sendReceiveSerializable(sA); 
 
                     ser2 = (SampleSerializable)sA[0]; 
                     assertEquals(10, ser2.getInt()); 
-
+                    
                     Remote r = sample.sendReceiveRemote(sample); 
                     Sample sample2 = (Sample) PortableRemoteObject.narrow(r, Sample.class);
                     assertEquals(sample, sample2);
@@ -159,6 +161,22 @@ public class ClientMain extends Assert {
 		public void testString() throws RemoteException {
 			sample.setString("hello");
 			assertEquals("hello", sample.getString());
+		}
+		
+		// Make sure that a field definition for a value-type interface 
+        // gets marshaled correctly.  The SampleSerializable object defines a 
+        // List field into which we'll place a Vector object.  This should properly 
+        // be processed as a value type rather than an abstract interface. 
+		public void testVector() throws RemoteException {
+            Vector v = new Vector(10);          
+            v.add("This is a test"); 
+            SampleSerializable ser = new SampleSerializable();
+            ser.setList(v);  
+            SampleSerializable ser2 = (SampleSerializable)sample.sendReceiveSerializable(ser); 
+            Vector v2 = (Vector)ser2.getList();
+            assertEquals(10, v2.capacity()); 
+            assertEquals(1, v2.size()); 
+            assertEquals("This is a test", v2.elementAt(0)); 
 		}
 		
 		public void testIntArray() throws RemoteException {
@@ -300,6 +318,7 @@ public class ClientMain extends Assert {
 
 		// Run RMI tests
 		Test test = new Test(sample);
+        test.testVector(); 
 		test.testPrimitive();
 		test.testArray();
 		test.testString();
@@ -316,5 +335,6 @@ public class ClientMain extends Assert {
 		test.testComplexCorbaAttribute(SampleCorbaHelper.narrow(sampleCorbaRef));
 		test.testHashMap();
 		//myORB.destroy();
+        System.out.println("Testing complete"); 
 	}
 }

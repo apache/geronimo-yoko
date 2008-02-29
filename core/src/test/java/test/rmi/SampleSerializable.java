@@ -19,6 +19,7 @@ package test.rmi;
 
 import java.io.Serializable;
 import java.rmi.Remote;
+import java.util.List; 
 
 public class SampleSerializable implements Serializable {
 	private org.omg.CORBA.Object corbaObj;
@@ -29,6 +30,7 @@ public class SampleSerializable implements Serializable {
 	private Object serializableObj1, serializableObj2;
 	private Serializable serializable;
 	private int i = 0;
+    private List aVector; 
 	
 	public void setInt(int i) { this.i = i; }
 	public int getInt() { return i; }
@@ -71,6 +73,14 @@ public class SampleSerializable implements Serializable {
 			throw new Error("Expected serializable objects to be == identical");
 		}
 	}
+    
+    public void setList(List l) {
+        aVector = l; 
+    }
+    
+    public List getList() {
+        return aVector; 
+    }
 	
 	public void setSerializable(Serializable s) {
 		this.serializable = s;

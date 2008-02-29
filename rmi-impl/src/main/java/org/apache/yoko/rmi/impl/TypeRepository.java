@@ -88,7 +88,6 @@ public class TypeRepository {
             desc.init();
             repidMap.put(desc.getRepositoryID(), desc);
         }
-
         desc = new AnyDescriptor(java.io.Externalizable.class, this);
         synchronized (desc) {
             classMap.put(java.io.Externalizable.class, desc);
@@ -102,7 +101,6 @@ public class TypeRepository {
             desc.init();
             repidMap.put(desc.getRepositoryID(), desc);
         }
-
         desc = new AnyDescriptor(java.rmi.Remote.class, this);
         synchronized (desc) {
             classMap.put(java.rmi.Remote.class, desc);
@@ -145,6 +143,7 @@ public class TypeRepository {
     }
 
     public TypeDescriptor getDescriptor(Class type) {
+        logger.fine("Requesting type descriptor for class " + type.getName()); 
         TypeDescriptor desc = (TypeDescriptor) classMap.get(type);
 
         if (desc != null) {
@@ -325,11 +324,11 @@ public class TypeRepository {
      */
     public ValueDescriptor getDescriptor(Class clz, String repid,
             RunTime runtime) throws ClassNotFoundException {
-
         // ValueDescriptor desc = null;
         ValueDescriptor clzdesc = null;
 
         if (clz != null) {
+            logger.fine("Requesting type descriptor for class " + clz.getName() + " with repid " + repid); 
             ValueDescriptor desc = (ValueDescriptor)classMap.get(clz);
             if (desc != null) {
                 return desc;
@@ -351,23 +350,25 @@ public class TypeRepository {
                 return clzdesc;
             }
 
-            String localHash = localID.substring(localID.lastIndexOf(':'));
-            String remoteHash = repid.substring(repid.lastIndexOf(':'));
+            // we have a mismatch.  We'll accept this if the class name and the
+            // serial version id are the same (ignoring the hash portion of the id); 
+            String localClassName = localID.substring(0, localID.indexOf(':'));
+            String remoteClassName = repid.substring(0, repid.indexOf(':'));
+            
+            String localSUID = localID.substring(localID.lastIndexOf(':'));
+            String remoteSUID = repid.substring(repid.lastIndexOf(':'));
 
             // compare the CORBA hash codes, and allow this to work
-            if (localHash == null ? localHash == remoteHash : localHash
-                    .equals(remoteHash)) {
-
-                if (Boolean.getBoolean("trifork.rmi.ignoreSerialVersionUID")) {
-                    return clzdesc;
-                }
-
+            if (localClassName.equals(remoteClassName) && localSUID.equals(remoteSUID)) {
+                logger.fine("mismatching repository ids accepted because of matching name and SUID.  local: " + clzdesc.getRepositoryID() + "; remote: " + repid);
+                return clzdesc; 
             }
 
             logger.fine("mismatching repository ids. local: "
                     + clzdesc.getRepositoryID() + "; remote: " + repid);
         }
 
+        logger.fine("Requesting type descriptor for repid " + repid); 
         if (repid != null) {
             clzdesc = (ValueDescriptor) repidMap.get(repid);
             if (clzdesc != null) {

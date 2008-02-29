@@ -24,6 +24,9 @@ package org.omg.CORBA;
 
 public final class CompletionStatus implements org.omg.CORBA.portable.IDLEntity
 {
+    // force compatibility with Sun version for interop. 
+    static final long serialVersionUID = -9047319660881406859L;
+    
     private static CompletionStatus [] values_ = new CompletionStatus[3];
     private int value_;
 

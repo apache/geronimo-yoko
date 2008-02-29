@@ -81,6 +81,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
 
     protected ArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, rep);
+        logger.fine("Creating an array descriptor for type " + type.getName() + " holding elements of " + elemType.getName()); 
         this.elementType = elemType;
 
         order = 1;
@@ -128,6 +129,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
     }
 
     static ArrayDescriptor get(final Class type, TypeRepository rep) {
+        logger.fine("retrieving an array descriptor for class " + type.getName()); 
         if (!type.isArray()) {
             throw new IllegalArgumentException("type is not an array");
         }
@@ -178,8 +180,17 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
      */
     public Object read(org.omg.CORBA.portable.InputStream in) {
         org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
-
-        return _in.read_value(getRepositoryID());
+        logger.fine("Reading an array value with repository id " + getRepositoryID() + " java class is " + getJavaClass()); 
+        
+        // if we have a resolved class, read using that, otherwise fall back on the 
+        // repository id. 
+        Class clz = getJavaClass(); 
+        if (clz == null) {
+            return _in.read_value(getRepositoryID());
+        }
+        else { 
+            return _in.read_value(clz);
+        }
     }
 
     /** Write an instance of this value to a CDR stream */
@@ -259,6 +270,12 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
             for (int i = 0; i < length; i++) {
                 try {
                     arr[i] = reader.readAny();
+                    if (arr[i] != null) {
+                        logger.finer("Array item " + i + " is of type " + arr[i].getClass().getName()); 
+                    }
+                    else {
+                        logger.finer("Array item " + i + " is null"); 
+                    }
                 } catch (org.omg.CORBA.portable.IndirectionException ex) {
                     arr[i] = offsetMap.get(new Integer(ex.offset));
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));

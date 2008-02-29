@@ -57,6 +57,25 @@ public final class Buffer {
     public boolean is_full() {
         return pos_ >= len_;
     }
+    
+    /**
+     * Return the data in the buffer as a formatted string suitable for 
+     * logging. 
+     * 
+     * @return The string value of the data. 
+     */
+    public String dumpData() 
+    {
+        StringBuffer dump = new StringBuffer(); 
+        dump.append("Buffer pos="); 
+        dump.append(pos_); 
+        dump.append(" Buffer len="); 
+        dump.append(len_); 
+        dump.append(" Remaining buffer data=\n\n"); 
+        
+        dump.append(org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length())); 
+        return dump.toString(); 
+    }
 
     // ------------------------------------------------------------------
     // Additional Yoko specific functions

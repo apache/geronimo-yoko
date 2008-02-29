@@ -417,7 +417,7 @@ public class UtilImpl implements UtilDelegate {
                     throw (MARSHAL)new MARSHAL("unable to export object").initCause(ex);
                 }
             }
-
+            obj = objref; 
         }
 
         org.omg.CORBA_2_3.portable.OutputStream out_ = (org.omg.CORBA_2_3.portable.OutputStream) out;

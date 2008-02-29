@@ -18,12 +18,14 @@
 package org.apache.yoko.orb.CORBA;
 
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.rmi.CORBA.Util;
 
 import org.omg.SendingContext.CodeBase;
 
 final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
+    static final Logger logger = Logger.getLogger(InputStream.class.getName());
     org.apache.yoko.orb.OB.ORBInstance orbInstance_;
 
     public org.apache.yoko.orb.OCI.Buffer buf_;
@@ -81,6 +83,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             java.util.Hashtable history, boolean isTopLevel) {
         int kind = read_ulong();
         int oldPos = buf_.pos_ - 4;
+        logger.finest("Reading a TypeCode of kind " + kind + " from position " + oldPos); 
 
         TypeCode tc = null;
         if (kind == -1) {
@@ -135,6 +138,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_objref: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -160,6 +166,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_except: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();  
@@ -201,6 +210,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_union: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -291,6 +303,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_enum: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -357,6 +372,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_alias: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -383,6 +401,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_value: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -431,6 +452,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_value_box: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -456,11 +480,16 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_abstract_interface: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
 
                 String id = read_string();
+                
+                logger.fine("Abstract interface typecode encapsulaton length=" + length + " id=" + id); 
 
                 if (isTopLevel && cache_ != null)
                     tc = checkCache(id, typePos, length); // may advance pos
@@ -480,6 +509,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA.TCKind._tk_native: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -504,6 +536,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             case org.omg.CORBA_2_4.TCKind._tk_local_interface: {
                 int length = read_ulong(); // encapsulation length
                 // save this position after the read, since we might be on a chunk boundary.
+                // however, we do an explicit check for the chunk boundary before doing the 
+                // read. 
+                checkChunk(); 
                 int typePos = buf_.pos_;
                 boolean swap = swap_;
                 _OB_readEndian();
@@ -544,8 +579,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     // reads wide-characters using the old non-compliant method
     //
     private char _OB_read_wchar_old() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
+        checkChunk(); 
 
         if (wCharConversionRequired_) {
             final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.inputWcharConverter;
@@ -631,9 +665,8 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     // reads wide-characters using compliant method
     //
     private char _OB_read_wchar_new(boolean partOfString) {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
+        
         char value;
         final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.inputWcharConverter;
 
@@ -778,9 +811,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     private String _OB_read_wstring_old() {
         String s = "";
 
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         int len = read_ulong();
 
         //
@@ -900,9 +931,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     //
     private String _OB_read_wstring_new() {
         String s = "";
-
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
+        checkChunk(); 
 
         final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.inputWcharConverter;
 
@@ -911,6 +940,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         // GIOP 1.0/1.1 and in octets for GIOP 1.2+)
         // 
         int len = read_ulong();
+        logger.fine("Reading wstring of length " + len); 
 
         switch (GIOPVersion_) {
 
@@ -920,21 +950,23 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
             // it is not legal in GIOP 1.0/1.1 for a string to be 0 in
             // length... it MUST have a null terminator
             // 
-            if (len == 0)
+            if (len == 0) {
                 throw new org.omg.CORBA.MARSHAL(
                         org.apache.yoko.orb.OB.MinorCodes
                                 .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringZeroLength),
                         org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringZeroLength,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
 
             char[] tmp = new char[len];
 
-            if (wCharReaderRequired_)
-                converter
-                        .set_reader_flags(org.apache.yoko.orb.OB.CodeSetReader.FIRST_CHAR);
+            if (wCharReaderRequired_) {
+                converter.set_reader_flags(org.apache.yoko.orb.OB.CodeSetReader.FIRST_CHAR);
+            }
 
-            for (int i = 0; i < len; i++)
+            for (int i = 0; i < len; i++) {
                 tmp[i] = read_wchar(true);
+            }
 
             //
             // Check for terminating null wchar
@@ -1077,9 +1109,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public int read() throws java.io.IOException {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         if (buf_.pos_ + 1 > buf_.len_)
             return -1;
 
@@ -1093,23 +1123,22 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public boolean read_boolean() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
+        checkChunk(); 
 
-        if (buf_.pos_ + 1 > buf_.len_)
+        if (buf_.pos_ + 1 > buf_.len_) {
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadBooleanOverflow),
                     org.apache.yoko.orb.OB.MinorCodes.MinorReadBooleanOverflow,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
+        logger.finest("Boolean value is " + buf_.data_[buf_.pos_] + " from position " + buf_.pos_); 
         return buf_.data_[buf_.pos_++] != (byte) 0;
     }
 
     public char read_char() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         if (buf_.pos_ + 1 > buf_.len_)
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
@@ -1146,9 +1175,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public byte read_octet() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         if (buf_.pos_ + 1 > buf_.len_)
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
@@ -1160,9 +1187,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public short read_short() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         buf_.pos_ += (buf_.pos_ & 0x1);
 
         if (buf_.pos_ + 2 > buf_.len_)
@@ -1183,9 +1208,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public int read_long() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         return _OB_readLongUnchecked();
     }
 
@@ -1194,9 +1217,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public long read_longlong() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         final int pmod8 = buf_.pos_ & 0x7;
         if (pmod8 != 0)
             buf_.pos_ += 8 - pmod8;
@@ -1241,8 +1262,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public String read_string() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
+        checkChunk(); 
 
         //
         // Number of octets (i.e. bytes) in the string (including
@@ -1251,20 +1271,23 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         //
         int length = read_ulong();
 
-        if (length == 0)
+        if (length == 0) {
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadStringZeroLength),
                     org.apache.yoko.orb.OB.MinorCodes.MinorReadStringZeroLength,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         int newPos = buf_.pos_ + length;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.len_) {
+            logger.fine("String length=" + length + " newPos=" + newPos + " buf_.pos=" + buf_.pos_ + " buf_.len=" + buf_.len_); 
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadStringOverflow),
                     org.apache.yoko.orb.OB.MinorCodes.MinorReadStringOverflow,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         length--;
 
@@ -1367,8 +1390,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 
     public void read_boolean_array(boolean[] value, int offset, int length) {
         if (length > 0) {
-            if (valueReader_ != null)
-                valueReader_.checkChunk();
+            checkChunk(); 
 
             if (buf_.pos_ + length < buf_.pos_
                     || buf_.pos_ + length > buf_.len_)
@@ -1385,8 +1407,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 
     public void read_char_array(char[] value, int offset, int length) {
         if (length > 0) {
-            if (valueReader_ != null)
-                valueReader_.checkChunk();
+            checkChunk(); 
 
             if (buf_.pos_ + length < buf_.pos_
                     || buf_.pos_ + length > buf_.len_)
@@ -1448,8 +1469,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 
     public void read_octet_array(byte[] value, int offset, int length) {
         if (length > 0) {
-            if (valueReader_ != null)
-                valueReader_.checkChunk();
+            checkChunk(); 
 
             int newPos = buf_.pos_ + length;
             if (newPos < buf_.pos_ || newPos > buf_.len_)
@@ -1469,9 +1489,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         if (length <= 0)
             return;
 
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         buf_.pos_ += (buf_.pos_ & 0x1);
 
         int newPos = buf_.pos_ + length * 2;
@@ -1497,10 +1515,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     public void read_long_array(int[] value, int offset, int length) {
         if (length <= 0)
             return;
-
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         final int pmod4 = buf_.pos_ & 0x3;
         if (pmod4 != 0)
             buf_.pos_ += 4 - pmod4;
@@ -1535,9 +1550,8 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         if (length <= 0)
             return;
 
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
+        
         final int pmod8 = buf_.pos_ & 0x7;
         if (pmod8 != 0)
             buf_.pos_ += 8 - pmod8;
@@ -1578,8 +1592,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 
     public void read_float_array(float[] value, int offset, int length) {
         if (length > 0) {
-            if (valueReader_ != null)
-                valueReader_.checkChunk();
+            checkChunk(); 
 
             final int pmod4 = buf_.pos_ & 0x3;
             if (pmod4 != 0)
@@ -1618,9 +1631,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         if (length <= 0)
             return;
 
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         final int pmod8 = buf_.pos_ & 0x7;
         if (pmod8 != 0)
             buf_.pos_ += 8 - pmod8;
@@ -1662,8 +1673,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
     public org.omg.CORBA.Object read_Object() {
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
+        checkChunk(); 
 
         org.omg.IOP.IOR ior = org.omg.IOP.IORHelper.read(this);
 
@@ -1685,8 +1695,6 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         //
         org.omg.CORBA.Object obj = read_Object();
 
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-        
         if (obj != null) {
             // OK, we have two possibilities here.  The usual possibility is we're asked to load 
             // an object using a specified Stub class.  We just create an instance of the stub class, 
@@ -1787,9 +1795,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         // encapsulation in a separate buffer.
         //
 
-        if (valueReader_ != null)
-            valueReader_.checkChunk();
-
+        checkChunk(); 
         java.util.Hashtable history = new java.util.Hashtable(11);
         return readTypeCodeImpl(history, true);
     }
@@ -2109,5 +2115,15 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 	public String __getCodeBase() {
 		return codebase_;
 	}
+    
+    public String dumpData() {
+        return buf_.dumpData(); 
+    }
+    
+    private void checkChunk() {
+        if (valueReader_ != null) {
+            valueReader_.checkChunk();
+        }
+    }
 }
 

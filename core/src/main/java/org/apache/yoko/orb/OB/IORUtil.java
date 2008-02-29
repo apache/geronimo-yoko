@@ -304,39 +304,42 @@ public final class IORUtil {
     // Convert an octet buffer into human-friendly data dump
     //
     public static String dump_octets(byte[] oct, int offset, int count) {
-        final int inc = 8;
+        final int inc = 16;
+        
+        if (count <= 0) {
+            return ""; 
+        }
 
-        StringBuffer result = new StringBuffer((count - offset) * 8);
+        StringBuffer result = new StringBuffer(count * 8);
 
         for (int i = offset; i < offset + count; i += inc) {
             for (int j = i; j - i < inc; j++) {
                 if (j < offset + count) {
-                    int n = (int) oct[j];
-                    if (n < 0)
-                        n += 256;
-                    if (n < 10)
-                        result.append("  ");
-                    else if (n < 100)
-                        result.append(' ');
-                    result.append(n);
+                    int n = ((int) oct[j]) & 0xff;
+                    String hex = Integer.toHexString(n); 
+                    if (hex.length() == 1) {
+                        result.append('0'); 
+                    }
+                    result.append(hex); 
                     result.append(' ');
-                } else
-                    result.append("    ");
+                } else {
+                    result.append("   ");
+                }
             }
 
             result.append('"');
 
             for (int j = i; j < offset + count && j - i < inc; j++) {
-                if (oct[j] >= (byte) 32 && oct[j] < (byte) 127)
+                if (oct[j] >= (byte) 32 && oct[j] < (byte) 127) {
                     result.append((char) oct[j]);
-                else
+                }
+                else {
                     result.append('.');
+                }
             }
-
             result.append('"');
             result.append('\n');
         }
-
         return result.toString();
     }
 
@@ -351,8 +354,11 @@ public final class IORUtil {
     // Convert an octet buffer into a single-line readable data dump. 
     //
     public static String format_octets(byte[] oct, int offset, int count) {
+        if (count <= 0) {
+            return ""; 
+        }
 
-        StringBuffer result = new StringBuffer((count - offset) * 8);
+        StringBuffer result = new StringBuffer(count * 8);
         result.append('"'); 
 
         for (int i = offset; i < offset + count; i++) {
