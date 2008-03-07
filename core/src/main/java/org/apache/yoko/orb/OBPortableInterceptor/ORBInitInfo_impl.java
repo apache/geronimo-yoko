@@ -124,7 +124,10 @@ final public class ORBInitInfo_impl extends org.omg.CORBA.LocalObject implements
 
         // TODO: check state
         try {
-            return initServiceManager_.resolveInitialReferences(name);
+            // we delegate this to the ORB rather than call the initial service manager directly. 
+            // because the ORB has a special test to initialize the RootPOA service if it 
+            // doesn't exist. 
+            return orb_.resolve_initial_references(name);
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
             throw (org.omg.PortableInterceptor.ORBInitInfoPackage.InvalidName)new 
                 org.omg.PortableInterceptor.ORBInitInfoPackage.InvalidName().initCause(ex); 

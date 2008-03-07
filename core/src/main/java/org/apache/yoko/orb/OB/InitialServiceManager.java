@@ -17,7 +17,14 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.omg.CORBA.LocalObject;
+
 public final class InitialServiceManager {
+    static final Logger logger = Logger.getLogger(InitialServiceManager.class.getName());
+    
     //
     // Set of available initial services
     //
@@ -141,6 +148,8 @@ public final class InitialServiceManager {
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         Assert._OB_assert(identifier != null);
+        
+        logger.fine("Resolving initial ORB reference for " + identifier); 
 
         ObjectFactory objectFactory = orbInstance_.getObjectFactory();
 
@@ -159,6 +168,8 @@ public final class InitialServiceManager {
                 services_.put(identifier, svc);
             }
         }
+        
+        logger.fine("No match found for ORB intial reference " + identifier); 
 
         //
         // If no match was found, and there's a default initial
@@ -173,14 +184,17 @@ public final class InitialServiceManager {
             obj = objectFactory.stringToObject(url);
         }
 
-        if (obj == null)
+        if (obj == null) {
+            logger.fine("No default initializer found for ORB intial reference " + identifier); 
             throw new org.omg.CORBA.ORBPackage.InvalidName();
+        }
 
         //
         // If the object is a l-c object, return the object now
         //
-        if (obj instanceof org.omg.CORBA.LocalObject)
+        if (obj instanceof org.omg.CORBA.LocalObject) {
             return obj;
+        }
 
         //
         // If the object is remote, return a new reference with the
@@ -215,20 +229,26 @@ public final class InitialServiceManager {
 
     public synchronized void addInitialReference(String name, String iorString,
             boolean override) throws org.omg.CORBA.ORBPackage.InvalidName {
+        logger.fine("Adding initial reference name=" + name + ", ior=" + iorString); 
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
         if (destroy_)
+        {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                                               .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
+                                               org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+                                               org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         Assert._OB_assert(name != null && iorString != null);
 
         if (services_.containsKey(name) && !override)
+        {
+            logger.fine("Initial reference name=" + name + "already exists"); 
             throw new org.omg.CORBA.ORBPackage.InvalidName();
+        }
 
         Service svc = new Service();
         svc.ref = iorString;
@@ -238,6 +258,12 @@ public final class InitialServiceManager {
     public synchronized void addInitialReference(String name,
             org.omg.CORBA.Object p, boolean override)
             throws org.omg.CORBA.ORBPackage.InvalidName {
+        if (p != null) {
+            logger.fine("Adding initial reference name=" + name + " of type " + p.getClass().getName()); 
+        }
+        else {
+            logger.fine("Adding initial reference name=" + name + " with null implementation"); 
+        }
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
