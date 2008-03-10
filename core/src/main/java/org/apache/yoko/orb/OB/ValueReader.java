@@ -218,8 +218,7 @@ final public class ValueReader {
             org.omg.CORBA.portable.ValueFactory f = null;
 
             if (orbInstance_ != null) {
-                ValueFactoryManager manager = orbInstance_
-                        .getValueFactoryManager();
+                ValueFactoryManager manager = orbInstance_.getValueFactoryManager();
 
                 if (h.ids.length > 0) {
                     for (int i = 0; i < h.ids.length; i++) {
@@ -1042,12 +1041,14 @@ final public class ValueReader {
     }
 
     public java.io.Serializable readValue(String id) {
+        logger.fine("Reading value of type " + id); 
         FactoryCreationStrategy strategy = new FactoryCreationStrategy(this,
                 in_, id);
         return read(strategy);
     }
 
     public java.io.Serializable readValue(Class clz) {
+        logger.fine("Reading value of type " + clz.getName()); 
     	if(clz.equals(String.class)) {
     		return WStringValueHelper.read(in_);
     	}

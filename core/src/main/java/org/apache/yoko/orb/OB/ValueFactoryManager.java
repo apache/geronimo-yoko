@@ -137,17 +137,18 @@ public final class ValueFactoryManager {
     }
 
     // Java-specific method
-    public org.omg.CORBA.portable.ValueFactory lookupValueFactoryWithClass(
-            String id) {
+    public org.omg.CORBA.portable.ValueFactory lookupValueFactoryWithClass(String id) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
         if (destroy_)
+        {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                                               .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
+                                               org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+                                               org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         Assert._OB_assert(id != null);
 

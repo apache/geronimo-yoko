@@ -20,10 +20,14 @@ package org.apache.yoko.orb.OB;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 
 public final class Util {
+    static final Logger logger = Logger.getLogger(Util.class.getName());
     //
     // Print octets to stream
     //
@@ -355,7 +359,7 @@ public final class Util {
                     s = id.substring(4, end);
 
                 //
-                // If the ID contains a prefix, then reverse the
+                // If the ID contains a prefix, then fix each of the 
                 // dotted components of the prefix
                 //
                 int slash = s.indexOf('/');
@@ -366,9 +370,9 @@ public final class Util {
                             prefix, ".");
                     while (tokenizer.hasMoreTokens()) {
                         String tok = tokenizer.nextToken();
-                        buf.insert(0, fixName(tok) + ".");
+                        buf.append(fixName(tok));
+                        buf.append('.');
                     }
-
                     s = rest;
                 }
 
@@ -484,15 +488,19 @@ public final class Util {
     // See the IDL-to-Java mapping, section 1.13.8.
     //
     public static Class idToClass(String id, String suffix) {
+        logger.fine("Searching for class from " + id + " using suffix " + suffix); 
         Class result = null;
         String className = idToClassName(id, suffix);
 
+        logger.fine("Converted class name is " + className); 
+        
         if (className != null) {
             try {
                 // get the appropriate class for the loading.
                 ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                result = loader.loadClass(className);
+                result = javax.rmi.CORBA.Util.loadClass(className, null, loader); 
             } catch (ClassNotFoundException ex) {
+                logger.fine("Converted class name not found"); 
                 // ignore
             }
         }
