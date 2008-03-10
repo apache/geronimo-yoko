@@ -78,67 +78,69 @@ final public class POAPolicies {
         dispatchStrategyPolicyValue_ = null;
         bidirPolicyValue_ = org.omg.BiDirPolicy.BOTH.value;
 
-        for (int i = 0; i < policies.length; ++i) {
-            int policyType = policies[i].policy_type();
-            if (policyType == org.omg.PortableServer.THREAD_POLICY_ID.value) {
-                org.omg.PortableServer.ThreadPolicy policy = org.omg.PortableServer.ThreadPolicyHelper
-                        .narrow(policies[i]);
-                synchronizationPolicyValue_ = (policy.value() == org.omg.PortableServer.ThreadPolicyValue.ORB_CTRL_MODEL) ? SynchronizationPolicyValue.NO_SYNCHRONIZATION
-                        : SynchronizationPolicyValue.SYNCHRONIZE_ON_ORB;
-            } else if (policyType == org.omg.PortableServer.LIFESPAN_POLICY_ID.value) {
-                org.omg.PortableServer.LifespanPolicy policy = org.omg.PortableServer.LifespanPolicyHelper
-                        .narrow(policies[i]);
-                lifespanPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.PortableServer.ID_UNIQUENESS_POLICY_ID.value) {
-                org.omg.PortableServer.IdUniquenessPolicy policy = org.omg.PortableServer.IdUniquenessPolicyHelper
-                        .narrow(policies[i]);
-                idUniquenessPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.PortableServer.ID_ASSIGNMENT_POLICY_ID.value) {
-                org.omg.PortableServer.IdAssignmentPolicy policy = org.omg.PortableServer.IdAssignmentPolicyHelper
-                        .narrow(policies[i]);
-                idAssignmentPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID.value) {
-                org.omg.PortableServer.ImplicitActivationPolicy policy = org.omg.PortableServer.ImplicitActivationPolicyHelper
-                        .narrow(policies[i]);
-                implicitActivationPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID.value) {
-                org.omg.PortableServer.ServantRetentionPolicy policy = org.omg.PortableServer.ServantRetentionPolicyHelper
-                        .narrow(policies[i]);
-                servantRetentionPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID.value) {
-                org.omg.PortableServer.RequestProcessingPolicy policy = org.omg.PortableServer.RequestProcessingPolicyHelper
-                        .narrow(policies[i]);
-                requestProcessingPolicyValue_ = policy.value();
-            } else if (policyType == org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value) {
-                org.omg.BiDirPolicy.BidirectionalPolicy p = org.omg.BiDirPolicy.BidirectionalPolicyHelper
-                        .narrow(policies[i]);
-                bidirPolicyValue_ = p.value();
-            }
+        if (policies != null) {
+            for (int i = 0; i < policies.length; ++i) {
+                int policyType = policies[i].policy_type();
+                if (policyType == org.omg.PortableServer.THREAD_POLICY_ID.value) {
+                    org.omg.PortableServer.ThreadPolicy policy = org.omg.PortableServer.ThreadPolicyHelper
+                            .narrow(policies[i]);
+                    synchronizationPolicyValue_ = (policy.value() == org.omg.PortableServer.ThreadPolicyValue.ORB_CTRL_MODEL) ? SynchronizationPolicyValue.NO_SYNCHRONIZATION
+                            : SynchronizationPolicyValue.SYNCHRONIZE_ON_ORB;
+                } else if (policyType == org.omg.PortableServer.LIFESPAN_POLICY_ID.value) {
+                    org.omg.PortableServer.LifespanPolicy policy = org.omg.PortableServer.LifespanPolicyHelper
+                            .narrow(policies[i]);
+                    lifespanPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.PortableServer.ID_UNIQUENESS_POLICY_ID.value) {
+                    org.omg.PortableServer.IdUniquenessPolicy policy = org.omg.PortableServer.IdUniquenessPolicyHelper
+                            .narrow(policies[i]);
+                    idUniquenessPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.PortableServer.ID_ASSIGNMENT_POLICY_ID.value) {
+                    org.omg.PortableServer.IdAssignmentPolicy policy = org.omg.PortableServer.IdAssignmentPolicyHelper
+                            .narrow(policies[i]);
+                    idAssignmentPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID.value) {
+                    org.omg.PortableServer.ImplicitActivationPolicy policy = org.omg.PortableServer.ImplicitActivationPolicyHelper
+                            .narrow(policies[i]);
+                    implicitActivationPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID.value) {
+                    org.omg.PortableServer.ServantRetentionPolicy policy = org.omg.PortableServer.ServantRetentionPolicyHelper
+                            .narrow(policies[i]);
+                    servantRetentionPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID.value) {
+                    org.omg.PortableServer.RequestProcessingPolicy policy = org.omg.PortableServer.RequestProcessingPolicyHelper
+                            .narrow(policies[i]);
+                    requestProcessingPolicyValue_ = policy.value();
+                } else if (policyType == org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value) {
+                    org.omg.BiDirPolicy.BidirectionalPolicy p = org.omg.BiDirPolicy.BidirectionalPolicyHelper
+                            .narrow(policies[i]);
+                    bidirPolicyValue_ = p.value();
+                }
 
-            //
-            // Yoko proprietary policies
-            //
-            else if (policyType == SYNCHRONIZATION_POLICY_ID.value) {
-                SynchronizationPolicy policy = SynchronizationPolicyHelper
-                        .narrow(policies[i]);
-                synchronizationPolicyValue_ = policy.value();
-            } else if (policyType == DISPATCH_STRATEGY_POLICY_ID.value) {
-                DispatchStrategyPolicy policy = DispatchStrategyPolicyHelper
-                        .narrow(policies[i]);
-                dispatchStrategyPolicyValue_ = policy.value();
-            } else if (policyType == INTERCEPTOR_CALL_POLICY_ID.value) {
-                InterceptorCallPolicy policy = InterceptorCallPolicyHelper
-                        .narrow(policies[i]);
-                interceptorCallPolicyValue_ = policy.value();
-            } else if (policyType == ZERO_PORT_POLICY_ID.value) {
-                ZeroPortPolicy policy = ZeroPortPolicyHelper
-                        .narrow(policies[i]);
-                zeroPortPolicyValue_ = policy.value();
-            }
+                //
+                // Yoko proprietary policies
+                //
+                else if (policyType == SYNCHRONIZATION_POLICY_ID.value) {
+                    SynchronizationPolicy policy = SynchronizationPolicyHelper
+                            .narrow(policies[i]);
+                    synchronizationPolicyValue_ = policy.value();
+                } else if (policyType == DISPATCH_STRATEGY_POLICY_ID.value) {
+                    DispatchStrategyPolicy policy = DispatchStrategyPolicyHelper
+                            .narrow(policies[i]);
+                    dispatchStrategyPolicyValue_ = policy.value();
+                } else if (policyType == INTERCEPTOR_CALL_POLICY_ID.value) {
+                    InterceptorCallPolicy policy = InterceptorCallPolicyHelper
+                            .narrow(policies[i]);
+                    interceptorCallPolicyValue_ = policy.value();
+                } else if (policyType == ZERO_PORT_POLICY_ID.value) {
+                    ZeroPortPolicy policy = ZeroPortPolicyHelper
+                            .narrow(policies[i]);
+                    zeroPortPolicyValue_ = policy.value();
+                }
 
-            //
-            // Otherwise the policy is not a ORB defined POA policy
-            //
+                //
+                // Otherwise the policy is not a ORB defined POA policy
+                //
+            }
         }
 
         if (dispatchStrategyPolicyValue_ == null) {
