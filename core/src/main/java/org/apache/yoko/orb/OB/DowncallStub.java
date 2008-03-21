@@ -16,6 +16,9 @@
  */
 
 package org.apache.yoko.orb.OB;
+ 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.RETRY_ALWAYS;
 
@@ -23,13 +26,12 @@ import org.apache.yoko.orb.OB.RETRY_ALWAYS;
 // DowncallStub is equivalent to the C++ class OB::MarshalStubImpl
 //
 public final class DowncallStub {
+    static final Logger logger = Logger.getLogger(DowncallStub.class.getName());
     //
     // The ORBInstance object
     //
     private ORBInstance orbInstance_;
     
-    protected Logger logger_;   // the orbInstance_ logger object 
-
     //
     // The IOR and the original IOR
     //
@@ -72,8 +74,7 @@ public final class DowncallStub {
             // Get all clients that can be used
             //
             ClientManager clientManager = orbInstance_.getClientManager();
-            clientProfilePairs_ = clientManager.getClientProfilePairs(IOR_,
-                    policies_.value);
+            clientProfilePairs_ = clientManager.getClientProfilePairs(IOR_, policies_.value);
         }
 
         //
@@ -83,7 +84,7 @@ public final class DowncallStub {
         if (clientProfilePairs_.isEmpty()) {
             CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
             if (coreTraceLevels.traceRetry() >= 2) {
-                logger_.trace("retry", "no profiles available");
+                logger.fine("retry: no profiles available");
             }
 
             throw new FailureException(new org.omg.CORBA.TRANSIENT(org.apache.yoko.orb.OB.MinorCodes
@@ -92,8 +93,7 @@ public final class DowncallStub {
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO));
         }
 
-        ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_
-                .elementAt(0);
+        ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_.elementAt(0);
         profileInfo.value = clientProfilePair.profile;
         return clientProfilePair.client;
     }
@@ -133,9 +133,6 @@ public final class DowncallStub {
         // Save the ORBInstance object
         //
         orbInstance_ = orbInstance;
-        // and get the logger from the instance 
-        logger_ = orbInstance_.getLogger(); 
-
         //
         // Save the IOR
         //
@@ -157,17 +154,16 @@ public final class DowncallStub {
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
-        if (!policies_.interceptor)
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+        if (!policies_.interceptor) {
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
+        }
 
         PIManager piManager = orbInstance_.getPIManager();
         if (piManager.haveClientInterceptors()) {
             return new PIDowncall(orbInstance_, client, profile.value,
                     policies_, op, resp, IOR_, origIOR_, piManager);
         } else {
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
         }
     }
 
@@ -179,8 +175,7 @@ public final class DowncallStub {
         //
         // A LocateRequest is not seen by the interceptors
         //
-        return new Downcall(orbInstance_, client, profile.value, policies_,
-                "_locate", true);
+        return new Downcall(orbInstance_, client, profile.value, policies_, "_locate", true);
     }
 
     public Downcall createPIArgsDowncall(String op, boolean resp,
@@ -376,21 +371,15 @@ public final class DowncallStub {
         // completion status is not COMPLETED_NO
         //
         if (policies_.retry.mode != RETRY_ALWAYS.value
-                && ex.exception.completed != org.omg.CORBA.CompletionStatus.COMPLETED_NO)
+                && ex.exception.completed != org.omg.CORBA.CompletionStatus.COMPLETED_NO) {
             throw ex;
+        }
 
         //
         // If no client/profile pairs are left, we cannot retry either
         //
         if (clientProfilePairs_.isEmpty()) {
-            CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-            if (coreTraceLevels.traceRetry() >= 2) {
-                String msg = "retry:  no profiles left to try\n"
-                        + ex.exception.getMessage();
-
-                logger_.debug(msg, ex.exception);
-            }
-
+            logger.log(Level.FINE, "no profiles left to try", ex.exception);
             throw ex;
         }
 
@@ -398,14 +387,11 @@ public final class DowncallStub {
         // OK, let's continue with the next profile
         //
         CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceRetry() >= 2) {
-            String msg = "trying next profile\n" + ex.exception.getMessage();
-
-            logger_.trace("retry", msg);
-        }
+        logger.log(Level.FINE, "trying next profile", ex.exception);
     }
 
     public boolean locate_request() throws LocationForward, FailureException {
+        logger.fine("performing a locate_request"); 
         while (true) {
             org.apache.yoko.orb.OB.Downcall down = createLocateRequestDowncall();
 
@@ -420,16 +406,21 @@ public final class DowncallStub {
                     //
                     // If the LocateRequest policy is false, then return now
                     //
-                    if (!policies_.locateRequest)
+                    if (!policies_.locateRequest) {
+                        logger.fine("LocateRequest policy is false, returning true"); 
                         return true;
+                    }
 
                     //
                     // If the client doesn't support twoway invocations,
                     // then silently pretend the locate request succeeded
                     //
-                    if (!client.twoway())
+                    if (!client.twoway()) {
+                        logger.fine("Twoway invocations not supported, returning true"); 
                         return true;
+                    }
                 } catch (org.omg.CORBA.SystemException ex) {
+                    logger.log(Level.FINE, "Exception occurred during locate request", ex); 
                     throw new FailureException(ex);
                 }
 
@@ -438,10 +429,13 @@ public final class DowncallStub {
                 locate(down);
                 preUnmarshal(down);
                 postUnmarshal(down);
+                logger.fine("Object located"); 
                 return true;
             } catch (org.omg.CORBA.OBJECT_NOT_EXIST ex) {
+                logger.log(Level.FINE, "Object does not exist", ex); 
                 return false;
             } catch (FailureException ex) {
+                logger.log(Level.FINE, "Object lookup failure", ex); 
                 handleFailureException(down, ex);
             }
         }
@@ -614,8 +608,9 @@ public final class DowncallStub {
         //
         // If the DowncallStub has changed, then remarshal
         //
-        if (ctx.downcallStub != this)
+        if (ctx.downcallStub != this) {
             throw new org.omg.CORBA.portable.RemarshalException();
+        }
 
         Downcall down = ctx.downcall;
 
@@ -627,10 +622,12 @@ public final class DowncallStub {
             down.postMarshal();
 
             boolean response = down.responseExpected();
-            if (response)
+            if (response) {
                 down.request();
-            else
+            }
+            else {
                 down.oneway();
+            }
 
             if (response) {
                 org.apache.yoko.orb.CORBA.InputStream in = down.preUnmarshal();
@@ -1002,15 +999,15 @@ public final class DowncallStub {
         //
         // Align to an 8 byte boundary if we have something left
         //
-        if (buf.rest_length() > 0)
+        if (buf.rest_length() > 0) {
             buf.pos((buf.pos() + 7) & ~7);
+        }
 
         //
         // Copy in the rest of the message body
         //
         messageBody.body = new byte[buf.rest_length()];
-        System.arraycopy(buf.data_, buf.pos(), messageBody.body, 0, buf
-                .rest_length());
+        System.arraycopy(buf.data_, buf.pos(), messageBody.body, 0, buf.rest_length());
         requestMessage.body = messageBody;
 
         //
@@ -1034,10 +1031,9 @@ public final class DowncallStub {
             //
             int curLength = requestInfo.to_visit.length;
             org.omg.MessageRouting.Router[] toVisit = new org.omg.MessageRouting.Router[curLength + 1];
-            if (curLength > 0)
-                System
-                        .arraycopy(requestInfo.to_visit, 0, toVisit, 1,
-                                curLength);
+            if (curLength > 0) {
+                System.arraycopy(requestInfo.to_visit, 0, toVisit, 1, curLength);
+            }
             toVisit[0] = curRouter;
             requestInfo.to_visit = toVisit;
 
@@ -1049,7 +1045,7 @@ public final class DowncallStub {
                 //
                 delivered = true;
             } catch (org.omg.CORBA.SystemException ex) {
-                orbInstance_.getLogger().warning("Failed to contact router: " + ex.getMessage(), ex); 
+                logger.log(Level.FINE, "Failed to contact router: " + ex.getMessage(), ex); 
                 //
                 // Failure: try the next router in the list
                 //

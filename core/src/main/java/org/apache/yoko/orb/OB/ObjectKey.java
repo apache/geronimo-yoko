@@ -31,8 +31,15 @@
 //
 
 package org.apache.yoko.orb.OB;
+ 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import org.apache.yoko.orb.OB.IORUtil;
 
 final public class ObjectKey {
+    static final Logger logger = Logger.getLogger(ObjectKey.class.getName());
+    
     public static byte[] CreateObjectKey(ObjectKeyData id) {
         byte[] key;
 
@@ -40,8 +47,9 @@ final public class ObjectKey {
         // Count the number of bytes for the poas.
         //
         int len = id.serverId.length() + 1;
-        for (int i = 0; i < id.poaId.length; i++)
+        for (int i = 0; i < id.poaId.length; i++) {
             len += id.poaId[i].length() + 1;
+        }
 
         //
         // Add one for the '\0'
@@ -85,8 +93,9 @@ final public class ObjectKey {
         } else {
             key[data++] = (byte) '1';
             int n = time.length();
-            for (int i = 0; i < n; i++)
+            for (int i = 0; i < n; i++) {
                 key[data++] = (byte) time.charAt(i);
+            }
             data++;
         }
 
@@ -94,14 +103,16 @@ final public class ObjectKey {
         // Copy in the data for the poas
         //
         int n = id.serverId.length();
-        for (int j = 0; j < n; j++)
+        for (int j = 0; j < n; j++) {
             key[data++] = (byte) id.serverId.charAt(j);
+        }
         data++;
 
         for (int i = 0; i < id.poaId.length; i++) {
             n = id.poaId[i].length();
-            for (int j = 0; j < n; j++)
+            for (int j = 0; j < n; j++) {
                 key[data++] = (byte) id.poaId[i].charAt(j);
+            }
             data++;
         }
 
@@ -112,6 +123,10 @@ final public class ObjectKey {
 
         System.arraycopy(id.oid, 0, key, data, id.oid.length);
 
+        
+        if (logger.isLoggable(Level.FINEST)) {
+            logger.finest("Created object key\n" + IORUtil.dump_octets(key)); 
+        }
         return key;
     }
 
@@ -126,6 +141,10 @@ final public class ObjectKey {
         //
         int data = 0;
         int end = key.length;
+        
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Parsing object key\n" + IORUtil.dump_octets(key)); 
+        }
 
         //
         // First try to figure out whether the object-key is OB 4.x
@@ -138,27 +157,34 @@ final public class ObjectKey {
             data += 3;
             if (key[data] == '0') // persistent
             {
+                logger.fine("Parsing persistent object key"); 
                 keyData.persistent = true;
                 keyData.createTime = 0;
                 ++data;
             } else {
-                if (key[data] != '1')
+                if (key[data] != '1') {
+                    logger.fine("Characters '1' expected at position " + data); 
                     return false;
+                }
                 keyData.persistent = false;
                 ++data;
                 //
                 // Remember the start of the time stamp
                 //
                 int start = data;
-                while (data < end && key[data] != '\0')
+                while (data < end && key[data] != '\0') {
                     data++;
-                if (data >= end)
+                }
+                if (data >= end) {
+                    logger.fine("Missing '\0' in key data"); 
                     return false;
+                }
 
                 String t = new String(key, start, data - start);
                 try {
                     keyData.createTime = Integer.valueOf(t).intValue();
                 } catch (NumberFormatException ex) {
+                    logger.log(Level.FINE, "Invalid timestamp in key data", ex); 
                     return false;
                 }
                 //
@@ -174,23 +200,29 @@ final public class ObjectKey {
                 // Remember the start of the POA name
                 //
                 int start = data;
-                while (data < end && key[data] != '\0')
+                while (data < end && key[data] != '\0') {
                     data++;
+                }
 
                 //
                 // Ensure that we haven't gone too far...
                 //
-                if (data >= end)
+                if (data >= end) {
+                    logger.fine("Missing '\0' in key data"); 
                     return false;
+                }
 
                 //
                 // Append this to the sequence of POA's.
                 //
                 if (first) {
                     keyData.serverId = new String(key, start, data - start);
+                    logger.fine("Parsed serverId=" + keyData.serverId); 
                     first = false;
                 } else {
-                    poaId.addElement(new String(key, start, data - start));
+                    String element = new String(key, start, data - start); 
+                    logger.fine("Parsed POA name=" + element); 
+                    poaId.addElement(element);
                 }
 
                 //
@@ -210,8 +242,10 @@ final public class ObjectKey {
             //
             // Verify that we haven't gone too far.
             //
-            if (data >= end)
+            if (data >= end) {
+                logger.fine("Missing object id in key data"); 
                 return false;
+            }
 
             //
             // Remaining portion is the ObjectId.
@@ -220,8 +254,13 @@ final public class ObjectKey {
             keyData.oid = new byte[len];
             System.arraycopy(key, data, keyData.oid, 0, len);
 
+            if (logger.isLoggable(Level.FINEST)) {
+                logger.finest("Parsed object id is\n" + IORUtil.dump_octets(keyData.oid)); 
+            }
+
             return true;
         } else {
+            logger.fine("Invalid magic number in object key"); 
             return false;
         }
     }

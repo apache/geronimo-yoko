@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+
 public class Downcall {
     //
     // The ORBInstance object

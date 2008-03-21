@@ -26,6 +26,7 @@ import org.omg.SendingContext.CodeBase;
 
 final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     static final Logger logger = Logger.getLogger(InputStream.class.getName());
+    
     org.apache.yoko.orb.OB.ORBInstance orbInstance_;
 
     public org.apache.yoko.orb.OCI.Buffer buf_;

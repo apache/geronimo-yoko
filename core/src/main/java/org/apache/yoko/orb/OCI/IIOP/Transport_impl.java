@@ -192,6 +192,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     public void receive(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
         setBlock(block);
 
+        logger.fine("receiving a buffer of " + buf.rest_length() + " from " + socket_ + " using transport " + this); 
         while (!buf.is_full()) {
             try {
                 int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
@@ -204,6 +205,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 }
                 buf.advance(result);
             } catch (java.io.InterruptedIOException ex) {
+                logger.log(Level.FINE, "Received interrupted exception", ex); 
                 buf.advance(ex.bytesTransferred);
 
                 if (!block)
@@ -329,7 +331,9 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
 
     public void send(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
         setBlock(block);
-
+        
+        logger.fine("Sending buffer of size " + buf.rest_length() + " to " + " using transport " + this); 
+        
         while (!buf.is_full()) {
             try {
                 out_.write(buf.data(), buf.pos(), buf.rest_length());
@@ -492,6 +496,8 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             java.net.Socket socket, ListenerMap lm) {
         socket_ = socket;
         shutdown_ = false;
+        
+        logger.fine("Creating new transport for socket " + socket); 
 
         //
         // Cache the streams associated with the socket, for

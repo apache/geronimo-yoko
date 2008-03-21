@@ -118,6 +118,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         try {
             logger.fine("Connecting to host=" + address + ", port=" + port_);
             socket_ = connectionHelper_.createSocket(ior_, policies_, address, port_);
+            logger.fine("Connection created with socket " + socket_); 
         } catch (java.net.ConnectException ex) {
             logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + port_, ex);
             throw new org.omg.CORBA.TRANSIENT(

@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_ID;
 import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_REACTIVE;
 import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_THREADED;
@@ -31,8 +34,9 @@ import org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_ID;
 import org.apache.yoko.orb.OBPortableServer.POAManager;
 import org.omg.PortableServer.POAManagerPackage.*;
 
-final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
-        POAManager {
+final public class POAManager_impl extends org.omg.CORBA.LocalObject implements POAManager {
+    static final Logger logger = Logger.getLogger(POAManager_impl.class.getName());
+    
     //
     // The ORBInstance
     //
@@ -175,15 +179,19 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
     // ------------------------------------------------------------------
 
     public synchronized void activate() throws AdapterInactive {
+        logger.fine("Activating POAManager " + id_ + " current state is " + state_); 
         //
         // If the POA manager is in inactive state then raise the
         // AdapterInactive exception
         //
-        if (state_ == State.INACTIVE)
+        if (state_ == State.INACTIVE) {
             throw new AdapterInactive();
+        }
 
-        if (state_ == State.ACTIVE)
+        if (state_ == State.ACTIVE) {
+            logger.fine("POAManager already active, returning"); 
             return;
+        }
 
         //
         // Switch to the active state.
@@ -436,12 +444,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
         //
         String rootKey = "yoko.orb.poamanager." + id_ + ".";
         int rootKeyLen = rootKey.length();
-
-        //
-        // Get the Logger
-        //
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-
+        
         //
         // Get the ORB properties
         //
@@ -635,7 +638,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
                     } else {
                         String err = fullkey
                                 + ": expected `1.0', `1.1' or `1.2'";
-                        logger.error(err);
+                        logger.severe(err);
                         throw new org.omg.CORBA.INITIALIZE(err);
                     }
                 }
@@ -660,6 +663,8 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
     //
     synchronized void _OB_addPOA(org.omg.PortableServer.POA poa, String[] id) {
         POANameHasher idkey = new POANameHasher(id);
+        
+        logger.fine("Adding new poa with id " + idkey); 
         org.apache.yoko.orb.OB.Assert._OB_assert(!poas_.containsKey(idkey));
         poas_.put(idkey, poa);
 
@@ -671,6 +676,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
     //
     synchronized void _OB_removePOA(String[] id) {
         POANameHasher idkey = new POANameHasher(id);
+        logger.fine("Removing poa with id " + idkey); 
         org.apache.yoko.orb.OB.Assert._OB_assert(poas_.containsKey(idkey));
         poas_.remove(idkey);
 
@@ -680,12 +686,14 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
     DirectServant _OB_getDirectServant(byte[] key,
             org.apache.yoko.orb.OB.RefCountPolicyList policies)
             throws org.apache.yoko.orb.OB.LocationForward, AdapterInactive {
+        
         synchronized (this) {
             if (state_ == State.INACTIVE)
                 throw new AdapterInactive();
         }
-
+        
         org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData();
+        
         if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(key, data)) {
             org.omg.PortableServer.POA poa;
             synchronized (this) {
@@ -723,11 +731,13 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
         // INACTIVE state, then something is wrong.
         //
         org.apache.yoko.orb.OB.Assert._OB_assert(get_state() != State.INACTIVE);
+        logger.fine("Searching for direct servant with key " + data); 
 
         org.omg.PortableServer.POA poa = null;
         if (data.serverId.equals(serverId_)) {
-            poa = (org.omg.PortableServer.POA) poas_.get(new POANameHasher(
-                    data.poaId));
+            POANameHasher key = new POANameHasher(data.poaId); 
+            logger.fine("Searching for direct servant with poa key " + key); 
+            poa = (org.omg.PortableServer.POA) poas_.get(key); 
             if (poa == null) {
                 //
                 // The POA isn't contained in our local POA table. Ask the
@@ -740,16 +750,15 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
                 // hence some other end-point) then location forward
                 //
                 if (poa != null) {
-                    org.omg.PortableServer.POAManager manager = poa
-                            .the_POAManager();
+                    logger.fine("Attempting to obtain a local reference to an object activated on a differnt POA"); 
+                    org.omg.PortableServer.POAManager manager = poa.the_POAManager();
                     if (manager != this) {
                         Object obj = poa.create_reference_with_id(data.oid, "");
 
                         org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) obj)
                                 ._get_delegate());
                         org.omg.IOP.IOR ior = p._OB_IOR();
-                        throw new org.apache.yoko.orb.OB.LocationForward(ior,
-                                false);
+                        throw new org.apache.yoko.orb.OB.LocationForward(ior, false);
                     }
                 }
             }
@@ -761,8 +770,10 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements
         //
         if (poa != null) {
             POA_impl poaImpl = (POA_impl) poa;
-            if (!poaImpl._OB_poaMatches(data, false))
+            if (!poaImpl._OB_poaMatches(data, false)) {
+                logger.fine("POA located but object key data doesn't match"); 
                 poa = null;
+            }
         }
 
         return poa;

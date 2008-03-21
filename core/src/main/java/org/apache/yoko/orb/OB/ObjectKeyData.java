@@ -44,6 +44,19 @@ final public class ObjectKeyData {
     }
     
     public String toString() {
-        return serverId + ":" + poaId + ":" + IORUtil.format_octets(oid); 
+        StringBuffer buf = new StringBuffer(); 
+        buf.append(serverId); 
+        buf.append(':'); 
+        if (poaId != null) {
+            for (int i = 0; i < poaId.length; i++) {
+                buf.append('/'); 
+                buf.append(poaId[i]); 
+            }
+        }
+        buf.append(':'); 
+        if (oid != null) {
+            buf.append(IORUtil.format_octets(oid)); 
+        }
+        return buf.toString(); 
     }
 }

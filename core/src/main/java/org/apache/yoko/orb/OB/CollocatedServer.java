@@ -17,7 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 final public class CollocatedServer extends Server implements UpcallReturn {
+    static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
     //
     // The next request ID and the corresponding mutex
     //
@@ -106,6 +110,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     //
     public synchronized void hold() {
         Assert._OB_assert(!destroy_);
+        logger.fine("Collocated server placed in hold state"); 
         hold_ = true;
 
         //
@@ -119,6 +124,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     //
     public synchronized void activate() {
         Assert._OB_assert(!destroy_);
+        logger.fine("Collocated server activated"); 
         hold_ = false;
 
         //
@@ -131,6 +137,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     // Called to emit downcalls
     //
     public boolean send(Downcall down, boolean b) {
+        logger.fine("Sending a request"); 
         //
         // We need a state monitor if the request is dispatched in a
         // separate thread.
@@ -149,6 +156,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             //
             while (hold_ && !destroy_) {
                 try {
+                    logger.fine("Waiting for hold to be released"); 
                     wait();
                 } catch (InterruptedException ex) {
                 }
@@ -164,8 +172,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             //
             // Collect the Upcall data
             //
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo = down
-                    .profileInfo();
+            org.apache.yoko.orb.OCI.ProfileInfo profileInfo = down.profileInfo();
             int reqId = down.requestId();
             String op = down.operation();
             org.apache.yoko.orb.CORBA.OutputStream out = down.output();
@@ -247,6 +254,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     }
 
     public boolean receive(Downcall down, boolean block) {
+        logger.fine("Receiving a request"); 
         //
         // Try to receive the reply
         //

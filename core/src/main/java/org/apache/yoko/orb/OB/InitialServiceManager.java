@@ -141,11 +141,12 @@ public final class InitialServiceManager {
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         Assert._OB_assert(identifier != null);
         
@@ -160,8 +161,9 @@ public final class InitialServiceManager {
         //
         Service svc = (Service) services_.get(identifier);
         if (svc != null) {
-            if (svc.obj != null)
+            if (svc.obj != null) {
                 obj = svc.obj;
+            }
             else if (svc.ref.length() > 0) {
                 obj = objectFactory.stringToObject(svc.ref);
                 svc.obj = obj;
@@ -210,16 +212,16 @@ public final class InitialServiceManager {
             } catch (org.omg.CORBA.INV_POLICY ex) {
             }
 
-            if (policy == null)
+            if (policy == null) {
                 policy = orbPolicies[i];
+            }
 
             vec.addElement(policy);
         }
         org.omg.CORBA.Policy[] p = new org.omg.CORBA.Policy[vec.size()];
         vec.copyInto(p);
 
-        return obj._set_policy_override(p,
-                org.omg.CORBA.SetOverrideType.SET_OVERRIDE);
+        return obj._set_policy_override(p, org.omg.CORBA.SetOverrideType.SET_OVERRIDE);
     }
 
     public void addInitialReference(String name, org.omg.CORBA.Object obj)
@@ -268,16 +270,18 @@ public final class InitialServiceManager {
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         Assert._OB_assert(name != null);
 
-        if (services_.containsKey(name) && !override)
+        if (services_.containsKey(name) && !override) {
             throw new org.omg.CORBA.ORBPackage.InvalidName();
+        }
 
         Service svc = new Service();
         svc.ref = "";

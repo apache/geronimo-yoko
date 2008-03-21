@@ -17,9 +17,14 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.orb.PortableServer.*;
 
 abstract class GIOPServerStarter {
+    static final Logger logger = Logger.getLogger(GIOPServerStarter.class.getName());
+    
     protected ORBInstance orbInstance_; // The ORBInstance
 
     protected org.apache.yoko.orb.OCI.Acceptor acceptor_; // The acceptor

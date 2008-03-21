@@ -122,7 +122,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl pmFactory = new org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl();
             org.apache.yoko.orb.OB.MultiRequestSender multiRequestSender = new org.apache.yoko.orb.OB.MultiRequestSender();
             org.apache.yoko.orb.OB.DispatchStrategyFactory_impl dsf = new org.apache.yoko.orb.OB.DispatchStrategyFactory_impl();
-            org.apache.yoko.orb.OB.BootManager_impl bootManager = new org.apache.yoko.orb.OB.BootManager_impl();
+            org.apache.yoko.orb.OB.BootManager_impl bootManager = new org.apache.yoko.orb.OB.BootManager_impl(this);
             org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = new org.apache.yoko.orb.OCI.ConFactoryRegistry_impl();
             org.apache.yoko.orb.OCI.AccFactoryRegistry accFactoryRegistry = new org.apache.yoko.orb.OCI.AccFactoryRegistry_impl();
             org.apache.yoko.orb.OB.UnknownExceptionStrategy unknownExceptionStrategy = new org.apache.yoko.orb.OB.UnknownExceptionStrategy_impl(
@@ -1075,8 +1075,9 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
     public synchronized org.omg.CORBA.Object resolve_initial_references(
             String identifier) throws org.omg.CORBA.ORBPackage.InvalidName {
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+        }
 
         org.apache.yoko.orb.OB.InitialServiceManager initServiceManager = orbInstance_
                 .getInitialServiceManager();
@@ -1094,10 +1095,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             if (identifier.equals("RootPOA")) {
                 orbControl_.initializeRootPOA(this);
                 return resolve_initial_references(identifier);
-            } else
+            } else {
                 throw ex;
+            }
         }
-
         return obj;
     }
 

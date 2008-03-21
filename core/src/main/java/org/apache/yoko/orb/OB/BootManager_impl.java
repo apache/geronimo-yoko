@@ -16,12 +16,18 @@
  */
 
 package org.apache.yoko.orb.OB;
+ 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.BootLocator;
 import org.apache.yoko.orb.OB.BootManager;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
 
 final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
         BootManager {
+    static final Logger logger = Logger.getLogger(BootManager_impl.class.getName());
     //
     // Set of known bindings
     //
@@ -32,9 +38,13 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
     // since assign and read methods are atomic in Java.
     //
     private BootLocator locator_ = null;
+    
+    // the ORB that created us 
+    private ORB orb_; 
 
-    public BootManager_impl() {
+    public BootManager_impl(ORB orb) {
         bindings_ = new java.util.Hashtable(17);
+        orb_ = orb; 
     }
 
     // ------------------------------------------------------------------
@@ -44,6 +54,9 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
     public void add_binding(byte[] id, org.omg.CORBA.Object obj)
             throws org.apache.yoko.orb.OB.BootManagerPackage.AlreadyExists {
         ObjectIdHasher oid = new ObjectIdHasher(id);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Adding binding under id " + IORUtil.dump_octets(id)); 
+        }
 
         //
         // If binding id is not already mapped add the binding.
@@ -59,6 +72,9 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
     public void remove_binding(byte[] id)
             throws org.apache.yoko.orb.OB.BootManagerPackage.NotFound {
         ObjectIdHasher oid = new ObjectIdHasher(id);
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Removing binding with id " + IORUtil.dump_octets(id)); 
+        }
 
         //
         // If binding id is mapped remove the binding
@@ -87,22 +103,41 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
         // binding for the requested ObjectId.
         //
         ObjectIdHasher oid = new ObjectIdHasher(id);
+        
+        if (logger.isLoggable(Level.FINE)) {
+            logger.fine("Searching for binding with id " + IORUtil.dump_octets(id)); 
+        }
         org.omg.CORBA.Object obj = (org.omg.CORBA.Object) bindings_.get(oid);
         if (obj == null && locator_ != null) {
+            logger.fine("Object not found, passing on to locator");
             try {
                 org.omg.CORBA.ObjectHolder objHolder = new org.omg.CORBA.ObjectHolder();
                 org.omg.CORBA.BooleanHolder addHolder = new org.omg.CORBA.BooleanHolder();
                 locator_.locate(id, objHolder, addHolder);
 
                 obj = objHolder.value;
-                if (addHolder.value)
+                if (addHolder.value) {
                     bindings_.put(oid, obj);
+                }
             } catch (org.apache.yoko.orb.OB.BootManagerPackage.NotFound ex) {
             }
         }
 
-        if (obj == null)
-            return null;
+        if (obj == null) {
+            // these should map to initial references as well when used as a corbaloc name.
+            // convert the key to a string and try for one of those 
+            String keyString = new String(id); 
+            try {
+                obj = orb_.resolve_initial_references(keyString); 
+            } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+                // if this is not valid, it won't work 
+                return null; 
+            }
+            // just return null if still not there 
+            if (obj == null) {
+                return null;
+            }
+        }
 
         org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) obj)
                 ._get_delegate());

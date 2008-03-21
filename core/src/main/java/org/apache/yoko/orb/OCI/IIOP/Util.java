@@ -158,10 +158,12 @@ final public class Util {
             org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq,
             boolean performMatch, String host, int port, boolean loopbackMatches) {
         short portNo;
-        if (port >= 0x8000)
+        if (port >= 0x8000) {
             portNo = (short) (port - 0xffff - 1);
-        else
+        }
+        else {
             portNo = (short) port;
+        }
 
         java.util.Vector vec = new java.util.Vector();
         for (int i = 0; i < ior.profiles.length; i++) {
@@ -184,11 +186,12 @@ final public class Util {
                 if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                     int len = in.read_ulong();
                     components = new org.omg.IOP.TaggedComponent[len];
-                    for (int j = 0; j < len; j++)
-                        components[j] = org.omg.IOP.TaggedComponentHelper
-                                .read(in);
-                } else
+                    for (int j = 0; j < len; j++) {
+                        components[j] = org.omg.IOP.TaggedComponentHelper.read(in);
+                    }
+                } else {
                     components = new org.omg.IOP.TaggedComponent[0];
+                }
 
                 if (performMatch) {
                     //
@@ -252,9 +255,9 @@ final public class Util {
                 org.apache.yoko.orb.OCI.ProfileInfo[] arr = new org.apache.yoko.orb.OCI.ProfileInfo[len
                         + vec.size()];
                 System.arraycopy(profileInfoSeq.value, 0, arr, 0, len);
-                for (int i = 0; i < vec.size(); i++)
-                    arr[len + i] = (org.apache.yoko.orb.OCI.ProfileInfo) vec
-                            .elementAt(i);
+                for (int i = 0; i < vec.size(); i++) {
+                    arr[len + i] = (org.apache.yoko.orb.OCI.ProfileInfo) vec.elementAt(i);
+                }
                 profileInfoSeq.value = arr;
             }
         }

@@ -35,14 +35,14 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
 
         for (int i = 0; i < result.length; i++) {
             char ch = keyStr.charAt(i);
-            if (ch > 255)
+            if (ch > 255) {
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
                                 + ": invalid character in key",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+            }
             result[i] = (byte) ch;
         }
 
@@ -56,24 +56,25 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
         //
         if (str.substring(startIdx, startIdx + 4).equals("rir:")) {
             int comma = str.indexOf(',', startIdx);
-            if (comma != -1 && comma <= endIdx)
+            if (comma != -1 && comma <= endIdx) {
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
                                 + ": rir cannot be used with other protocols",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
 
-            if (startIdx + 3 != endIdx)
+            if (startIdx + 3 != endIdx) {
                 throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
                         .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress)
                         + ": rir does not allow an address",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
 
             try {
-                InitialServiceManager initialServiceManager = orbInstance_
-                        .getInitialServiceManager();
+                InitialServiceManager initialServiceManager = orbInstance_.getInitialServiceManager();
                 return initialServiceManager.resolveInitialReferences(keyStr);
             } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
                 throw new org.omg.CORBA.BAD_PARAM(
@@ -102,31 +103,36 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
             //
             String protocol;
             int colon = str.indexOf(':', pos);
-            if (colon == -1)
+            if (colon == -1) {
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
                                 + ": no protocol",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-            else if (colon > endIdx)
+            }
+            else if (colon > endIdx) {
                 break;
-            if (colon == pos) // ":" is shorthand for "iiop:"
+            }
+            if (colon == pos) {// ":" is shorthand for "iiop:"
                 protocol = "iiop";
-            else
+            }
+            else {
                 protocol = str.substring(pos, colon).toLowerCase();
+            }
             pos = colon;
 
             //
             // Check for rir (again)
             //
-            if (protocol.equals("rir"))
+            if (protocol.equals("rir")) {
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
                                 + ": rir cannot be used with other protocols",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
 
             //
             // Get the protocol address
@@ -159,12 +165,13 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
             }
         }
 
-        if (profiles.size() == 0)
+        if (profiles.size() == 0) {
             throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
                     .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
                     + ": no valid protocol addresses",
                     org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         org.omg.IOP.IOR ior = new org.omg.IOP.IOR();
         ior.type_id = "";
@@ -201,19 +208,21 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
         // Although an object key is optional according to the specification,
         // we consider this to be an invalid URL
         //
-        if (slash == -1)
+        if (slash == -1) {
             throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
                     .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorOther)
                     + ": no key specified", org.apache.yoko.orb.OB.MinorCodes.MinorOther,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         int addrStart = 9; // skip "corbaloc:"
         int addrEnd = slash - 1;
-        if (addrStart == slash)
+        if (addrStart == slash) {
             throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
                     .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress)
                     + ": no protocol address", org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         String key = url.substring(slash + 1);
         return parse_addresses(url, addrStart, addrEnd, key);
@@ -232,9 +241,9 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
     public void add_protocol(CorbalocProtocol protocol)
             throws org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists {
         String name = protocol.name();
-        if (protocols_.containsKey(name))
+        if (protocols_.containsKey(name)) {
             throw new org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists();
-
+        }
         protocols_.put(name, protocol);
     }
 

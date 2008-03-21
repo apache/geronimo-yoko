@@ -17,7 +17,12 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public final class ObjectFactory {
+    static final Logger logger = Logger.getLogger(ObjectFactory.class.getName());
+    
     private boolean destroy_; // True if destroy() was called
 
     ORBInstance orbInstance_; // The ORBInstance object
@@ -70,18 +75,22 @@ public final class ObjectFactory {
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         //
         // Check for nil object reference
         //
-        if (ior.type_id.length() == 0 && ior.profiles.length == 0)
+        if (ior.type_id.length() == 0 && ior.profiles.length == 0) {
             return null;
+        }
 
+        logger.fine("Creating an object of type " + ior.type_id); 
+        
         //
         // Create new delegate, set policies and change delegate
         //
@@ -93,6 +102,7 @@ public final class ObjectFactory {
         // Create new object, set the delegate and return
         //
         org.omg.CORBA.portable.ObjectImpl obj;
+        
         if(ior.type_id.startsWith("RMI")) {
         	obj = new org.apache.yoko.orb.CORBA.StubForRemote();
         }
@@ -104,6 +114,7 @@ public final class ObjectFactory {
     }
 
     public org.omg.CORBA.Object stringToObject(String ior) {
+        logger.fine("Creating an object from " + ior); 
         return orbInstance_.getURLRegistry().parse_url(ior);
     }
 

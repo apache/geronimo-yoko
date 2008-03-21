@@ -17,7 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public final class GIOPConnectionThreaded extends GIOPConnection {
+    static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
     // ----------------------------------------------------------------
     // Inner helper classes
     // ----------------------------------------------------------------
@@ -391,6 +395,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // called from a receiver thread to perform a reception
     //
     public void execReceive() {
+        
+        logger.fine("Receiving incoming message " + this); 
         GIOPIncomingMessage inMsg = new GIOPIncomingMessage(orbInstance_);
         org.apache.yoko.orb.OCI.Buffer buf = null;
 
@@ -405,6 +411,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // Receive header, blocking, detect connection loss
             //
             try {
+                logger.fine("Reading message header"); 
                 transport_.receive(buf, true);
                 Assert._OB_assert(buf.is_full());
             } catch (org.omg.CORBA.SystemException ex) {
@@ -417,6 +424,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             //
             try {
                 inMsg.extractHeader(buf);
+                logger.fine("Header received for message of size " + inMsg.size()); 
                 buf.realloc(12 + inMsg.size());
             } catch (org.omg.CORBA.SystemException ex) {
                 processException(State.Error, ex, false);
@@ -428,12 +436,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // Receive body, blocking
                 //
                 try {
+                    logger.fine("Receiving message body of size " + inMsg.size()); 
                     transport_.receive(buf, true);
                     Assert._OB_assert(buf.is_full());
                 } catch (org.omg.CORBA.SystemException ex) {
                     processException(State.Closed, ex, false);
                     break;
                 }
+                logger.fine("Message body received "); 
             }
 
             //
@@ -464,8 +474,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 org.apache.yoko.orb.OCI.Buffer bufCopy = buf;
                 buf = null;
-                if (inMsg.consumeBuffer(bufCopy) == true)
+                if (inMsg.consumeBuffer(bufCopy) == true) {
                     upcall = processMessage(inMsg);
+                }
             } catch (org.omg.CORBA.SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
@@ -476,6 +487,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // a fragment or error, so we can proceed to invoke it
             // 
             if (upcall != null) {
+                logger.fine("Processing message using upcall " + upcall.getClass().getName()); 
                 // 
                 // in the BiDir case, this upcall could result in a
                 // nested call back and forth. This requires a new
@@ -543,9 +555,10 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // client-side send method (from DowncallEmitter)
     //
     public boolean send(Downcall down, boolean block) {
-        Assert
-                ._OB_assert(transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly);
+        Assert._OB_assert(transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly);
         Assert._OB_assert(down.unsent() == true);
+        
+        logger.fine("Sending a request with Downcall of type " + down.getClass().getName()); 
 
         //
         // if we send off a message in the loop, this var might help us
@@ -566,8 +579,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             //
             // make the downcall thread-safe
             //
-            if (down.responseExpected())
+            if (down.responseExpected()) {
                 down.initStateMonitor();
+            }
 
             // 
             // buffer the request
@@ -577,8 +591,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             //
             // check the sent status while we're locked
             //
-            if ((properties_ & Property.RequestSent) != 0)
+            if ((properties_ & Property.RequestSent) != 0) {
                 msgSentMarked = true;
+            }
         }
 
         //
@@ -631,8 +646,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                             // 
                             // Timeout?
                             // 
-                            if (!buf.is_full())
+                            if (!buf.is_full()) {
                                 throw new org.omg.CORBA.NO_RESPONSE();
+                            }
                         }
                     }
                 } catch (org.omg.CORBA.SystemException ex) {
@@ -703,6 +719,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             }
         }
 
+        logger.fine(" Request send completed with Downcall of type " + down.getClass().getName()); 
         return !down.responseExpected();
     }
 
@@ -710,11 +727,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // client-side receive method (from DowncallEmitter)
     //
     public boolean receive(Downcall down, boolean block) {
+        logger.fine("Receiving response with Downcall of type " + down.getClass().getName()); 
         //
         // Try to receive the reply
         //
         try {
-            return down.waitUntilCompleted(block);
+            boolean result = down.waitUntilCompleted(block);
+            logger.fine("Completed eceiving response with Downcall of type " + down.getClass().getName()); 
+            return result; 
         } catch (org.omg.CORBA.SystemException ex) {
             processException(State.Closed, ex, false);
             return true;

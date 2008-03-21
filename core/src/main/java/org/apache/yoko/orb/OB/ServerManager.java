@@ -17,7 +17,12 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public final class ServerManager {
+    static final Logger logger = Logger.getLogger(ServerManager.class.getName());
+    
     private boolean destroy_; // if destroy() was called
 
     private CollocatedServer collocatedServer_; // The collocated server
@@ -82,15 +87,19 @@ public final class ServerManager {
     }
 
     public synchronized void hold() {
+        logger.fine("Holding all servers"); 
         java.util.Enumeration e = allServers_.elements();
-        while (e.hasMoreElements())
+        while (e.hasMoreElements()) {
             ((Server) e.nextElement()).hold();
+        }
     }
 
     public synchronized void activate() {
+        logger.fine("Activating all servers"); 
         java.util.Enumeration e = allServers_.elements();
-        while (e.hasMoreElements())
+        while (e.hasMoreElements()) {
             ((Server) e.nextElement()).activate();
+        }
     }
 
     public synchronized CollocatedServer getCollocatedServer() {
@@ -101,10 +110,9 @@ public final class ServerManager {
         org.apache.yoko.orb.OB.Server[] servers = new org.apache.yoko.orb.OB.Server[allServers_
                 .size()];
 
-        for (int i = 0; i < allServers_.size(); i++)
-            servers[i] = (org.apache.yoko.orb.OB.Server) allServers_
-                    .elementAt(i);
-
+        for (int i = 0; i < allServers_.size(); i++) {
+            servers[i] = (org.apache.yoko.orb.OB.Server) allServers_.elementAt(i);
+        }
         return servers;
     }
 

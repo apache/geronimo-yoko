@@ -17,7 +17,9 @@
 
 package org.apache.yoko.orb.OBPortableServer;
  
-import org.apache.yoko.orb.OB.Logger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.orb.OB.IORUtil;
 
 //
@@ -29,6 +31,7 @@ import org.apache.yoko.orb.OB.IORUtil;
 //
 final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OB.OAInterface {
+    static final Logger logger = Logger.getLogger(POAOAInterface_impl.class.getName());
     //
     // The ORBInstance
     //
@@ -72,26 +75,27 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
             String op, org.apache.yoko.orb.CORBA.InputStream in,
             org.omg.IOP.ServiceContext[] requestSCL) {
         org.apache.yoko.orb.OB.Upcall upcall = null;
+        logger.fine("Creating upcall for operation " + op); 
         try {
             //
             // If discarding then throw a TRANSIENT exception
             //
-            if (discard_)
+            if (discard_) {
                 throw new org.omg.CORBA.TRANSIENT(
                         "Requests are being discarded", 0,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
 
             org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData();
-            if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(
-                    profileInfo.key, data)) {
+            if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(profileInfo.key, data)) {
                 while (true) {
                     //
                     // Locate the POA. This may also throw a TRANSIENT
                     // exception if the POA manager is discarding.
                     //
-                    org.omg.PortableServer.POA poa = poaManager_
-                            ._OB_locatePOA(data);
+                    org.omg.PortableServer.POA poa = poaManager_._OB_locatePOA(data);
                     if (poa != null) {
+                        logger.fine("Unable to locate POA " + data + " using POAManager " + poaManager_.get_id()); 
                         POA_impl poaImpl = (POA_impl) poa;
                         upcall = poaImpl._OB_createUpcall(data.oid,
                                 upcallReturn, profileInfo, transportInfo,
@@ -101,20 +105,22 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
                         // then we should retry since that means that the
                         // POA is being destroyed
                         //
-                        if (upcall == null)
+                        if (upcall == null) {
                             continue;
+                        }
                     }
                     break;
                 }
             } else if (upcallReturn != null) {
+                logger.fine("Error parsing object key data"); 
                 //
                 // Check to see if the BootManager knows of a reference
                 // for the ObjectKey. If so, forward the request.
                 //
-                org.omg.IOP.IOR ior = bootManagerImpl_
-                        ._OB_locate(profileInfo.key);
-                if (ior != null)
+                org.omg.IOP.IOR ior = bootManagerImpl_._OB_locate(profileInfo.key);
+                if (ior != null) {
                     throw new org.apache.yoko.orb.OB.LocationForward(ior, false);
+                }
             }
             //
             // If no upcall has been created then the object simply
@@ -128,23 +134,26 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
                     upcall.preUnmarshal();
                     upcall.postUnmarshal();
                     upcall.postinvoke();
-                    org.omg.CORBA.portable.OutputStream out = upcall
-                            .preMarshal();
+                    org.omg.CORBA.portable.OutputStream out = upcall.preMarshal();
                     out.write_boolean(true);
                     upcall.postMarshal();
-                } else
+                } 
+                else {
                     throw new org.omg.CORBA.OBJECT_NOT_EXIST(
                             org.apache.yoko.orb.OB.MinorCodes
                                     .describeObjectNotExist(org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch),
                             org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch,
                             org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                }
             }
         } catch (org.omg.CORBA.SystemException ex) {
+            logger.log(Level.FINE, "System exception creating upcall", ex); 
             upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
                     upcallReturn, profileInfo, transportInfo, requestId, op,
                     in, requestSCL);
             upcall.setSystemException(ex);
         } catch (org.apache.yoko.orb.OB.LocationForward ex) {
+            logger.log(Level.FINE, "Location forward request creating upcall.", ex); 
             upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
                     upcallReturn, profileInfo, transportInfo, requestId, op,
                     in, requestSCL);
@@ -157,15 +166,11 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
 
     public int findByKey(byte[] key, org.omg.IOP.IORHolder ior) {
         org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData();
-        Logger logger = orbInstance_.getLogger();
         if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(key, data)) {
             try {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Locate request for object key " + key);  
-                }
+                logger.fine("Locate request for object key " + data);  
                 
-                org.omg.PortableServer.POA poa = poaManager_
-                        ._OB_locatePOA(data);
+                org.omg.PortableServer.POA poa = poaManager_._OB_locatePOA(data);
                 if (poa != null) {
                     POA_impl poaImpl = (POA_impl) poa;
                     poaImpl._OB_locateServant(data.oid);
@@ -182,12 +187,11 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
             // Check to see if the BootManager knows of a reference
             // for the ObjectKey.
             //
-            if (logger.isDebugEnabled()) {
-                logger.debug("Checking boot manager for object with key " + IORUtil.format_octets(key));  
-            }
+            logger.fine("Checking boot manager for object with key " + data);  
             ior.value = bootManagerImpl_._OB_locate(key);
-            if (ior.value != null)
+            if (ior.value != null) {
                 return org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD;
+            }
         }
         return org.apache.yoko.orb.OB.OAInterface.UNKNOWN_OBJECT;
     }

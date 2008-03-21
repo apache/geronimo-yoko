@@ -109,6 +109,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
             logger.fine("Accepting connection for host=" + localAddress_ + ", port=" + port_);
             socket = socket_.accept();
+            logger.fine("Received inbound connection on socket " + socket);
         } catch (java.io.InterruptedIOException ex) {
             if (!block)
                 return null; // Timeout
@@ -411,9 +412,10 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq = new org.apache.yoko.orb.OCI.ProfileInfoSeqHolder();
         profileInfoSeq.value = new org.apache.yoko.orb.OCI.ProfileInfo[0];
 
-        for (int i = 0; i < hosts_.length; i++)
+        for (int i = 0; i < hosts_.length; i++) {
             Util.extractAllProfileInfos(ior, profileInfoSeq, true, hosts_[i],
                     port_, true);
+        }
 
         return profileInfoSeq.value;
     }
@@ -429,15 +431,13 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
     public Acceptor_impl(String[] hosts, boolean multiProfile, int port,
             int backlog, boolean keepAlive, ConnectionHelper helper, ListenerMap lm) {
-        // System.out.println("Acceptor_impl");
-
         hosts_ = hosts;
         multiProfile_ = multiProfile;
         keepAlive_ = keepAlive;
         connectionHelper_ = helper;
         info_ = new AcceptorInfo_impl(this);
         listenMap_ = lm;
-
+        
         if (backlog == 0)
             backlog = 50; // 50 is the JDK's default value
 
@@ -469,6 +469,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
             // the operating system.
             //
             port_ = socket_.getLocalPort();
+            logger.fine("Acceptor created using socket " + socket_); 
         } catch (java.net.BindException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port_, ex);
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
@@ -535,7 +536,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
             // the operating system.
             //
             port_ = socket_.getLocalPort();
-            logger.fine("Created acceptor socket for port=" + port_ + " localAddress=" + localAddress_); 
+            logger.fine("Acceptor created using socket " + socket_); 
         } catch (java.net.BindException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
@@ -577,5 +578,9 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         }
 
         super.finalize();
+    }
+    
+    public String toString() {
+        return "Acceptor listening on " + socket_; 
     }
 }

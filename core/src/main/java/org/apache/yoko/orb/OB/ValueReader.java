@@ -27,6 +27,7 @@ import javax.rmi.CORBA.ValueHandler;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.StreamableValue;
 import org.omg.SendingContext.CodeBase;
 
 final public class ValueReader {
@@ -693,15 +694,17 @@ final public class ValueReader {
     // Java only
     //
     private void unmarshalValueState(java.io.Serializable v) {
-        if (v instanceof org.omg.CORBA.portable.StreamableValue)
+        if (v instanceof org.omg.CORBA.portable.StreamableValue) {
             ((org.omg.CORBA.portable.StreamableValue) v)._read(in_);
+        }
         else if (v instanceof org.omg.CORBA.CustomMarshal) {
             org.omg.CORBA.DataInputStream dis = new org.apache.yoko.orb.CORBA.DataInputStream(
                     in_);
             ((org.omg.CORBA.CustomMarshal) v).unmarshal(dis);
-        } else
+        } else {
             throw new org.omg.CORBA.MARSHAL("Valuetype does not implement "
                     + "StreamableValue or " + "CustomMarshal");
+        }
     }
 
     private java.io.Serializable readIndirection(CreationStrategy strategy) {

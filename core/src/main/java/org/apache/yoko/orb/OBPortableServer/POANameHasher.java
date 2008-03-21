@@ -49,4 +49,13 @@ final class POANameHasher {
 
         return true;
     }
+    
+    public String toString() {
+        StringBuffer buf = new StringBuffer(); 
+        for (int i = 0; i < poaId_.length; i++) {
+            buf.append('/'); 
+            buf.append(poaId_[i]); 
+        }
+        return buf.toString(); 
+    }
 }

@@ -17,10 +17,14 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.orb.OB.DispatchRequest;
 import org.apache.yoko.orb.OB.DispatchStrategy;
 
 public class Upcall {
+    static final Logger logger = Logger.getLogger(Upcall.class.getName());
     //
     // The ORBInstance object
     //
@@ -132,6 +136,7 @@ public class Upcall {
 
         userEx_ = false; // Java only
 
+        logger.fine("Creating upcall request for operation " + op + " and request id " + requestId); 
         in._OB_ORBInstance(orbInstance_);
     }
 
@@ -356,9 +361,12 @@ public class Upcall {
         // In this case do nothing.
         //
         try {
-            if (dispatchStrategy_ != null)
+            if (dispatchStrategy_ != null) {
+                logger.fine("Dispatching request " + reqId_ + " with dispatch strategy " + dispatchStrategy_.getClass().getName()); 
                 dispatchStrategy_.dispatch(dispatchRequest_);
+            }
         } catch (org.omg.CORBA.SystemException ex) {
+            logger.log(Level.FINE, "Exception received dispatching request", ex); 
             setSystemException(ex);
         }
     }

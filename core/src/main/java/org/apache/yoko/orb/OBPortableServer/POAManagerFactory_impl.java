@@ -409,6 +409,9 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
                 //
                 // Ignore -- the POAManager isn't valid anymore
                 //
+            
+            } catch (org.omg.CORBA.OBJECT_NOT_EXIST ex) {
+                // also ignored.  At this point, we just want to determine if there is a local version. 
             }
         }
 

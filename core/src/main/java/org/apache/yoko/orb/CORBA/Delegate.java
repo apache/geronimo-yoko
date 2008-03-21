@@ -16,14 +16,18 @@
  */
 
 package org.apache.yoko.orb.CORBA;
+ 
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.omg.CORBA.INV_POLICY;
+import org.omg.CORBA.LocalObject;
 
 //
 // Delegate is equivalent to OBCORBA::Object in C++
 //
 public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
+    static final Logger logger = Logger.getLogger(Delegate.class.getName());
     //
     // The ORBInstance object
     //
@@ -76,10 +80,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         if (retryTSS_ != null) {
             Thread t = Thread.currentThread();
             RetryInfo info = (RetryInfo) retryTSS_.remove(t);
-            if (info != null)
+            if (info != null) {
                 return info;
+            }
         }
-
         return new RetryInfo();
     }
 
@@ -87,8 +91,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     // Set retry information for current thread in TSS
     //
     private synchronized void setRetry(RetryInfo info) {
-        if (retryTSS_ == null)
+        if (retryTSS_ == null) {
             retryTSS_ = new java.util.Hashtable(7);
+        }
 
         Thread t = Thread.currentThread();
         retryTSS_.put(t, info);
@@ -130,15 +135,15 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         } catch (org.omg.CORBA.TRANSIENT e) {
         } catch (org.omg.CORBA.NO_RESPONSE e) {
         } catch (org.omg.CORBA.SystemException e) {
-            org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
             logger.log(java.util.logging.Level.FINE, "System exception during operation", ex); 
             if (coreTraceLevels.traceRetry() > 0) {
                 String msg = "retry only upon COMM_FAILURE, TRANSIENT "
                         + "and NO_RESPONSE exceptions";
                 String exMsg = ex.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry: " + msg);
             }
             throw ex;
         }
@@ -170,10 +175,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             if (coreTraceLevels.traceRetry() > 0) {
                 String msg = "retry only upon locally raised exceptions\n";
                 String exMsg = ex.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry " + msg);
             }
             throw ex;
         }
@@ -186,10 +191,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 String msg = "can't try again, because I "
                         + "tried maximum times already";
                 String exMsg = ex.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry " + msg);
             }
             throw ex;
         }
@@ -202,10 +207,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 String msg = "can't try again because the "
                         + "RETRY_NEVER policy is set";
                 String exMsg = ex.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry " + msg);
             }
             throw ex;
         }
@@ -221,10 +226,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                         + "RETRY_STRICT policy is set\n"
                         + "and completion status is not " + "COMPLETED_NO";
                 String exMsg = ex.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry " + msg);
             }
             throw ex;
         }
@@ -237,8 +242,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             if (coreTraceLevels.traceRetry() > 0) {
                 String msg = "next attempt in " + policies_.retry.interval
                         + " milliseconds";
-                org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-                logger.trace("retry", msg);
+                logger.fine("retry " + msg);
             }
             try {
                 Thread.sleep(policies_.retry.interval);
@@ -252,9 +256,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // DirectServant must be explicitly destroyed in order to
         // make it eligible for garbage collection
         //
-        if (directServant_ != null)
+        if (directServant_ != null) {
             directServant_.destroy();
-
+        }
         super.finalize();
     }
 
@@ -273,8 +277,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 try {
                     out = request(self, "_interface", true);
                     in = invoke(self, out);
-                    org.omg.CORBA.InterfaceDef def = org.omg.CORBA.InterfaceDefHelper
-                            .read(in);
+                    org.omg.CORBA.InterfaceDef def = org.omg.CORBA.InterfaceDefHelper.read(in);
                     return def;
                 } catch (org.omg.CORBA.portable.ApplicationException ex) {
                     org.apache.yoko.orb.OB.Assert._OB_assert(ex);
@@ -313,8 +316,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         //
         // Check IDL:omg.org/CORBA/Object:1.0
         //
-        if (repository_id.equals("IDL:omg.org/CORBA/Object:1.0"))
+        if (repository_id.equals("IDL:omg.org/CORBA/Object:1.0")) {
             return true;
+        }
 
         //
         // Check all other ids
@@ -322,17 +326,19 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         org.omg.CORBA.portable.ObjectImpl o = (org.omg.CORBA.portable.ObjectImpl) self;
 
         String[] ids = o._ids();
-        for (int i = 0; i < ids.length; i++)
-            if (repository_id.equals(ids[i]))
+        for (int i = 0; i < ids.length; i++) {
+            if (repository_id.equals(ids[i])) {
                 return true;
+            }
+        }
 
         //
         // Check the type_id in the IOR and the original IOR
         //
         synchronized (this) {
-            if (repository_id.equals(IOR_.type_id)
-                    || repository_id.equals(origIOR_.type_id))
+            if (repository_id.equals(IOR_.type_id) || repository_id.equals(origIOR_.type_id)) {
                 return true;
+            }
         }
 
         //
@@ -361,8 +367,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             } else {
                 org.omg.CORBA.portable.ServantObject so = servant_preinvoke(
                         self, "_is_a", null);
-                if (so == null)
+                if (so == null) {
                     continue;
+                }
                 try {
                     org.omg.PortableServer.Servant servant = (org.omg.PortableServer.Servant) so.servant;
                     return servant._is_a(repository_id);
@@ -390,10 +397,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                     releaseReply(self, in);
                 }
             } else {
-                org.omg.CORBA.portable.ServantObject so = servant_preinvoke(
-                        self, "_non_existent", null);
-                if (so == null)
+                org.omg.CORBA.portable.ServantObject so = servant_preinvoke(self, "_non_existent", null);
+                if (so == null) {
                     continue;
+                }
                 try {
                     org.omg.PortableServer.Servant servant = (org.omg.PortableServer.Servant) so.servant;
                     return servant._non_existent();
@@ -409,37 +416,38 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         //
         // Check for nil reference
         //
-        if (rhs == null)
+        if (rhs == null) {
             return false;
+        }
 
         //
         // Direct object reference comparison
         //
-        if (self == rhs)
+        if (self == rhs) {
             return true;
+        }
 
         //
         // Locality-constrained objects are never equivalent if the
         // reference comparisons fail
         //
-        if (self instanceof org.omg.CORBA.LocalObject
-                || rhs instanceof org.omg.CORBA.LocalObject)
+        if (self instanceof org.omg.CORBA.LocalObject || rhs instanceof org.omg.CORBA.LocalObject) {
             return false;
+        }
 
         //
         // Direct delegate reference comparison
         //
-        Delegate p = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) rhs)
-                ._get_delegate();
-        if (p == this)
+        Delegate p = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) rhs)._get_delegate();
+        if (p == this) {
             return true;
+        }
 
         //
         // Ask the client manager
         //
         synchronized (this) {
-            org.apache.yoko.orb.OB.ClientManager clientManager = orbInstance_
-                    .getClientManager();
+            org.apache.yoko.orb.OB.ClientManager clientManager = orbInstance_.getClientManager();
             return clientManager.equivalent(origIOR_, p._OB_origIOR());
         }
     }
@@ -449,8 +457,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // Ask the client manager
         //
         synchronized (this) {
-            org.apache.yoko.orb.OB.ClientManager clientManager = orbInstance_
-                    .getClientManager();
+            org.apache.yoko.orb.OB.ClientManager clientManager = orbInstance_.getClientManager();
             return clientManager.hash(origIOR_, maximum);
         }
     }
@@ -469,8 +476,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             org.omg.CORBA.NVList arg_list, org.omg.CORBA.NamedValue result,
             org.omg.CORBA.ExceptionList excepts,
             org.omg.CORBA.ContextList contexts) {
-        Request request = new Request(self, operation, arg_list, result,
-                excepts, contexts);
+        Request request = new Request(self, operation, arg_list, result, excepts, contexts);
         request.ctx(ctx);
 
         return request;
@@ -536,16 +542,15 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         RetryInfo info = (RetryInfo) obout._OB_delegateContext();
         try {
             org.apache.yoko.orb.OB.DowncallStub downcallStub = _OB_getDowncallStub(self);
-            org.omg.CORBA.portable.InputStream in = downcallStub.invoke(self,
-                    obout);
+            org.omg.CORBA.portable.InputStream in = downcallStub.invoke(self, obout);
             return in;
         } catch (org.omg.CORBA.portable.ApplicationException ex) {
-            org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
             logger.log(java.util.logging.Level.FINE, "Received ApplicationException for request", ex); 
             throw ex;
         } catch (org.omg.CORBA.portable.RemarshalException ex) {
             // fall through
         } catch (Exception ex) {
+            logger.log(java.util.logging.Level.FINE, "Received unexpected exception for request", ex); 
             _OB_handleException(self, ex, info, false, true);
         }
 
@@ -583,8 +588,8 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // Check for duplicate policy type
         //
         if (np.length > 1) {
-            for (int i = 0; i < np.length - 1; i++)
-                for (int j = i + 1; j < np.length; j++)
+            for (int i = 0; i < np.length - 1; i++) {
+                for (int j = i + 1; j < np.length; j++) {
                     if (np[i].policy_type() == np[j].policy_type()) {
                         throw new org.omg.CORBA.BAD_PARAM(
                                 org.apache.yoko.orb.OB.MinorCodes
@@ -592,6 +597,8 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                                 org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType,
                                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
                     }
+                }
+            }
         }
 
         //
@@ -605,24 +612,27 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         } else // ADD_OVERRIDE
         {
             java.util.Vector v = new java.util.Vector();
-            for (int i = 0; i < policies_.value.length; i++)
+            for (int i = 0; i < policies_.value.length; i++) {
                 v.addElement(policies_.value[i]);
+            }
 
             for (int i = 0; i < np.length; i++) {
                 int len = v.size();
                 int j;
 
                 for (j = 0; j < len; j++) {
-                    org.omg.CORBA.Policy policy = (org.omg.CORBA.Policy) v
-                            .elementAt(j);
-                    if (policy.policy_type() == np[i].policy_type())
+                    org.omg.CORBA.Policy policy = (org.omg.CORBA.Policy) v.elementAt(j);
+                    if (policy.policy_type() == np[i].policy_type()) {
                         break;
+                    }
                 }
 
-                if (j < len)
+                if (j < len) {
                     v.setElementAt(np[i], j);
-                else
+                }
+                else {
                     v.addElement(np[i]);
+                }
             }
 
             newPolicies = new org.omg.CORBA.Policy[v.size()];
@@ -652,16 +662,16 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     public boolean is_local(org.omg.CORBA.Object self) {
         if (checkLocal_) {
             synchronized (directServantMutex_) {
-                if (directServant_ != null && !directServant_.deactivated())
+                if (directServant_ != null && !directServant_.deactivated()) {
                     return true;
+                }
 
                 org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory = orbInstance_
                         .getPOAManagerFactory();
                 org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl factory = (org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl) pmFactory;
                 while (true) {
                     try {
-                        directServant_ = factory._OB_getDirectServant(IOR_,
-                                policies_);
+                        directServant_ = factory._OB_getDirectServant(IOR_, policies_);
                         break;
                     } catch (org.apache.yoko.orb.OB.LocationForward ex) {
                         synchronized (this) {
@@ -669,8 +679,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                             // Change the IOR
                             //
                             IOR_ = ex.ior;
-                            if (ex.perm)
+                            if (ex.perm) {
                                 origIOR_ = ex.ior;
+                            }
 
                             //
                             // Clear the downcall stub
@@ -696,8 +707,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                     if (directServant_.servant.getClass().getClassLoader() == self
                             .getClass().getClassLoader()) {
                         getRetry();
-                        if (!directServant_.locate_request())
+                        if (!directServant_.locate_request()) {
                             throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+                        }
                         return true;
                     }
                 }
@@ -708,12 +720,12 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 checkLocal_ = false;
             }
         }
-
         return false;
     }
 
     public org.omg.CORBA.portable.ServantObject servant_preinvoke(
-            org.omg.CORBA.Object self, String operation, Class expectedType) {
+            org.omg.CORBA.Object self, String operation, Class expectedType)  
+  {  
         org.omg.CORBA.portable.ServantObject result = null;
 
         org.apache.yoko.orb.OBPortableServer.DirectServant ds = directServant_;
@@ -761,28 +773,27 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         //
         if (types.length == 0) {
             org.omg.CORBA.Policy[] all = new org.omg.CORBA.Policy[policies_.value.length];
-            System
-                    .arraycopy(policies_.value, 0, all, 0,
-                            policies_.value.length);
+            System.arraycopy(policies_.value, 0, all, 0, policies_.value.length);
 
             return all;
         }
 
         java.util.Vector policies = new java.util.Vector();
 
-        for (int i = 0; i < types.length; i++)
-            for (int j = 0; j < policies_.value.length; j++)
-                if (policies_.value[j].policy_type() == types[i])
+        for (int i = 0; i < types.length; i++) {
+            for (int j = 0; j < policies_.value.length; j++) {
+                if (policies_.value[j].policy_type() == types[i]) {
                     policies.addElement(policies_.value[j]);
+                }
+            }
+        }
 
-        org.omg.CORBA.Policy[] result = new org.omg.CORBA.Policy[policies
-                .size()];
+        org.omg.CORBA.Policy[] result = new org.omg.CORBA.Policy[policies.size()];
         policies.copyInto(result);
         return result;
     }
 
-    public org.omg.CORBA.Policy get_client_policy(org.omg.CORBA.Object self,
-            int type) {
+    public org.omg.CORBA.Policy get_client_policy(org.omg.CORBA.Object self, int type) {
         //
         // TODO: Implement
         //
@@ -825,8 +836,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     public org.apache.yoko.orb.OCI.TransportInfo get_oci_transport_info() {
-        if (is_local(null))
+        if (is_local(null)) {
             return null;
+        }
 
         RetryInfo info = new RetryInfo();
         while (true) {
@@ -886,10 +898,11 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     public org.omg.CORBA.Policy _OB_getPolicy(int policy_type) {
-        for (int i = 0; i < policies_.value.length; i++)
-            if (policies_.value[i].policy_type() == policy_type)
+        for (int i = 0; i < policies_.value.length; i++) {
+            if (policies_.value[i].policy_type() == policy_type) {
                 return policies_.value[i];
-
+            }
+        }
         return null;
     }
 
@@ -901,7 +914,6 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     void _OB_handleException(org.omg.CORBA.Object self, Exception ex,
             RetryInfo info, boolean ignoreRebind, boolean useTSS) {
         
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
         try {
             throw ex;
         } catch (org.apache.yoko.orb.OB.LocationForward e) {
@@ -918,7 +930,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 if (policies_.rebindMode == org.omg.Messaging.NO_RECONNECT.value
                         && !ignoreRebind) {
                     if (coreTraceLevels.traceRetry() > 0) {
-                        logger.trace("retry", "can't try again, because "
+                        logger.fine("retry: can't try again, because "
                                 + "NO_RECONNECT prevents a transparent "
                                 + "location forward");
                     }
@@ -934,8 +946,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 info.hop++;
                 if (info.hop > 10) {
                     if (coreTraceLevels.traceRetry() > 0) {
-                        logger.trace("retry",
-                                "location forward hop count exceeded");
+                        logger.fine("retry: location forward hop count exceeded");
                     }
 
                     throw new org.omg.CORBA.TRANSIENT(
@@ -950,8 +961,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 // Change the IOR
                 //
                 IOR_ = e.ior;
-                if (e.perm)
+                if (e.perm) {
                     origIOR_ = e.ior;
+                }
 
                 //
                 // We need to reget the downcall stub
@@ -964,13 +976,13 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 checkLocal_ = true;
 
                 if (coreTraceLevels.traceRetry() > 0) {
-                    logger.trace("retry", "trying again because of location "
-                            + "forward");
+                    logger.fine("retry:  trying again because of location forward");
                 }
             }
 
-            if (useTSS)
+            if (useTSS) {
                 setRetry(info);
+            }
         } catch (org.apache.yoko.orb.OB.FailureException e) {
             info.retry++;
 
@@ -985,13 +997,15 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 String msg = "trying again (" + info.retry
                         + ") because of failure";
                 String exMsg = e.exception.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry: " + msg);
             }
 
-            if (useTSS)
+            if (useTSS) {
                 setRetry(info);
+            }
         } catch (org.omg.CORBA.TRANSIENT e) {
             info.retry++;
 
@@ -1006,13 +1020,15 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 String msg = "trying again (" + info.retry
                         + ") because server sent a TRANSIENT " + "exception";
                 String exMsg = e.getMessage();
-                if (exMsg != null)
+                if (exMsg != null) {
                     msg += "\n" + exMsg;
-                logger.trace("retry", msg);
+                }
+                logger.fine("retry: " + msg);
             }
 
-            if (useTSS)
+            if (useTSS) {
                 setRetry(info);
+            }
         } catch (org.omg.CORBA.SystemException e) {
             logger.log(java.util.logging.Level.FINE, "Received SystemException", e); 
             throw e;
@@ -1033,19 +1049,18 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
         if (downcallStub_ == null) {
-            downcallStub_ = new org.apache.yoko.orb.OB.DowncallStub(
-                    orbInstance_, IOR_, origIOR_, policies_);
-            if (!downcallStub_.locate_request())
+            downcallStub_ = new org.apache.yoko.orb.OB.DowncallStub(orbInstance_, IOR_, origIOR_, policies_);
+            if (!downcallStub_.locate_request()) {
                 throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            }
         }
-
         return downcallStub_;
     }
 
     public synchronized void _OB_closeConnection(boolean terminate) {
-        if (downcallStub_ == null)
+        if (downcallStub_ == null) {
             return;
-
+        }
         downcallStub_._OB_closeConnection(terminate);
         downcallStub_ = null;
     }

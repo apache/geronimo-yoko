@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,6 +16,9 @@
  */
 
 package org.apache.yoko.orb.OBPortableServer;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OBPortableServer.DISPATCH_STRATEGY_POLICY_ID;
 import org.apache.yoko.orb.OBPortableServer.DispatchStrategyPolicy;
@@ -30,6 +33,7 @@ import org.apache.yoko.orb.OBPortableServer.SynchronizationPolicy;
 import org.apache.yoko.orb.OBPortableServer.SynchronizationPolicyValue;
 
 final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
+    static final Logger logger = Logger.getLogger(POA_impl.class.getName());
     //
     // The ORB
     //
@@ -433,6 +437,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         String orbId = orbInstance_.getOrbId();
         String serverId = orbInstance_.getServerId();
+        logger.fine("POA " + name_ + " activated on ORB " + orbId + " and server " + serverId); 
         if (policies_.lifespanPolicy() == org.omg.PortableServer.LifespanPolicyValue.PERSISTENT)
             adapterTemplate_ = new org.apache.yoko.orb.OBPortableInterceptor.PersistentORT_impl(
                     orbInstance_, serverId, orbId, poaId_, iorTemplate);
@@ -522,6 +527,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         ort_ = null;
         childTemplates_ = new java.util.Vector();
         callAdapterStateChange_ = true;
+        
+        logger.fine("Creating POA " + name + " using manager " + manager.get_id()); 
 
         //
         // Set my POA id
@@ -633,8 +640,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // Has the POA been destroyed?
         //
-        if (poaControl_.getDestroyed())
+        if (poaControl_.getDestroyed()) {
             throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        }
+        
+        logger.fine("POA " + name_ + " creating new POA with name " + adapter); 
 
         //
         // Are the requested policies valid?
@@ -654,8 +664,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // (by calling create_POA again)
         //
         synchronized (children_) {
-            if (children_.containsKey(adapter))
+            if (children_.containsKey(adapter)) {
                 throw new org.omg.PortableServer.POAPackage.AdapterAlreadyExists();
+            }
 
             //
             // If necessary create a new POAManager for this POA
@@ -666,8 +677,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                     org.apache.yoko.orb.OB.InitialServiceManager ism = orbInstance_
                             .getInitialServiceManager();
                     POAManagerFactory factory = POAManagerFactoryHelper
-                            .narrow(ism
-                                    .resolveInitialReferences("POAManagerFactory"));
+                            .narrow(ism.resolveInitialReferences("POAManagerFactory"));
                     org.omg.CORBA.Policy[] emptyPl = new org.omg.CORBA.Policy[0];
                     obmanager = (org.apache.yoko.orb.OBPortableServer.POAManager) factory
                             .create_POAManager(adapter, emptyPl);
@@ -726,8 +736,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             throws org.omg.PortableServer.POAPackage.AdapterNonExistent {
         org.apache.yoko.orb.OB.Assert._OB_assert(adapter != null);
 
-        if (poaControl_.getDestroyed())
+        if (poaControl_.getDestroyed()) {
             throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        }
+        
+        logger.fine("POA " + name_ + " finding POA with name " + adapter); 
 
         boolean check = true;
 

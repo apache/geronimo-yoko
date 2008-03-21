@@ -36,6 +36,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                 Assert._OB_assert(ex);
             }
 
+            logger.fine("Shutting down ORB server listener thread"); 
             //
             // Shutdown the acceptor so that no further connections are
             // accepted
@@ -46,7 +47,6 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             //
             // Accept all connections which might have queued up in the
             // listen() backlog
-            //
             while (true) {
                 org.apache.yoko.orb.OCI.Transport transport = null;
 
@@ -55,8 +55,10 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                 } catch (org.omg.CORBA.SystemException ex) {
                 }
 
-                if (transport == null)
+                if (transport == null) {
+                    logger.fine("Null transport received from a connect"); 
                     break;
+                }
 
                 try {
                     GIOPConnection connection = new GIOPConnectionThreaded(
@@ -91,6 +93,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             org.apache.yoko.orb.OCI.Acceptor acceptor, OAInterface oaInterface) {
         super(orbInstance, acceptor, oaInterface);
 
+        logger.fine("GIOPServer thread started " + this + " using acceptor " + acceptor); 
         try {
             //
             // Retrieve the thread group for the servers
@@ -124,15 +127,19 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
         //
         // Don't do anything if there is no state change
         //
-        if (state_ == state)
+        if (state_ == state) {
             return;
+        }
+        
+        logger.fine("Setting server state to " + state); 
 
         //
         // It is not possible to transition backwards, except if we are
         // in holding state
         //
-        if (state_ != StateHolding && state < state_)
+        if (state_ != StateHolding && state < state_) {
             return;
+        }
 
         switch (state) {
         case StateActive: {
@@ -216,11 +223,13 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                 //
                 while (state_ == StateHolding) {
                     try {
+                        logger.fine("Waiting on an inbound connection because the state is holding.  acceptor=" + acceptor_); 
                         wait();
                     } catch (InterruptedException ex) {
                     }
                 }
 
+                logger.fine("Processing an inbound connection with state=" + state_); 
                 if (transport != null) {
                     try {
                         if (state_ == StateActive) {
@@ -233,6 +242,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             connections_.addElement(connection);
                             connection.setState(GIOPConnection.State.Active);
                         } else {
+                            logger.fine("Processing an inbound connection because state is closed"); 
                             //
                             // If we're closed, we create a new dummy
                             // worker, only in order to set it to
@@ -246,14 +256,15 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             connection.setState(GIOPConnection.State.Closing);
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
-                        String msg = "can't accept connection\n"
-                                + ex.getMessage();
-                        orbInstance_.getLogger().log(java.util.logging.Level.WARNING, msg, ex);
+                        String msg = "can't accept connection\n" + ex.getMessage();
+                        logger.log(java.util.logging.Level.WARNING, msg, ex);
                     }
                 }
 
-                if (state_ == StateClosed)
+                if (state_ == StateClosed) {
+                    logger.fine("Shutting down server thread"); 
                     break;
+                }
             }
         }
     }

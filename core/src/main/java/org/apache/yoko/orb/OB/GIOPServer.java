@@ -17,7 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 final class GIOPServer extends Server {
+    static final Logger logger = Logger.getLogger(GIOPServer.class.getName());
     protected ORBInstance orbInstance_; // The ORB Instance
 
     protected boolean destroy_; // True if destroy() was called
@@ -51,6 +55,8 @@ final class GIOPServer extends Server {
         destroy_ = false;
         acceptor_ = acceptor;
         oaInterface_ = oaInterface;
+        
+        logger.fine("GIOPServer " + System.identityHashCode(this) + " created for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + " identityHash=" + System.identityHashCode(orbInstance_)); 
 
         try {
             switch (concModel_) {
@@ -69,6 +75,7 @@ final class GIOPServer extends Server {
     // Destroy the server
     //
     public void destroy() {
+        logger.fine("Destroying GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
         //
         // Don't destroy twice
         //
@@ -92,6 +99,7 @@ final class GIOPServer extends Server {
     // Hold any new requests that arrive for the Server
     //
     public void hold() {
+        logger.fine("Holding GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
         Assert._OB_assert(!destroy_);
         Assert._OB_assert(starter_ != null);
         starter_.setState(GIOPServerStarter.StateHolding);
@@ -101,6 +109,7 @@ final class GIOPServer extends Server {
     // Dispatch any requests that arrive for the Server
     //
     public void activate() {
+        logger.fine("Activating GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
         Assert._OB_assert(!destroy_);
         Assert._OB_assert(starter_ != null);
         starter_.setState(GIOPServerStarter.StateActive);
