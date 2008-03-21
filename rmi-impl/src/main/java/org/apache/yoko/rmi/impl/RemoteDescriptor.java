@@ -47,8 +47,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
     public RemoteInterfaceDescriptor getRemoteInterface() {
         RemoteInterfaceDescriptor result = super.getRemoteInterface();
-        if (result != null)
+        if (result != null) { 
             return result;
+        }
 
         if (this instanceof RemoteInterfaceDescriptor) {
             result = (RemoteInterfaceDescriptor) this;
@@ -100,8 +101,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
         if (method_map == null) {
             method_map = new java.util.HashMap();
-            for (int i = 0; i < operations.length; i++)
+            for (int i = 0; i < operations.length; i++) {
                 method_map.put(operations[i].getIDLName(), operations[i]);
+            }
         }
 
         return (MethodDescriptor) method_map.get(idl_name);
@@ -114,12 +116,8 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             Iterator it = method_map.keySet().iterator();
             while (it.hasNext()) {
                 String idl_name = (String) it.next();
-                MethodDescriptor desc = (MethodDescriptor) method_map
-                        .get(idl_name);
-
-                logger
-                        .finer("IDL " + idl_name + " -> "
-                                + desc.reflected_method);
+                MethodDescriptor desc = (MethodDescriptor) method_map.get(idl_name);
+                logger.finer("IDL " + idl_name + " -> "+ desc.reflected_method);
             }
         }
     }
@@ -131,9 +129,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
         if (refl_method_map == null) {
             refl_method_map = new java.util.HashMap();
-            for (int i = 0; i < operations.length; i++)
-                refl_method_map.put(operations[i].getReflectedMethod(),
-                        operations[i]);
+            for (int i = 0; i < operations.length; i++) {
+                refl_method_map.put(operations[i].getReflectedMethod(), operations[i]);
+            }
         }
 
         return (MethodDescriptor) refl_method_map.get(refl_method);
@@ -147,15 +145,16 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
     }
 
     public MethodDescriptor[] getMethods() {
-        if (operations == null)
+        if (operations == null) {
             init_methods();
-
+        }
         return operations;
     }
 
     public synchronized void init_methods() {
-        if (operations != null)
+        if (operations != null) {
             return;
+        }
 
         AccessController.doPrivileged(new PrivilegedAction() {
             public Object run() {
@@ -192,8 +191,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
                     method_list.add(op);
                     addMethodOverloading(all_methods, op.getReflectedMethod());
-                    addMethodCaseSensitive(lower_case_names, op
-                            .getReflectedMethod());
+                    addMethodCaseSensitive(lower_case_names, op.getReflectedMethod());
                 }
             }
         }
@@ -224,8 +222,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             String mname = op.getJavaName();
 
             // is there another method that differs only in case?
-            Set same_case_names = (Set) lower_case_names.get(mname
-                    .toLowerCase());
+            Set same_case_names = (Set) lower_case_names.get(mname.toLowerCase());
             if (same_case_names.size() > 1) {
                 op.setCaseSensitive(true);
             }
@@ -245,6 +242,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         method_map = new java.util.HashMap();
         for (int i = 0; i < method_list.size(); i++) {
             MethodDescriptor desc = (MethodDescriptor) method_list.get(i);
+            logger.finer("Adding method " + desc.getJavaName() + " to method map under " + desc.getIDLName()); 
             method_map.put(desc.getIDLName(), desc);
         }
 
@@ -292,8 +290,8 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             throw e;
         }
         for (int j = 0; j < methods.length; j++) {
-            if (isRemoteMethod(methods[j]))
-                result.add(methods[j]);
+            // since this is a remote interface, we need to add everything
+            result.add(methods[j]);
         }
 
         Class[] ifaces = clz.getInterfaces();

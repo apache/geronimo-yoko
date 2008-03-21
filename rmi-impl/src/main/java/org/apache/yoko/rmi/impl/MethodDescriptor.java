@@ -30,8 +30,7 @@ import javax.rmi.CORBA.Util;
 import org.omg.CORBA.ORB;
 
 public final class MethodDescriptor extends ModelElement {
-    static final Logger logger = Logger.getLogger(MethodDescriptor.class
-            .getName());
+    static final Logger logger = Logger.getLogger(MethodDescriptor.class.getName());
 
     /** The refleced method object for this method */
     java.lang.reflect.Method reflected_method;

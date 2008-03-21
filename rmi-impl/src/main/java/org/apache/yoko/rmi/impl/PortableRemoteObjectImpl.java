@@ -276,8 +276,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         Constructor cons = getRMIStubClassConstructor(state, type);
 
         try {
-            javax.rmi.CORBA.Stub result = (javax.rmi.CORBA.Stub) cons
-                    .newInstance(NO_ARG);
+            javax.rmi.CORBA.Stub result = (javax.rmi.CORBA.Stub) cons.newInstance(NO_ARG);
             return result;
         } catch (InstantiationException ex) {
             throw new RuntimeException(
@@ -311,33 +310,36 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
     static Constructor getRMIStubClassConstructor(RMIState state, Class type)
             throws ClassNotFoundException {
+        logger.fine("Requesting stub constructor of class " + type.getName()); 
         Constructor cons = (Constructor) state.stub_map.get(type);
 
         if (cons != null) {
+            logger.fine("Returning cached constructor of class " + cons.getDeclaringClass().getName()); 
             return cons;
         }
 
         TypeRepository repository = state.getTypeRepository();
-        RemoteDescriptor desc = (RemoteDescriptor) repository
-                .getRemoteDescriptor(type);
+        RemoteDescriptor desc = (RemoteDescriptor) repository.getRemoteDescriptor(type);
 
         MethodDescriptor[] mdesc = desc.getMethods();
         MethodDescriptor[] descriptors = new MethodDescriptor[mdesc.length + 1];
         for (int i = 0; i < mdesc.length; i++) {
             descriptors[i] = mdesc[i];
         }
+        
+        logger.finer("TYPE ----> " + type);
+        logger.finer("LOADER --> " + UtilImpl.getClassLoader(type));
+        logger.finer("CONTEXT -> " + getClassLoader());
 
         MethodRef[] methods = new MethodRef[descriptors.length];
 
         for (int i = 0; i < mdesc.length; i++) {
             Method m = descriptors[i].getReflectedMethod();
+            logger.finer("Method ----> " + m);
             methods[i] = new MethodRef(m);
         }
         methods[mdesc.length] = new MethodRef(stub_write_replace);
 
-        logger.finer("TYPE ----> " + type);
-        logger.finer("LOADER --> " + UtilImpl.getClassLoader(type));
-        logger.finer("CONTEXT -> " + getClassLoader());
 
         Class clazz = null;
 

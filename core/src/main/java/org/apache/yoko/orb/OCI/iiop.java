@@ -226,8 +226,9 @@ public class iiop implements PluginInit {
                 str += port;
             }
 
-            if (value == null)
+            if (value == null) {
                 props.put(propName, str);
+            }
             else {
                 //
                 // Append to existing property value
