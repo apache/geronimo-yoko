@@ -85,22 +85,45 @@ public class iiop implements PluginInit {
             java.util.Enumeration keys = props.keys();
             while (keys.hasMoreElements()) {
                 String key = (String) keys.nextElement();
-                if (!key.startsWith("yoko.iiop."))
-                    continue;
-                String value = props.getProperty(key);
+                // we'll recognize and process the some of the 
+                // portable CORBA properties for cross-orb compatibility
+                if (key.startsWith("org.omg.CORBA.")) {
+                    String value = props.getProperty(key);
+                    if (key.equals("org.omg.CORBA.ORBInitialHost")) {
+                        host = value; 
+                        haveArgs = true; 
+                    }
+                    else if (key.equals("org.omg.CORBA.ORBInitialPort")) {
+                        port = value; 
+                        haveArgs = true; 
+                    }
+                    else if (key.equals("org.omg.CORBA.ORBListenEndpoints")) {
+                        // both specified on one property 
+                        int sep = value.indexOf(':'); 
+                        if (sep != -1) {
+                            host = value.substring(0, sep); 
+                            port = value.substring(sep + 1); 
+                            haveArgs = true; 
+                        }
+                    }
+                }
+                else if (key.startsWith("yoko.iiop.")) {
+                    String value = props.getProperty(key);
 
-                if (key.equals("yoko.iiop.host")) {
-                    host = value;
-                    haveArgs = true;
-                } else if (key.equals("yoko.iiop.numeric")) {
-                    numeric = true;
-                    haveArgs = true;
-                } else if (key.equals("yoko.iiop.port")) {
-                    port = value;
-                    haveArgs = true;
-                } else
-                    throw new org.omg.CORBA.INITIALIZE("iiop: unknown "
-                            + "property " + key);
+                    if (key.equals("yoko.iiop.host")) {
+                        host = value;
+                        haveArgs = true;
+                    } else if (key.equals("yoko.iiop.numeric")) {
+                        numeric = true;
+                        haveArgs = true;
+                    } else if (key.equals("yoko.iiop.port")) {
+                        port = value;
+                        haveArgs = true;
+                    } else {
+                        throw new org.omg.CORBA.INITIALIZE("iiop: unknown "
+                                + "property " + key);
+                    }
+                }
             }
         }
 

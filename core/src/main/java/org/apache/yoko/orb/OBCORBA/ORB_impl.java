@@ -1648,24 +1648,28 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         // Load the contents of the configuration file if present
         //
-        if (configFile != null && configFile.length() > 0)
+        if (configFile != null && configFile.length() > 0) {
             loadConfigFile(configFile, properties, logger);
+        }
 
         //
         // Set the default value of the ORB and OA concurrency models if
         // they are not already set
         //
-        if (properties.getProperty("yoko.orb.conc_model") == null)
+        if (properties.getProperty("yoko.orb.conc_model") == null) {
             properties.put("yoko.orb.conc_model", "threaded");
+        }
 
-        if (properties.getProperty("yoko.orb.oa.conc_model") == null)
+        if (properties.getProperty("yoko.orb.oa.conc_model") == null) {
             properties.put("yoko.orb.oa.conc_model", "thread_per_client");
+        }
 
         //
         // set the default number of AMI workers if not already set
         //
-        if (properties.getProperty("yoko.orb.ami_workers") == null)
+        if (properties.getProperty("yoko.orb.ami_workers") == null) {
             properties.put("yoko.orb.ami_workers", "1");
+        }
 
         //
         // Process each argument. Turn each argument into an appropriate
