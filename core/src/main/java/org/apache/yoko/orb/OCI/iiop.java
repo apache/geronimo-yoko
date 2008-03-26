@@ -17,9 +17,13 @@
 
 package org.apache.yoko.orb.OCI;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
 
 public class iiop implements PluginInit {
+    static final Logger logger = Logger.getLogger(iiop.class.getName());
     // default settings for loading the connectionHelper "plugin-to-the-plugin"
     private String connectionHelper = "org.apache.yoko.orb.OCI.IIOP.DefaultConnectionHelper";
     private String helperArgs = "";
@@ -92,10 +96,12 @@ public class iiop implements PluginInit {
                     if (key.equals("org.omg.CORBA.ORBInitialHost")) {
                         host = value; 
                         haveArgs = true; 
+                        logger.fine("Using ORBInitialHost value of " + host); 
                     }
                     else if (key.equals("org.omg.CORBA.ORBInitialPort")) {
                         port = value; 
                         haveArgs = true; 
+                        logger.fine("Using ORBInitialPort value of " + port); 
                     }
                     else if (key.equals("org.omg.CORBA.ORBListenEndpoints")) {
                         // both specified on one property 
@@ -104,6 +110,7 @@ public class iiop implements PluginInit {
                             host = value.substring(0, sep); 
                             port = value.substring(sep + 1); 
                             haveArgs = true; 
+                            logger.fine("Using ORBListenEndpoints values of " + host + "/" + port); 
                         }
                     }
                 }
@@ -113,12 +120,15 @@ public class iiop implements PluginInit {
                     if (key.equals("yoko.iiop.host")) {
                         host = value;
                         haveArgs = true;
+                        logger.fine("Using yoko.iiop.host value of " + host); 
                     } else if (key.equals("yoko.iiop.numeric")) {
                         numeric = true;
                         haveArgs = true;
+                        logger.fine("Using yoko.iiop.numeric value"); 
                     } else if (key.equals("yoko.iiop.port")) {
                         port = value;
                         haveArgs = true;
+                        logger.fine("Using yoko.iiop.port value of " + port); 
                     } else {
                         throw new org.omg.CORBA.INITIALIZE("iiop: unknown "
                                 + "property " + key);
@@ -227,18 +237,17 @@ public class iiop implements PluginInit {
             }
 
             if (value == null) {
+                logger.fine("Setting endpoint property " + propName + " to " + str); 
                 props.put(propName, str);
             }
             else {
                 //
                 // Append to existing property value
                 //
+                logger.fine("Setting endpoint property " + propName + " to " + value + ", " + str); 
                 props.put(propName, value + ", " + str);
             }
         }
-
-
-
 
         //
         // Filter arguments

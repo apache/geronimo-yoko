@@ -332,7 +332,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     public void send(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
         setBlock(block);
         
-        logger.fine("Sending buffer of size " + buf.rest_length() + " to " + " using transport " + this); 
+        logger.fine("Sending buffer of size " + buf.rest_length() + " to " + socket_); 
         
         while (!buf.is_full()) {
             try {
@@ -529,5 +529,9 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             close();
 
         super.finalize();
+    }
+    
+    public String toString() {
+        return "iiop transport using socket " + socket_; 
     }
 }

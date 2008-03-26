@@ -629,8 +629,9 @@ public class Downcall {
         //
         // Yield if non-blocking or blocking with zero timeout
         //
-        if (!block || (block && t == 0))
+        if (!block || (block && t == 0)) {
             Thread.yield();
+        }
 
         //
         // Wait for the desired state, taking the timeout and blocking
@@ -640,8 +641,9 @@ public class Downcall {
         synchronized (stateMonitor_) {
             while (state_ == DowncallStateUnsent
                     || state_ == DowncallStatePending) {
-                if (!block)
+                if (!block) {
                     return false;
+                }
 
                 try {
                     if (t < 0) {
@@ -651,11 +653,12 @@ public class Downcall {
 
                         stateMonitor_.wait(t);
 
-                        if (state_ == oldState)
+                        if (state_ == oldState) {
                             throw new org.omg.CORBA.NO_RESPONSE(
                                     "Timeout during receive",
                                     0,
                                     org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+                        }
                     }
                 } catch (InterruptedException ex) {
                 }

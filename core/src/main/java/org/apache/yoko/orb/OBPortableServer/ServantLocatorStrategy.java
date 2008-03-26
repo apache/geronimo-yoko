@@ -46,13 +46,13 @@ class ServantLocatorStrategy implements ServantManagerStrategy {
         // been set will result in the BAD_INV_ORDER exception being
         // raised.
         //
-        if (servantLocator_ != null)
+        if (servantLocator_ != null) {
             throw new org.omg.CORBA.BAD_INV_ORDER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet),
                     org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+        }
         try {
             servantLocator_ = org.omg.PortableServer.ServantLocatorHelper
                     .narrow(manager);
@@ -113,12 +113,13 @@ class ServantLocatorStrategy implements ServantManagerStrategy {
         // the OBJ_ADAPTER system exception as the result of the
         // request.
         //
-        if (servant == null)
+        if (servant == null) {
             throw new org.omg.CORBA.OBJ_ADAPTER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeObjAdapter(org.apache.yoko.orb.OB.MinorCodes.MinorServantNotFound),
                     org.apache.yoko.orb.OB.MinorCodes.MinorServantNotFound,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         //
         // In Java, the servant needs to be associated with the ORB
@@ -135,9 +136,9 @@ class ServantLocatorStrategy implements ServantManagerStrategy {
         org.omg.PortableServer.ServantLocator locator;
 
         synchronized (this) {
-            if (servantLocator_ == null)
+            if (servantLocator_ == null) {
                 return;
-
+            }
             locator = servantLocator_;
         }
 

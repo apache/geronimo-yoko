@@ -928,11 +928,13 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             org.apache.yoko.orb.OB.Assert._OB_assert(value != null);
 
             if (key.equals("yoko.orb.conc_model")) {
-                if (value.equals("threaded"))
+                if (value.equals("threaded")) {
                     concModel = org.apache.yoko.orb.OB.Client.Threaded;
-                else
+                }
+                else {
                     logger.warning("ORB.init: unknown value for "
                             + "yoko.orb.conc_model: " + value);
+                }
             } else if (key.startsWith("yoko.orb.trace.")) {
                 // Ignore -- handled in CoreTraceLevels
             } else if (key.startsWith("yoko.orb.policy.")) {
@@ -1661,7 +1663,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         }
 
         if (properties.getProperty("yoko.orb.oa.conc_model") == null) {
-            properties.put("yoko.orb.oa.conc_model", "thread_per_client");
+            properties.put("yoko.orb.oa.conc_model", "thread_pool");
         }
 
         //

@@ -16,6 +16,9 @@
  */
 
 package org.apache.yoko.orb.OB;
+ 
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.DispatchRequest;
 import org.apache.yoko.orb.OB.DispatchStrategy;
@@ -142,6 +145,7 @@ class DispatchThreadPool_impl extends org.omg.CORBA.LocalObject implements
 
 public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         implements DispatchStrategyFactory {
+    static final Logger logger = Logger.getLogger(DispatchStrategyFactory.class.getName());
     //
     // A sequence of thread pools. The index in the sequence is the
     // thread pool id.
@@ -177,25 +181,29 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization
         // error if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         //
         // Find the first empty thread pool
         //
         int i;
-        for (i = 0; i < pools_.size(); i++)
-            if (pools_.elementAt(i) == null)
+        for (i = 0; i < pools_.size(); i++) {
+            if (pools_.elementAt(i) == null) {
                 break;
+            }
+        }
 
         //
         // If there is no empty slot then append an empty slot
         //
-        if (i >= pools_.size())
+        if (i >= pools_.size()) {
             pools_.addElement(null);
+        }
 
         //
         // Allocate a new ThreadPool
@@ -211,14 +219,16 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
-        if (id < 0 || id > pools_.size() || pools_.elementAt(id) == null)
+        if (id < 0 || id > pools_.size() || pools_.elementAt(id) == null) {
             throw new InvalidThreadPool();
+        }
 
         //
         // Destroy the ThreadPool
@@ -237,14 +247,16 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
-        if (id < 0 || id > pools_.size() || pools_.elementAt(id) == null)
+        if (id < 0 || id > pools_.size() || pools_.elementAt(id) == null) {
             throw new InvalidThreadPool();
+        }
 
         return new DispatchThreadPool_impl(id, (ThreadPool) pools_
                 .elementAt(id));
@@ -255,12 +267,12 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+        }
         return new DispatchSameThread_impl();
     }
 
@@ -269,12 +281,12 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+        }
         return new DispatchThreadPerRequest_impl();
     }
 
@@ -283,11 +295,12 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_)
+        if (destroy_) {
             throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
                     .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         //
         // Get the ORB properties
@@ -301,9 +314,12 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         String value = properties.getProperty("yoko.orb.oa.conc_model");
 
         if (value != null) {
+            logger.fine("Defined concurrency model is " + value); 
             if (value.equals("threaded") || value.equals("thread_per_client")) {
+                logger.fine("Using same thread dispatch strategy"); 
                 return create_same_thread_strategy();
             } else if (value.equals("thread_per_request")) {
+                logger.fine("Using thread per request dispatch strategy"); 
                 return create_thread_per_request_strategy();
             } else if (value.equals("thread_pool")) {
                 //
@@ -314,13 +330,17 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
                     haveDefaultThreadPool_ = true;
                     value = properties.getProperty("yoko.orb.oa.thread_pool");
                     int nthreads = 0;
-                    if (value != null)
+                    if (value != null) {
                         nthreads = Integer.parseInt(value);
-                    if (nthreads == 0)
+                    }
+                    if (nthreads == 0) {
                         nthreads = 10;
+                    }
+                    logger.fine("Creating a thread pool of size " + nthreads); 
                     defaultThreadPool_ = create_thread_pool(nthreads);
                 }
                 try {
+                    logger.fine("Using a thread pool dispatch strategy"); 
                     return create_thread_pool_strategy(defaultThreadPool_);
                 } catch (InvalidThreadPool ex) {
                     Assert._OB_assert(ex);
@@ -334,9 +354,11 @@ public class DispatchStrategyFactory_impl extends org.omg.CORBA.LocalObject
         }
 
         //
-        // The default
+        // The default is to use a thread-per-request.  Not doing this can cause 
+        // deadlocks, so the single thread 
         //
-        return create_same_thread_strategy();
+        logger.fine("Using default thread per request strategy"); 
+        return create_thread_per_request_strategy();
     }
 
     // ------------------------------------------------------------------

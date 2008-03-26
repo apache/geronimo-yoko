@@ -119,10 +119,12 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // Retrieve the thread group
         //
         ThreadGroup group;
-        if ((properties_ & Property.CreatedByClient) != 0)
+        if ((properties_ & Property.CreatedByClient) != 0) {
             group = orbInstance_.getClientWorkerGroup();
-        else
+        }
+        else {
             group = orbInstance_.getServerWorkerGroup();
+        }
 
         //
         // Start receiver thread
@@ -147,8 +149,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         while (i.hasNext()) {
             Thread thr = (Thread) i.next();
 
-            if (!thr.isAlive())
+            if (!thr.isAlive()) {
                 i.remove();
+            }
         }
     }
 
@@ -366,10 +369,12 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     Thread t = (Thread) i.next();
 
                     try {
-                        if (timeout > 0)
+                        if (timeout > 0) {
                             t.join(timeout);
-                        else
+                        }
+                        else {
                             t.join();
+                        }
                     } catch (InterruptedException ex) {
                         continue;
                     }
@@ -495,8 +500,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // the upcall doesn't return back into a receiving state
                 // until the function processing is done)
                 //
-                boolean haveBidirSCL = transport_.get_info()
-                        .received_bidir_SCL();
+                boolean haveBidirSCL = transport_.get_info().received_bidir_SCL();
 
                 //
                 // if we have received a bidirectional SCL then we need
@@ -516,8 +520,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // then we can quit this thread because we know another
                 // will be ready to take over anyway
                 // 
-                if (haveBidirSCL)
+                if (haveBidirSCL) {
                     break;
+                }
             }
         }
     }
@@ -558,7 +563,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         Assert._OB_assert(transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly);
         Assert._OB_assert(down.unsent() == true);
         
-        logger.fine("Sending a request with Downcall of type " + down.getClass().getName()); 
+        logger.fine("Sending a request with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " on transport " + transport_); 
 
         //
         // if we send off a message in the loop, this var might help us
@@ -572,6 +577,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         synchronized (this) {
             if ((enabledOps_ & AccessOp.Write) == 0) {
+                logger.fine("writing not enabled for this connection"); 
                 down.setFailureException(new org.omg.CORBA.TRANSIENT());
                 return true;
             }
@@ -617,8 +623,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 Downcall nextDown;
 
                 synchronized (this) {
-                    if (!down.unsent())
+                    if (!down.unsent()) {
                         break;
+                    }
 
                     Assert._OB_assert(messageQueue_.hasUnsent());
 
@@ -727,7 +734,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // client-side receive method (from DowncallEmitter)
     //
     public boolean receive(Downcall down, boolean block) {
-        logger.fine("Receiving response with Downcall of type " + down.getClass().getName()); 
+        logger.fine("Receiving response with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " from transport " + transport_); 
         //
         // Try to receive the reply
         //
@@ -748,8 +755,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         ACM_disableIdleMonitor();
 
         try {
-            if (send(down, true))
+            if (send(down, true)) {
                 return true;
+            }
             return receive(down, true);
         } finally {
             ACM_enableIdleMonitor();
@@ -776,8 +784,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         if (transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly) {
             try {
                 synchronized (this) {
-                    if (receiverThreads_.size() > 0)
+                    if (receiverThreads_.size() > 0) {
                         return;
+                    }
 
                     addReceiverThread();
                 }

@@ -471,7 +471,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
             port_ = socket_.getLocalPort();
             logger.fine("Acceptor created using socket " + socket_); 
         } catch (java.net.BindException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port_, ex);
+            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorBind)
@@ -479,7 +479,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                     org.apache.yoko.orb.OB.MinorCodes.MinorBind,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
         } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port_, ex);
+            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
