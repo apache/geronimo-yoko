@@ -1663,7 +1663,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         }
 
         if (properties.getProperty("yoko.orb.oa.conc_model") == null) {
-            properties.put("yoko.orb.oa.conc_model", "thread_pool");
+            properties.put("yoko.orb.oa.conc_model", "thread_per_request");
         }
 
         //
