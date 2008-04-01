@@ -302,6 +302,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Complete the destroy of the POA
     //
     private void completeDestroy() {
+        logger.fine("Completing destroy of POA " + name_ + " using POAContrl " + poaControl_); 
         //
         // Wait for all pending requests to terminate. If the POA has
         // destruction has already completed waitPendingRequests
@@ -362,6 +363,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // Mark the destroy as complete
             //
             poaControl_.markDestroyCompleted();
+            
+            logger.fine("POA " + name_ + " is in a destroyed state"); 
 
             //
             // Release the IORInfo object now
@@ -476,7 +479,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Create the POA control
         //
         poaControl_ = new POAControl();
-
+        
         //
         // Initialize the ServantLocationStategy
         //
@@ -641,7 +644,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Has the POA been destroyed?
         //
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         
         logger.fine("POA " + name_ + " creating new POA with name " + adapter); 
@@ -737,7 +740,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         org.apache.yoko.orb.OB.Assert._OB_assert(adapter != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         
         logger.fine("POA " + name_ + " finding POA with name " + adapter); 
@@ -879,22 +882,25 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // ----------------------------------------------------------------------
 
     public String the_name() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         return name_;
     }
 
     public org.omg.PortableServer.POA the_parent() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         return parent_;
     }
 
     public org.omg.PortableServer.POA[] the_children() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // Since its possible that the children list changes while
@@ -904,21 +910,21 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         java.util.Vector content = new java.util.Vector();
         java.util.Enumeration e = children_.elements();
         while (e.hasMoreElements()) {
-            org.omg.PortableServer.POA child = (org.omg.PortableServer.POA) e
-                    .nextElement();
-            if (child != null)
+            org.omg.PortableServer.POA child = (org.omg.PortableServer.POA) e.nextElement();
+            if (child != null) {
                 content.addElement(child);
+            }
         }
-        org.omg.PortableServer.POA[] children = new org.omg.PortableServer.POA[content
-                .size()];
+        org.omg.PortableServer.POA[] children = new org.omg.PortableServer.POA[content.size()];
         content.copyInto(children);
 
         return children;
     }
 
     public org.omg.PortableServer.POAManager the_POAManager() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         return manager_;
     }
@@ -928,16 +934,18 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public org.omg.PortableServer.AdapterActivator the_activator() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         return adapterActivator_.getAdapterActivator();
     }
 
     public void the_activator(org.omg.PortableServer.AdapterActivator activator) {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
-
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
+        
         adapterActivator_.setAdapterActivator(activator);
     }
 
@@ -975,22 +983,25 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public org.omg.PortableServer.ServantManager get_servant_manager()
             throws org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         ServantManagerStrategy servantManagerStrategy = servantLocationStrategy_
                 .getServantManagerStrategy();
 
-        if (servantManagerStrategy == null)
+        if (servantManagerStrategy == null) {
             throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+        }
 
         return servantManagerStrategy.getServantManager();
     }
 
     public void set_servant_manager(org.omg.PortableServer.ServantManager mgr)
             throws org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         ServantManagerStrategy servantManagerStrategy = servantLocationStrategy_
                 .getServantManagerStrategy();
@@ -1004,8 +1015,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public org.omg.PortableServer.Servant get_servant()
             throws org.omg.PortableServer.POAPackage.NoServant,
             org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         DefaultServantHolder defaultServantHolder = servantLocationStrategy_
                 .getDefaultServantHolder();
@@ -1025,8 +1037,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             throws org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         DefaultServantHolder defaultServantHolder = servantLocationStrategy_
                 .getDefaultServantHolder();
@@ -1043,8 +1056,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         byte[] oid = idGenerationStrategy_.createId();
 
@@ -1130,8 +1144,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // Validate that the ObjectId is valid
@@ -1156,8 +1171,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public void deactivate_object(byte[] oid)
             throws org.omg.PortableServer.POAPackage.ObjectNotActive,
             org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         servantLocationStrategy_.deactivate(this, oid);
 
@@ -1171,8 +1187,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             throws org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(intf != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         byte[] oid = idGenerationStrategy_.createId();
         return ort().make_object(intf, oid);
@@ -1181,9 +1198,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public org.omg.CORBA.Object create_reference_with_id(byte[] oid, String intf) {
         org.apache.yoko.orb.OB.Assert._OB_assert(intf != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
-
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
         //
         // Validate that the ObjectId is valid
         //
@@ -1204,8 +1221,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // Requires USE_DEFAULT_SERVANT policy or RETAIN policy and
@@ -1245,8 +1263,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // If the operation was invoked in the context of executing
@@ -1276,8 +1295,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(reference != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT
@@ -1303,8 +1323,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             org.omg.PortableServer.POAPackage.WrongPolicy {
         org.apache.yoko.orb.OB.Assert._OB_assert(reference != null);
 
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         org.apache.yoko.orb.CORBA.Delegate d = (org.apache.yoko.orb.CORBA.Delegate) ((org.omg.CORBA.portable.ObjectImpl) reference)
                 ._get_delegate();
@@ -1347,8 +1368,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public org.omg.PortableServer.Servant id_to_servant(byte[] oid)
             throws org.omg.PortableServer.POAPackage.ObjectNotActive,
             org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         //
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT policy.
@@ -1369,8 +1391,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public org.omg.CORBA.Object id_to_reference(byte[] oid)
             throws org.omg.PortableServer.POAPackage.ObjectNotActive,
             org.omg.PortableServer.POAPackage.WrongPolicy {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         // Requires the RETAIN policy
         //
@@ -1387,8 +1410,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public byte[] id() {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        if (poaControl_.getDestroyed()) {
+            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        }
 
         return adapterId_;
     }
@@ -1739,8 +1763,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Decrement the outstanding number of requests
     //
     public void _OB_decrementRequestCount() {
-        if (poaControl_.decrementRequestCount())
+        if (poaControl_.decrementRequestCount()) {
             completeDestroy();
+        }
     }
 
     //
@@ -1819,8 +1844,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public void _OB_destroy(boolean etherealize, boolean waitForCompletion,
             java.util.Vector templates) {
-        if (poaControl_.getDestroyed())
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA has been destroyed");
+        logger.fine("Destroying POA " + name_); 
+        if (poaControl_.getDestroyed()) {
+            // this is not an error on other ORBS. 
+            return;
+        }
 
         //
         // If waitForCompletion is TRUE and the current thread is in
@@ -1891,8 +1919,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // completed then destruction of the the POA will
             // complete.
             //
-            if (!waitForCompletion && poaControl_.hasPendingRequests())
+            if (!waitForCompletion && poaControl_.hasPendingRequests()) {
                 return;
+            }
 
             completeDestroy();
         }
@@ -1901,10 +1930,12 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     private void _OB_handleBidirSCL(
             org.apache.yoko.orb.OCI.TransportInfo transportInfo,
             org.omg.IOP.ServiceContext[] contexts) {
-        if (policies_.bidirPolicy() != org.omg.BiDirPolicy.BOTH.value)
+        if (policies_.bidirPolicy() != org.omg.BiDirPolicy.BOTH.value) {
             return;
+        }
 
-        if (transportInfo != null)
+        if (transportInfo != null) {
             transportInfo.handle_service_contexts(contexts);
+        }
     }
 }

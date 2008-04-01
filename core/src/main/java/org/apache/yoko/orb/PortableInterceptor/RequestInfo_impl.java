@@ -17,8 +17,13 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
         org.omg.PortableInterceptor.RequestInfo {
+// the real logger backing instance.  We use the interface class as the locator
+static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // The ORB (Java only)
     //
@@ -119,13 +124,12 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
     // Protected member implementations
     // ------------------------------------------------------------------
 
-    protected org.omg.IOP.ServiceContext getServiceContext(java.util.Vector l,
-            int id) {
+    protected org.omg.IOP.ServiceContext getServiceContext(java.util.Vector l, int id) {
         for (int i = 0; i < l.size(); i++) {
-            org.omg.IOP.ServiceContext sc = (org.omg.IOP.ServiceContext) l
-                    .elementAt(i);
-            if (sc.context_id == id)
+            org.omg.IOP.ServiceContext sc = (org.omg.IOP.ServiceContext) l.elementAt(i);
+            if (sc.context_id == id) {
                 return copyServiceContext(sc);
+            }
         }
 
         throw new org.omg.CORBA.BAD_PARAM(
@@ -136,24 +140,23 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
-    protected void addServiceContext(java.util.Vector l,
-            org.omg.IOP.ServiceContext sc, boolean addReplace) {
+    protected void addServiceContext(java.util.Vector l, org.omg.IOP.ServiceContext sc, boolean addReplace) {
         //
         // It would be possible to use a hashtable internally for this
         // instead of a sequence. However, the additional overhead isn't
         // worth the effort.
         //
         for (int i = 0; i < l.size(); i++) {
-            org.omg.IOP.ServiceContext c = (org.omg.IOP.ServiceContext) l
-                    .elementAt(i);
+            org.omg.IOP.ServiceContext c = (org.omg.IOP.ServiceContext) l.elementAt(i);
             if (c.context_id == sc.context_id) {
-                if (!addReplace)
+                if (!addReplace) {
                     throw new org.omg.CORBA.BAD_INV_ORDER(
                             org.apache.yoko.orb.OB.MinorCodes
                                     .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists)
                                     + ": " + sc.context_id,
                             org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists,
                             org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                }
                 l.setElementAt(copyServiceContext(sc), i);
                 return;
             }
@@ -349,13 +352,13 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
         // This cannot be called in send_poll, send_request or
         // receive_request_service_context, receive_request
         //
-        if (status_ < 0)
+        if (status_ < 0) {
             throw new org.omg.CORBA.BAD_INV_ORDER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
                     org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+        }
         return status_;
     }
 
@@ -377,12 +380,13 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
         // This can only be called if the status is location forward
         // or location forward perm
         //
-        if (status_ != org.omg.PortableInterceptor.LOCATION_FORWARD.value)
+        if (status_ != org.omg.PortableInterceptor.LOCATION_FORWARD.value) {
             throw new org.omg.CORBA.BAD_INV_ORDER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
                     org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         org.apache.yoko.orb.OB.Assert._OB_assert(forwardReference_ != null);
         return orbInstance_.getObjectFactory().createObject(forwardReference_);
@@ -403,13 +407,16 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
     //
     public org.omg.CORBA.Any get_slot(int id)
             throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= slots_.length)
+        if (id >= slots_.length) {
             throw new org.omg.PortableInterceptor.InvalidSlot();
+        }
+        
+        logger.fine("getting slot " + id + " for operation " + op_); 
 
         org.omg.CORBA.Any result = orb_.create_any();
-        if (slots_[id] != null)
-            result.read_value(slots_[id].create_input_stream(), slots_[id]
-                    .type());
+        if (slots_[id] != null) {
+            result.read_value(slots_[id].create_input_stream(), slots_[id].type());
+        }
         return result;
     }
 
@@ -444,13 +451,13 @@ public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
     // send_reply: yes send_exception: yes send_other: yes
     //
     public org.omg.IOP.ServiceContext get_reply_service_context(int id) {
-        if (status_ < 0)
+        if (status_ < 0) {
             throw new org.omg.CORBA.BAD_INV_ORDER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
                     org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
+        }
         return getServiceContext(replySCL_, id);
     }
 

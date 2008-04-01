@@ -566,8 +566,9 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
     public void finalize() throws Throwable {
         // System.out.println("~Acceptor_impl");
-        if (socket_ != null)
+        if (socket_ != null) {
             close();
+        }
 
         //
         // remove this acceptor from the listenMap_

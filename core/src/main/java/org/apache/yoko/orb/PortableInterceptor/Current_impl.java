@@ -26,8 +26,14 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 final public class Current_impl extends org.omg.CORBA.LocalObject implements
         org.omg.PortableInterceptor.Current {
+    // the real logger backing instance.  We use the interface class as the locator
+    static final Logger logger = Logger.getLogger(Current_impl.class.getName());
+    
     private class SlotData {
         org.omg.CORBA.Any[] slots;
 
@@ -80,8 +86,9 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
             // then it's not necessary to allocate data for the actual
             // slots.
             //
-            if (!partial)
+            if (!partial) {
                 slots = new org.omg.CORBA.Any[maxSlots_];
+            }
 
             holder_.head = new SlotData(slots);
             holder_.head.next = null;
@@ -96,25 +103,33 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
 
     public org.omg.CORBA.Any get_slot(int id)
             throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_)
+        if (id >= maxSlots_) {
             throw new org.omg.PortableInterceptor.InvalidSlot();
+        }
 
+        logger.fine("getting slot " + id); 
+        
         SlotDataHolder holder = establishTSD(false);
 
         org.omg.CORBA.Any result;
         org.omg.CORBA.Any slot = holder.head.slots[id];
-        if (slot == null)
+        if (slot == null) {
             result = orb_.create_any();
-        else
+        }
+        else {
             result = new org.apache.yoko.orb.CORBA.Any(slot);
+        }
 
         return result;
     }
 
     public void set_slot(int id, org.omg.CORBA.Any any)
             throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_)
+        if (id >= maxSlots_) {
             throw new org.omg.PortableInterceptor.InvalidSlot();
+        }
+        
+        logger.fine("setting slot " + id); 
 
         SlotDataHolder holder = establishTSD(false);
 
@@ -136,10 +151,10 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         org.omg.CORBA.Any[] data = new org.omg.CORBA.Any[holder.head.slots.length];
         for (int i = 0; i < holder.head.slots.length; i++) {
             org.omg.CORBA.Any slot = holder.head.slots[i];
-            if (slot != null)
+            if (slot != null) {
                 data[i] = new org.apache.yoko.orb.CORBA.Any(slot);
+            }
         }
-
         return data;
     }
 
@@ -152,6 +167,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
     // interceptor and the server side PICurrent
     //
     void _OB_pushSlotData(org.omg.CORBA.Any[] slots) {
+        logger.fine("pushing slot data"); 
         SlotDataHolder holder = establishTSD(false);
 
         SlotData newSlots = new SlotData(slots);
@@ -160,6 +176,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
     }
 
     void _OB_popSlotData() {
+        logger.fine("popping slot data"); 
         SlotDataHolder holder = establishTSD(false);
 
         holder.head = holder.head.next;

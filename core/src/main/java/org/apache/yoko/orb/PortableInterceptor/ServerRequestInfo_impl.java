@@ -282,8 +282,10 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public void set_slot(int id, org.omg.CORBA.Any data)
             throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= slots_.length)
+        if (id >= slots_.length) {
             throw new org.omg.PortableInterceptor.InvalidSlot();
+        }
+        logger.fine("setting slot " + id + " for operation " + op_); 
         slots_[id] = new org.apache.yoko.orb.CORBA.Any(data);
     }
 
@@ -296,12 +298,13 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // send_reply: no send_exception: no send_other: no
     //
     public boolean target_is_a(String id) {
-        if (status_ == NO_REPLY_SC || servant_ == null)
+        if (status_ == NO_REPLY_SC || servant_ == null) {
             throw new org.omg.CORBA.BAD_INV_ORDER(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
                     org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        }
 
         return servant_._is_a(id);
     }
@@ -545,9 +548,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public void _OB_contextSwitch() {
         if (popCurrent_) {
+            logger.fine("Popping the PICurrent because of a context switch"); 
             popCurrent_ = false;
             current_._OB_popSlotData();
         } else {
+            logger.fine("Pushing the PICurrent because of a context switch"); 
             popCurrent_ = true;
             current_._OB_pushSlotData(slots_);
         }
