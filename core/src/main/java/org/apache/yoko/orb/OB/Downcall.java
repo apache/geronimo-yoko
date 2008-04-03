@@ -141,6 +141,9 @@ public class Downcall {
 
         case DowncallStateSystemException:
             Assert._OB_assert(ex_ != null);
+            // update the stack trace to have the caller's stack rather than the 
+            // receiver thread. 
+            ex_.fillInStackTrace();    
             throw (org.omg.CORBA.SystemException) ex_;
 
         case DowncallStateFailureException:
