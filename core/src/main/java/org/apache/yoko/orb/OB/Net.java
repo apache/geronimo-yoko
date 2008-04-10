@@ -46,27 +46,12 @@ public final class Net {
 
         try {
             if (!numeric) {
-                host = java.net.InetAddress.getLocalHost()
-                        .getCanonicalHostName();
-
-                if (host.lastIndexOf('.') == -1) {
-                    // logger.warning("ORB_init: " +
-                    // "hostname is a domainless name\n" +
-                    // "using dotted decimal notation " +
-                    // "instead of hostname");
-
-                    host = java.net.InetAddress.getLocalHost().getHostAddress();
-                }
+                host = java.net.InetAddress.getLocalHost().getHostName(); 
             } else {
                 host = java.net.InetAddress.getLocalHost().getHostAddress();
             }
 
             if (host.equals("127.0.0.1") || host.equals("localhost")) {
-                // logger.warning("ORB_init: " +
-                // "hostname lookup returned " +
-                // "`localhost' (127.0.0.1)\n" +
-                // "Use the -IIOPhost option to select " +
-                // "some other hostname");
             }
         } catch (java.net.UnknownHostException ex) {
             // logger.warning("ORB_init: " +
