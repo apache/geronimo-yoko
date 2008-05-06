@@ -19,41 +19,25 @@
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
-  <parent>
-    <groupId>org.apache</groupId>
-    <artifactId>apache</artifactId>
-    <version>3</version>
-  </parent>
-
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>org.apache.yoko</groupId>
-    <artifactId>yoko</artifactId>
-    <version>1.0-SNAPSHOT</version>
-    <name>Apache Yoko CORBA Server</name>
-    <url>http://incubator.apache.org/yoko/</url>
-    <inceptionYear>2006</inceptionYear>
-
-
-    <packaging>pom</packaging>
-
-    <modules>
-        <module>core</module>
-        <module>yoko-spec-corba</module>
-        <module>rmi-spec</module>
-        <module>rmi-impl</module>
-    </modules>
+    <parent>
+        <groupId>org.apache</groupId>
+        <artifactId>apache</artifactId>
+        <version>3</version>
+    </parent>
 
     <!-- These properties should be defined in top level pom.xml -->
-     <properties>
+    <properties>
         <!--
         NOTE: Project version, to be used instead of ${pom.version} since that
               value magically changes when using SNAPSHOT versions.
-
+    
               This value *must* be kept in sync with the value of the <version>
               element, and it will need to be changed manually before a release,
               as the maven-release-plugin will not update this value.
         -->
         <version>1.0-SNAPSHOT</version>
+        <siteId>yoko</siteId>
+        <projectName>Apache Geronimo Yoko ORB</projectName>
 
         <!-- versions of external dependencies -->
         <ant.version>1.6.5</ant.version>
@@ -76,72 +60,96 @@
         <no.checkstyle>false</no.checkstyle>
         <no.pmd>false</no.pmd>
         <notice.dir>.</notice.dir>
-     </properties>
+    </properties>                         
 
-     <dependencyManagement>
-         <dependencies>
-             <!--  Yoko modules -->
-             <dependency>
-                 <groupId>org.apache.yoko</groupId>
-                 <artifactId>yoko-core</artifactId>
-                 <version>${version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.yoko</groupId>
-                 <artifactId>yoko-spec-corba</artifactId>
-                 <version>${version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.yoko</groupId>
-                 <artifactId>yoko-rmi-spec</artifactId>
-                 <version>${version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.yoko</groupId>
-                 <artifactId>yoko-rmi-impl</artifactId>
-                 <version>${version}</version>
-             </dependency>
-             <!--  External dependencies -->
-             <dependency>
-                 <groupId>junit</groupId>
-                 <artifactId>junit</artifactId>
-                 <version>${junit.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.bcel</groupId>
-                 <artifactId>bcel</artifactId>
-                 <version>${bcel.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.maven</groupId>
-                 <artifactId>maven-plugin-api</artifactId>
-                 <version>${maven.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>org.apache.maven</groupId>
-                 <artifactId>maven-project</artifactId>
-                 <version>${maven.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>ant</groupId>
-                 <artifactId>ant</artifactId>
-                 <version>${ant.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>ant</groupId>
-                 <artifactId>ant-nodeps</artifactId>
-                 <version>${ant.version}</version>
-             </dependency>
-             <dependency>
-                 <groupId>concurrent</groupId>
-                 <artifactId>concurrent</artifactId>
-                 <version>${concurrent.version}</version>
-                 <scope>test</scope>
-             </dependency>
-         </dependencies>
-     </dependencyManagement>
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.apache.yoko</groupId>
+    <artifactId>yoko</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <name>Apache Yoko CORBA Server</name>     
+    <inceptionYear>2006</inceptionYear>
 
-     <build>
+    <url>http://geronimo.apache.org/maven/${siteId}/${version}</url>
+    <distributionManagement>
+        <site>
+            <id>geronimo-website</id>
+            <url>${staging.siteURL}/${siteId}/${version}</url>
+        </site>
+    </distributionManagement>
+
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>core</module>
+        <module>yoko-spec-corba</module>
+        <module>rmi-spec</module>
+        <module>rmi-impl</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <!--  Yoko modules -->
+            <dependency>
+                <groupId>org.apache.yoko</groupId>
+                <artifactId>yoko-core</artifactId>
+                <version>${version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.yoko</groupId>
+                <artifactId>yoko-spec-corba</artifactId>
+                <version>${version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.yoko</groupId>
+                <artifactId>yoko-rmi-spec</artifactId>
+                <version>${version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.yoko</groupId>
+                <artifactId>yoko-rmi-impl</artifactId>
+                <version>${version}</version>
+            </dependency>
+            <!--  External dependencies -->
+            <dependency>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+                <version>${junit.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.bcel</groupId>
+                <artifactId>bcel</artifactId>
+                <version>${bcel.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-plugin-api</artifactId>
+                <version>${maven.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.maven</groupId>
+                <artifactId>maven-project</artifactId>
+                <version>${maven.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ant</groupId>
+                <artifactId>ant</artifactId>
+                <version>${ant.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>ant</groupId>
+                <artifactId>ant-nodeps</artifactId>
+                <version>${ant.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>concurrent</groupId>
+                <artifactId>concurrent</artifactId>
+                <version>${concurrent.version}</version>
+                <scope>test</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
         <resources>
             <resource>
                 <directory>src/main/java</directory>
@@ -243,10 +251,10 @@
                                 <addClasspath>true</addClasspath>
                             </manifest>
                             <manifestEntries>
-                                 <Specification-Title>${project.name}</Specification-Title>
-                                 <Specification-Vendor>The Apache Software Foundation</Specification-Vendor>
-                                 <Specification-Version>${version}</Specification-Version>
-                                 <Implementation-Vendor-Id>org.apache</Implementation-Vendor-Id>
+                                <Specification-Title>${project.name}</Specification-Title>
+                                <Specification-Vendor>The Apache Software Foundation</Specification-Vendor>
+                                <Specification-Version>${version}</Specification-Version>
+                                <Implementation-Vendor-Id>org.apache</Implementation-Vendor-Id>
                                 <Implementation-Vendor>The Apache Software Foundation</Implementation-Vendor>
                             </manifestEntries>
                         </archive>
@@ -300,219 +308,254 @@
                     </configuration>
                 </plugin>
                 <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-site-plugin</artifactId>
-                <version>${site.version}</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-eclipse-plugin</artifactId>
-                <version>${eclipse.version}</version>
-                <configuration>
-                    <downloadSources>true</downloadSources>
-                    <buildcommands>
-                        <java.lang.String>org.eclipse.jdt.core.javabuilder</java.lang.String>
-                        <java.lang.String>net.sourceforge.pmd.eclipse.pmdBuilder</java.lang.String>
-                    </buildcommands>
-                    <projectnatures>
-                        <nature>org.eclipse.jdt.core.javanature</nature>
-                        <nature>net.sourceforge.pmd.eclipse.pmdNature</nature>
-                    </projectnatures>
-                </configuration>
-            </plugin>
-          </plugins>
+                    <groupId>org.apache.maven.plugins</groupId>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-site-plugin</artifactId>
+                    <version>${site.version}</version>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-eclipse-plugin</artifactId>
+                    <version>${eclipse.version}</version>
+                    <configuration>
+                        <downloadSources>true</downloadSources>
+                        <buildcommands>
+                            <java.lang.String>org.eclipse.jdt.core.javabuilder</java.lang.String>
+                            <java.lang.String>net.sourceforge.pmd.eclipse.pmdBuilder</java.lang.String>
+                        </buildcommands>
+                        <projectnatures>
+                            <nature>org.eclipse.jdt.core.javanature</nature>
+                            <nature>net.sourceforge.pmd.eclipse.pmdNature</nature>
+                        </projectnatures>
+                    </configuration>
+                </plugin>
+            </plugins>
         </pluginManagement>
 
 
         <extensions>
             <extension>
-              <groupId>org.apache.maven.wagon</groupId>
-              <artifactId>wagon-ssh-external</artifactId>
-              <version>1.0-alpha-5</version>
+                <groupId>org.apache.maven.wagon</groupId>
+                <artifactId>wagon-ssh-external</artifactId>
+                <version>1.0-alpha-5</version>
             </extension>
-       </extensions>
+        </extensions>
 
     </build>
 
-  <reporting>
-    <plugins>
-      <plugin>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <artifactId>maven-clover-plugin</artifactId>
-      </plugin>
-      <!--plugin>
-        <artifactId>maven-pmd-plugin</artifactId>
-      </plugin!-->
-      <plugin>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-      </plugin>
-    </plugins>
-  </reporting>
-
-  <repositories>
-      <repository>
-          <id>apache-snapshots</id>
-          <name>Apache repo</name>
-          <url>http://people.apache.org/maven-snapshot-repository</url>
-          <releases>
-              <enabled>true</enabled>
-          </releases>
-          <snapshots>
-              <enabled>true</enabled>
-          </snapshots>
-      </repository>
-      <repository>
-          <id>apache-incubator</id>
-          <name>Apache incubating repo</name>
-          <url>http://people.apache.org/repo/m2-incubating-repository</url>
-      </repository>
-      <repository>
-          <id>java.net</id>
-          <name>java.net Maven Repository</name>
-          <url>https://maven-repository.dev.java.net/nonav/repository/</url>
-          <layout>legacy</layout>
-      </repository>
-  </repositories>
-
-  <pluginRepositories>
-        <pluginRepository>
-          <id>apache-incubator</id>
-          <name>Apache incubating repo</name>
-          <url>http://people.apache.org/repo/m2-incubating-repository</url>
-          <layout>default</layout>
-       </pluginRepository>
-  </pluginRepositories>
-
-  <distributionManagement>
-    <snapshotRepository>
-       <id>apache-snapshots</id>
-       <name>Apache SNAPSHOT Repository</name>
-       <url>scpexe://people.apache.org/www/people.apache.org/repo/m2-snapshot-repository</url>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <profiles>
-    <profile>
-        <!-- this is a hack for eclipse - taken from Tuscany. Eclipse doesn't
-        like "." as a resource directory as then you have source directories
-        inside a src directory which causes all sorts of problems.  so the
-        resources directory gets pointed back to the resources directory  so
-        the NOTICE.txt, LICENSE.txt and DISCLAIMER.txt files won't be included
-        in the eclipse builds.
-        -->
-        <id>eclipse</id>
-        <properties>
-                <notice.dir>src/main/resources</notice.dir>
-        </properties>
-        <build>
-          <defaultGoal>process-test-sources</defaultGoal>
-          <plugins>
+    <reporting>
+        <plugins>
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-eclipse-plugin</artifactId>
-                <executions>
-                    <execution>
-                        <id>setup.eclipse.project</id>
-                        <phase>process-test-sources</phase>
-                        <goals>
-                            <goal>eclipse</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <artifactId>maven-checkstyle-plugin</artifactId>
             </plugin>
-          </plugins>
-        </build>
-    </profile>
+            <plugin>
+                <artifactId>maven-clover-plugin</artifactId>
+            </plugin>
+            <!--plugin>
+              <artifactId>maven-pmd-plugin</artifactId>
+            </plugin!-->
+            <plugin>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </reporting>
 
-    <profile>
-      <id>release</id>
-      <build>
-        <plugins>
-          <!-- We want to deploy the artifact to a staging location for perusal -->
-          <plugin>
-            <inherited>true</inherited>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <version>2.3</version>
-            <configuration>
-              <altDeploymentRepository>${deploy.altRepository}</altDeploymentRepository>
-              <updateReleaseInfo>true</updateReleaseInfo>
-            </configuration>
-          </plugin>
-          <!-- We want to sign the artifact, the POM, and all attached artifacts -->
-          <plugin>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.0-alpha-1</version>
-            <executions>
-              <execution>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
+    <repositories>
+        <repository>
+            <id>apache-snapshots</id>
+            <name>Apache repo</name>
+            <url>http://people.apache.org/maven-snapshot-repository</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+            <snapshots>
+                <enabled>true</enabled>
+            </snapshots>
+        </repository>
+        <repository>
+            <id>apache-incubator</id>
+            <name>Apache incubating repo</name>
+            <url>http://people.apache.org/repo/m2-incubating-repository</url>
+        </repository>
+        <repository>
+            <id>java.net</id>
+            <name>java.net Maven Repository</name>
+            <url>https://maven-repository.dev.java.net/nonav/repository/</url>
+            <layout>legacy</layout>
+        </repository>
+    </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>apache-incubator</id>
+            <name>Apache incubating repo</name>
+            <url>http://people.apache.org/repo/m2-incubating-repository</url>
+            <layout>default</layout>
+        </pluginRepository>
+    </pluginRepositories>
+
+    <profiles>
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-release-plugin</artifactId>
+                        <configuration>
+                            <useReleaseProfile>false</useReleaseProfile>
+                            <goals>deploy</goals>
+                            <arguments>-Prelease</arguments>
+                        </configuration>
+                    </plugin>
+
+                    <!-- We want a source jar -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- We want to sign the artifact, the POM, and all attached artifacts -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <inherited>true</inherited>
+                        <configuration>
+                            <passphrase>${gpg.passphrase}</passphrase>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- We want to deploy the artifact to a staging location for perusal -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-deploy-plugin</artifactId>
+                        <inherited>true</inherited>
+                        <configuration>
+                            <altDeploymentRepository>${deploy.altRepository}</altDeploymentRepository>
+                            <updateReleaseInfo>true</updateReleaseInfo>
+                        </configuration>
+                    </plugin>
+
+                    <!-- We want the JavaDoc JAR published with the release -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <inherited>true</inherited>
+                        <configuration>
+                            <source>1.4</source>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <!-- this is a hack for eclipse - taken from Tuscany. Eclipse doesn't
+            like "." as a resource directory as then you have source directories
+            inside a src directory which causes all sorts of problems.  so the
+            resources directory gets pointed back to the resources directory  so
+            the NOTICE.txt, LICENSE.txt and DISCLAIMER.txt files won't be included
+            in the eclipse builds.
+            -->
+            <id>eclipse</id>
+            <properties>
+                <notice.dir>src/main/resources</notice.dir>
+            </properties>
+            <build>
+                <defaultGoal>process-test-sources</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-eclipse-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>setup.eclipse.project</id>
+                                <phase>process-test-sources</phase>
+                                <goals>
+                                    <goal>eclipse</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>deploy</id>
+            <build>
+                <defaultGoal>deploy</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>2.0.2</version>
+                        <executions>
+                            <execution>
+                                <id>attach-sources</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>2.2</version>
+                        <executions>
+                            <execution>
+                                <id>attach-javadocs</id>
+                                <goals>
+                                    <goal>jar</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <ciManagement>
+        <system>continuum</system>
+        <url>http://vmbuild.apache.org/continuum</url>
+        <notifiers>
+            <notifier>
                 <configuration>
-                  <passphrase>${gpg.passphrase}</passphrase>
+                    <address>yoko-commits@incubator.apache.org</address>
                 </configuration>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-    <profile>
-      <id>deploy</id>
-      <build>
-        <defaultGoal>deploy</defaultGoal>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <version>2.0.2</version>
-            <executions>
-              <execution>
-                <id>attach-sources</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <version>2.2</version>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
+            </notifier>
+        </notifiers>
+    </ciManagement>
 
-  <ciManagement>
-    <system>continuum</system>
-    <url>http://vmbuild.apache.org/continuum</url>
-    <notifiers>
-      <notifier>
-        <configuration>
-          <address>yoko-commits@incubator.apache.org</address>
-        </configuration>
-      </notifier>
-    </notifiers>
-  </ciManagement>
-
-  <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk</url>
-  </scm>
+    <scm>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk</connection>
+        <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk</developerConnection>
+        <url>http://svn.apache.org/viewvc/incubator/yoko/trunk</url>
+    </scm>
 
 </project>
