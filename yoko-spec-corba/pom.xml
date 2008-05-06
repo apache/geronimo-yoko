@@ -223,9 +223,9 @@
     </build>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/yoko-spec-corba</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/yoko-spec-corba</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/yoko-spec-corba</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</connection>
+    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/yoko-spec-corba</url>
   </scm>
 
 </project>

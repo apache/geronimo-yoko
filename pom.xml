@@ -540,9 +540,9 @@
     </ciManagement>
 
     <scm>
-        <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk</connection>
-        <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk</developerConnection>
-        <url>http://svn.apache.org/viewvc/incubator/yoko/trunk</url>
+        <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk</connection>
+        <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk</developerConnection>
+        <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk</url>
     </scm>
 
 </project>

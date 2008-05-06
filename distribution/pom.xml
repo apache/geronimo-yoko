@@ -185,9 +185,9 @@
     </profiles>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/distribution</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/distribution</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/distribution</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/distribution</connection>
+    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/distribution</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/distribution</url>
   </scm>
 
 </project>

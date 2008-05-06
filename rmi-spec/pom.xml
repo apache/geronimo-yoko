@@ -55,9 +55,9 @@
     </build>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/rmi-spec</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/rmi-spec</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/rmi-spec</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</connection>
+    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/rmi-spec</url>
   </scm>
 
 </project>

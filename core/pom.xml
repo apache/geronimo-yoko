@@ -17,7 +17,7 @@
  * specific language governing permissions and limitations
  * under the License.
 -->
-<project>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>yoko-core</artifactId>
   <name>Apache Yoko Core</name>
@@ -168,9 +168,9 @@
   </reporting>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/core</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/core</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/core</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/core</connection>
+    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/core</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/core</url>
   </scm>
 
 </project>
