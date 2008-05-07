@@ -243,6 +243,8 @@ public final class TestPOAManagerServer extends test.common.TestBase {
 
             File file = new File(refFile);
             file.delete();
+            file = new File(refFileMgr);
+            file.delete();
         } catch (SystemException ex) {
             ex.printStackTrace();
             System.exit(1);

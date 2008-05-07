@@ -17,7 +17,7 @@
  * specific language governing permissions and limitations
  * under the License.
 -->
-<project>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>yoko-core</artifactId>
   <name>Apache Yoko Core</name>
@@ -26,7 +26,7 @@
   <parent>
     <groupId>org.apache.yoko</groupId>
     <artifactId>yoko</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.0</version>
   </parent>
 
   <dependencies>
@@ -114,28 +114,28 @@
             <configuration>
               <tasks>
                 <java classname="sun.rmi.rmic.Main" fork="true">
-                  <arg value="-d"/>
-                  <arg value="target/test-classes"/>
-                  <arg value="-classpath"/>
-                  <arg value="target/test-classes"/>
-                  <arg value="-iiop"/>
-                  <arg value="-poa"/>
-                  <arg value="-keep"/>
-                  <arg value="test.rmi.SampleImpl"/>
-                  <arg value="test.rmi.SampleRemoteImpl"/>
+                  <arg value="-d" />
+                  <arg value="target/test-classes" />
+                  <arg value="-classpath" />
+                  <arg value="target/test-classes" />
+                  <arg value="-iiop" />
+                  <arg value="-poa" />
+                  <arg value="-keep" />
+                  <arg value="test.rmi.SampleImpl" />
+                  <arg value="test.rmi.SampleRemoteImpl" />
                   <classpath>
-                    <pathelement path="${java.home}/../lib/tools.jar"/>
+                    <pathelement path="${java.home}/../lib/tools.jar" />
                   </classpath>
                 </java>
                 <java classname="sun.rmi.rmic.Main" fork="true">
-                  <arg value="-d"/>
-                  <arg value="target/test-classes"/>
-                  <arg value="-classpath"/>
-                  <arg value="target/test-classes"/>
-                  <arg value="org.apache.yoko.processmanager.ProcessManager"/>
-                  <arg value="org.apache.yoko.processmanager.internal.ProcessAgentImpl"/>
+                  <arg value="-d" />
+                  <arg value="target/test-classes" />
+                  <arg value="-classpath" />
+                  <arg value="target/test-classes" />
+                  <arg value="org.apache.yoko.processmanager.ProcessManager" />
+                  <arg value="org.apache.yoko.processmanager.internal.ProcessAgentImpl" />
                   <classpath>
-                    <pathelement path="${java.home}/../lib/tools.jar"/>
+                    <pathelement path="${java.home}/../lib/tools.jar" />
                   </classpath>
                 </java>
               </tasks>
@@ -168,9 +168,9 @@
   </reporting>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/core</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/core</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/core</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/core</connection>
+    <developerConnection>scm:svn:https://rickmcguire@svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/core</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/tags/yoko-1.0/core</url>
   </scm>
 
 </project>

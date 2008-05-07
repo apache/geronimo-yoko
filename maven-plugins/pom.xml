@@ -99,9 +99,9 @@
   </reporting>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/yoko/trunk/maven-plugins</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/incubator/yoko/trunk/maven-plugins</developerConnection>
-    <url>http://svn.apache.org/viewvc/incubator/yoko/trunk/maven-plugins</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/maven-plugins</connection>
+    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/maven-plugins</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/maven-plugins</url>
   </scm>
 
 </project>
