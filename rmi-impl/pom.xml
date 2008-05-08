@@ -45,7 +45,7 @@
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/rmi-impl</connection>
-    <developerConnection>scm:svn:https://rickmcguire@svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/rmi-impl</developerConnection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/rmi-impl</developerConnection>
     <url>http://svn.apache.org/viewvc/geronimo/yoko/tags/yoko-1.0/rmi-impl</url>
   </scm>
 
