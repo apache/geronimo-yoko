@@ -64,7 +64,7 @@
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-impl</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-impl</developerConnection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-impl</developerConnection>
     <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/rmi-impl</url>
   </scm>
 

@@ -169,7 +169,7 @@
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/core</connection>
-    <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk/core</developerConnection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/core</developerConnection>
     <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/core</url>
   </scm>
 
