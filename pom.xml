@@ -65,7 +65,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.yoko</groupId>
     <artifactId>yoko</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
     <name>Apache Yoko CORBA Server</name>     
     <inceptionYear>2006</inceptionYear>
 
@@ -541,7 +541,7 @@
 
     <scm>
         <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk</connection>
-        <developerConnection>scm:svn:https://rickmcguire@svn.apache.org/repos/asf/geronimo/yoko/trunk</developerConnection>
+        <developerConnection>scm:svn:https://${maven.username}@svn.apache.org/repos/asf/geronimo/yoko/trunk</developerConnection>
         <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk</url>
     </scm>
 
