@@ -3,7 +3,7 @@
     <parent>
         <groupId>org.apache.yoko</groupId>
         <artifactId>yoko</artifactId>
-        <version>1.0</version>
+        <version>1.1-SNAPSHOT</version>
     </parent>
     <artifactId>yoko-spec-corba</artifactId>
     <packaging>jar</packaging>
@@ -202,9 +202,9 @@
     </build>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/yoko-spec-corba</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/yoko-spec-corba</developerConnection>
-    <url>http://svn.apache.org/viewvc/geronimo/yoko/tags/yoko-1.0/yoko-spec-corba</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/yoko-spec-corba</url>
   </scm>
 
 </project>
