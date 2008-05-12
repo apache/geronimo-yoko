@@ -64,7 +64,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.yoko</groupId>
     <artifactId>yoko</artifactId>
-    <version>1.1-SNAPSHOT</version>
+    <version>1.0-SNAPSHOT</version>
     <name>Apache Yoko CORBA Server</name>     
     <inceptionYear>2006</inceptionYear>
 
