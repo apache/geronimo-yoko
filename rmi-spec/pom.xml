@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.yoko</groupId>
         <artifactId>yoko</artifactId>
-        <version>1.0</version>
+        <version>1.1-SNAPSHOT</version>
     </parent>
     <artifactId>yoko-rmi-spec</artifactId>
     <packaging>jar</packaging>
@@ -53,9 +53,9 @@
     </build>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/rmi-spec</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/tags/yoko-1.0/rmi-spec</developerConnection>
-    <url>http://svn.apache.org/viewvc/geronimo/yoko/tags/yoko-1.0/rmi-spec</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</developerConnection>
+    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/rmi-spec</url>
   </scm>
 
 </project>
