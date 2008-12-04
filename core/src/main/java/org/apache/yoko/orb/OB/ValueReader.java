@@ -354,7 +354,10 @@ final public class ValueReader {
 
     // Java only
     private void addInstance(int pos, java.io.Serializable instance) {
-        instanceTable_.put(new Integer(pos), instance);
+        // only add this if we have a real value 
+        if (instance != null) {
+            instanceTable_.put(new Integer(pos), instance);
+        }
     }
 
     // Java only
