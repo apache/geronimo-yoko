@@ -25,7 +25,7 @@
         <version>1.1-SNAPSHOT</version>
     </parent>
     <artifactId>yoko-spec-corba</artifactId>
-    <packaging>jar</packaging>
+    <packaging>bundle</packaging>
     <name>Apache Yoko CORBA Spec</name>
 
     <dependencies>

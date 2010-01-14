@@ -21,7 +21,7 @@
   <modelVersion>4.0.0</modelVersion>
   <artifactId>yoko-core</artifactId>
   <name>Apache Yoko Core</name>
-  <packaging>jar</packaging>
+  <packaging>bundle</packaging>
 
   <parent>
     <groupId>org.apache.yoko</groupId>

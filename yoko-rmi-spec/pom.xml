@@ -23,7 +23,7 @@
         <version>1.1-SNAPSHOT</version>
     </parent>
     <artifactId>yoko-rmi-spec</artifactId>
-    <packaging>jar</packaging>
+    <packaging>bundle</packaging>
     <name>Apache Yoko RMI Spec</name>
 
     <dependencies>

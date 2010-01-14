@@ -201,7 +201,12 @@
             </testResource>
         </testResources>
 
-        <!--<plugins>-->
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+            </plugin>
+
             <!--<plugin>-->
                 <!--<artifactId>maven-remote-resources-plugin</artifactId>-->
                 <!--<version>1.0-alpha-5</version>-->
@@ -222,7 +227,7 @@
                     <!--</execution>-->
                 <!--</executions>-->
             <!--</plugin>-->
-        <!--</plugins>-->
+        </plugins>
 
         <!--<defaultGoal>install</defaultGoal>-->
 
@@ -318,6 +323,19 @@
                         <!--</projectnatures>-->
                     <!--</configuration>-->
                 <!--</plugin>-->
+                <plugin>
+                    <groupId>org.apache.felix</groupId>
+                    <artifactId>maven-bundle-plugin</artifactId>
+                    <version>2.0.1</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <instructions>
+                            <Implementation-Title>${project.name}</Implementation-Title>
+                            <Implementation-Version>${project.version}</Implementation-Version>
+                            <Bundle-DocURL>${project.url}</Bundle-DocURL>
+                        </instructions>
+                    </configuration>
+                </plugin>
             </plugins>
         </pluginManagement>
 
