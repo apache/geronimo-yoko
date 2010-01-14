@@ -32,23 +32,20 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
-            <version>3.8.1</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
     <build>
         <plugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-compiler-plugin</artifactId>
-              <configuration>
-                <source>1.4</source>
-                <target>1.4</target>
-                <compilerArguments>
-                  <endorseddirs>${project.build.directory}/endorsed</endorseddirs>
-                </compilerArguments>
-              </configuration>
-            </plugin>
+            <!--<plugin>-->
+              <!--<groupId>org.apache.maven.plugins</groupId>-->
+              <!--<artifactId>maven-compiler-plugin</artifactId>-->
+              <!--<configuration>-->
+                <!--<compilerArguments>-->
+                  <!--<endorseddirs>${project.build.directory}/endorsed</endorseddirs>-->
+                <!--</compilerArguments>-->
+              <!--</configuration>-->
+            <!--</plugin>-->
 
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -219,11 +216,5 @@
             </plugin>
         </plugins>
     </build>
-
-  <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/yoko-spec-corba</developerConnection>
-    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/yoko-spec-corba</url>
-  </scm>
 
 </project>

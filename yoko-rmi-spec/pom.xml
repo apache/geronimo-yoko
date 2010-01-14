@@ -39,23 +39,5 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <build>
-      <plugins>
-       <plugin>
-         <groupId>org.apache.maven.plugins</groupId>
-         <artifactId>maven-compiler-plugin</artifactId>
-         <configuration>
-           <source>1.4</source>
-           <target>1.4</target>
-         </configuration>
-       </plugin>
-      </plugins>
-    </build>
-
-  <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/geronimo/yoko/trunk/rmi-spec</developerConnection>
-    <url>http://svn.apache.org/viewvc/geronimo/yoko/trunk/rmi-spec</url>
-  </scm>
 
 </project>
