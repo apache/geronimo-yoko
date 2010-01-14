@@ -80,10 +80,10 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>core</module>
+        <module>yoko-core</module>
         <module>yoko-spec-corba</module>
-        <module>rmi-spec</module>
-        <module>rmi-impl</module>
+        <module>yoko-rmi-spec</module>
+        <module>yoko-rmi-impl</module>
     </modules>
 
     <dependencyManagement>
