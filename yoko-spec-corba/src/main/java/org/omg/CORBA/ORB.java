@@ -16,8 +16,11 @@
  */
 package org.omg.CORBA;
 
+import org.apache.yoko.osgi.ProviderLocator;
+
 import java.security.PrivilegedAction;
 import java.security.AccessController;
+import java.util.Properties;
 
 public abstract class ORB {
 
@@ -170,27 +173,8 @@ public abstract class ORB {
     private static final String ORBSingletonPropertyKey = "org.omg.CORBA.ORBSingleton";
 
     public static ORB init(String[] args, java.util.Properties props) {
-        String orbClassName = null;
 
-        if (props != null)
-            orbClassName = props.getProperty(ORBClassPropertyKey);
-
-        if (orbClassName == null)
-            orbClassName = getSystemProperty(ORBClassPropertyKey);
-
-        if (orbClassName == null)
-            orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-
-        ORB orb;
-
-        try {
-            // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            orb = (ORB) loader.loadClass(orbClassName).newInstance();
-        } catch (Throwable ex) {
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
-                    + orbClassName).initCause(ex);
-        }
+        ORB orb = newOrb(props);
 
         ORBSingleton_ = orb;
 
@@ -200,59 +184,84 @@ public abstract class ORB {
     }
 
     public static ORB init(java.applet.Applet app, java.util.Properties props) {
-        String orbClassName = null;
-
-        if (props != null)
-            orbClassName = props.getProperty(ORBClassPropertyKey);
-
-        try {
-            if (orbClassName == null)
-                orbClassName = getSystemProperty(ORBClassPropertyKey);
-        } catch (SecurityException ex) {
-            // ignore
-        }
-
-        if (orbClassName == null)
-            orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-
-        ORB orb;
-
-        try {
-            // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            orb = (ORB) loader.loadClass(orbClassName).newInstance();
-        } catch (Throwable ex) {
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
-                    + orbClassName).initCause(ex);
-        }
+        ORB orb = newOrb(props);
 
         ORBSingleton_ = orb;
 
         orb.set_parameters(app, props);
 
+        return ORBSingleton_;
+    }
+
+    private static ORB newOrb(Properties props) {
+        String orbClassName = null;
+
+        if (props != null) {
+            orbClassName = props.getProperty(ORBClassPropertyKey);
+        }
+
+        ORB orb = null;
+        if (orbClassName == null) {
+            try {
+                orb = (ORB) ProviderLocator.getService(ORBClassPropertyKey, ORB.class, Thread.currentThread().getContextClassLoader());
+            } catch (Exception ex) {
+                throw (INITIALIZE)new INITIALIZE("Invalid ORB class from osgi: ").initCause(ex);
+            }
+        }
+
+        if (orb == null) {
+            try {
+                if (orbClassName == null)
+                    orbClassName = getSystemProperty(ORBClassPropertyKey);
+            } catch (SecurityException ex) {
+                // ignore
+            }
+
+            if (orbClassName == null)
+                orbClassName = "org.apache.yoko.orb.CORBA.ORB";
+
+
+            try {
+                // get the appropriate class for the loading.
+                ClassLoader loader = Thread.currentThread().getContextClassLoader();
+                orb = (ORB) ProviderLocator.loadClass(orbClassName, ORB.class, loader).newInstance();
+            } catch (Throwable ex) {
+                throw (INITIALIZE)new INITIALIZE("Invalid ORB class: "
+                        + orbClassName).initCause(ex);
+            }
+        }
         return orb;
     }
 
     public static ORB init() {
         if (ORBSingleton_ == null) {
-            String orbClassName = getSystemProperty(ORBSingletonPropertyKey);
-        
-            if (orbClassName == null) {
-                orbClassName = "org.apache.yoko.orb.CORBA.ORBSingleton";
-            }
-
-            ORB orb;
-
             try {
-                // get the appropriate class for the loading.
-                ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                orb = (ORB) loader.loadClass(orbClassName).newInstance();
-            } catch (Throwable ex) {
+                ORBSingleton_ = (ORB) ProviderLocator.getService(ORBSingletonPropertyKey, ORB.class, Thread.currentThread().getContextClassLoader());
+            } catch (Exception ex) {
                 throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
-                        "Invalid ORB singleton class: " + orbClassName).initCause(ex);
-            }
+                        "Invalid ORB singleton class from osgi: ").initCause(ex);
 
-            ORBSingleton_ = orb;
+            }
+            if (ORBSingleton_ == null) {
+                String orbClassName = getSystemProperty(ORBSingletonPropertyKey);
+
+                if (orbClassName == null) {
+                    orbClassName = "org.apache.yoko.orb.CORBA.ORBSingleton";
+                }
+
+                try {
+                    ORBSingleton_ = (ORB) ProviderLocator.loadClass(orbClassName, ORB.class, Thread.currentThread().getContextClassLoader()).newInstance();
+                } catch (ClassNotFoundException ex) {
+                    throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
+                            "Invalid ORB singleton class from osgi: ").initCause(ex);
+                } catch (InstantiationException ex) {
+                    throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
+                            "Invalid ORB singleton class from osgi: ").initCause(ex);
+                } catch (IllegalAccessException ex) {
+                    throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
+                            "Invalid ORB singleton class from osgi: ").initCause(ex);
+                }
+            }
         }
 
         return ORBSingleton_;

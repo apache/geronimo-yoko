@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.osgi.ProviderLocator;
+
 //
 // ObjectImpl is the base class for proprietary stubs with full
 // interceptor support
@@ -186,14 +188,10 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
 
             // get the appropriate class for the loading.
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            if (loader == null) {
-                loader = this.getClass().getClassLoader();
-            }
-
-            Class c = loader.loadClass(className + "Helper");
+            Class c = ProviderLocator.loadClass(className + "Helper", this.getClass(), loader);
             Class[] paramTypes = new Class[2];
-            paramTypes[0] = loader.loadClass("org.omg.CORBA.portable.OutputStream");
-            paramTypes[1] = loader.loadClass(className);
+            paramTypes[0] = ProviderLocator.loadClass("org.omg.CORBA.portable.OutputStream", this.getClass(), loader);
+            paramTypes[1] = ProviderLocator.loadClass(className, this.getClass(), loader);
             java.lang.reflect.Method m = c.getMethod("write", paramTypes);
 
             //

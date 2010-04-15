@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmispec.util;
 
+import org.apache.yoko.osgi.ProviderLocator;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -39,16 +41,10 @@ public class UtilLoader {
             throws ClassNotFoundException {
         Class result = null;
 
-        if (loader != null) {
-            try {
-                logger.finer("trying provided class loader");
-                result = loader.loadClass(name);
-            } catch (ClassNotFoundException ex) {
-                // skip //
-            }
-
-            if (result != null)
-                return result;
+        try {
+            return ProviderLocator.loadClass(name, null, loader);
+        } catch (ClassNotFoundException e) {
+            //skip
         }
 
         ClassLoader stackLoader = null;

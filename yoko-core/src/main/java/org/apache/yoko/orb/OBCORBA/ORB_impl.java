@@ -20,6 +20,7 @@ package org.apache.yoko.orb.OBCORBA;
 import java.security.AccessController;
 import java.util.Properties;
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
+import org.apache.yoko.osgi.ProviderLocator;
 
 // This class must be public and not final
 public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
@@ -787,13 +788,8 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     try {
                         // get the appropriate class for the loading.
                         ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                        if (loader == null) {
-                            loader = this.getClass().getClassLoader();
-                        }
-
-                        Class c = loader.loadClass(initClass);
-                        org.omg.PortableInterceptor.ORBInitializer init = (org.omg.PortableInterceptor.ORBInitializer) c
-                                .newInstance();
+                        org.omg.PortableInterceptor.ORBInitializer init = (org.omg.PortableInterceptor.ORBInitializer) 
+                                ProviderLocator.loadClass(initClass, getClass(), loader).newInstance();
                         orbInitializers_.put(initClass, init);
                     }
                     // Exceptions have to be ignored here
@@ -1487,21 +1483,26 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
 
-        if (props != null)
-            orbClassName = props.getProperty(propName);
-
-        if (orbClassName == null)
-            orbClassName = getSystemProperty(propName);
-
-        if (orbClassName == null)
-            orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-
         ORB_impl orb;
 
         try {
-            // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            orb = (ORB_impl) loader.loadClass(orbClassName).newInstance();
+            orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
+            if (orb == null) {
+
+                if (props != null)
+                    orbClassName = props.getProperty(propName);
+
+                try {
+                    if (orbClassName == null)
+                        orbClassName = getSystemProperty(propName);
+                } catch (SecurityException ex) {
+                    // ignore
+                }
+
+                if (orbClassName == null)
+                    orbClassName = "org.apache.yoko.orb.CORBA.ORB";
+                orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
+            }
         } catch (Throwable ex) {
             throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
                     + orbClassName + '\n' + ex.getMessage()).initCause(ex);
@@ -1523,26 +1524,26 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
-
-        if (props != null)
-            orbClassName = props.getProperty(propName);
-
-        try {
-            if (orbClassName == null)
-                orbClassName = getSystemProperty(propName);
-        } catch (SecurityException ex) {
-            // ignore
-        }
-
-        if (orbClassName == null)
-            orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-
         ORB_impl orb;
 
         try {
-            // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            orb = (ORB_impl) loader.loadClass(orbClassName).newInstance();
+            orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
+            if (orb == null) {
+
+                if (props != null)
+                    orbClassName = props.getProperty(propName);
+
+                try {
+                    if (orbClassName == null)
+                        orbClassName = getSystemProperty(propName);
+                } catch (SecurityException ex) {
+                    // ignore
+                }
+
+                if (orbClassName == null)
+                    orbClassName = "org.apache.yoko.orb.CORBA.ORB";
+                orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
+            }
         } catch (Throwable ex) {
             throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
                     + orbClassName + '\n' + ex.getMessage()).initCause(ex);

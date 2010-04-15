@@ -17,14 +17,13 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
+import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
+
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.logging.Logger;
 
 public final class Util {
     static final Logger logger = Logger.getLogger(Util.class.getName());
@@ -309,10 +308,8 @@ public final class Util {
             String className = exClass.getName();
             String id = null;
             try {
-                // get the appropriate class for the loading.
-                ClassLoader loader = exClass.getClassLoader();
 
-                Class c = loader.loadClass(className + "Helper");
+                Class c = ProviderLocator.loadClass(className + "Helper", exClass, null);
                 java.lang.reflect.Method m = c.getMethod("id", new Class[0]);
                 id = (String) m.invoke(null, new Object[0]);
             } catch (ClassNotFoundException e) {
@@ -598,11 +595,7 @@ public final class Util {
             Class exClass = ex.getClass();
             String helper = exClass.getName() + "Helper";
             // get the appropriate class for the loading.
-            ClassLoader loader = exClass.getClassLoader();
-            if(loader == null) {
-            	loader = Thread.currentThread().getContextClassLoader();
-            }
-        	Class c = loader.loadClass(helper);
+        	Class c = ProviderLocator.loadClass(helper, exClass, Thread.currentThread().getContextClassLoader());
             final Class[] paramTypes = { org.omg.CORBA.Any.class, exClass };
             java.lang.reflect.Method m = c.getMethod("insert", paramTypes);
             final java.lang.Object[] args = { any, ex };

@@ -22,6 +22,7 @@ import javax.security.auth.login.LoginException;
 
 import java.security.AccessController;
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public abstract class SecurityContext {
 
@@ -49,7 +50,7 @@ public abstract class SecurityContext {
         try {
             // get the appropriate class for the loading.
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            Class c = loader.loadClass(className);
+            Class c = ProviderLocator.loadClass(className, SecurityContext.class, loader);
             return (SecurityContextDelegate) c.newInstance();
         }
         catch (Exception ex) {

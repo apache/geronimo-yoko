@@ -16,6 +16,7 @@
  */
 
 package org.apache.yoko.orb.OBMessaging;
+import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 
 public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
@@ -210,7 +211,7 @@ public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
                 //
                 // get the appropriate class for the loading.
                 ClassLoader loader = exClass.getClassLoader();
-                Class c = loader.loadClass(className + "Helper");
+                Class c = ProviderLocator.loadClass(className + "Helper", exClass);
                 Class[] paramTypes = new Class[2];
                 paramTypes[0] = org.omg.CORBA.Any.class;
                 paramTypes[1] = exClass;

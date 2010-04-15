@@ -22,6 +22,7 @@ import java.io.Serializable;
 import javax.rmi.CORBA.ValueHandler;
 
 import org.apache.yoko.orb.CORBA.ORB;
+import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.portable.BoxedValueHelper;
 
 final public class ValueWriter {
@@ -193,11 +194,7 @@ final public class ValueWriter {
         try {
             String name = value.getClass().getName() + "Helper";
             // get the appropriate class for the loading.
-            ClassLoader loader = value.getClass().getClassLoader();
-            if(loader == null) {
-            	loader = Thread.currentThread().getContextClassLoader();
-            }
-            Class c = loader.loadClass(name);
+            Class c = ProviderLocator.loadClass(name, value.getClass(), Thread.currentThread().getContextClassLoader());
             if (BoxedValueHelper.class.isAssignableFrom(c))
                 helperClass = c;
         } catch (ClassNotFoundException ex) {

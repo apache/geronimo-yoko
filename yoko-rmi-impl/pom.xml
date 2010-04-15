@@ -32,14 +32,16 @@
         <dependency>
             <groupId>org.apache.yoko</groupId>
             <artifactId>yoko-spec-corba</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
             <artifactId>yoko-rmi-spec</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.bcel</groupId>
-            <artifactId>bcel</artifactId>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.bcel</artifactId>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -55,7 +57,14 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
-                        <Export-Package>org.apache.yoko.rmi.impl*,*</Export-Package>
+                        <Export-Package>
+                            org.apache.yoko.osgi.locator,
+                            org.apache.yoko.rmi.impl,
+                            org.apache.yoko.rmi.api,
+                            org.apache.yoko.rmi.util,
+                            org.apache.yoko.rmi.util.corba,
+                            org.apache.yoko.rmi.util.stub
+                        </Export-Package>
                     </instructions>
                 </configuration>
             </plugin>

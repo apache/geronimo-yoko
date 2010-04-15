@@ -42,6 +42,7 @@ import javax.rmi.CORBA.UtilDelegate;
 import javax.rmi.CORBA.ValueHandler;
 import javax.rmi.PortableRemoteObject;
 
+import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.MARSHAL;
@@ -202,7 +203,7 @@ public class UtilImpl implements UtilDelegate {
      * Generic function for reflective instantiation
      */
     private Object newInstance(final Class cls, final Class[] arg_types,
-            final Object[] args) {
+                               final Object[] args) {
         return java.security.AccessController
                 .doPrivileged(new java.security.PrivilegedAction() {
                     public Object run() {
@@ -285,8 +286,8 @@ public class UtilImpl implements UtilDelegate {
                 corba_obj = (org.omg.CORBA.Object) PortableRemoteObject
                         .toStub(ro);
             } catch (java.rmi.NoSuchObjectException ex) {
-                throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(
-                    "object not exported " + ro).initCause(ex);
+                throw (org.omg.CORBA.MARSHAL) new org.omg.CORBA.MARSHAL(
+                        "object not exported " + ro).initCause(ex);
             }
 
             any.insert_Object((org.omg.CORBA.Object) corba_obj);
@@ -352,7 +353,7 @@ public class UtilImpl implements UtilDelegate {
      * instances of java.rmi.Remote for objects that have already been exported.
      */
     public void writeRemoteObject(org.omg.CORBA.portable.OutputStream out,
-            Object obj) throws org.omg.CORBA.SystemException {
+                                  Object obj) throws org.omg.CORBA.SystemException {
         org.omg.CORBA.Object objref = null;
 
         if (obj == null) {
@@ -377,7 +378,7 @@ public class UtilImpl implements UtilDelegate {
                     objref = (javax.rmi.CORBA.Stub) PortableRemoteObject
                             .toStub((java.rmi.Remote) obj);
                 } catch (java.rmi.RemoteException ex) {
-                    throw (MARSHAL)new MARSHAL("cannot convert Remote to Object").initCause(ex);
+                    throw (MARSHAL) new MARSHAL("cannot convert Remote to Object").initCause(ex);
                 }
             }
 
@@ -391,7 +392,7 @@ public class UtilImpl implements UtilDelegate {
     }
 
     public void writeAbstractObject(org.omg.CORBA.portable.OutputStream out,
-            Object obj) {
+                                    Object obj) {
         logger.finer("writeAbstractObject.1 " + " out=" + out);
 
         if (obj instanceof org.omg.CORBA.Object || obj instanceof Serializable) {
@@ -414,10 +415,10 @@ public class UtilImpl implements UtilDelegate {
                     objref = (org.omg.CORBA.Object) PortableRemoteObject
                             .toStub((Remote) obj);
                 } catch (RemoteException ex) {
-                    throw (MARSHAL)new MARSHAL("unable to export object").initCause(ex);
+                    throw (MARSHAL) new MARSHAL("unable to export object").initCause(ex);
                 }
             }
-            obj = objref; 
+            obj = objref;
         }
 
         org.omg.CORBA_2_3.portable.OutputStream out_ = (org.omg.CORBA_2_3.portable.OutputStream) out;
@@ -528,36 +529,30 @@ public class UtilImpl implements UtilDelegate {
         try {
             return loadClass0(name, codebase, loader);
         } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINER, "cannot load from " + codebase + " " + 
-                ex.getMessage(), ex);
+            logger.log(Level.FINER, "cannot load from " + codebase + " " +
+                    ex.getMessage(), ex);
             throw ex;
         }
     }
 
     static public Class loadClass0(String name, String codebase, ClassLoader loader)
             throws ClassNotFoundException {
+
+        try {
+            return ProviderLocator.loadClass(name, null, loader);
+        } catch (ClassNotFoundException e) {
+            //skip
+        }
         Class result = null;
 
-        if (loader != null) {
-            try {
-                result = loader.loadClass(name);
-            } catch (ClassNotFoundException ex) {
-                // skip //
-            }
-
-            if (result != null)
-                return result;
-        }
-
         ClassLoader stackLoader = null;
-        ClassLoader thisLoader = Util.class.getClassLoader(); 
+        ClassLoader thisLoader = Util.class.getClassLoader();
         Class[] stack = _secman.getClassContext();
         for (int i = 1; i < stack.length; i++) {
             ClassLoader testLoader = stack[i].getClassLoader();
-            if (testLoader != null && testLoader != thisLoader)
-            {
-                stackLoader = thisLoader; 
-                break; 
+            if (testLoader != null && testLoader != thisLoader) {
+                stackLoader = thisLoader;
+                break;
             }
         }
 
@@ -890,40 +885,41 @@ public class UtilImpl implements UtilDelegate {
     static final Class[] RMI_TO_CORBA_EXCEPTION;
 
 //  We want to avoid a dependency on JTA, so we add these classes only if JTA is available.
+
     static {
-	Class[] rmiToCorba;
-	try {
-	    rmiToCorba = new Class[] {
-		    Util.loadClass("javax.transaction.HeuresticMixedException", null, null),
-		    org.omg.CosTransactions.HeuristicMixed.class,
+        Class[] rmiToCorba;
+        try {
+            rmiToCorba = new Class[]{
+                    Util.loadClass("javax.transaction.HeuristicMixedException", null, null),
+                    org.omg.CosTransactions.HeuristicMixed.class,
 
-		    Util.loadClass("javax.transaction.HeuristicRollbackException", null, null),
-		    org.omg.CosTransactions.HeuristicRollback.class,
+                    Util.loadClass("javax.transaction.HeuristicRollbackException", null, null),
+                    org.omg.CosTransactions.HeuristicRollback.class,
 
-	            Util.loadClass("javax.transaction.HeuristicCommitException", null, null),
-	            org.omg.CosTransactions.HeuristicCommit.class,
+                    Util.loadClass("javax.transaction.HeuristicCommitException", null, null),
+                    org.omg.CosTransactions.HeuristicCommit.class,
 
-	            Util.loadClass("javax.transaction.NotSupportedException", null, null),
-	            org.omg.CosTransactions.SubtransactionsUnavailable.class,
+                    Util.loadClass("javax.transaction.NotSupportedException", null, null),
+                    org.omg.CosTransactions.SubtransactionsUnavailable.class,
 
-	            Util.loadClass("javax.transaction.InvalidTransactionException", null, null),
-	            org.omg.CORBA.INVALID_TRANSACTION.class,
+                    Util.loadClass("javax.transaction.InvalidTransactionException", null, null),
+                    org.omg.CORBA.INVALID_TRANSACTION.class,
 
-	            Util.loadClass("javax.transaction.TransactionRequiredException", null, null),
-	            org.omg.CORBA.TRANSACTION_REQUIRED.class,
+                    Util.loadClass("javax.transaction.TransactionRequiredException", null, null),
+                    org.omg.CORBA.TRANSACTION_REQUIRED.class,
 
-	            Util.loadClass("javax.transaction.TransactionRolledbackException", null, null),
-	            org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
+                    Util.loadClass("javax.transaction.TransactionRolledbackException", null, null),
+                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
 
-	            Util.loadClass("javax.transaction.RollbackException", null, null),
-	            org.omg.CORBA.TRANSACTION_ROLLEDBACK.class
-	    };
+                    Util.loadClass("javax.transaction.RollbackException", null, null),
+                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class
+            };
 
-	}
-	catch(ClassNotFoundException e) {
-	    rmiToCorba = new Class[0];
-	}
-	RMI_TO_CORBA_EXCEPTION = rmiToCorba;
+        }
+        catch (ClassNotFoundException e) {
+            rmiToCorba = new Class[0];
+        }
+        RMI_TO_CORBA_EXCEPTION = rmiToCorba;
     }
 
     static final Class[] CORBA_TO_RMI_EXCEPTION = {

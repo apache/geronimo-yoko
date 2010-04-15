@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public final class PluginManager {
     //
@@ -124,11 +124,8 @@ public final class PluginManager {
             try {
                 // get the appropriate class for the loading.
                 ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                if (loader == null) {
-                    loader = this.getClass().getClassLoader();
-                }
 
-                Class c = loader.loadClass(className);
+                Class c = ProviderLocator.loadClass(className, this.getClass(), loader);
                 pi = (org.apache.yoko.orb.OCI.PluginInit) c.newInstance();
             } catch (org.omg.CORBA.SystemException ex) {
                 throw ex;

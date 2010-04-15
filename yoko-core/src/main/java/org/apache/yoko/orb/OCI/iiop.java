@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public class iiop implements PluginInit {
     static final Logger logger = Logger.getLogger(iiop.class.getName());
@@ -55,11 +56,8 @@ public class iiop implements PluginInit {
         try {
             // get the appropriate class for the loading.
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            if (loader == null) {
-                loader = this.getClass().getClassLoader();
-            }
 
-            Class c = loader.loadClass(connectionHelper);
+            Class c = ProviderLocator.loadClass(connectionHelper, getClass(), loader);
             helper = (org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) c.newInstance();
             // give this a chance to initializer
             helper.init(orb, helperArgs);

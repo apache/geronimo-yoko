@@ -26,6 +26,7 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 import EDU.oswego.cs.dl.util.concurrent.CountDown;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgent {
 
@@ -144,11 +145,8 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
             }
             // get the appropriate class for the loading.
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            if (loader == null) {
-                loader = this.getClass().getClassLoader();
-            }
 
-            Class cl = loader.loadClass(className);
+            Class cl = ProviderLocator.loadClass(className, getClass(), loader);
             Method method = cl.getMethod(methodName, parameters);
             return method.invoke(null, args);
         }

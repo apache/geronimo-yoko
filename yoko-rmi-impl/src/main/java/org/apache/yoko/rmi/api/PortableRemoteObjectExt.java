@@ -19,6 +19,8 @@
 package org.apache.yoko.rmi.api;
 
 import java.security.AccessController;
+
+import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 
 public class PortableRemoteObjectExt {
@@ -29,40 +31,32 @@ public class PortableRemoteObjectExt {
         if (delegate != null)
             return;
 
-        String name = (String)AccessController.doPrivileged(new GetSystemPropertyAction(
-                "org.apache.yoko.rmi.PortableRemoteObjectExtClass",
-                "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
-
-        Class clz = null;
         try {
-            clz = Thread.currentThread().getContextClassLoader()
-                    .loadClass(name);
-        } catch (ClassNotFoundException ex) {
-
+            delegate = (PortableRemoteObjectExtDelegate) ProviderLocator.getService("org.apache.yoko.rmi.PortableRemoteObjectExtClass", PortableRemoteObjectExt.class, Thread.currentThread().getContextClassLoader());
+        } catch (Exception ex) {
+            throw new RuntimeException("internal problem: " + ex.getMessage(), ex);
         }
 
-        if (clz == null) {
+        if (delegate == null) {
+            String name = (String)AccessController.doPrivileged(new GetSystemPropertyAction(
+                    "org.apache.yoko.rmi.PortableRemoteObjectExtClass",
+                    "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
+
             try {
-                clz = Class.forName(name);
+                delegate = (PortableRemoteObjectExtDelegate)ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, Thread.currentThread().getContextClassLoader()).newInstance();
+            } catch (InstantiationException ex) {
+                throw new RuntimeException(ex.getMessage(), ex);
+            } catch (IllegalAccessException ex) {
+                throw new RuntimeException(ex.getMessage(), ex);
             } catch (ClassNotFoundException ex) {
                 throw new RuntimeException(ex.getMessage(), ex);
             }
-        }
-
-        try {
-            delegate = (PortableRemoteObjectExtDelegate) clz.newInstance();
-
-        } catch (InstantiationException ex) {
-            throw new RuntimeException("internal problem: " + ex.getMessage(), ex);
-
-        } catch (IllegalAccessException ex) {
-            throw new RuntimeException("internal problem: " + ex.getMessage(), ex);
         }
     }
 
     /** Return the currently active state for this thread */
     public static PortableRemoteObjectState getState() {
-	init();
-	return delegate.getCurrentState();
-     }
+        init();
+        return delegate.getCurrentState();
+    }
 }

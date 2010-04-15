@@ -116,9 +116,9 @@
                 <version>${junit.version}</version>
             </dependency>
             <dependency>
-                <groupId>org.apache.bcel</groupId>
-                <artifactId>bcel</artifactId>
-                <version>${bcel.version}</version>
+                <groupId>org.apache.servicemix.bundles</groupId>
+                <artifactId>org.apache.servicemix.bundles.bcel</artifactId>
+                <version>5.2_2</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.maven</groupId>
