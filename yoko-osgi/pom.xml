@@ -16,29 +16,23 @@
 *  limitations under the License.
 * -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd" xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
     <modelVersion>4.0.0</modelVersion>
     <parent>
-        <groupId>org.apache.yoko</groupId>
         <artifactId>yoko</artifactId>
+        <groupId>org.apache.yoko</groupId>
         <version>1.1-SNAPSHOT</version>
     </parent>
-    <artifactId>yoko-rmi-spec</artifactId>
+    <artifactId>yoko-osgi</artifactId>
+    <name>Apache Yoko osgi support</name>
     <packaging>bundle</packaging>
-    <name>Apache Yoko RMI Spec</name>
-
     <dependencies>
-    <!--  The JDK CORBA classes are also sufficient, so it is not necessary to add this dependency as
-    an endorsed standard -->
+        <!-- this contains the osgi-relevant classes in the endorsed dir -->
         <dependency>
             <groupId>org.apache.yoko</groupId>
             <artifactId>yoko-spec-corba</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
-
 </project>
