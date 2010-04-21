@@ -24,11 +24,6 @@ limitations under the License.
 
 <blueprint xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0">
 
-    <!--<service id="yokoRegistry"-->
-             <!--interface="org.apache.yoko.osgi.ProviderRegistry"-->
-             <!--activation="eager">-->
-        <!--<ref component-id="yokoRegistryBean"/>-->
-    <!--</service>-->
     <service id="yokoRegister"
              interface="org.apache.yoko.osgi.locator.Register"
              activation="eager">
@@ -83,6 +78,23 @@ limitations under the License.
         </argument>
         <argument>
             <value>org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl</value>
+        </argument>
+        <argument>
+            <ref component-id="blueprintBundle"/>
+        </argument>
+        <argument>
+            <ref component-id="yokoRegistryBean"/>
+        </argument>
+    </bean>
+    <bean class="org.apache.yoko.osgi.locator.ServiceBean"
+          activation="eager"
+          init-method="start"
+          destroy-method="stop">
+        <argument>
+            <value>javax.rmi.CORBA.StubClass</value>
+        </argument>
+        <argument>
+            <value>org.apache.yoko.rmi.impl.StubImpl</value>
         </argument>
         <argument>
             <ref component-id="blueprintBundle"/>

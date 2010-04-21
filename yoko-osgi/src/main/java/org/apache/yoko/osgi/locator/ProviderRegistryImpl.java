@@ -17,6 +17,7 @@
 package org.apache.yoko.osgi.locator;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -525,10 +526,11 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
             // when asked to locate.
             List<BundleProviderLoader> l = registry.get(providerId);
             if (l ==  null) {
-                l = new ArrayList<BundleProviderLoader>();
+                l = new ArrayList<BundleProviderLoader>(2);
                 registry.put(providerId, l);
             }
             l.add(provider);
+            Collections.sort(l);
         }
 
         /**

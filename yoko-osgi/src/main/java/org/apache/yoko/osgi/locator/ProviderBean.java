@@ -22,7 +22,6 @@ package org.apache.yoko.osgi.locator;
 
 import java.util.logging.Logger;
 
-import org.apache.yoko.osgi.ProviderRegistry;
 import org.osgi.framework.Bundle;
 
 /**
@@ -36,10 +35,18 @@ public class ProviderBean {
     private BundleProviderLoader bundleProviderLoader;
 
     public ProviderBean(String key,
+                       String className,
+                       Bundle bundle,
+                       Register providerRegistry) {
+        this(key, className, bundle, providerRegistry, -1);
+    }
+
+    public ProviderBean(String key,
                         String className,
                         Bundle bundle,
-                        Register providerRegistry) {
-        bundleProviderLoader = new BundleProviderLoader(key, className, bundle);
+                        Register providerRegistry,
+                        Integer priority) {
+        bundleProviderLoader = new BundleProviderLoader(key, className, bundle, priority == null? -1: priority);
         log.finer("ProviderBean: " + bundleProviderLoader);
         this.providerRegistry = providerRegistry;
     }

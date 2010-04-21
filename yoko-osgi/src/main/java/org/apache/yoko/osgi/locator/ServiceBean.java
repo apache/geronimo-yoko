@@ -35,10 +35,18 @@ public class ServiceBean {
     private BundleProviderLoader bundleProviderLoader;
 
     public ServiceBean(String key,
-                        String className,
-                        Bundle bundle,
-                        Register providerRegistry) {
-        bundleProviderLoader = new BundleProviderLoader(key, className, bundle);
+                       String className,
+                       Bundle bundle,
+                       Register providerRegistry) {
+        this(key, className, bundle, providerRegistry, -1);
+    }
+    
+    public ServiceBean(String key,
+                       String className,
+                       Bundle bundle,
+                       Register providerRegistry,
+                       Integer priority) {
+        bundleProviderLoader = new BundleProviderLoader(key, className, bundle, priority == null? -1: priority);
         log.finer("ServiceBean: " + bundleProviderLoader);
         this.providerRegistry = providerRegistry;
     }

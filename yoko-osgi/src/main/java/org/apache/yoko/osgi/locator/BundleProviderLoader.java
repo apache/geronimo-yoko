@@ -25,7 +25,7 @@ import org.osgi.framework.Bundle;
 /**
  * Holder class for located services information.
  */
-public class BundleProviderLoader {
+public class BundleProviderLoader implements Comparable<BundleProviderLoader> {
     // the class name for this provider
     private final String providerId;
     // the mapped class name of the provider.
@@ -33,17 +33,21 @@ public class BundleProviderLoader {
     // the hosting bundle.
     private final Bundle bundle;
 
+    private final int priority;
+
     /**
      * Create a loader for this registered provider.
      *
      * @param providerId The provider ID
      * @param providerClass The mapped class name of the provider.
      * @param bundle    The hosting bundle.
+     * @param priority
      */
-    public BundleProviderLoader(String providerId, String providerClass, Bundle bundle) {
+    public BundleProviderLoader(String providerId, String providerClass, Bundle bundle, int priority) {
         this.providerId = providerId;
         this.providerClass = providerClass;
         this.bundle = bundle;
+        this.priority = priority;
     }
 
     /**
@@ -107,5 +111,9 @@ public class BundleProviderLoader {
         } else {
             return false;
         }
+    }
+
+    public int compareTo(BundleProviderLoader other) {
+        return other.priority - priority;
     }
 }
