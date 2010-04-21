@@ -21,10 +21,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.osgi.ProviderLocator;
-import org.osgi.service.log.LogService;
 
 /**
  * The implementation of the provider registry used to store
@@ -33,10 +33,6 @@ import org.osgi.service.log.LogService;
 public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegistry, Register {
 
     private static final Logger log = Logger.getLogger(ProviderRegistryImpl.class.getName());
-    // indicates a bundle wishes to opt in to the META-INF/services registration and tracking.
-    public static final String OPT_IN_HEADER = "SPI-Provider";
-    // provider classes exported via a header.
-    public static final String EXPORT_PROVIDER_HEADER = "Export-SPI-Provider";
     // our mapping between a provider id and the implementation information.  There
     // might be a one-to-many relationship between the ids and implementing classes.
     private SPIRegistry providers = new SPIRegistry();
@@ -52,59 +48,13 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         ProviderLocator.setRegistry(null);
     }
 
-    // our base Activator (used as a service source)
-//    private Activator activator;
-
-//    public ProviderRegistryImpl(Activator activator) {
-//        this.activator = activator;
-//    }
-
-    /**
-     * Add a bundle to the provider registry.  This searches
-     * for services information in the OSGI-INF/providers
-     * directory of the bundle and registers this information
-     * in a provider registry.  Bundles that need to locate
-     * class instances can use the provider registry to
-     * locate classes that might reside in other bundles.
-     *
-     * @param bundle The source bundle.
-     *
-     * @return A map of the located registrations.  Returns null if
-     *         this bundle does not contain any providers.
-     */
-//    public Object addBundle(Bundle bundle) {
-//        log(LogService.LOG_DEBUG, "adding bundle " + bundle);
-//        // create a tracker item for this bundle.  This will record all of the information
-//        // that's relevent to this bundle
-//        BundleResources tracker = new BundleResources(bundle);
-//
-//        // if the tracker found information of interest, return it to the
-//        // BundleTracker to let it know we need to watch this one.
-//        return tracker.needsTracking() ? tracker : null;
-//    }
-
-
-    /**
-     * Remove a bundle from the registry.
-     *
-     * @param bundle The target bundle.
-     */
-//    public void removeBundle(Bundle bundle, Object obj) {
-//        log(LogService.LOG_DEBUG, "removing bundle " + bundle);
-//        BundleResources tracker = (BundleResources)obj;
-//        if (tracker != null) {
-//            tracker.remove();
-//        }
-//    }
-
-
     /**
      * Register an individual provivider item by its provider identifier.
      *
      * @param provider The loader used to resolve the provider class.
      */
     public void registerProvider(BundleProviderLoader provider) {
-        log(LogService.LOG_DEBUG, "registering provider " + provider);
+        log(Level.FINE, "registering provider " + provider);
         providers.register(provider);
     }
 
@@ -114,7 +64,7 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The provider registration instance
      */
     public void unregisterProvider(BundleProviderLoader provider) {
-        log(LogService.LOG_DEBUG, "unregistering provider " + provider);
+        log(Level.FINE, "unregistering provider " + provider);
         providers.unregister(provider);
     }
 
@@ -125,7 +75,7 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The loader used to resolve the provider class.
      */
     public void registerService(BundleProviderLoader provider) {
-        log(LogService.LOG_DEBUG, "registering service " + provider);
+        log(Level.FINE, "registering service " + provider);
         serviceProviders.register(provider);
     }
 
@@ -135,10 +85,9 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The provider registration instance
      */
     public void unregisterService(BundleProviderLoader provider) {
-        log(LogService.LOG_DEBUG, "unregistering service " + provider);
+        log(Level.FINE, "unregistering service " + provider);
         serviceProviders.unregister(provider);
     }
-
 
     /**
      * Locate a class by its provider id indicator. .
@@ -192,7 +141,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         return classes;
     }
 
-
     /**
      * Locate and instantiate an instance of a service provider
      * defined in the META-INF/services directory of tracked bundles.
@@ -242,7 +190,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         return instances;
     }
 
-
     /**
      * Locate all services that match a given provider id and return the implementation
      * classes
@@ -271,7 +218,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         return classes;
     }
 
-
     /**
      * Locate and return the class for a service provider
      * defined in the META-INF/services directory of tracked bundles.
@@ -280,7 +226,7 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      *
      * @return The provider class.   Returns null if no service defintions
      *         can be located.
-     * @exception Exception Any classloading or other exceptions thrown during
+     * @exception ClassNotFoundException Any classloading or other exceptions thrown during
      *                      the process of loading this service provider class.
      */
     public Class<?> getServiceClass(String providerId) throws ClassNotFoundException {
@@ -295,210 +241,9 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         return null;
     }
 
-    private void log(int level, String message) {
-        log.fine(message);
-//        activator.log(level, message);
+    private void log(Level level, String message) {
+        log.log(level, message);
     }
-
-    private void log(int level, String message, Throwable th) {
-//        log.fine(message, th);
-//        activator.log(level, message, th);
-    }
-
-
-//    private class BundleResources {
-//        // the bundle we're attached to.
-//        private Bundle bundle;
-//        // our map of providers maintained for the META-INF/services design pattern.
-//        // this is an interface-to-provider instance mapping.
-//        private List<BundleProviderLoader> serviceProviders;
-//        // the defined mapping for provider classes...not maintained as an
-//        // interface-to-provider mapping.
-//        private List<BundleProviderLoader> providers;
-//
-//        public BundleResources(Bundle b) {
-//            bundle = b;
-//            // go locate any services we need
-//            locateProviders();
-//            locateServices();
-//        }
-//
-//        public boolean needsTracking() {
-//            return serviceProviders != null || providers != null;
-//        }
-//
-//        // locate and process any providers defined in the OSGI-INF/providers directory
-//        private void locateProviders() {
-//            // we accumulate from the headers and the providers directory.  The headers
-//            // are simpler if there is no class mapping and is easier to use when
-//            // converting a simple jar to a bundle.
-//            Set<BundleProviderLoader> locatedProviders = new LinkedHashSet<BundleProviderLoader>();
-//            List<BundleProviderLoader> headerProviders = locateHeaderProviderDefinitions();
-//            if (headerProviders != null) {
-//                locatedProviders.addAll(headerProviders);
-//            }
-//
-//            List<BundleProviderLoader> directoryProviders = processDefinitions("OSGI-INF/providers/");
-//            if (directoryProviders != null) {
-//                locatedProviders.addAll(directoryProviders);
-//            }
-//            // if we have anything, add to global registry
-//            if (!locatedProviders.isEmpty()) {
-//                // process the registrations for each item
-//                for (BundleProviderLoader loader: locatedProviders) {
-//                    // add to the mapping table
-//                    registerProvider(loader);
-//                }
-//                // remember this list so we can unregister when the bundle is stopped
-//                providers = new ArrayList(locatedProviders);
-//            }
-//        }
-//
-//        /**
-//         * Parse the Export-Provider: header to create a list of
-//         * providers that are exported via the header syntax
-//         * rather than via a provider mapping file.
-//         *
-//         * @return A list of providers defined on the header, or null if
-//         *         no providers were exported.
-//         */
-//        private List<BundleProviderLoader> locateHeaderProviderDefinitions() {
-//            // check the header to see if there's anything defined here.
-//            String exportedProviders = (String)bundle.getHeaders().get(EXPORT_PROVIDER_HEADER);
-//            if (exportedProviders == null) {
-//                return null;
-//            }
-//
-//            List<BundleProviderLoader>providers = new ArrayList<BundleProviderLoader>();
-//            // split on the separator
-//            String[] classNames = exportedProviders.split(",");
-//
-//            for (String name : classNames) {
-//                name = name.trim();
-//                // this is a simple mapping
-//                providers.add(new BundleProviderLoader(name, name, bundle));
-//            }
-//            return providers;
-//        }
-//
-//        // now process any services
-//        private void locateServices() {
-//            // we only process these if there is a header indicating this
-//            // bundle wants to opt-in to this registration process.
-//            if (bundle.getHeaders().get(OPT_IN_HEADER) == null) {
-//                return;
-//            }
-//
-//            log(LogService.LOG_INFO, OPT_IN_HEADER + " Manifest header found in bundle: " + bundle.getSymbolicName());
-//
-//            serviceProviders = processDefinitions("META-INF/services/");
-//            // if we have anything, add to global registry
-//            if (serviceProviders != null) {
-//                // process the registrations for each item
-//                for (BundleProviderLoader loader: serviceProviders) {
-//                    // add to the mapping table
-//                    registerService(loader);
-//                }
-//            }
-//        }
-//
-//
-//        /**
-//         * Remove all resources associated with this bundle from the
-//         * global registry.
-//         */
-//        public void remove() {
-//            log(LogService.LOG_DEBUG, "removing bundle " + bundle);
-//            if (providers != null) {
-//                for (BundleProviderLoader loader : providers) {
-//                    // unregistry the individual entry
-//                    unregisterProvider(loader);
-//                }
-//            }
-//
-//            if (serviceProviders != null) {
-//                for (BundleProviderLoader loader : serviceProviders) {
-//                    // unregistry the individual entry
-//                    unregisterService(loader);
-//                }
-//            }
-//        }
-//
-//
-//        /**
-//         * Process all of the service definition files in a given
-//         * target path.  This is used to process both the
-//         * META-INF/services files and the OSGI-INF/providers files.
-//         *
-//         * @param path   The target path location.
-//         *
-//         * @return The list of matching service definitions.  Returns null if
-//         *         no matches were found.
-//         */
-//        private List<BundleProviderLoader> processDefinitions(String path) {
-//            List<BundleProviderLoader> mappings = new ArrayList<BundleProviderLoader>();
-//
-//            // look for services definitions in the bundle...we accumulate these as provider class
-//            // definitions.
-//            Enumeration e = bundle.findEntries(path, "*", false);
-//            if (e != null) {
-//                while (e.hasMoreElements()) {
-//                    final URL u = (URL) e.nextElement();
-//                    // go parse out the control file
-//                    parseServiceFile(u, mappings);
-//                }
-//            }
-//            // only return this if we have something associated with this bundle
-//            return mappings.isEmpty() ? null : mappings;
-//        }
-//
-//
-//        /**
-//         * Parse a provider definition file and create loaders
-//         * for all definitions contained within the file.
-//         *
-//         * @param u      The URL of the file
-//         *
-//         * @return A list of the defined mappings.
-//         */
-//        private void parseServiceFile(URL u, List<BundleProviderLoader>mappings) {
-//            final String url = u.toString();
-//            // ignore directories
-//            if (url.endsWith("/")) {
-//                return;
-//            }
-//
-//            // the identifier used for the provider is the last item in the URL.
-//            final String providerId = url.substring(url.lastIndexOf("/") + 1);
-//            try {
-//                BufferedReader br = new BufferedReader(new InputStreamReader(u.openStream(), "UTF-8"));
-//                String providerClassName = null;
-//                // the file can be multiple lines long, with comments.  A single file can define multiple providers
-//                // for a single key, so we might need to create multiple entries.  If the file does not contain any
-//                // definition lines, then as a default, we use the providerId as an implementation class also.
-//                String line = br.readLine();
-//                while (line != null) {
-//                    // we allow comments on these lines, and a line can be all comment
-//                    int comment = line.indexOf('#');
-//                    if (comment != -1) {
-//                        line = line.substring(0, comment);
-//                    }
-//                    line = line.trim();
-//                    // if there is nothing left on the line after stripping white space and comments, skip this
-//                    if (line.length() > 0) {
-//                        // add this to our list
-//                        mappings.add(new BundleProviderLoader(providerId, line, bundle));
-//                    }
-//                    // keep reading until the end.
-//                    line = br.readLine();
-//                }
-//                br.close();
-//            } catch (IOException e) {
-//                // ignore errors and handle as default
-//            }
-//        }
-//    }
-
 
     /**
      * Holder class for information about a given collection of
@@ -549,7 +294,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
             }
         }
 
-
         private synchronized BundleProviderLoader getLoader(String id) {
             // synchronize on the registry instance
             if (registry != null) {
@@ -563,7 +307,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
             // no match here
             return null;
         }
-
 
         private synchronized List<BundleProviderLoader> getLoaders(String id) {
             if (registry != null) {
