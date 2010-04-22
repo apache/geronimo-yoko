@@ -1,22 +1,30 @@
-                          Instructions to build Yoko
-			 ============================
+* Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+
+                          Instructions to build Apache Yoko
+			             ===================================
 
 Build Requirements
 ------------------
 
-1. maven2.0.2 and above as your MAVEN_HOME
-2. JDK1.5 as your JAVA_HOME
-3. Subversion 1.2 and above
+1. maven 2.2.1 or above
+2. JDK1.5 or above
 
 Steps to build Yoko
 -------------------
 
-1. If you aren't using maven first time then we recommend cleaning local maven repository. 
-   on unix clean: ~/.m2/ directory
-   on win clean: %USERPROFILE%/m2/ directory
+1. Configure maven so it works in your system.
 
-2. Open a shell and add JAVA_HOME and MAVEN_HOME environment variables to your path.
-
-3. Run the command 'mvn install'.
-
-4. To do a clean build run 'mvn clean install'
+2. Run the command 'mvn install' or 'mvn clean install'.

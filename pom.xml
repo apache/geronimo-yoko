@@ -230,24 +230,24 @@
                         </dependency>
                     </dependencies>
                 </plugin>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-surefire-plugin</artifactId>
-                    <configuration>
-                        <includes>
-                            <include>**/*Test.java</include>
-                            <include>**/*TestCase.java</include>
-                        </includes>
-                        <excludes>
-                            <exclude>**/*$*</exclude>
-                        </excludes>
-                        <reportFormat>brief</reportFormat>
-                        <useFile>false</useFile>
-                        <forkMode>once</forkMode>
-                        <childDelegation>false</childDelegation>
-                        <argLine>-ea</argLine>
-                    </configuration>
-                </plugin>
+                <!--<plugin>-->
+                    <!--<groupId>org.apache.maven.plugins</groupId>-->
+                    <!--<artifactId>maven-surefire-plugin</artifactId>-->
+                    <!--<configuration>-->
+                        <!--<includes>-->
+                            <!--<include>**/*Test.java</include>-->
+                            <!--<include>**/*TestCase.java</include>-->
+                        <!--</includes>-->
+                        <!--<excludes>-->
+                            <!--<exclude>**/*$*</exclude>-->
+                        <!--</excludes>-->
+                        <!--<reportFormat>brief</reportFormat>-->
+                        <!--<useFile>false</useFile>-->
+                        <!--<forkMode>once</forkMode>-->
+                        <!--<childDelegation>false</childDelegation>-->
+                        <!--<argLine>-ea</argLine>-->
+                    <!--</configuration>-->
+                <!--</plugin>-->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
