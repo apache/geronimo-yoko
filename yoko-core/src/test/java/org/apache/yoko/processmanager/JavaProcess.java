@@ -23,12 +23,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 
 import org.apache.yoko.processmanager.internal.ProcessAgent;
 import org.apache.yoko.processmanager.internal.ProcessAgentImpl;
 import org.apache.yoko.processmanager.internal.Util;
-
-import EDU.oswego.cs.dl.util.concurrent.CountDown;
 
 public class JavaProcess {
 
@@ -37,8 +36,8 @@ public class JavaProcess {
 	private ProcessAgent processAgent;
 	private ProcessManager manager;
 
-	CountDown processExited = new CountDown(1);
-	CountDown processStarted = new CountDown(1);
+	CountDownLatch processExited = new CountDownLatch(1);
+	CountDownLatch processStarted = new CountDownLatch(1);
 
 	public JavaProcess(String name, ProcessManager manager) {
 		this.name = name;
@@ -144,7 +143,7 @@ public class JavaProcess {
 		result = processAgent.invokeStatic(className, method, args);
 		}
 		catch(RemoteException e) {
-			if(processExited.currentCount() != 0) {
+			if(processExited.getCount() != 0) {
                 e.printStackTrace();
 				throw new Error(e);
 			}
@@ -180,7 +179,7 @@ public class JavaProcess {
 			//throw new Error(e);
 		}
 		try {
-			processExited.acquire();
+			processExited.await();
 		} catch (InterruptedException e) {
 			throw new Error(e);
 		}
@@ -188,7 +187,7 @@ public class JavaProcess {
 
 	private void waitForProcessStartup(int maxWaitMillis) {
 		try {
-			processStarted.acquire();
+			processStarted.await();
 		} catch (InterruptedException e) {
 			throw new Error(e);
 		}

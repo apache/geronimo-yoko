@@ -49,11 +49,6 @@
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>concurrent</groupId>
-            <artifactId>concurrent</artifactId>
-            <scope>test</scope>
-        </dependency>
 
     </dependencies>
 

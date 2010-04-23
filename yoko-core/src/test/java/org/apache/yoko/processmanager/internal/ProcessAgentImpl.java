@@ -24,8 +24,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
-import EDU.oswego.cs.dl.util.concurrent.CountDown;
 import org.apache.yoko.osgi.ProviderLocator;
 
 public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgent {
@@ -36,7 +37,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
         super();
     }
 
-    private CountDown shutdownCountDown = new CountDown(1);
+    private CountDownLatch shutdownCountDown = new CountDownLatch(1);
     private boolean agentExited = false;
     private boolean exitedFromParent = false;
     private int exitCode = 0;
@@ -67,7 +68,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
 
         agent.shutdownHook = new Thread(new Runnable() {
                 public void run() {
-                    agent.shutdownCountDown.release();
+                    agent.shutdownCountDown.countDown();
                     try {
                         agent.mainThread.join();
                     } catch (InterruptedException e) {
@@ -104,7 +105,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
     private void waitForShutdown() {
         try {
             while(true) {
-                if(shutdownCountDown.attempt(1000)) {
+                if(shutdownCountDown.await(1000, TimeUnit.MILLISECONDS)) {
                     break;
                 }
                 // Throws RemoteException if processManager is gone.
@@ -134,7 +135,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
     public void exit(int exitCode) throws RemoteException {
         this.exitedFromParent = true;
         this.exitCode = exitCode;
-        shutdownCountDown.release();
+        shutdownCountDown.countDown();
     }
 
     public Object invokeStatic(String className, String methodName, Object[] args) {

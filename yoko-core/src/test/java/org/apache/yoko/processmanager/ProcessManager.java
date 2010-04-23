@@ -63,7 +63,7 @@ public class ProcessManager extends UnicastRemoteObject implements ProcessManage
 		}
 		else {
 			process.setAgent(agent);
-			process.processStarted.release();
+			process.processStarted.countDown();
 		}
 	}
 	
@@ -76,7 +76,7 @@ public class ProcessManager extends UnicastRemoteObject implements ProcessManage
 		}
 		else {
 			process.setAgent(agent);
-			process.processExited.release();
+			process.processExited.countDown();
 		}
 	}
 	
