@@ -36,10 +36,21 @@ public class UtilLoader {
     // since that method will call loadClass0 which uses this field... if it is below the static
     // initializer the _secman field will be null
     private static final SecMan _secman = getSecMan();
+    
+    static public Class<?> loadServiceClass(String delegateName, String delegateKey) throws ClassNotFoundException {
+    	
+    	try {
+    		return ProviderLocator.getServiceClass(delegateKey, null, null);
+    	} catch (ClassNotFoundException e){
+    		// skip
+    	}
+    	
+    	return loadClass0(delegateName, null, null);
+    }
 
     static public Class loadClass(String name, String codebase, ClassLoader loader)
             throws ClassNotFoundException {
-        Class result = null;
+        
 
         try {
             return ProviderLocator.loadClass(name, null, loader);
@@ -47,7 +58,14 @@ public class UtilLoader {
             //skip
         }
 
-        ClassLoader stackLoader = null;
+        return loadClass0(name, codebase, loader);
+    }
+    
+    private static Class<?> loadClass0(String name, String codebase, ClassLoader loader) 
+    	throws ClassNotFoundException {
+    	Class result = null;
+    	
+    	ClassLoader stackLoader = null;
         ClassLoader thisLoader = UtilLoader.class.getClassLoader(); 
         Class[] stack = _secman.getClassContext();
         for (int i = 1; i < stack.length; i++) {

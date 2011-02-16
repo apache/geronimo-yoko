@@ -32,18 +32,19 @@ import org.apache.yoko.rmispec.util.UtilLoader;
 public class Util {
     private static UtilDelegate delegate = null;
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.UtilImpl";
+    private static final String DELEGATEKEY = "javax.rmi.CORBA.UtilClass";
 
     // To hide the default constructor we should implement empty private constructor
     private Util() {}
 
     static {
         // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction("javax.rmi.CORBA.UtilClass", defaultDelegate));
+        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
         try {
 
             // this is a little bit recursive, but this will use the full default search order for locating
             // this.
-            delegate = (UtilDelegate)Util.loadClass(delegateName, null, null).newInstance();
+        	delegate = (UtilDelegate)UtilLoader.loadServiceClass(delegateName, DELEGATEKEY).newInstance();
         } catch (Throwable e) {
             org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create Util delegate: "+delegateName);
             ex.initCause(e); 

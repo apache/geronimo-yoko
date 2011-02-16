@@ -25,6 +25,7 @@ import java.rmi.RemoteException;
 import java.security.AccessController;
 
 import org.apache.yoko.rmispec.util.GetSystemPropertyAction;
+import org.apache.yoko.rmispec.util.UtilLoader;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA_2_3.portable.ObjectImpl;
 
@@ -33,14 +34,15 @@ public abstract class Stub extends ObjectImpl implements Serializable {
 
     private transient StubDelegate delegate = null;
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.StubImpl";
+    private static final String DELEGATEKEY = "javax.rmi.CORBA.StubClass";
     // the class we use to create delegates.  This is loaded once,
     private static Class delegateClass = null;
 
     static {
         // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction("javax.rmi.CORBA.StubClass", defaultDelegate));
+        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
         try {
-            delegateClass = Util.loadClass(delegateName, null, null);
+        	delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATEKEY);
         } catch (Exception e) {
             org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create Stub delegate: " + delegateName);
             ex.initCause(e); 
