@@ -36,6 +36,7 @@ import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.apache.yoko.rmi.util.stub.MethodRef;
 import org.apache.yoko.rmi.util.stub.StubClass;
 import org.apache.yoko.rmi.util.stub.StubInitializer;
+import org.apache.yoko.rmispec.util.UtilLoader;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.portable.ObjectImpl;
 
@@ -565,7 +566,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         if (initializer == null) {
             String factory = (String)AccessController.doPrivileged(new GetSystemPropertyAction("org.apache.yoko.rmi.RMIStubInitializerClass", defaultInitializer));
             try {
-                initializer  = (StubInitializer)(Util.loadClass(factory, null, null).newInstance());
+                initializer = (StubInitializer)(UtilLoader.loadServiceClass(factory, "org.apache.yoko.rmi.RMIStubInitializerClass").newInstance());
             } catch (Exception e) {
                 throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
                     "Can not create RMIStubInitializer: " + factory).initCause(e);

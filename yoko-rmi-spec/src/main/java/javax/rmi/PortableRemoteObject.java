@@ -23,18 +23,21 @@ import java.rmi.NoSuchObjectException;
 import java.security.AccessController;
 import javax.rmi.CORBA.PortableRemoteObjectDelegate;
 import javax.rmi.CORBA.Util;
+import javax.rmi.CORBA.UtilDelegate;
 
 import org.apache.yoko.rmispec.util.GetSystemPropertyAction;
+import org.apache.yoko.rmispec.util.UtilLoader;
 
 public class PortableRemoteObject {
     private static PortableRemoteObjectDelegate delegate = null;
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.PortableRemoteObjectImpl";
+    private static final String DELEGATEKEY = "javax.rmi.CORBA.PortableRemoteObjectClass";
 
     static {
         // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction("javax.rmi.CORBA.PortableRemoteObjectClass", defaultDelegate));
+        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
         try {
-            delegate = (PortableRemoteObjectDelegate)Util.loadClass(delegateName, null, null).newInstance();
+        	delegate = (PortableRemoteObjectDelegate)UtilLoader.loadServiceClass(delegateName, DELEGATEKEY).newInstance();
         } catch (Throwable e) {
            org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create PortableRemoteObject delegate: "+delegateName);
            ex.initCause(e); 
