@@ -48,7 +48,7 @@ limitations under the License.
           init-method="start"
           destroy-method="stop">
         <argument>
-            <value>org.omg.CORBA.ORBSingletonClass</value>
+            <value>org.omg.CORBA.ORBSingleton</value>
         </argument>
         <argument>
             <value>org.apache.yoko.orb.CORBA.ORBSingleton</value>
