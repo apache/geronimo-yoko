@@ -170,7 +170,7 @@ public abstract class ORB {
 
     private static ORB ORBSingleton_;
     private static final String ORBClassPropertyKey = "org.omg.CORBA.ORBClass";
-    private static final String ORBSingletonPropertyKey = "org.omg.CORBA.ORBSingleton";
+    private static final String ORBSingletonPropertyKey = "org.omg.CORBA.ORBSingletonClass";
 
     public static ORB init(String[] args, java.util.Properties props) {
 
