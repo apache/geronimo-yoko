@@ -378,6 +378,8 @@ final public class ValueReader {
         //
         if ((h.tag & 0x00000008) == 8) {
             h.state.chunked = true;
+        } else {
+        	h.state.chunked = false;
         }
 
         //
