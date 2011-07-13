@@ -14,7 +14,7 @@
 *  limitations under the License.
 
                           Instructions to build Apache Yoko
-			             ===================================
+                          ===================================
 
 Build Requirements
 ------------------
