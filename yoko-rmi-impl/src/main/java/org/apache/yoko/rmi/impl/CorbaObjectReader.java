@@ -19,6 +19,8 @@
 package org.apache.yoko.rmi.impl;
 
 
+import java.io.IOException;
+
 public class CorbaObjectReader extends ObjectReader {
     final org.omg.CORBA_2_3.portable.InputStream in;
 
@@ -202,4 +204,18 @@ public class CorbaObjectReader extends ObjectReader {
         return in.available();
     }
 
+    @Override
+    public void mark(int i) {
+        in.mark(i);
+    }
+
+    @Override
+    public boolean markSupported() {
+        return in.markSupported();
+    }
+
+    @Override
+    public void reset() throws IOException {
+        in.reset();
+    }
 }

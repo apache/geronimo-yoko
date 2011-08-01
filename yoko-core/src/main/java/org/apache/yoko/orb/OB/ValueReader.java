@@ -202,7 +202,7 @@ final public class ValueReader {
     //
     // Create a value using a factory
     //
-    private class FactoryCreationStrategy extends CreationStrategy {
+    static class FactoryCreationStrategy extends CreationStrategy {
         private String id_;
 
         private ORBInstance orbInstance_;
@@ -296,8 +296,8 @@ final public class ValueReader {
             Assert._OB_assert(h.tag >= 0x7fffff00 && h.tag != -1);
 
             if (h.isRMIValue ()) {
-                Serializable result = readRMIValue (h, null, h.ids[0]);
-                addInstance (h.headerPos, result);
+                Serializable result = reader_.readRMIValue(h, null, h.ids[0]);
+                reader_.addInstance(h.headerPos, result);
                 return result;
             }
             //

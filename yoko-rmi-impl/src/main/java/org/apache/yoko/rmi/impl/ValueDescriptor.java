@@ -818,13 +818,49 @@ public class ValueDescriptor extends TypeDescriptor {
 
         // System.out.println ("readValue "+getJavaClass());
 
-        if (_write_object_method != null) {
+        //Determine if source object had a writeObject method.
+        //If the source object had a writeObject method, the next two bytes will be stream format version and
+        //whether the write object method called defaultWriteObject.
+
+        //If the source object did not have a writeObject method, the next 4-byte-aligned bit will be the start of a header
+        //for the first field.
+        //What if there are no fields?
+
+        //The only obvious way to do this is to, if the reader supports mark, try the way suggested by the target class
+        // and if that doesn't work try the other possibility.
+
+        if (reader.markSupported()) {
+            reader.mark(7);
+        }
+        boolean hasWriteObjectMethod = _write_object_method != null;
+
+        try {
+            tryReadObject(reader, value, hasWriteObjectMethod);
+        } catch (org.omg.CORBA.MARSHAL e) {
+            if (reader.markSupported()) {
+                reader.reset();
+                tryReadObject(reader, value, !hasWriteObjectMethod);
+            } else {
+                throw e;
+            }
+        } catch (org.omg.CORBA.portable.UnknownException e) {
+            if (reader.markSupported()) {
+                reader.reset();
+                tryReadObject(reader, value, !hasWriteObjectMethod);
+            } else {
+                throw e;
+            }
+        }
+
+    }
+
+    private void tryReadObject(ObjectReader reader, Serializable value, boolean hasWriteObjectMethod) throws IOException {
+        if (hasWriteObjectMethod) {
 
             // read custom marshalling value header
             byte streamFormatVersion = reader.readByte();
             boolean writeDefaultStateCalled = reader.readBoolean();
         }
-
         if (_read_object_method != null) {
 
             // System.out.println ("readValue "+getJavaClass()+" calling
@@ -847,7 +883,6 @@ public class ValueDescriptor extends TypeDescriptor {
         } else {
             defaultReadValue(reader, value);
         }
-
     }
 
     protected long computeHashCode() {
