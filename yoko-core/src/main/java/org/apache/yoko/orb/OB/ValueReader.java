@@ -71,7 +71,7 @@ final public class ValueReader {
 
         String[] ids;
 
-        ChunkState state;
+        final ChunkState state;
 
         Header next; // Java only
         String codebase; // Java only

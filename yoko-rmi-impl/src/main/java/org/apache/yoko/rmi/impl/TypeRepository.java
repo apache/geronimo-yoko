@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.lang.reflect.Method;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
@@ -37,76 +39,58 @@ public class TypeRepository {
 
     org.omg.CORBA.ORB orb;
 
-    java.util.Map classMap = new java.util.HashMap();
+    java.util.Map<Class, TypeDescriptor> classMap = new ConcurrentHashMap<Class, TypeDescriptor> ();
 
-    java.util.Map repidMap = new java.util.HashMap();
+    java.util.Map<String, TypeDescriptor> repidMap = new ConcurrentHashMap<String, TypeDescriptor>();
 
     public TypeRepository(org.omg.CORBA.ORB orb) {
         this.orb = orb;
-        init();
+        TypeDescriptor desc;
+
+        desc = new AnyDescriptor(java.lang.Object.class, this);
+        classMap.put(java.lang.Object.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new AnyDescriptor(java.lang.Object.class, this);
+        classMap.put(java.lang.Object.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new StringDescriptor(this);
+        classMap.put(String.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new ClassDescriptor(this);
+        classMap.put(Class.class, desc);
+        classMap.put(javax.rmi.CORBA.ClassDesc.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new DateValueDescriptor(this);
+        classMap.put(java.util.Date.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new AnyDescriptor(java.io.Externalizable.class, this);
+        classMap.put(java.io.Externalizable.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new AnyDescriptor(java.io.Serializable.class, this);
+        classMap.put(java.io.Serializable.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
+
+        desc = new AnyDescriptor(java.rmi.Remote.class, this);
+        classMap.put(java.rmi.Remote.class, desc);
+        desc.init();
+        repidMap.put(desc.getRepositoryID(), desc);
     }
 
     org.omg.CORBA.ORB getORB() {
         return orb;
-    }
-
-    void init() {
-        TypeDescriptor desc;
-
-        desc = new AnyDescriptor(java.lang.Object.class, this);
-        synchronized (desc) {
-            classMap.put(java.lang.Object.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-
-        desc = new AnyDescriptor(java.lang.Object.class, this);
-        synchronized (desc) {
-            classMap.put(java.lang.Object.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-
-        desc = new StringDescriptor(this);
-        synchronized (desc) {
-            classMap.put(String.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-
-        desc = new ClassDescriptor(this);
-        synchronized (desc) {
-            classMap.put(Class.class, desc);
-            classMap.put(javax.rmi.CORBA.ClassDesc.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-
-        desc = new DateValueDescriptor(this);
-        synchronized (desc) {
-            classMap.put(java.util.Date.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-        desc = new AnyDescriptor(java.io.Externalizable.class, this);
-        synchronized (desc) {
-            classMap.put(java.io.Externalizable.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-
-        desc = new AnyDescriptor(java.io.Serializable.class, this);
-        synchronized (desc) {
-            classMap.put(java.io.Serializable.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
-        desc = new AnyDescriptor(java.rmi.Remote.class, this);
-        synchronized (desc) {
-            classMap.put(java.rmi.Remote.class, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        }
     }
 
     public String getRepositoryID(Class type) {
@@ -143,8 +127,8 @@ public class TypeRepository {
     }
 
     public TypeDescriptor getDescriptor(Class type) {
-        logger.fine("Requesting type descriptor for class " + type.getName()); 
-        TypeDescriptor desc = (TypeDescriptor) classMap.get(type);
+        logger.fine("Requesting type descriptor for class " + type.getName());
+        TypeDescriptor desc = classMap.get(type);
 
         if (desc != null) {
             return desc.getSelf();
@@ -154,33 +138,25 @@ public class TypeRepository {
                 && isIDLEntity(type)) {
             IDLEntityDescriptor idlDesc = new IDLEntityDescriptor(type, this);
             desc = idlDesc;
-            synchronized (desc) {
-                classMap.put(type, desc);
-                idlDesc.initIDL();
-            }
+            classMap.put(type, desc);
+            idlDesc.initIDL();
         } else if (java.lang.Throwable.class.isAssignableFrom(type)) {
             desc = new ExceptionDescriptor(type, this);
-            synchronized (desc) {
-                classMap.put(type, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            desc.init();
+            repidMap.put(desc.getRepositoryID(), desc);
 
         } else if (type.isArray()) {
             desc = ArrayDescriptor.get(type, this);
-            synchronized (desc) {
-                classMap.put(type, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            desc.init();
+            repidMap.put(desc.getRepositoryID(), desc);
         } else if (!type.isInterface()
                 && java.io.Serializable.class.isAssignableFrom(type)) {
             desc = new ValueDescriptor(type, this);
-            synchronized (desc) {
-                classMap.put(type, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            desc.init();
+            repidMap.put(desc.getRepositoryID(), desc);
         } else if (java.rmi.Remote.class.isAssignableFrom(type)) {
             if (type.isInterface()) {
                 desc = new RemoteInterfaceDescriptor(type, this);
@@ -188,17 +164,13 @@ public class TypeRepository {
                 desc = new RemoteClassDescriptor(type, this);
             }
 
-            synchronized (desc) {
-                classMap.put(type, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            desc.init();
+            repidMap.put(desc.getRepositoryID(), desc);
         } else if (type.isPrimitive()) {
             desc = getSimpleDescriptor(type);
-            synchronized (desc) {
-                classMap.put(type, desc);
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            repidMap.put(desc.getRepositoryID(), desc);
 
         } else if (Object.class.isAssignableFrom(type)) {
             if (isAbstractInterface(type)) {
@@ -212,24 +184,18 @@ public class TypeRepository {
                 desc = new ValueDescriptor(type, this);
             }
 
-            synchronized (desc) {
-                classMap.put(type, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-            }
+            classMap.put(type, desc);
+            desc.init();
+            repidMap.put(desc.getRepositoryID(), desc);
 
         } else {
             throw new RuntimeException("cannot handle class " + type.getName());
         }
-        
-        logger.fine("Class " + type.getName() + " resolves to " + desc.getClass().getName()); 
+
+        logger.fine("Class " + type.getName() + " resolves to " + desc.getClass().getName());
         return desc;
     }
 
-    /**
-     * @param type
-     * @return
-     */
     private boolean isIDLEntity(Class type) {
         Class[] supers = type.getInterfaces();
 
@@ -293,14 +259,14 @@ public class TypeRepository {
             return false;
 
         Class[] interfaces = type.getInterfaces();
-        for (int i = 0; i < interfaces.length; i++) {
-            if (!isAbstractInterface(interfaces[i]))
+        for (Class anInterface : interfaces) {
+            if (!isAbstractInterface(anInterface))
                 return false;
         }
 
         java.lang.reflect.Method[] methods = type.getDeclaredMethods();
-        for (int j = 0; j < methods.length; j++) {
-            if (!isRemoteMethod(methods[j]))
+        for (Method method : methods) {
+            if (!isRemoteMethod(method))
                 return false;
         }
 
@@ -310,8 +276,8 @@ public class TypeRepository {
     boolean isRemoteMethod(java.lang.reflect.Method m) {
         Class[] ex = m.getExceptionTypes();
 
-        for (int i = 0; i < ex.length; i++) {
-            if (ex[i].isAssignableFrom(REMOTE_EXCEPTION))
+        for (Class anEx : ex) {
+            if (anEx.isAssignableFrom(REMOTE_EXCEPTION))
                 return true;
         }
 
@@ -319,28 +285,32 @@ public class TypeRepository {
     }
 
     /**
-     * @param repid
+     * @param clz (local) class we are interested in
+     * @param repid  repository id from GIOP input for the remote class
+     * @param runtime way to look up the complete remote descriptor
      * @return ValueDescriptor
+     * @throws ClassNotFoundException  something might go wrong.
      */
     public ValueDescriptor getDescriptor(Class clz, String repid,
             RunTime runtime) throws ClassNotFoundException {
-        // ValueDescriptor desc = null;
-        ValueDescriptor clzdesc = null;
+        if (repid == null) {
+            return (ValueDescriptor) getDescriptor(clz);
+        }
+
+        ValueDescriptor clzdesc = (ValueDescriptor) repidMap.get(repid);
+        if (clzdesc != null) {
+            return clzdesc;
+        }
 
         if (clz != null) {
             logger.fine("Requesting type descriptor for class " + clz.getName() + " with repid " + repid); 
-            ValueDescriptor desc = (ValueDescriptor)classMap.get(clz);
-            if (desc != null) {
-                return desc;
-            }
-            // special handling for array value types. 
+            // special handling for array value types.
             if (clz.isArray()) {
-                desc = ArrayDescriptor.get(clz, this);
-                synchronized (desc) {
-                    classMap.put(clz, desc);
-                    desc.init();
-                    repidMap.put(desc.getRepositoryID(), desc);
-                }
+                //TODO don't we need to look up the FVD for the array element?
+                ValueDescriptor desc = ArrayDescriptor.get(clz, this);
+                classMap.put(clz, desc);
+                desc.init();
+                repidMap.put(desc.getRepositoryID(), desc);
                 return desc;
             }
             clzdesc = (ValueDescriptor) getDescriptor(clz);
@@ -349,33 +319,14 @@ public class TypeRepository {
             if (repid.equals(localID)) {
                 return clzdesc;
             }
-
-            // we have a mismatch.  We'll accept this if the class name and the
-            // serial version id are the same (ignoring the hash portion of the id); 
-            String localClassName = localID.substring(0, localID.indexOf(':'));
-            String remoteClassName = repid.substring(0, repid.indexOf(':'));
-            
-            String localSUID = localID.substring(localID.lastIndexOf(':'));
-            String remoteSUID = repid.substring(repid.lastIndexOf(':'));
-
-            // compare the CORBA hash codes, and allow this to work
-            if (localClassName.equals(remoteClassName) && localSUID.equals(remoteSUID)) {
-                logger.fine("mismatching repository ids accepted because of matching name and SUID.  local: " + clzdesc.getRepositoryID() + "; remote: " + repid);
-                return clzdesc; 
-            }
-
-            logger.fine("mismatching repository ids. local: "
-                    + clzdesc.getRepositoryID() + "; remote: " + repid);
+            //One might think that java serialization compatibility (same SerialVersionUID) would mean corba
+            //serialization compatibility.  However, one implementation might have a writeObject method and the
+            //other implementation not.  This is recorded only in the isCustomMarshall of the source value
+            //descriptor, so we have to fetch it to find out.  A custom marshall value has a couple extra bytes
+            // and padding and these can't be reliably identified without this remote info.  cf YOKO-434.
         }
 
         logger.fine("Requesting type descriptor for repid " + repid); 
-        if (repid != null) {
-            clzdesc = (ValueDescriptor) repidMap.get(repid);
-            if (clzdesc != null) {
-                return clzdesc;
-            }
-        }
-
         CodeBase codebase = CodeBaseHelper.narrow(runtime);
         if (codebase == null) {
             throw new MARSHAL("cannot locate RunTime CodeBase");
@@ -385,7 +336,7 @@ public class TypeRepository {
 
         ValueDescriptor super_desc = null;
         if (!"".equals(fvd.base_value)) {
-            super_desc = getDescriptor(clz.getSuperclass(), fvd.base_value,
+            super_desc = getDescriptor(clz == null? null: clz.getSuperclass(), fvd.base_value,
                     codebase);
         }
 
@@ -475,14 +426,14 @@ public class TypeRepository {
             int len = current.length();
             match = false;
 
-            for (int i = 0; i < reservedPostfixes.length; i++) {
-                if (current.endsWith(reservedPostfixes[i])) {
+            for (ByteString reservedPostfixe : reservedPostfixes) {
+                if (current.endsWith(reservedPostfixe)) {
                     ByteBuffer buf = new ByteBuffer();
                     buf.append('_');
                     buf.append(result);
                     result = buf.toByteString();
 
-                    int resultLen = reservedPostfixes[i].length();
+                    int resultLen = reservedPostfixe.length();
                     if (len > resultLen)
                         current = current.substring(0, len - resultLen);
                     else
@@ -498,7 +449,7 @@ public class TypeRepository {
         return name;
     }
 
-    static final java.util.Set keyWords = new java.util.HashSet();
+    static final java.util.Set<ByteString> keyWords = new java.util.HashSet<ByteString>();
 
     static final ByteString[] reservedPostfixes = new ByteString[] {
             new ByteString("Helper"), new ByteString("Holder"),
@@ -519,8 +470,8 @@ public class TypeRepository {
                 "toString", "transient", "true", "try", "void", "volatile",
                 "wait", "while" };
 
-        for (int i = 0; i < words.length; i++) {
-            keyWords.add(new ByteString(words[i]));
+        for (String word : words) {
+            keyWords.add(new ByteString(word));
         }
     }
 

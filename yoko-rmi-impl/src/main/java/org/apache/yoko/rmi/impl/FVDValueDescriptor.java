@@ -20,6 +20,7 @@ package org.apache.yoko.rmi.impl;
 import org.omg.CORBA.AttributeDescription;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.ValueMember;
 
 /**
  * @author krab
@@ -44,24 +45,24 @@ public class FVDValueDescriptor extends ValueDescriptor {
     public void init() {
         super.init();
 
-        // iverride custom loading
-        if (!fvd.is_custom) {
-            _read_object_method = null;
-            _write_object_method = null;
-            _is_externalizable = false;
-        }
+        // don't override custom loading. Our local version could work differently.
+//        if (!fvd.is_custom) {
+//            _read_object_method = null;
+//            _write_object_method = null;
+//            _is_externalizable = false;
+//        }
 
-        AttributeDescription[] atts = fvd.attributes;
-        FieldDescriptor[] new_fields = new FieldDescriptor[atts.length];
-        for (int i = 0; i < atts.length; i++) {
-            AttributeDescription att = atts[i];
-            new_fields[i] = findField(att);
+        ValueMember[] members = fvd.members;
+        FieldDescriptor[] new_fields = new FieldDescriptor[members.length];
+        for (int i = 0; i < members.length; i++) {
+            ValueMember valueMember = members[i];
+            new_fields[i] = findField(valueMember);
         }
 
         _fields = new_fields;
     }
 
-    FieldDescriptor findField(AttributeDescription att) {
+    FieldDescriptor findField(ValueMember valueMember) {
         FieldDescriptor result = null;
 
         for (Class c = getJavaClass(); c != null; c = c.getSuperclass()) {
@@ -75,7 +76,7 @@ public class FVDValueDescriptor extends ValueDescriptor {
                 }
 
                 for (int i = 0; i < fds.length; i++) {
-                    if (fds[i].getIDLName().equals(att.name)) {
+                    if (fds[i].getIDLName().equals(valueMember.name)) {
                         return fds[0];
                     }
                 }
@@ -103,7 +104,7 @@ public class FVDValueDescriptor extends ValueDescriptor {
      * 
      * @see org.apache.yoko.rmi.impl.TypeDescriptor#getTypeCode()
      */
-    TypeCode getTypeCode() {
+    public TypeCode getTypeCode() {
         return fvd.type;
     }
 

@@ -818,7 +818,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
         // System.out.println ("readValue "+getJavaClass());
 
-        if (_write_object_method != null) {
+        if (isCustomMarshalled()) {
 
             // read custom marshalling value header
             byte streamFormatVersion = reader.readByte();
@@ -967,7 +967,8 @@ public class ValueDescriptor extends TypeDescriptor {
                 getJavaClass().getName(), getRepositoryID(), false, // is_abstract
                 isCustomMarshalled(), "", "1.0",
                 new org.omg.CORBA.OperationDescription[0],
-                new org.omg.CORBA.AttributeDescription[0], getValueMembers(),
+                new org.omg.CORBA.AttributeDescription[0],
+                getValueMembers(),
                 new org.omg.CORBA.Initializer[0], new String[0], new String[0],
                 false, // is_truncatable
                 (_super_descriptor == null ? "" : _super_descriptor

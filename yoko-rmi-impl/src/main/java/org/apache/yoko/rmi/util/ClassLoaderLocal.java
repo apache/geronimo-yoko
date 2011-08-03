@@ -86,7 +86,7 @@ public class ClassLoaderLocal {
     
     // table for tracking the CL to map relationships.  We're
     // using a WeakHashMap to prevent us pinning class loaders. 
-    static private WeakHashMap localMaps = new WeakHashMap(); 
+    static final private WeakHashMap localMaps = new WeakHashMap();
 
     private ClassLocalMap getLoaderLocalMap() {
         ClassLoader cl = Thread.currentThread().getContextClassLoader();
