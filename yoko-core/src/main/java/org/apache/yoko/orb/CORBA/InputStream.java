@@ -17,7 +17,6 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,9 +62,6 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
 	private CodeBase sendingContextRuntime_;
 
 	private String codebase_;
-
-    //mark support
-    private int mark_pos;
 
     // ------------------------------------------------------------------
     // Private and protected members
@@ -2129,22 +2125,6 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         if (valueReader_ != null) {
             valueReader_.checkChunk();
         }
-    }
-
-    @Override
-    public void mark(int i) {
-        mark_pos = buf_.pos();
-    }
-
-    @Override
-    public boolean markSupported() {
-        return true;
-    }
-
-    @Override
-    public void reset() throws IOException {
-        buf_.pos(mark_pos);
-        mark_pos = 0;
     }
 }
 
