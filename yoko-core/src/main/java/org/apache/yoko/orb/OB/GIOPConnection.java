@@ -481,7 +481,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     | version.minor);
 
         //
-        // read in the peer's sendig context runtime object
+        // read in the peer's sending context runtime object
         //
         assignSendingContextRuntime(in, scl.value);
 
