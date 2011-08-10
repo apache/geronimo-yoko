@@ -40,7 +40,10 @@ public class UtilLoader {
     static public Class<?> loadServiceClass(String delegateName, String delegateKey) throws ClassNotFoundException {
     	
     	try {
-    		return ProviderLocator.getServiceClass(delegateKey, null, null);
+    		Class<?> cls = ProviderLocator.getServiceClass(delegateKey, null, null);
+            if (cls != null) {
+                return cls;
+            }
     	} catch (ClassNotFoundException e){
     		// skip
     	}

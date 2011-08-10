@@ -94,7 +94,7 @@ public class AbstractOrbTestBase extends TestCase {
         // and is somewhat non-robust.
         Thread.sleep(1000);
         client.invokeMain(clientClass, clientArgs);
-        serverThread.join();
+        serverThread.join(10000);
         server.exit(0);
                 
     }
