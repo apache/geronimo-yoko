@@ -955,9 +955,17 @@ public class ValueDescriptor extends TypeDescriptor {
         org.omg.CORBA.TypeCode _base = (_super_descriptor == null ? null
                 : _super_descriptor.getTypeCode());
 
-        _type_code = orb.create_value_tc(getRepositoryID(), getJavaClass()
-                .getName(), org.omg.CORBA.VM_NONE.value, _base,
-                getValueMembers());
+        Class javaClass = getJavaClass();
+        if (!javaClass.isArray()) {
+            _type_code = orb.create_value_tc(getRepositoryID(), javaClass
+                    .getSimpleName(), org.omg.CORBA.VM_NONE.value, _base,
+                    getValueMembers());
+        } else {
+            TypeDescriptor desc = getTypeRepository().getDescriptor(javaClass.getComponentType());
+            _type_code = desc.getTypeCode();
+            _type_code = orb.create_sequence_tc(0, _type_code);
+            _type_code = orb.create_value_box_tc(getRepositoryID(), "Sequence", _type_code);
+        }
 
         return _type_code;
     }
