@@ -39,4 +39,6 @@ public interface UpcallReturn {
 
     void upcallForward(Upcall upcall, org.omg.IOP.IOR ior, boolean perm,
             org.omg.IOP.ServiceContext[] scl);
+
+    boolean replySent();
 }

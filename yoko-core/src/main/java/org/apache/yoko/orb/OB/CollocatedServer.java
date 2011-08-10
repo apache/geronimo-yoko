@@ -446,4 +446,12 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             callMap_.remove(new Integer(down.requestId()));
         }
     }
+
+    /**
+     * no need to send code set and code base service contexts to ourselves
+     * @return
+     */
+    public boolean replySent() {
+        return true;
+    }
 }

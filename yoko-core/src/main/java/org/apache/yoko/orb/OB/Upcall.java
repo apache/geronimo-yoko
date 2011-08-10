@@ -113,6 +113,13 @@ public class Upcall {
     //
     protected boolean userEx_;
 
+    //
+    // Codesets SC
+    //
+    protected org.omg.IOP.ServiceContext codeSetSC_;
+
+    protected org.omg.IOP.ServiceContext codeBaseSC_;
+
     // ----------------------------------------------------------------------
     // Upcall public member implementations
     // ----------------------------------------------------------------------
@@ -207,6 +214,75 @@ public class Upcall {
         }
     }
 
+    // initialize internal service contexts
+    private void initServiceContexts() {
+/*
+        if (codeSetSC_ == null) {
+            //
+            // Create CONV_FRAME::CodeSetContext
+            //
+            org.omg.CONV_FRAME.CodeSetContext ctx = new org.omg.CONV_FRAME.CodeSetContext();
+            CodeConverters conv = codeConverters();
+
+            if (conv.outputCharConverter != null)
+                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
+            else
+                ctx.char_data = CodeSetDatabase.ISOLATIN1;
+
+            if (conv.outputWcharConverter != null)
+                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
+            else
+                ctx.wchar_data = orbInstance_.getNativeWcs();
+
+            //
+            // Create encapsulation for CONV_FRAME::CodeSetContext
+            //
+            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            org.apache.yoko.orb.CORBA.OutputStream outCSC = new org.apache.yoko.orb.CORBA.OutputStream(
+                    buf);
+            outCSC._OB_writeEndian();
+            org.omg.CONV_FRAME.CodeSetContextHelper.write(outCSC, ctx);
+
+            //
+            // Create service context containing the
+            // CONV_FRAME::CodeSetContext encapsulation
+            //
+            codeSetSC_ = new org.omg.IOP.ServiceContext();
+            codeSetSC_.context_id = org.omg.IOP.CodeSets.value;
+
+            int len = buf.length();
+            byte[] data = buf.data();
+            codeSetSC_.context_data = new byte[len];
+            System.arraycopy(data, 0, codeSetSC_.context_data, 0, len);
+        }
+*/
+        if (codeBaseSC_ == null) {
+
+            javax.rmi.CORBA.ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
+            org.omg.SendingContext.CodeBase codeBase = (org.omg.SendingContext.CodeBase) valueHandler.getRunTimeCodeBase();
+
+
+            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            org.apache.yoko.orb.CORBA.OutputStream outCBC = new org.apache.yoko.orb.CORBA.OutputStream(
+                    buf);
+            outCBC._OB_writeEndian();
+            org.omg.SendingContext.CodeBaseHelper.write(outCBC, codeBase);
+
+            codeBaseSC_ = new org.omg.IOP.ServiceContext();
+            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
+
+            int len = buf.length();
+            byte[] data = buf.data();
+            codeBaseSC_.context_data = new byte[len];
+            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+        }
+        //
+        // NOTE: We don't initialize the INVOCATION_POLICIES service context
+        // here because the list of policies can change from one invocation to
+        // the next. Instead, we need to get the policies and build the
+        // service context each time we make an invocation.
+        //
+    }
     public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
             throws LocationForward {
         //
@@ -218,6 +294,38 @@ public class Upcall {
         // OutputStream to make the skeleton happy and avoid a crash.
         //
         if (upcallReturn_ != null) {
+            if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
+                initServiceContexts();
+//                CoreTraceLevels coreTraceLevels = orbInstance_
+//                        .getCoreTraceLevels();
+//                if (coreTraceLevels.traceConnections() >= 2) {
+//                    CodeConverters conv = codeConverters();
+//                    String msg = "sending transmission code sets";
+//                    msg += "\nchar code set: ";
+//                    if (conv.outputCharConverter != null)
+//                        msg += conv.outputCharConverter.getTo().description;
+//                    else {
+//                        CodeSetInfo info = CodeSetDatabase.instance()
+//                                .getCodeSetInfo(orbInstance_.getNativeCs());
+//                        msg += info.description;
+//                    }
+//                    msg += "\nwchar code set: ";
+//                    if (conv.outputWcharConverter != null)
+//                        msg += conv.outputWcharConverter.getTo().description;
+//                    else {
+//                        CodeSetInfo info = CodeSetDatabase.instance()
+//                                .getCodeSetInfo(orbInstance_.getNativeWcs());
+//                        msg += info.description;
+//                    }
+//                    orbInstance_.getLogger().trace("outgoing", msg);
+//                }
+
+//                Assert._OB_assert(codeSetSC_ != null);
+//                replySCL_.add(codeSetSC_);
+
+                Assert._OB_assert(codeBaseSC_ != null);
+                replySCL_.add(codeBaseSC_);
+            }
             org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);

@@ -37,6 +37,8 @@ final class GIOPClient extends Client {
     // 
     protected org.omg.IOP.ServiceContext codeSetSC_;
 
+    protected org.omg.IOP.ServiceContext codeBaseSC_;
+
     protected boolean bidirWorker_; // is the worker bidir?
 
     protected boolean ownsWorker_; // does 'this' own the worker?
@@ -278,7 +280,26 @@ final class GIOPClient extends Client {
             codeSetSC_.context_data = new byte[len];
             System.arraycopy(data, 0, codeSetSC_.context_data, 0, len);
         }
+        if (codeBaseSC_ == null) {
 
+            javax.rmi.CORBA.ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
+            org.omg.SendingContext.CodeBase codeBase = (org.omg.SendingContext.CodeBase) valueHandler.getRunTimeCodeBase();
+
+
+            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            org.apache.yoko.orb.CORBA.OutputStream outCBC = new org.apache.yoko.orb.CORBA.OutputStream(
+                    buf);
+            outCBC._OB_writeEndian();
+            org.omg.SendingContext.CodeBaseHelper.write(outCBC, codeBase);
+
+            codeBaseSC_ = new org.omg.IOP.ServiceContext();
+            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
+
+            int len = buf.length();
+            byte[] data = buf.data();
+            codeBaseSC_.context_data = new byte[len];
+            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+        }
         //
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
         // here because the list of policies can change from one invocation to
@@ -487,6 +508,10 @@ final class GIOPClient extends Client {
 
                 Assert._OB_assert(codeSetSC_ != null);
                 down.addToRequestSCL(codeSetSC_);
+
+                Assert._OB_assert(codeBaseSC_ != null);
+                down.addToRequestSCL(codeBaseSC_);
+
             }
 
             // 

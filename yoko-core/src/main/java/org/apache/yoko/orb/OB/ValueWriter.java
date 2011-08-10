@@ -469,9 +469,8 @@ final public class ValueWriter {
 
         //
         // Determine if chunked encoding is needed.
-        // (we chunk all RMI objects)
         //
-        boolean isChunked = true; // valueHandler.isCustomMarshaled (clz);
+        boolean isChunked = valueHandler.isCustomMarshaled (clz);
 
         int pos = beginValue (tag, ids, codebase, isChunked);
         instanceTable_.put (value, new Integer (pos));
