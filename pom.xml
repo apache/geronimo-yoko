@@ -61,11 +61,11 @@
     <inceptionYear>2006</inceptionYear>
     <description>Apache Yoko CORBA Server</description>
 
-    <url>http://geronimo.apache.org/maven/${siteId}/${version}</url>
+    <url>http://geronimo.apache.org/maven/${siteId}/${project.version}</url>
     <distributionManagement>
         <site>
             <id>geronimo-website</id>
-            <url>${staging.siteURL}/${siteId}/${version}</url>
+            <url>${staging.siteURL}/${siteId}/${project.version}</url>
         </site>
     </distributionManagement>
 
@@ -85,27 +85,27 @@
             <dependency>
                 <groupId>org.apache.yoko</groupId>
                 <artifactId>yoko-core</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.yoko</groupId>
                 <artifactId>yoko-spec-corba</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.yoko</groupId>
                 <artifactId>yoko-osgi</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.yoko</groupId>
                 <artifactId>yoko-rmi-spec</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.yoko</groupId>
                 <artifactId>yoko-rmi-impl</artifactId>
-                <version>${version}</version>
+                <version>${project.version}</version>
             </dependency>
             <!--  External dependencies -->
             <dependency>
@@ -241,7 +241,7 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>2.0.1</version>
+                    <version>2.3.4</version>
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
@@ -260,9 +260,11 @@
         <plugins>
             <plugin>
                 <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.6</version>
             </plugin>
             <plugin>
                 <artifactId>maven-clover-plugin</artifactId>
+                <version>2.4</version>
             </plugin>
             <!--plugin>
               <artifactId>maven-pmd-plugin</artifactId>
