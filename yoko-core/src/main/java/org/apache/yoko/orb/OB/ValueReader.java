@@ -366,7 +366,8 @@ final public class ValueReader {
     }
 
     private void readHeader(Header h) {
-        logger.fine("Reading header with tag value " + Integer.toHexString(h.tag)); 
+        logger.fine("Reading header with tag value " + Integer.toHexString(h.tag) + " at pos=" 
+        		+ in_.buf_.pos_); 
         
         //
         // Special cases are handled elsewhere
@@ -965,8 +966,21 @@ final public class ValueReader {
         if (remoteCodeBase instanceof CodeBaseProxy) {
             remoteCodeBase = ((CodeBaseProxy) remoteCodeBase).getCodeBase();
         }
+        
+        java.io.Serializable serobj = null;
+        try {
+        	serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
+        } catch (RuntimeException ex) {
+            logger.log(Level.FINE, "RuntimeException happens when reading GIOP stream coming to pos_=" + in_.buf_.pos_);
+            logger.log(Level.FINE, "Wrong data section: \n" + in_.dumpData());
+            int currentpos = in_.buf_.pos_;
+            in_.buf_.pos_ = 0;
+            logger.log(Level.FINE, "Full GIOP stream dump: \n" + in_.dumpData());
+            in_.buf_.pos_ = currentpos;
+            throw ex;
+        }
 
-        return valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
+        return serobj;
     }
     
     private Class resolveRepoClass(String name, String codebase) 

@@ -448,7 +448,13 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     processException(State.Closed, ex, false);
                     break;
                 }
-                logger.fine("Message body received "); 
+                if (logger.isLoggable(Level.FINE)) {
+                    logger.fine("Message body received ");
+                    int currentpos = buf.pos_;
+                    buf.pos_ = 0;
+                    logger.fine("Received message are: \n" + buf.dumpData());
+                    buf.pos_ = currentpos;
+                }
             }
 
             //
@@ -611,6 +617,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // Get the request timeout
             //
             int t = down.policies().requestTimeout;
+            int msgcount = 0;
 
             //
             // now we can start sending off the messages
@@ -671,11 +678,22 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         && !nextDown.operation().equals("_locate")) {
                     msgSentMarked = true;
                     properties_ |= Property.RequestSent;
+                    // debug
+                    if (logger.isLoggable(Level.FINE)) {
+                        int currentpos = buf.pos_;
+                        buf.pos_ = 0;
+                        logger.fine("Sent message in blocking at msgcount="
+                                + msgcount + ", size=" + buf.len_
+                                + ", the message piece is: \n" + buf.dumpData());
+                        buf.pos_ = currentpos;
+                        msgcount++;
+                    }
                 }
             }
         } else // Non blocking
         {
             synchronized (this) {
+            	int msgcount = 0;
                 while (true) {
                     if (!down.unsent())
                         break;
@@ -720,6 +738,19 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                                 && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
                             properties_ |= Property.RequestSent;
+                            // debug
+                            if (logger.isLoggable(Level.FINE)) {
+                                int currentpos = buf.pos_;
+                                buf.pos_ = 0;
+                                logger.fine("Sent message in non-blocking at msgcount="
+                                        + msgcount
+                                        + ", size="
+                                        + buf.len_
+                                        + ", the message piece is: \n"
+                                        + buf.dumpData());
+                                buf.pos_ = currentpos;
+                                msgcount++;
+                            }
                         }
                     }
                 }
