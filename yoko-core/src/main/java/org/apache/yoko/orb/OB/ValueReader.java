@@ -1076,7 +1076,18 @@ final public class ValueReader {
     	}
         ClassCreationStrategy strategy = new ClassCreationStrategy(this, in_,
                 clz);
-        return read(strategy);
+        java.io.Serializable result = null;
+        try {
+            result = read(strategy);
+        } catch (org.omg.CORBA.MARSHAL marshalex) {
+            logger.severe(marshalex.getMessage() + " at pos=" + (in_.buf_.pos_- 4));
+            if (System.getProperty("org.apache.yoko.ignoreInvalidValueTag").equalsIgnoreCase("true")) {
+                result = read(strategy);
+            } else {
+                throw marshalex;
+            }
+        }
+        return result;
     }
 
     public java.io.Serializable readValueBox(
