@@ -1081,7 +1081,7 @@ final public class ValueReader {
             result = read(strategy);
         } catch (org.omg.CORBA.MARSHAL marshalex) {
             logger.severe(marshalex.getMessage() + " at pos=" + (in_.buf_.pos_- 4));
-            if (System.getProperty("org.apache.yoko.ignoreInvalidValueTag").equalsIgnoreCase("true")) {
+            if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
                 result = read(strategy);
             } else {
                 throw marshalex;
