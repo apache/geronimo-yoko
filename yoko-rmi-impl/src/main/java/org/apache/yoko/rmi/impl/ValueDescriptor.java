@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
+import org.apache.yoko.rmi.util.StringUtil;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueMember;
@@ -101,7 +102,7 @@ public class ValueDescriptor extends TypeDescriptor {
     public String getRepositoryID() {
         if (_repid == null) {
             StringBuffer buf = new StringBuffer("RMI:");
-            buf.append(getJavaClass().getName());
+            buf.append(StringUtil.convertToValidIDLNames(getJavaClass().getName()));
             buf.append(":");
 
             String hashCode = Long.toHexString(_hash_code).toUpperCase();
@@ -823,6 +824,8 @@ public class ValueDescriptor extends TypeDescriptor {
             // read custom marshalling value header
             byte streamFormatVersion = reader.readByte();
             boolean writeDefaultStateCalled = reader.readBoolean();
+            logger.log(Level.FINE, "Reading value in streamFormatVersion=" + streamFormatVersion 
+                    + " IsCalleddefaultWriteObject=" + writeDefaultStateCalled);
         }
 
         if (_read_object_method != null) {

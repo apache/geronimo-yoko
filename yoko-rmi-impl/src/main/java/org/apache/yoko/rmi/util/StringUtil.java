@@ -73,4 +73,71 @@ public class StringUtil {
 
         return result.toString();
     }
+    
+    public static final byte[] HEX_CHARS = {
+        (byte)'0',
+        (byte)'1',
+        (byte)'2',
+        (byte)'3',
+        (byte)'4',
+        (byte)'5',
+        (byte)'6',
+        (byte)'7',
+        (byte)'8',
+        (byte)'9',
+        (byte)'A',
+        (byte)'B',
+        (byte)'C',
+        (byte)'D',
+        (byte)'E',
+        (byte)'F',
+    };
+
+    public static final byte[] VALID_IDL_CHARS = {
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,1,0,
+        1,1,1,1, 1,1,1,1, 1,1,0,0, 0,0,0,0,
+        0,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+        1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,1,
+        0,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+        1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+        1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+        0,1,1,1, 1,1,1,0, 1,1,1,1, 1,0,0,1,
+        1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+        0,1,1,1, 1,1,1,0, 1,1,1,1, 1,0,0,1,
+    };
+
+    public static String convertToValidIDLNames(String str) {
+
+        int length = str.length();
+        if (length == 0) {
+            return str;
+        }
+        
+        StringBuilder builder = new StringBuilder();
+        
+        for (char c : str.toCharArray()) {
+            if (c > 255 || VALID_IDL_CHARS[c] == 0) {
+                builder.append("\\U" +
+                        (char)HEX_CHARS[(c & 0xF000) >>> 12] +
+                        (char)HEX_CHARS[(c & 0x0F00) >>> 8] +
+                        (char)HEX_CHARS[(c & 0x00F0) >>> 4] +
+                        (char)HEX_CHARS[(c & 0x000F)] );
+            } else {
+                builder.append(c);
+            }
+        }
+        
+        if (builder.length() > 0) {
+            str = builder.toString();
+        }
+        
+        return str;
+    }
+    
 }
