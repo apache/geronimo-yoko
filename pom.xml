@@ -47,7 +47,6 @@
         <junit.version>4.5</junit.version>
         <compile.flags>-Xlint:unchecked,deprecation,fallthrough,finally</compile.flags>
         <java.endorsed.dirs>${basedir}/target/classes</java.endorsed.dirs>
-        <site.version>2.0-beta-4</site.version>
         <compile.forked>false</compile.forked>
         <!--<no.checkstyle>false</no.checkstyle>-->
         <!--<no.pmd>false</no.pmd>-->
@@ -233,11 +232,6 @@
                         <!--<argLine>-ea</argLine>-->
                     <!--</configuration>-->
                 <!--</plugin>-->
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>${site.version}</version>
-                </plugin>
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
