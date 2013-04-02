@@ -21,7 +21,7 @@
     <parent>
         <artifactId>yoko</artifactId>
         <groupId>org.apache.yoko</groupId>
-        <version>1.4-SNAPSHOT</version>
+        <version>1.4</version>
     </parent>
     <artifactId>yoko-osgi</artifactId>
     <name>Apache Yoko OSGI Support</name>
