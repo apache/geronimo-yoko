@@ -39,6 +39,18 @@
         <!--<sourceDirectory>${basedir}/src/main/generated-sources/idl</sourceDirectory>-->
         <plugins>
             <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Export-Package>
+                            org.omg.*;version=2.4,
+                            org.apache.*;version=1.0
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <executions>

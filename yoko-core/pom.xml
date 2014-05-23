@@ -66,6 +66,19 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Bundle-Activator>org.apache.yoko.orb.activator.Activator</Bundle-Activator>
+                        <Private-Package>
+                            org.apache.yoko.orb.activator,
+                            org.apache.yoko.osgi.locator.activator
+                        </Private-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
