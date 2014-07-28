@@ -1,5 +1,6 @@
 *.i??
 .project
+.metadata
 .idea
 .classpath
 .settings
