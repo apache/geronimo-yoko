@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.CORBA.ORB;
 
 public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Plugin {
@@ -25,7 +26,9 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
 
     private ListenerMap listenMap_; // list of listenPoints
 
-    private ConnectionHelper connectionHelper_;   // SSL connection helper
+    private final ConnectionHelper connectionHelper_;   // SSL connection helper
+
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -60,7 +63,11 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
                     .resolve_initial_references("OCIConFactoryRegistry");
             org.apache.yoko.orb.OCI.ConFactoryRegistry registry = org.apache.yoko.orb.OCI.ConFactoryRegistryHelper
                     .narrow(obj);
-            registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper_));
+            if (connectionHelper_ != null) {
+                registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper_));
+            } else {
+                registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, extendedConnectionHelper_));                
+            }
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
             org.apache.yoko.orb.OB.Assert._OB_assert(ex);
         } catch (org.apache.yoko.orb.OCI.FactoryAlreadyExists ex) {
@@ -95,7 +102,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
                     .resolve_initial_references("OCIAccFactoryRegistry");
             org.apache.yoko.orb.OCI.AccFactoryRegistry registry = org.apache.yoko.orb.OCI.AccFactoryRegistryHelper
                     .narrow(obj);
-            registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper_));
+            registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper_, extendedConnectionHelper_));
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
             org.apache.yoko.orb.OB.Assert._OB_assert(ex);
         } catch (org.apache.yoko.orb.OCI.FactoryAlreadyExists ex) {
@@ -113,6 +120,14 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
     public Plugin_impl(org.omg.CORBA.ORB orb, ConnectionHelper helper) {
         orb_ = orb;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = null;
+        listenMap_ = new ListenerMap();
+    }
+
+    public Plugin_impl(ORB orb, ExtendedConnectionHelper helper) {
+        orb_ = orb;
+        connectionHelper_ = null;
+        extendedConnectionHelper_ = helper;
         listenMap_ = new ListenerMap();
     }
 }
