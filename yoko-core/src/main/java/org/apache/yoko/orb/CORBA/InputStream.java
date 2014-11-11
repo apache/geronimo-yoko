@@ -1749,9 +1749,11 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
     }
 
 
+    private static final String STUB_SUFFIX = "_Stub";
+    private static final String OMG_STUB_PREFIX = "org.omg.stub.";
     /**
      * Convert a class type into a stub class name using the
-     * ISL stub name rules.
+     * IDL stub name rules.
      * 
      * @param c      The class we need to stub.
      * 
@@ -1765,12 +1767,11 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         int idx = cname.lastIndexOf('.');
 
         if (idx == -1) {
-            return "_" + cname + "Stub";
+            return "_" + cname + STUB_SUFFIX;
         } else {
-            return cname.substring(0, idx + 1) + "_" + cname.substring(idx + 1) + "Stub";
+            return cname.substring(0, idx + 1) + "_" + cname.substring(idx + 1) + STUB_SUFFIX;
         }
     }
-    
     
     /**
      * Load a statically-created Stub class for a type, 
@@ -1782,8 +1783,18 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
      * @return A loaded stub class.
      */
     private Class getIDLStubClass(String codebase, Class type) throws ClassNotFoundException {
-        String name = getIDLStubClassName(type); 
-        return Util.loadClass(name, codebase, type.getClassLoader()); 
+        String name = getIDLStubClassName(type);
+        ClassLoader cl = type.getClassLoader();
+        try {
+        	return Util.loadClass(name, codebase, cl);
+        } catch (ClassNotFoundException e1) {
+        	try {
+        		return Util.loadClass(OMG_STUB_PREFIX + name, codebase, cl);
+        	} catch (ClassNotFoundException e2) {
+        		e2.addSuppressed(e1);
+        		throw e2;
+        	}
+        }
     }
     
 
