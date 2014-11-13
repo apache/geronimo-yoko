@@ -59,12 +59,12 @@ public class UtilImpl implements UtilDelegate {
     // initializer the _secman field will be null
     private static final SecMan _secman = getSecMan();
 
-    static final Class JAVAX_TRANSACTION_USERTRANSACTION_CLASS;
+    static Class JAVAX_TRANSACTION_USERTRANSACTION_CLASS;
 
-    static {
+    public UtilImpl() {
         Class userTransactionClass;
         try {
-            userTransactionClass = Util.loadClass("javax.transaction.userTransaction", null, null);
+            userTransactionClass = Util.loadClass("javax.transaction.UserTransaction", null, null);
         }
         catch (ClassNotFoundException e) {
             logger.log(Level.FINE, "error loading transaction class", e);
@@ -882,45 +882,45 @@ public class UtilImpl implements UtilDelegate {
         tie.deactivate();
     }
 
-    static final Class[] RMI_TO_CORBA_EXCEPTION;
-
-//  We want to avoid a dependency on JTA, so we add these classes only if JTA is available.
-
-    static {
-        Class[] rmiToCorba;
-        try {
-            rmiToCorba = new Class[]{
-                    Util.loadClass("javax.transaction.HeuristicMixedException", null, null),
-                    org.omg.CosTransactions.HeuristicMixed.class,
-
-                    Util.loadClass("javax.transaction.HeuristicRollbackException", null, null),
-                    org.omg.CosTransactions.HeuristicRollback.class,
-
-                    Util.loadClass("javax.transaction.HeuristicCommitException", null, null),
-                    org.omg.CosTransactions.HeuristicCommit.class,
-
-                    Util.loadClass("javax.transaction.NotSupportedException", null, null),
-                    org.omg.CosTransactions.SubtransactionsUnavailable.class,
-
-                    Util.loadClass("javax.transaction.InvalidTransactionException", null, null),
-                    org.omg.CORBA.INVALID_TRANSACTION.class,
-
-                    Util.loadClass("javax.transaction.TransactionRequiredException", null, null),
-                    org.omg.CORBA.TRANSACTION_REQUIRED.class,
-
-                    Util.loadClass("javax.transaction.TransactionRolledbackException", null, null),
-                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
-
-                    Util.loadClass("javax.transaction.RollbackException", null, null),
-                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class
-            };
-
-        }
-        catch (ClassNotFoundException e) {
-            rmiToCorba = new Class[0];
-        }
-        RMI_TO_CORBA_EXCEPTION = rmiToCorba;
-    }
+//    static final Class[] RMI_TO_CORBA_EXCEPTION;
+//
+////  We want to avoid a dependency on JTA, so we add these classes only if JTA is available.
+//
+//    static {
+//        Class[] rmiToCorba;
+//        try {
+//            rmiToCorba = new Class[]{
+//                    Util.loadClass("javax.transaction.HeuristicMixedException", null, null),
+//                    org.omg.CosTransactions.HeuristicMixed.class,
+//
+//                    Util.loadClass("javax.transaction.HeuristicRollbackException", null, null),
+//                    org.omg.CosTransactions.HeuristicRollback.class,
+//
+//                    Util.loadClass("javax.transaction.HeuristicCommitException", null, null),
+//                    org.omg.CosTransactions.HeuristicCommit.class,
+//
+//                    Util.loadClass("javax.transaction.NotSupportedException", null, null),
+//                    org.omg.CosTransactions.SubtransactionsUnavailable.class,
+//
+//                    Util.loadClass("javax.transaction.InvalidTransactionException", null, null),
+//                    org.omg.CORBA.INVALID_TRANSACTION.class,
+//
+//                    Util.loadClass("javax.transaction.TransactionRequiredException", null, null),
+//                    org.omg.CORBA.TRANSACTION_REQUIRED.class,
+//
+//                    Util.loadClass("javax.transaction.TransactionRolledbackException", null, null),
+//                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
+//
+//                    Util.loadClass("javax.transaction.RollbackException", null, null),
+//                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class
+//            };
+//
+//        }
+//        catch (ClassNotFoundException e) {
+//            rmiToCorba = new Class[0];
+//        }
+//        RMI_TO_CORBA_EXCEPTION = rmiToCorba;
+//    }
 
     static final Class[] CORBA_TO_RMI_EXCEPTION = {
             org.omg.CORBA.BAD_PARAM.class, java.rmi.MarshalException.class,
