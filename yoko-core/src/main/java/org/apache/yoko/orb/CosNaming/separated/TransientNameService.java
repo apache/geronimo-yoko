@@ -122,7 +122,7 @@ public class TransientNameService {
 		@Override
 		public void pre_init(ORBInitInfo info) {
 			try {
-				final LocalNamingContext local = new LocalNamingContext();
+				final NamingContextImpl local = new NamingContextImpl();
 				info.register_initial_reference("NameService", local);
 			} catch (Exception e) {
 				throw (INITIALIZE)(new INITIALIZE().initCause(e));
@@ -143,8 +143,8 @@ public class TransientNameService {
 				final POA nameServicePOA = rootPOA.create_POA("TNameService", null, policies);
 				nameServicePOA.the_POAManager().activate();
 
-				final LocalNamingContext local = 
-						(LocalNamingContext) info.resolve_initial_references("NameService");
+				final NamingContextImpl local = 
+						(NamingContextImpl) info.resolve_initial_references("NameService");
 
 				final String serviceName = getServiceName(info);
 
@@ -153,7 +153,7 @@ public class TransientNameService {
 				byte[] objectId = serviceName.getBytes();
 				bootManager.add_binding(objectId, local);
 
-				new POANamingContext(nameServicePOA, local);
+				local.getServant(nameServicePOA, false);
 			} catch (Exception e) {
 				throw (INITIALIZE)(new INITIALIZE().initCause(e));
 			}
