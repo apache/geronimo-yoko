@@ -21,6 +21,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
 
 final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
@@ -47,6 +48,8 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     private ListenerMap listenMap_;
 
     private ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
+
+    private ExtendedConnectionHelper extendedConnectionHelper_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -190,7 +193,11 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         //
         java.net.Socket socket = null;
         try {
-            socket = connectionHelper_.createSelfConnection(localAddress_, port_);
+            if (connectionHelper_ != null) {
+                socket = connectionHelper_.createSelfConnection(localAddress_, port_);
+            } else {
+                socket = extendedConnectionHelper_.createSelfConnection(localAddress_, port_);
+            }
         } catch (java.net.ConnectException ex) {
             logger.log(Level.FINE, "Failure making self connection for host=" + localAddress_ + ", port=" + port_, ex);
             throw new org.omg.CORBA.TRANSIENT(
@@ -429,81 +436,15 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Acceptor_impl(String[] hosts, boolean multiProfile, int port,
-            int backlog, boolean keepAlive, ConnectionHelper helper, ListenerMap lm) {
-        hosts_ = hosts;
-        multiProfile_ = multiProfile;
-        keepAlive_ = keepAlive;
-        connectionHelper_ = helper;
-        info_ = new AcceptorInfo_impl(this);
-        listenMap_ = lm;
-        
-        if (backlog == 0)
-            backlog = 50; // 50 is the JDK's default value
-
-        //
-        // Get the local address for use by connect_self. Since we are
-        // binding to all network interfaces, we'll use the loopback
-        // address.
-        //
-        try {
-            localAddress_ = java.net.InetAddress.getLocalHost();
-        } catch (java.net.UnknownHostException ex) {
-            logger.log(Level.FINE, "Host resolution failure", ex); 
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        }
-
-        //
-        // Create socket and bind to all network interfaces
-        //
-        try {
-            socket_ = connectionHelper_.createServerSocket(port, backlog);
-
-            //
-            // Read back the port. This is needed if the port was selected by
-            // the operating system.
-            //
-            port_ = socket_.getLocalPort();
-            logger.fine("Acceptor created using socket " + socket_); 
-        } catch (java.net.BindException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorBind)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBind,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        }
-
-        //
-        // add these endpoints to the listenMap_
-        //
-        synchronized (listenMap_) {
-            for (int i = 0; i < hosts_.length; i++)
-                listenMap_.add(hosts_[i], (short) port_);
-        }
-    }
-
     public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
-            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ListenerMap lm) {
+            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params) {
         // System.out.println("Acceptor_impl");
+        Assert._OB_assert((helper == null) ^ (extendedConnectionHelper == null));
         hosts_ = hosts;
         multiProfile_ = multiProfile;
         keepAlive_ = keepAlive;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = extendedConnectionHelper;
         info_ = new AcceptorInfo_impl(this);
         listenMap_ = lm;
 
@@ -514,7 +455,14 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         // Get the local address for use by connect_self
         //
         try {
-            localAddress_ = java.net.InetAddress.getByName(address);
+            if (address == null) {
+                //Since we are
+                // binding to all network interfaces, we'll use the loopback
+                // address.
+                localAddress_ = java.net.InetAddress.getLocalHost();                
+            } else {
+                localAddress_ = java.net.InetAddress.getByName(address);
+            }
         } catch (java.net.UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution failure", ex); 
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
@@ -529,7 +477,19 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         // Create socket and bind to requested network interface
         //
         try {
-            socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+            if (address == null) {
+                if (connectionHelper_ != null) {
+                    socket_ = connectionHelper_.createServerSocket(port, backlog);
+                } else {
+                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
+                }
+            } else {
+                if (connectionHelper_ != null) {
+                    socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+                } else {
+                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
+                }
+            }
 
             //
             // Read back the port. This is needed if the port was selected by

@@ -56,6 +56,8 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
 
     private byte[] transportInfo;
 
+    private ExtendedConnectionHelper extendedConnectionHelper_;
+
 
     // ------------------------------------------------------------------
     // Private and protected functions
@@ -117,7 +119,11 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         try {
             logger.fine("Connecting to host=" + address + ", port=" + port_);
-            socket_ = connectionHelper_.createSocket(ior_, policies_, address, port_);
+            if (connectionHelper_ != null) {
+                socket_ = connectionHelper_.createSocket(ior_, policies_, address, port_);
+            } else {
+                socket_ = extendedConnectionHelper_.createSocket(ior_, policies_, address, port_);
+            }
             logger.fine("Connection created with socket " + socket_); 
         } catch (java.net.ConnectException ex) {
             logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + port_, ex);
@@ -213,7 +219,11 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
 
         public void run() {
             try {
-                so_ = connectionHelper_.createSocket(ior_, policies_, address_, port_);
+                if (connectionHelper_ != null) {
+                    so_ = connectionHelper_.createSocket(ior_, policies_, address_, port_);
+                } else {
+                    so_ = extendedConnectionHelper_.createSocket(ior_, policies_, address_, port_);
+                }
             } catch (java.io.IOException ex) {
                 logger.log(Level.FINE, "Socket creation error", ex);
                 ex_ = ex;
@@ -488,6 +498,20 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         info_ = new ConnectorInfo_impl(this, cb);
         listenMap_ = lm;
         connectionHelper_ = helper;
+        transportInfo = extractTransportInfo(ior);
+    }
+
+    public Connector_impl(org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies, String host, int port, boolean keepAlive,
+            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper helper) {
+        // System.out.println("Connector_impl");
+        ior_ = ior;
+        policies_ = policies;
+        host_ = host;
+        port_ = port;
+        keepAlive_ = keepAlive;
+        info_ = new ConnectorInfo_impl(this, cb);
+        listenMap_ = lm;
+        extendedConnectionHelper_ = helper;
         transportInfo = extractTransportInfo(ior);
     }
 

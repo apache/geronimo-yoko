@@ -37,6 +37,8 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
 
     private ConnectionHelper connectionHelper_;  // plugin for making ssl transport decisions.
 
+    private ExtendedConnectionHelper extendedConnectionHelper_;
+
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
@@ -150,9 +152,15 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                 org.apache.yoko.orb.OCI.ConnectCB[] cbs = info_
                         ._OB_getConnectCBSeq();
                 logger.fine("Creating connector to host=" + body.host +", port=" + port);
-                seq.addElement(new Connector_impl(ior, policies, body.host, port, keepAlive_,
-                        cbs, listenMap_, connectionHelper_));
-
+                if (connectionHelper_ != null) {
+                    seq.addElement(new Connector_impl(ior, policies, body.host,
+                            port, keepAlive_, cbs, listenMap_,
+                            connectionHelper_));
+                } else {
+                    seq.addElement(new Connector_impl(ior, policies, body.host,
+                            port, keepAlive_, cbs, listenMap_,
+                            extendedConnectionHelper_));
+                }
                 //
                 // If this is a 1.1 profile, check for
                 // TAG_ALTERNATE_IIOP_ADDRESS in the components
@@ -230,6 +238,15 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         info_ = new ConFactoryInfo_impl();
         listenMap_ = lm;
         connectionHelper_ = helper;
+    }
+
+    public ConFactory_impl(org.omg.CORBA.ORB orb, boolean keepAlive, ListenerMap lm, ExtendedConnectionHelper helper) {
+        // System.out.println("ConFactory");
+        orb_ = orb;
+        keepAlive_ = keepAlive;
+        info_ = new ConFactoryInfo_impl();
+        listenMap_ = lm;
+        extendedConnectionHelper_ = helper;
     }
 
     public void finalize() throws Throwable {
