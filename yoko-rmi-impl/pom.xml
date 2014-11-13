@@ -49,6 +49,12 @@
             <artifactId>org.apache.servicemix.bundles.bcel</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
@@ -62,6 +68,7 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
+                        <Bundle-Activator>org.apache.yoko.rmi.osgi.activator.Activator</Bundle-Activator>
                         <Export-Package>
                             org.apache.yoko.osgi.locator,
                             org.apache.yoko.rmi.impl,
@@ -70,6 +77,13 @@
                             org.apache.yoko.rmi.util.corba,
                             org.apache.yoko.rmi.util.stub
                         </Export-Package>
+                        <Import-Package>
+                            !sun.*,*
+                        </Import-Package>
+                        <Private-Package>
+                            org.apache.yoko.rmi.osgi.activator,
+                            org.apache.yoko.osgi.locator.activator
+                        </Private-Package>
                     </instructions>
                 </configuration>
             </plugin>
