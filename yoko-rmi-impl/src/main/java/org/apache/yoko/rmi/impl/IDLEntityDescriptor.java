@@ -46,7 +46,8 @@ public class IDLEntityDescriptor extends ValueDescriptor {
         return "org_omg_boxedIDL_" + super.getIDLName();
     }
 
-    public void initIDL() {
+    @Override
+    public void init() {
         super.init();
 
         try {
@@ -99,6 +100,11 @@ public class IDLEntityDescriptor extends ValueDescriptor {
             throw new RuntimeException("cannot load IDL Helper class for "
                     + getJavaClass(), ex);
         }
+    }
+    
+    @Deprecated
+    public void initIDL() {
+    	init();
     }
 
     /*

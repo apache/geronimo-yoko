@@ -18,10 +18,24 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.io.Externalizable;
+import java.io.Serializable;
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.sql.Date;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
+import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.rmi.CORBA.ClassDesc;
 
 import org.apache.yoko.rmi.util.ByteBuffer;
 import org.apache.yoko.rmi.util.ByteString;
@@ -39,65 +53,197 @@ public class TypeRepository {
 
     org.omg.CORBA.ORB orb;
 
-    java.util.Map<Class, TypeDescriptor> classMap = new ConcurrentHashMap<Class, TypeDescriptor> ();
+    private static final class RepIdWeakMap {
+    	private final Map<String, WeakReference<TypeDescriptor>> map = 
+    			Collections.synchronizedMap(new WeakHashMap<String,WeakReference<TypeDescriptor>>());
+    	
+    	void put(String repId, TypeDescriptor desc) {
+    		map.put(repId, new WeakReference<TypeDescriptor>(desc));
+    	}
+    	
+    	TypeDescriptor get(String repId) {
+    		WeakReference<TypeDescriptor> value = map.get(repId);
+    		return (value == null) ? null : value.get();
+    	}
+    }
+    
+    private static final class LocalDescriptors extends ClassValue<TypeDescriptor> {
+        private static final class Raw extends ClassValue<TypeDescriptor> {
+        	private static final List<Class<?>> staticAnyTypes = 
+        			Collections.unmodifiableList(
+        					Arrays.asList(Object.class, Externalizable.class, Serializable.class, Remote.class));
+        	
+        	private final TypeRepository repo;
+        	
+        	Raw(TypeRepository repo) {
+        		this.repo = repo;
+        	}
 
-    java.util.Map<String, TypeDescriptor> repidMap = new ConcurrentHashMap<String, TypeDescriptor>();
+    		@Override
+    		protected TypeDescriptor computeValue(Class<?> type) {
+    			if (type.isPrimitive()) {
+    				return primitiveDescriptor(type);
+    			} else if (type == String.class) {
+    				return new StringDescriptor(repo);
+    			} else if (type == Class.class) {
+    				return new ClassDescriptor(repo);
+    			} else if (type == javax.rmi.CORBA.ClassDesc.class) {
+    				return this.get(Class.class);
+    			} else if (type == java.util.Date.class) {
+    				return new DateValueDescriptor(repo);
+    			} else if (staticAnyTypes.contains(type)) {
+    				return new AnyDescriptor(type, repo);
+    			} else if (org.omg.CORBA.portable.IDLEntity.class.isAssignableFrom(type)
+    	                && isIDLEntity(type)) {
+    	            return new IDLEntityDescriptor(type, repo);
+    	        } else if (java.lang.Throwable.class.isAssignableFrom(type)) {
+    	            return new ExceptionDescriptor(type, repo);
+    	        } else if (type.isArray()) {
+    	            return ArrayDescriptor.get(type, repo);
+    	        } else if (!type.isInterface()
+    	                && java.io.Serializable.class.isAssignableFrom(type)) {
+    	            return new ValueDescriptor(type, repo);
+    	        } else if (java.rmi.Remote.class.isAssignableFrom(type)) {
+    	            if (type.isInterface()) {
+    	                return new RemoteInterfaceDescriptor(type, repo);
+    	            } else {
+    	                return new RemoteClassDescriptor(type, repo);
+    	            }
+    	        } else if (Object.class.isAssignableFrom(type)) {
+    	            if (isAbstractInterface(type)) {
+    	                logger.finer("encoding " + type + " as abstract interface");
+    	                return new AbstractObjectDescriptor(type, repo);
+    	            } else {
+    	                logger.finer("encoding " + type + " as a abstract value");
+    	                return new ValueDescriptor(type, repo);
+    	            }
+    	        } else {
+    	            throw new RuntimeException("cannot handle class " + type.getName());
+    	        }
+    		}
 
+    		private TypeDescriptor primitiveDescriptor(Class<?> type) {
+    	        if (type == Boolean.TYPE) {
+    	            return new BooleanDescriptor(repo);
+    	        } else if (type == Byte.TYPE) {
+    	            return new ByteDescriptor(repo);
+    	        } else if (type == Short.TYPE) {
+    	            return new ShortDescriptor(repo);
+    	        } else if (type == Character.TYPE) {
+    	            return new CharDescriptor(repo);
+    	        } else if (type == Integer.TYPE) {
+    	            return new IntegerDescriptor(repo);
+    	        } else if (type == Long.TYPE) {
+    	            return new LongDescriptor(repo);
+    	        } else if (type == Float.TYPE) {
+    	            return new FloatDescriptor(repo);
+    	        } else if (type == Double.TYPE) {
+    	            return new DoubleDescriptor(repo);
+    	        } else if (type == Void.TYPE) {
+    	            return new VoidDescriptor(repo);
+    	        } else {
+    	            throw new RuntimeException("internal error: " + type);
+    	        }
+    		}
+
+    	    private static boolean isIDLEntity(Class<?> type) {
+    	        Class<?>[] supers = type.getInterfaces();
+
+    	        for (int i = 0; supers != null && i < supers.length; i++) {
+    	            if (supers[i] == IDLEntity.class) {
+    	                return true;
+    	            }
+    	        }
+
+    	        return false;
+    	    }
+        	
+    	    private static boolean isAbstractInterface(Class<?> type) {
+    	        if (!type.isInterface())
+    	            return false;
+
+    	        Class<?>[] interfaces = type.getInterfaces();
+    	        for (Class<?> anInterface : interfaces) {
+    	            if (!isAbstractInterface(anInterface))
+    	                return false;
+    	        }
+
+    	        java.lang.reflect.Method[] methods = type.getDeclaredMethods();
+    	        for (Method method : methods) {
+    	            if (!isRemoteMethod(method))
+    	                return false;
+    	        }
+
+    	        return true;
+    	    }
+
+    	    private static boolean isRemoteMethod(java.lang.reflect.Method m) {
+    	        Class<?>[] ex = m.getExceptionTypes();
+
+    	        for (Class<?> anEx : ex) {
+    	            if (anEx.isAssignableFrom(RemoteException.class))
+    	                return true;
+    	        }
+
+    	        return false;
+    	    }
+
+        }
+
+    	private final Raw rawValues;
+    	private final RepIdWeakMap repIdDescriptors;
+    	
+    	LocalDescriptors(TypeRepository repo, RepIdWeakMap repIdDescriptors) {
+    		rawValues = new Raw(repo);
+    		this.repIdDescriptors = repIdDescriptors;
+    	}
+		@Override
+		protected TypeDescriptor computeValue(Class<?> type) {
+			final TypeDescriptor desc = rawValues.get(type);
+			desc.init();
+			repIdDescriptors.put(desc.getRepositoryID(), desc);
+			return desc;
+		}
+    	
+    }
+
+    private static final class FvdRepIdDescriptorMaps extends ClassValue<ConcurrentMap<String,ValueDescriptor>> {
+
+		@Override
+		protected ConcurrentMap<String,ValueDescriptor> computeValue(
+				Class<?> type) {
+			return new ConcurrentHashMap<String,ValueDescriptor>();
+		}
+    }
+    
+    private final RepIdWeakMap repIdDescriptors;
+    private final LocalDescriptors localDescriptors;
+    private final FvdRepIdDescriptorMaps fvdDescMaps = new FvdRepIdDescriptorMaps();
+    private final ConcurrentMap<String,ValueDescriptor> noTypeDescMap = new ConcurrentHashMap<String,ValueDescriptor>();
+    
     public TypeRepository(org.omg.CORBA.ORB orb) {
         this.orb = orb;
-        TypeDescriptor desc;
+        repIdDescriptors = new RepIdWeakMap();
+        localDescriptors = new LocalDescriptors(this, repIdDescriptors);
+        
+        Class<?>[] initTypes = {
+        		Object.class, String.class, ClassDesc.class, Date.class, 
+        		Externalizable.class, Serializable.class, Remote.class };
 
-        desc = new AnyDescriptor(java.lang.Object.class, this);
-        classMap.put(java.lang.Object.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new AnyDescriptor(java.lang.Object.class, this);
-        classMap.put(java.lang.Object.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new StringDescriptor(this);
-        classMap.put(String.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new ClassDescriptor(this);
-        classMap.put(Class.class, desc);
-        classMap.put(javax.rmi.CORBA.ClassDesc.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new DateValueDescriptor(this);
-        classMap.put(java.util.Date.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new AnyDescriptor(java.io.Externalizable.class, this);
-        classMap.put(java.io.Externalizable.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new AnyDescriptor(java.io.Serializable.class, this);
-        classMap.put(java.io.Serializable.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
-
-        desc = new AnyDescriptor(java.rmi.Remote.class, this);
-        classMap.put(java.rmi.Remote.class, desc);
-        desc.init();
-        repidMap.put(desc.getRepositoryID(), desc);
+        for (Class<?> type: initTypes) {
+        	localDescriptors.get(type);
+        }
     }
 
     org.omg.CORBA.ORB getORB() {
         return orb;
     }
 
-    public String getRepositoryID(Class type) {
+    public String getRepositoryID(Class<?> type) {
         return getDescriptor(type).getRepositoryID();
     }
 
-    public RemoteInterfaceDescriptor getRemoteDescriptor(Class type) {
+    public RemoteInterfaceDescriptor getRemoteDescriptor(Class<?> type) {
         TypeDescriptor td = getDescriptor(type);
         RemoteInterfaceDescriptor result = td.getRemoteInterface();
 
@@ -126,162 +272,11 @@ public class TypeRepository {
         return result;
     }
 
-    public TypeDescriptor getDescriptor(Class type) {
+    public TypeDescriptor getDescriptor(Class<?> type) {
         logger.fine("Requesting type descriptor for class " + type.getName());
-        TypeDescriptor desc = classMap.get(type);
-
-        if (desc != null) {
-            return desc.getSelf();
-        }
-
-        if (org.omg.CORBA.portable.IDLEntity.class.isAssignableFrom(type)
-                && isIDLEntity(type)) {
-            IDLEntityDescriptor idlDesc = new IDLEntityDescriptor(type, this);
-            desc = idlDesc;
-            classMap.put(type, desc);
-            idlDesc.initIDL();
-        } else if (java.lang.Throwable.class.isAssignableFrom(type)) {
-            desc = new ExceptionDescriptor(type, this);
-            classMap.put(type, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-
-        } else if (type.isArray()) {
-            desc = ArrayDescriptor.get(type, this);
-            classMap.put(type, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        } else if (!type.isInterface()
-                && java.io.Serializable.class.isAssignableFrom(type)) {
-            desc = new ValueDescriptor(type, this);
-            classMap.put(type, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        } else if (java.rmi.Remote.class.isAssignableFrom(type)) {
-            if (type.isInterface()) {
-                desc = new RemoteInterfaceDescriptor(type, this);
-            } else {
-                desc = new RemoteClassDescriptor(type, this);
-            }
-
-            classMap.put(type, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-        } else if (type.isPrimitive()) {
-            desc = getSimpleDescriptor(type);
-            classMap.put(type, desc);
-            repidMap.put(desc.getRepositoryID(), desc);
-
-        } else if (Object.class.isAssignableFrom(type)) {
-            if (isAbstractInterface(type)) {
-
-                logger.finer("encoding " + type + " as abstract interface");
-                desc = new AbstractObjectDescriptor(type, this);
-
-            } else {
-
-                logger.finer("encoding " + type + " as a abstract value");
-                desc = new ValueDescriptor(type, this);
-            }
-
-            classMap.put(type, desc);
-            desc.init();
-            repidMap.put(desc.getRepositoryID(), desc);
-
-        } else {
-            throw new RuntimeException("cannot handle class " + type.getName());
-        }
-
+        final TypeDescriptor desc = localDescriptors.get(type);
         logger.fine("Class " + type.getName() + " resolves to " + desc.getClass().getName());
         return desc;
-    }
-
-    private boolean isIDLEntity(Class type) {
-        Class[] supers = type.getInterfaces();
-
-        for (int i = 0; supers != null && i < supers.length; i++) {
-            if (supers[i].equals(IDLEntity.class)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    SimpleDescriptor getSimpleDescriptor(Class type) {
-        if (type == Boolean.TYPE) {
-            return boolean_descriptor;
-        } else if (type == Byte.TYPE) {
-            return byte_descriptor;
-        } else if (type == Short.TYPE) {
-            return short_descriptor;
-        } else if (type == Character.TYPE) {
-            return char_descriptor;
-        } else if (type == Integer.TYPE) {
-            return int_descriptor;
-        } else if (type == Long.TYPE) {
-            return long_descriptor;
-        } else if (type == Float.TYPE) {
-            return float_descriptor;
-        } else if (type == Double.TYPE) {
-            return double_descriptor;
-        } else if (type == Void.TYPE) {
-            return void_descriptor;
-        } else if (!type.isPrimitive()) {
-            throw new IllegalArgumentException("Cannot resolve simple descriptor for primitive types");
-        } else {
-            throw new RuntimeException("internal error: " + type);
-        }
-    }
-
-    SimpleDescriptor boolean_descriptor = new BooleanDescriptor(this);
-
-    SimpleDescriptor byte_descriptor = new ByteDescriptor(this);
-
-    SimpleDescriptor char_descriptor = new CharDescriptor(this);
-
-    SimpleDescriptor short_descriptor = new ShortDescriptor(this);
-
-    SimpleDescriptor int_descriptor = new IntegerDescriptor(this);
-
-    SimpleDescriptor long_descriptor = new LongDescriptor(this);
-
-    SimpleDescriptor float_descriptor = new FloatDescriptor(this);
-
-    SimpleDescriptor double_descriptor = new DoubleDescriptor(this);
-
-    SimpleDescriptor void_descriptor = new VoidDescriptor(this);
-
-    static final java.lang.Class REMOTE_EXCEPTION = java.rmi.RemoteException.class;
-
-    boolean isAbstractInterface(Class type) {
-        if (!type.isInterface())
-            return false;
-
-        Class[] interfaces = type.getInterfaces();
-        for (Class anInterface : interfaces) {
-            if (!isAbstractInterface(anInterface))
-                return false;
-        }
-
-        java.lang.reflect.Method[] methods = type.getDeclaredMethods();
-        for (Method method : methods) {
-            if (!isRemoteMethod(method))
-                return false;
-        }
-
-        return true;
-    }
-
-    boolean isRemoteMethod(java.lang.reflect.Method m) {
-        Class[] ex = m.getExceptionTypes();
-
-        for (Class anEx : ex) {
-            if (anEx.isAssignableFrom(REMOTE_EXCEPTION))
-                return true;
-        }
-
-        return false;
     }
 
     /**
@@ -291,13 +286,13 @@ public class TypeRepository {
      * @return ValueDescriptor
      * @throws ClassNotFoundException  something might go wrong.
      */
-    public ValueDescriptor getDescriptor(Class clz, String repid,
+    public ValueDescriptor getDescriptor(Class<?> clz, String repid,
             RunTime runtime) throws ClassNotFoundException {
         if (repid == null) {
             return (ValueDescriptor) getDescriptor(clz);
         }
 
-        ValueDescriptor clzdesc = (ValueDescriptor) repidMap.get(repid);
+        ValueDescriptor clzdesc = (ValueDescriptor) repIdDescriptors.get(repid);
         if (clzdesc != null) {
             return clzdesc;
         }
@@ -307,11 +302,7 @@ public class TypeRepository {
             // special handling for array value types.
             if (clz.isArray()) {
                 //TODO don't we need to look up the FVD for the array element?
-                ValueDescriptor desc = ArrayDescriptor.get(clz, this);
-                classMap.put(clz, desc);
-                desc.init();
-                repidMap.put(desc.getRepositoryID(), desc);
-                return desc;
+            	return (ValueDescriptor) localDescriptors.get(clz);
             }
             clzdesc = (ValueDescriptor) getDescriptor(clz);
             String localID = clzdesc.getRepositoryID();
@@ -340,8 +331,13 @@ public class TypeRepository {
                     codebase);
         }
 
-        clzdesc = new FVDValueDescriptor(fvd, clz, this, repid, super_desc);
-        repidMap.put(repid, clzdesc);
+        ValueDescriptor newDesc = new FVDValueDescriptor(fvd, clz, this, repid, super_desc);
+        ConcurrentMap<String, ValueDescriptor> remoteDescMap = (clz == null) ? noTypeDescMap : fvdDescMaps.get(clz);
+        clzdesc = remoteDescMap.putIfAbsent(repid, newDesc);
+        if (clzdesc == null) {
+        	clzdesc = newDesc;
+        	repIdDescriptors.put(repid, clzdesc);
+        }
 
         return clzdesc;
     }

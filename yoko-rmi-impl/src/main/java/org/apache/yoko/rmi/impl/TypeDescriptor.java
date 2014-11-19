@@ -29,7 +29,7 @@ import org.omg.CORBA.portable.InputStream;
 public abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    protected Class _java_class;
+    protected final Class _java_class;
 
     protected String _repid;
 
