@@ -20,14 +20,12 @@ package org.apache.yoko;
 
 import java.io.File;
 import java.rmi.registry.Registry;
-import java.util.Iterator;
 import java.util.Map.Entry;
+
+import junit.framework.TestCase;
 
 import org.apache.yoko.processmanager.JavaProcess;
 import org.apache.yoko.processmanager.ProcessManager;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 /**
  * Superclass for ORB tests. Takes care of setting up a a server process and a client process.
@@ -61,8 +59,7 @@ public class AbstractOrbTestBase extends TestCase {
         JavaProcess[] processes = new JavaProcess[] {server, client};
         for(int i = 0; i < processes.length; i++) {
             JavaProcess process = processes[i];
-            for(Iterator it = System.getProperties().entrySet().iterator(); it.hasNext();) {
-                Entry entry = (Entry) it.next();
+            for(Entry<?, ?> entry: System.getProperties().entrySet()) {
                 String key = entry.getKey().toString();
                 if(key.startsWith(process.getName() + ":")){
                     int pos = key.indexOf(':') + 1;
