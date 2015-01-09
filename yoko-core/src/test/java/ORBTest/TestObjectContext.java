@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectContext extends test.common.TestBase implements
@@ -59,7 +61,7 @@ public class TestObjectContext extends test.common.TestBase implements
 
             try {
                 seq = ti.opContext("*", ctx);
-                TEST(false);
+                assertTrue(false);
             } catch (BAD_CONTEXT ex) {
                 // Expected
             }
@@ -97,35 +99,35 @@ public class TestObjectContext extends test.common.TestBase implements
             ctx.set_one_value("YYY", any);
 
             seq = ti.opContext("*", ctx);
-            TEST(seq.length == 3 * 2);
+            assertTrue(seq.length == 3 * 2);
             for (i = 0; i < seq.length; i += 2) {
                 if (seq[i].equals("A"))
-                    TEST(seq[i + 1].equals("A1"));
+					assertTrue(seq[i + 1].equals("A1"));
 
                 if (seq[i].equals("AAA"))
-                    TEST(seq[i + 1].equals("A2"));
+					assertTrue(seq[i + 1].equals("A2"));
 
                 if (seq[i].equals("X"))
-                    TEST(seq[i + 1].equals("X1"));
+					assertTrue(seq[i + 1].equals("X1"));
             }
 
             seq = ti.opContext("A*", ctx);
-            TEST(seq.length == 2 * 2);
+            assertTrue(seq.length == 2 * 2);
             for (i = 0; i < seq.length; i += 2) {
                 if (seq[i].equals("A"))
-                    TEST(seq[i + 1].equals("A1"));
+					assertTrue(seq[i + 1].equals("A1"));
 
                 if (seq[i].equals("AAA"))
-                    TEST(seq[i + 1].equals("A2"));
+					assertTrue(seq[i + 1].equals("A2"));
             }
 
             seq = ti.opContext("AA*", ctx);
-            TEST(seq.length == 1 * 2);
-            TEST(seq[0].equals("AAA") && seq[1].equals("A2"));
+            assertTrue(seq.length == 1 * 2);
+            assertTrue(seq[0].equals("AAA") && seq[1].equals("A2"));
 
             seq = ti.opContext("A", ctx);
-            TEST(seq.length == 1 * 2);
-            TEST(seq[0].equals("A") && seq[1].equals("A1"));
+            assertTrue(seq.length == 1 * 2);
+            assertTrue(seq[0].equals("A") && seq[1].equals("A1"));
 
             ctx2 = ctx.create_child("child");
 
@@ -139,22 +141,22 @@ public class TestObjectContext extends test.common.TestBase implements
             ctx2.set_one_value("X", any);
 
             seq = ti.opContext("*", ctx2);
-            TEST(seq.length == 5 * 2);
+            assertTrue(seq.length == 5 * 2);
             for (i = 0; i < seq.length; i += 2) {
                 if (seq[i].equals("A"))
-                    TEST(seq[i + 1].equals("A1"));
+					assertTrue(seq[i + 1].equals("A1"));
 
                 if (seq[i].equals("AAA"))
-                    TEST(seq[i + 1].equals("A2"));
+					assertTrue(seq[i + 1].equals("A2"));
 
                 if (seq[i].equals("C"))
-                    TEST(seq[i + 1].equals("C1"));
+					assertTrue(seq[i + 1].equals("C1"));
 
                 if (seq[i].equals("CCC"))
-                    TEST(seq[i + 1].equals("C2"));
+					assertTrue(seq[i + 1].equals("C2"));
 
                 if (seq[i].equals("X"))
-                    TEST(seq[i + 1].equals("X1-1"));
+					assertTrue(seq[i + 1].equals("X1-1"));
             }
         }
     }
@@ -182,7 +184,7 @@ public class TestObjectContext extends test.common.TestBase implements
             try {
                 request.invoke();
                 Exception ex = request.env().exception();
-                TEST(ex != null);
+                assertTrue(ex != null);
                 BAD_CONTEXT bex = (BAD_CONTEXT) ex;
             } catch (BAD_CONTEXT ex) {
                 // Expected (if yoko.m_orb.raise_dii_exceptions = true)
@@ -236,16 +238,16 @@ public class TestObjectContext extends test.common.TestBase implements
             seq = (ORBTest_Context.StringSequenceHelper.extract(request
                     .return_value()));
 
-            TEST(seq.length == 3 * 2);
+            assertTrue(seq.length == 3 * 2);
             for (i = 0; i < seq.length; i += 2) {
                 if (seq[i].equals("A"))
-                    TEST(seq[i + 1].equals("A1"));
+					assertTrue(seq[i + 1].equals("A1"));
 
                 if (seq[i].equals("AAA"))
-                    TEST(seq[i + 1].equals("A2"));
+					assertTrue(seq[i + 1].equals("A2"));
 
                 if (seq[i].equals("X"))
-                    TEST(seq[i + 1].equals("X1"));
+					assertTrue(seq[i + 1].equals("X1"));
             }
 
             request = ti._request("opContext");
@@ -262,13 +264,13 @@ public class TestObjectContext extends test.common.TestBase implements
             seq = (ORBTest_Context.StringSequenceHelper.extract(request
                     .return_value()));
 
-            TEST(seq.length == 2 * 2);
+            assertTrue(seq.length == 2 * 2);
             for (i = 0; i < seq.length; i += 2) {
                 if (seq[i].equals("A"))
-                    TEST(seq[i + 1].equals("A1"));
+					assertTrue(seq[i + 1].equals("A1"));
 
                 if (seq[i].equals("AAA"))
-                    TEST(seq[i + 1].equals("A2"));
+					assertTrue(seq[i + 1].equals("A2"));
             }
 
             request = ti._request("opContext");
@@ -285,8 +287,8 @@ public class TestObjectContext extends test.common.TestBase implements
             seq = (ORBTest_Context.StringSequenceHelper.extract(request
                     .return_value()));
 
-            TEST(seq.length == 1 * 2);
-            TEST(seq[0].equals("AAA") && seq[1].equals("A2"));
+            assertTrue(seq.length == 1 * 2);
+            assertTrue(seq[0].equals("AAA") && seq[1].equals("A2"));
 
             request = ti._request("opContext");
             request.contexts().add("A*");
@@ -302,8 +304,8 @@ public class TestObjectContext extends test.common.TestBase implements
             seq = (ORBTest_Context.StringSequenceHelper.extract(request
                     .return_value()));
 
-            TEST(seq.length == 1 * 2);
-            TEST(seq[0].equals("A") && seq[1].equals("A1"));
+            assertTrue(seq.length == 1 * 2);
+            assertTrue(seq[0].equals("A") && seq[1].equals("A1"));
         }
     }
 }

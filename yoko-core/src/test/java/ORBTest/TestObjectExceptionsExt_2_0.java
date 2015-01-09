@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectExceptionsExt_2_0 extends test.common.TestBase implements
@@ -52,74 +54,74 @@ public class TestObjectExceptionsExt_2_0 extends test.common.TestBase implements
 
         try {
             ti.op_PERSIST_STORE_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (PERSIST_STORE ex) {
-            TEST(ex.minor == 16);
-            TEST(ex.completed == CompletionStatus.COMPLETED_YES);
+            assertTrue(ex.minor == 16);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_YES);
         }
 
         try {
             ti.op_FREE_MEM_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (FREE_MEM ex) {
-            TEST(ex.minor == 19);
-            TEST(ex.completed == CompletionStatus.COMPLETED_YES);
+            assertTrue(ex.minor == 19);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_YES);
         }
 
         try {
             ti.op_INV_IDENT_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (INV_IDENT ex) {
-            TEST(ex.minor == 20);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 20);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_INV_FLAG_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (INV_FLAG ex) {
-            TEST(ex.minor == 21);
-            TEST(ex.completed == CompletionStatus.COMPLETED_MAYBE);
+            assertTrue(ex.minor == 21);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_MAYBE);
         }
 
         try {
             ti.op_INTF_REPOS_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (INTF_REPOS ex) {
-            TEST(ex.minor == 22);
-            TEST(ex.completed == CompletionStatus.COMPLETED_YES);
+            assertTrue(ex.minor == 22);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_YES);
         }
 
         try {
             ti.op_BAD_CONTEXT_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (BAD_CONTEXT ex) {
-            TEST(ex.minor == 23);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 23);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_TRANSACTION_REQUIRED_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (TRANSACTION_REQUIRED ex) {
-            TEST(ex.minor == 27);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 27);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_TRANSACTION_ROLLEDBACK_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (TRANSACTION_ROLLEDBACK ex) {
-            TEST(ex.minor == 28);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 28);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_INVALID_TRANSACTION_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (INVALID_TRANSACTION ex) {
-            TEST(ex.minor == 29);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 29);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
     }
 

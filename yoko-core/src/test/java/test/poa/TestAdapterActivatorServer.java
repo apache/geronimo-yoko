@@ -17,11 +17,15 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 import org.omg.PortableServer.POAManagerPackage.*;
+
 import java.io.*;
 
 public final class TestAdapterActivatorServer extends test.common.TestBase {
@@ -39,9 +43,9 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         try {
             return parent.create_POA(name, mgr, policies);
         } catch (AdapterAlreadyExists ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (InvalidPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         return null;
@@ -70,7 +74,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         }
 
         public boolean unknown_adapter(POA parent, String name) {
-            TEST(name.equals(expectedName_));
+            assertTrue(name.equals(expectedName_));
             invoked_ = true;
             if (create_) {
                 Policy[] policies = new Policy[0];
@@ -78,9 +82,9 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
                 try {
                     POA poa = parent.create_POA(name, mgr, policies);
                 } catch (AdapterAlreadyExists ex) {
-                    TEST(false);
+                    assertTrue(false);
                 } catch (InvalidPolicy ex) {
-                    TEST(false);
+                    assertTrue(false);
                 }
                 return true;
             } else
@@ -96,7 +100,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         String str;
 
         POAManager rootMgr = root.the_POAManager();
-        TEST(rootMgr != null);
+        assertTrue(rootMgr != null);
 
         //
         // If this function terminates due to an exception this
@@ -115,15 +119,15 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         try {
             poa = root.find_POA("poa1", true);
         } catch (AdapterNonExistent ex) {
-            TEST(false);
+            assertTrue(false);
         }
-        TEST(poa != null);
-        TEST(activatorImpl.invoked());
+        assertTrue(poa != null);
+        assertTrue(activatorImpl.invoked());
         str = poa.the_name();
-        TEST(str.equals("poa1"));
+        assertTrue(str.equals("poa1"));
         parent = poa.the_parent();
-        TEST(parent != null);
-        TEST(parent._is_equivalent(root));
+        assertTrue(parent != null);
+        assertTrue(parent._is_equivalent(root));
 
         //
         // Test: Activator and unsuccessful creation
@@ -134,7 +138,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         } catch (AdapterNonExistent ex) {
             // expected
         }
-        TEST(activatorImpl.invoked());
+        assertTrue(activatorImpl.invoked());
 
         //
         // Test: Make sure activator isn't called when POA already exists
@@ -143,9 +147,9 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         try {
             poa = root.find_POA("poa1", true);
         } catch (AdapterNonExistent ex) {
-            TEST(false);
+            assertTrue(false);
         }
-        TEST(!activatorImpl.invoked());
+        assertTrue(!activatorImpl.invoked());
 
         //
         // Test: Disable adapter activator and make sure it isn't invoked
@@ -157,7 +161,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
         } catch (AdapterNonExistent ex) {
             // expected
         }
-        TEST(!activatorImpl.invoked());
+        assertTrue(!activatorImpl.invoked());
 
         poa.destroy(true, true);
 
@@ -165,11 +169,11 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
             byte[] id = root.servant_to_id(activatorImpl);
             root.deactivate_object(id);
         } catch (ServantNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (ObjectNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -201,11 +205,11 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
                     poa.activate_object_with_id(oid, servant);
                     return servant;
                 } catch (ObjectAlreadyActive ex) {
-                    TEST(false);
+                    assertTrue(false);
                 } catch (ServantAlreadyActive ex) {
-                    TEST(false);
+                    assertTrue(false);
                 } catch (WrongPolicy ex) {
-                    TEST(false);
+                    assertTrue(false);
                 }
             }
 
@@ -256,7 +260,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
                     try {
                         poa.set_servant_manager(activator);
                     } catch (WrongPolicy ex) {
-                        TEST(false);
+                        assertTrue(false);
                     }
                 }
                 return true;
@@ -280,7 +284,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
             POA root = TestUtil.GetRootPOA(orb);
 
             POAManager manager = root.the_POAManager();
-            TEST(manager != null);
+            assertTrue(manager != null);
 
             //
             // Run implementation
@@ -288,7 +292,7 @@ public final class TestAdapterActivatorServer extends test.common.TestBase {
             try {
                 manager.activate();
             } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             TestAdapterActivator(orb, root);

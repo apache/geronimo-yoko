@@ -17,6 +17,8 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.*;
 
 final public class TestDispatchStrategyClient extends test.common.TestBase {
@@ -57,7 +59,7 @@ final public class TestDispatchStrategyClient extends test.common.TestBase {
 
             int idx;
             for (idx = 0; idx < info.length; idx++) {
-                TEST(info[idx].obj != null);
+                assertTrue(info[idx].obj != null);
 
                 for (int idx2 = 0; idx2 < 4; idx2++) {
                     req = info[idx].obj._request("aMethod");

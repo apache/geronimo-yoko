@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -58,7 +61,7 @@ public final class TestMisc extends test.common.TestBase {
         //
         try {
             obj = user.create_reference("IDL:Test:1.0");
-            TEST(false); // create_reference should not have succeeded
+            assertTrue(false); // create_reference should not have succeeded
         } catch (WrongPolicy ex) {
             // expected
         }
@@ -72,7 +75,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             id1 = system.reference_to_id(obj);
         } catch (WrongPolicy ex) {
@@ -85,7 +88,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             id2 = system.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -93,7 +96,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(id1, id2));
+        assertTrue(!TestUtil.Compare(id1, id2));
 
         //
         // Test: create_reference_with_id using a system-generated ID
@@ -101,7 +104,7 @@ public final class TestMisc extends test.common.TestBase {
         try {
             obj = system.create_reference_with_id(id1, "IDL:Test:1.0");
         } catch (BAD_PARAM ex) {
-            TEST(false); // create_reference_with_id should have succeeded
+            assertTrue(false); // create_reference_with_id should have succeeded
         }
 
         id1 = ("id1").getBytes();
@@ -111,7 +114,7 @@ public final class TestMisc extends test.common.TestBase {
         //
         try {
             obj = system.create_reference_with_id(id1, "IDL:Test:1.0");
-            TEST(false); // create_reference_with_id should have not
+            assertTrue(false); // create_reference_with_id should have not
                             // succeeded
         } catch (BAD_PARAM ex) {
             // Expected
@@ -121,7 +124,7 @@ public final class TestMisc extends test.common.TestBase {
         // Test: create_reference_with_id
         //
         obj = user.create_reference_with_id(id1, "IDL:Test:1.0");
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid = user.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -129,10 +132,10 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id1, tmpid));
+        assertTrue(TestUtil.Compare(id1, tmpid));
         id2 = ("id2").getBytes();
         obj = user.create_reference_with_id(id2, "IDL:Test:1.0");
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid = user.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -140,7 +143,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id2, tmpid));
+        assertTrue(TestUtil.Compare(id2, tmpid));
 
         user.destroy(true, true);
         system.destroy(true, true);
@@ -220,7 +223,7 @@ public final class TestMisc extends test.common.TestBase {
         //
         try {
             unique.servant_to_id(servant1);
-            TEST(false); // servant_to_id should not have succeeded
+            assertTrue(false); // servant_to_id should not have succeeded
         } catch (ServantNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -248,7 +251,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id1, tmpid));
+        assertTrue(TestUtil.Compare(id1, tmpid));
 
         //
         // Test: servant_to_id (IMPLICIT_ACTIVATION) - servant1 should
@@ -273,7 +276,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id1, tmpid));
+        assertTrue(TestUtil.Compare(id1, tmpid));
 
         //
         // Test: Implicitly activating servant2 should produce a new ID
@@ -285,7 +288,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(id1, id2));
+        assertTrue(!TestUtil.Compare(id1, id2));
 
         //
         // Test: servant_to_id (IMPLICIT_ACTIVATION, MULTIPLE_ID) - servant1
@@ -309,7 +312,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(id1, tmpid));
+        assertTrue(!TestUtil.Compare(id1, tmpid));
 
         unique.destroy(true, true);
         implicit.destroy(true, true);
@@ -384,7 +387,7 @@ public final class TestMisc extends test.common.TestBase {
         try {
             tmpid = ("bad_id").getBytes();
             retain.id_to_servant(tmpid);
-            TEST(false); // id_to_servant should not have succeeded
+            assertTrue(false); // id_to_servant should not have succeeded
         } catch (ObjectNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -414,7 +417,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(servant1 == tmpservant);
+        assertTrue(servant1 == tmpservant);
         try {
             tmpservant = retain.id_to_servant(id2);
         } catch (WrongPolicy ex) {
@@ -422,7 +425,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(servant2 == tmpservant);
+        assertTrue(servant2 == tmpservant);
 
         //
         // Test: id_to_servant (USE_DEFAULT_SERVANT)
@@ -444,7 +447,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(servant1 == tmpservant);
+        assertTrue(servant1 == tmpservant);
         try {
             tmpservant = defaultPOA.id_to_servant(id2);
         } catch (WrongPolicy ex) {
@@ -452,7 +455,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(servant2 == tmpservant);
+        assertTrue(servant2 == tmpservant);
 
         //
         // Test: id_to_servant (USE_DEFAULT_SERVANT) - should return
@@ -466,7 +469,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(tmpservant == def);
+        assertTrue(tmpservant == def);
         tmpservant = null;
 
         retain.destroy(true, true);
@@ -547,7 +550,7 @@ public final class TestMisc extends test.common.TestBase {
         //
         try {
             unique.servant_to_reference(servant1);
-            TEST(false); // servant_to_reference should not have succeeded
+            assertTrue(false); // servant_to_reference should not have succeeded
         } catch (ServantNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -575,7 +578,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid1 = unique.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -583,7 +586,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id1, tmpid1));
+        assertTrue(TestUtil.Compare(id1, tmpid1));
 
         //
         // Test: servant_to_reference (IMPLICIT_ACTIVATION) - servant1 should
@@ -596,7 +599,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid1 = implicit.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -616,7 +619,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid2 = implicit.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -624,7 +627,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(TestUtil.Compare(tmpid1, tmpid2));
 
         //
         // Test: Implicitly activating servant2 should produce a new ID
@@ -636,7 +639,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid2 = implicit.reference_to_id(obj);
         } catch (WrongPolicy ex) {
@@ -644,7 +647,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(!TestUtil.Compare(tmpid1, tmpid2));
 
         //
         // Test: servant_to_reference (IMPLICIT_ACTIVATION, MULTIPLE_ID) -
@@ -657,7 +660,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid1 = multiple.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -676,7 +679,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid2 = multiple.reference_to_id(obj);
         } catch (WrongPolicy ex) {
@@ -684,7 +687,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(!TestUtil.Compare(tmpid1, tmpid2));
 
         unique.destroy(true, true);
         implicit.destroy(true, true);
@@ -728,7 +731,7 @@ public final class TestMisc extends test.common.TestBase {
         try {
             tmpid = ("bad_id").getBytes();
             retain.id_to_reference(tmpid);
-            TEST(false); // id_to_reference should not have succeeded
+            assertTrue(false); // id_to_reference should not have succeeded
         } catch (ObjectNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -758,7 +761,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid = retain.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -766,7 +769,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id1, tmpid));
+        assertTrue(TestUtil.Compare(id1, tmpid));
 
         //
         // Test: servant_to_reference
@@ -778,7 +781,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         }
-        TEST(obj != null);
+        assertTrue(obj != null);
         try {
             tmpid = retain.reference_to_id(obj);
         } catch (WrongAdapter ex) {
@@ -786,7 +789,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(id2, tmpid));
+        assertTrue(TestUtil.Compare(id2, tmpid));
 
         retain.destroy(true, true);
     }
@@ -860,7 +863,7 @@ public final class TestMisc extends test.common.TestBase {
             tmpid = ("bad_id").getBytes();
             obj = retain.create_reference_with_id(tmpid, "IDL:Test:1.0");
             retain.reference_to_servant(obj);
-            TEST(false); // reference_to_servant should not have succeeded
+            assertTrue(false); // reference_to_servant should not have succeeded
         } catch (ObjectNotActive ex) {
             // expected
         } catch (WrongAdapter ex) {
@@ -895,7 +898,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(servant1 == tmpservant);
+        assertTrue(servant1 == tmpservant);
         obj = retain.create_reference_with_id(id2, "IDL:Test:1.0");
         try {
             tmpservant = retain.reference_to_servant(obj);
@@ -906,7 +909,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(servant2 == tmpservant);
+        assertTrue(servant2 == tmpservant);
 
         //
         // Test: WrongAdapter exception
@@ -914,7 +917,7 @@ public final class TestMisc extends test.common.TestBase {
         try {
             obj = retain.create_reference_with_id(id1, "IDL:Test:1.0");
             defaultPOA.reference_to_servant(obj);
-            TEST(false); // reference_to_servant should not have succeeded
+            assertTrue(false); // reference_to_servant should not have succeeded
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         } catch (WrongPolicy ex) {
@@ -946,7 +949,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(servant1 == tmpservant);
+        assertTrue(servant1 == tmpservant);
         obj = defaultPOA.create_reference_with_id(id2, "IDL:Test:1.0");
         try {
             tmpservant = defaultPOA.reference_to_servant(obj);
@@ -957,7 +960,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(servant2 == tmpservant);
+        assertTrue(servant2 == tmpservant);
 
         //
         // Test: reference_to_servant (USE_DEFAULT_SERVANT) - should return
@@ -974,7 +977,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        TEST(tmpservant == def);
+        assertTrue(tmpservant == def);
         tmpservant = null;
 
         retain.destroy(true, true);
@@ -1021,7 +1024,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(tmpid, id1));
+        assertTrue(TestUtil.Compare(tmpid, id1));
         obj = poa.create_reference_with_id(id2, "IDL:Test:1.0");
         try {
             tmpid = poa.reference_to_id(obj);
@@ -1030,7 +1033,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(TestUtil.Compare(tmpid, id2));
+        assertTrue(TestUtil.Compare(tmpid, id2));
 
         //
         // Test: WrongAdapter exception
@@ -1038,7 +1041,7 @@ public final class TestMisc extends test.common.TestBase {
         try {
             obj = poa.create_reference_with_id(id1, "IDL:Test:1.0");
             root.reference_to_id(obj);
-            TEST(false); // reference_to_id should not have succeeded
+            assertTrue(false); // reference_to_id should not have succeeded
         } catch (WrongAdapter ex) {
             // expected
         } catch (WrongPolicy ex) {

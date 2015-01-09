@@ -17,10 +17,14 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
+
 import java.io.*;
 
 public final class TestPOAManagerServer extends test.common.TestBase {
@@ -130,11 +134,11 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             try {
                 retain.activate_object_with_id(oid, testImpl);
             } catch (ObjectAlreadyActive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (ServantAlreadyActive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (WrongPolicy ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             Test test = testImpl._this();
@@ -144,11 +148,11 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             try {
                 retain.activate_object_with_id(oidDSI, testDSIImpl);
             } catch (ObjectAlreadyActive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (ServantAlreadyActive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (WrongPolicy ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             org.omg.CORBA.Object objDSI = retain.create_reference_with_id(
@@ -181,7 +185,7 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             } catch (InterruptedException ex) {
             }
 
-            TEST(t.callState() == PMSTestThread.CALL_STARTED);
+            assertTrue(t.callState() == PMSTestThread.CALL_STARTED);
 
             //
             // Run implementation. This should cause the blocked call in
@@ -203,7 +207,7 @@ public final class TestPOAManagerServer extends test.common.TestBase {
                 // Ignore
             }
 
-            TEST(t.callState() == PMSTestThread.CALL_SUCCESS);
+            assertTrue(t.callState() == PMSTestThread.CALL_SUCCESS);
 
             new TestPOAManagerCommon(proxy, info);
 

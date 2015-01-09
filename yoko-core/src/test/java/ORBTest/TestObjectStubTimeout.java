@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectStubTimeout extends test.common.TestBase implements
@@ -69,7 +71,7 @@ public class TestObjectStubTimeout extends test.common.TestBase implements
             pl[0] = (m_orb.create_policy(
                     org.apache.yoko.orb.OB.TIMEOUT_POLICY_ID.value, any));
         } catch (PolicyError e) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -86,7 +88,7 @@ public class TestObjectStubTimeout extends test.common.TestBase implements
 
         try {
             ti.sleep_twoway(3);
-            TEST(false);
+            assertTrue(false);
         } catch (NO_RESPONSE ex) {
         }
 
@@ -114,7 +116,7 @@ public class TestObjectStubTimeout extends test.common.TestBase implements
         try {
             ti.sleep_twoway(0);
         } catch (NO_RESPONSE ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 

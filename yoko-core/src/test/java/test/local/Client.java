@@ -17,7 +17,10 @@
 
 package test.local;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 
@@ -34,13 +37,13 @@ public class Client extends test.common.TestBase {
         }
 
         Test test = TestHelper.narrow(obj);
-        TEST(test != null);
+        assertTrue(test != null);
 
         Test localTest = new LocalTest_impl();
 
         org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper
                 .narrow(orb.resolve_initial_references("CodecFactory"));
-        TEST(factory != null);
+        assertTrue(factory != null);
 
         org.omg.IOP.Encoding how = new org.omg.IOP.Encoding();
         how.major_version = 0;
@@ -48,7 +51,7 @@ public class Client extends test.common.TestBase {
         how.format = org.omg.IOP.ENCODING_CDR_ENCAPS.value;
 
         org.omg.IOP.Codec codec = factory.create_codec(how);
-        TEST(codec != null);
+        assertTrue(codec != null);
 
         System.out.print("Testing Codec... ");
         System.out.flush();
@@ -57,13 +60,13 @@ public class Client extends test.common.TestBase {
             TestHelper.insert(a, test);
             byte[] data = codec.encode_value(a);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         try {
             org.omg.CORBA.Any a = orb.create_any();
             TestHelper.insert(a, localTest);
             byte[] data = codec.encode_value(a);
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.MARSHAL ex) {
             // Expected
         }
@@ -79,7 +82,7 @@ public class Client extends test.common.TestBase {
         try {
             test.intest(test);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
 
@@ -87,7 +90,7 @@ public class Client extends test.common.TestBase {
         System.out.flush();
         try {
             test.intest(localTest);
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.MARSHAL ex) {
             // Expected
         }
@@ -100,7 +103,7 @@ public class Client extends test.common.TestBase {
             TestHelper.insert(a, test);
             test.inany(a);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
 
@@ -110,9 +113,9 @@ public class Client extends test.common.TestBase {
             org.omg.CORBA.Any a = orb.create_any();
             TestHelper.insert(a, localTest);
             Test t = TestHelper.extract(a);
-            TEST(t == localTest);
+            assertTrue(t == localTest);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
 
@@ -122,7 +125,7 @@ public class Client extends test.common.TestBase {
             org.omg.CORBA.Any a = orb.create_any();
             TestHelper.insert(a, localTest);
             test.inany(a);
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.MARSHAL ex) {
             // Expected
         }
@@ -132,7 +135,7 @@ public class Client extends test.common.TestBase {
         System.out.flush();
         try {
             Test t = test.returntest();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.MARSHAL ex) {
             // Expected
         }
@@ -143,7 +146,7 @@ public class Client extends test.common.TestBase {
         try {
             org.omg.CORBA.AnyHolder a = new org.omg.CORBA.AnyHolder();
             test.outany(a);
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.MARSHAL ex) {
             // Expected
         }

@@ -17,12 +17,16 @@
 
 package test.pi;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 import org.omg.PortableServer.POAManagerPackage.*;
 import org.omg.PortableInterceptor.*;
+
 import java.io.*;
 
 public final class Server extends test.common.TestBase {
@@ -132,7 +136,7 @@ public final class Server extends test.common.TestBase {
 
         org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper
                 .narrow(orb.resolve_initial_references("CodecFactory"));
-        TEST(factory != null);
+        assertTrue(factory != null);
 
         ServerRequestInterceptor interceptor = new ServerTestInterceptor_impl(
                 orb, factory);
