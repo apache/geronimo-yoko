@@ -1,11 +1,11 @@
-package org.apache.yoko.orb.CosNaming.separated;
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
-import org.apache.yoko.orb.CosNaming.separated.NamingContextImpl.BoundObject;
+import org.apache.yoko.orb.CosNaming.tnaming2.NamingContextImpl.BoundObject;
 import org.omg.CORBA.LocalObject;
 import org.omg.CosNaming.Binding;
 import org.omg.CosNaming.BindingHolder;

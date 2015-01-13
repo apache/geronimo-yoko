@@ -20,7 +20,7 @@
 /**
  * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
-package org.apache.yoko.orb.CosNaming.separated;
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
 public class TransientServiceException extends Exception
 {

@@ -21,7 +21,7 @@
  * @version $Rev: 553831 $ $Date: 2007-07-06 03:52:10 -0700 (Fri, 06 Jul 2007) $
  */
 
-package org.apache.yoko.orb.CosNaming.separated;
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.ArrayList;
 import java.util.List;

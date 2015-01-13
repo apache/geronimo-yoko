@@ -1,4 +1,4 @@
-package org.apache.yoko.orb.CosNaming.separated;
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.HashMap;
 import java.util.Objects;
