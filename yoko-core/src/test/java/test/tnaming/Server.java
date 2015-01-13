@@ -28,6 +28,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Properties;
 
@@ -58,92 +59,95 @@ public class Server extends test.common.TestBase {
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
 
     public static int run(ORB orb, String[] args) throws UserException {
-        //
-        // Resolve Root POA
-        //
-        POA poa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+        final String refFile = "Test.ref";
+        final NamingContextExt initialContext;
+        final org.omg.CORBA.Object test1, test2, test3, test3a;
+        try (FileWriter fw = new FileWriter(refFile); PrintWriter out = new PrintWriter(fw)) {
+            try {
+                //
+                // Resolve Root POA
+                //
+                POA poa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
 
-        //
-        // Get a reference to the POA manager and activate it
-        //
-        POAManager manager = poa.the_POAManager();
-        manager.activate();
+                //
+                // Get a reference to the POA manager and activate it
+                //
+                POAManager manager = poa.the_POAManager();
+                manager.activate();
 
-        System.out.println("Attempting to resolve NameService reference");
-        org.omg.CORBA.Object obj = orb.resolve_initial_references("NameService");
-        System.out.println("Resolved NameService reference=" + obj);
-        NamingContextExt initialContext = NamingContextExtHelper.narrow(obj);
+                System.out.println("Attempting to resolve NameService reference");
+                org.omg.CORBA.Object obj = orb.resolve_initial_references("NameService");
+                System.out.println("Resolved NameService reference=" + obj);
+                initialContext = NamingContextExtHelper.narrow(obj);
 
 
-        NamingContext nc1 = initialContext.new_context();
+                NamingContext nc1 = initialContext.new_context();
 
-        System.out.println("Binding context level1");
-        initialContext.bind_context(new NameComponent[] { LEVEL1 }, nc1);
+                System.out.println("Binding context level1");
+                initialContext.bind_context(new NameComponent[] { LEVEL1 }, nc1);
 
-        NamingContext nc2 = initialContext.bind_new_context(new NameComponent[] { LEVEL1, LEVEL2} );
+                NamingContext nc2 = initialContext.bind_new_context(new NameComponent[] { LEVEL1, LEVEL2} );
 
-        assertNameNotBound(initialContext, TEST1);
+                assertNameNotBound(initialContext, TEST1);
 
-        //
-        // Create implementation objects
-        //
-        org.omg.CORBA.Object test1 = new Test_impl(poa, "Test1")._this_object(orb);
-        org.omg.CORBA.Object test2 = new Test_impl(poa, "Test2")._this_object(orb);
-        org.omg.CORBA.Object test3 = new Test_impl(poa, "Test3")._this_object(orb);
-        org.omg.CORBA.Object test3a = new Test_impl(poa, "Test3a")._this_object(orb);
+                //
+                // Create implementation objects
+                //
+                test1 = new Test_impl(poa, "Test1")._this_object(orb);
+                test2 = new Test_impl(poa, "Test2")._this_object(orb);
+                test3 = new Test_impl(poa, "Test3")._this_object(orb);
+                test3a = new Test_impl(poa, "Test3a")._this_object(orb);
 
-        assertNameNotBound(initialContext, TEST1);
+                assertNameNotBound(initialContext, TEST1);
 
-        initialContext.bind(new NameComponent[] { TEST1 }, test1);
-        assertTestIsBound("Test1", initialContext, TEST1);
+                initialContext.bind(new NameComponent[] { TEST1 }, test1);
+                assertTestIsBound("Test1", initialContext, TEST1);
 
-        nc1.bind(new NameComponent[] { TEST2 }, test2);
-        assertTestIsBound("Test2", initialContext, LEVEL1, TEST2);
+                nc1.bind(new NameComponent[] { TEST2 }, test2);
+                assertTestIsBound("Test2", initialContext, LEVEL1, TEST2);
 
-        initialContext.bind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 }, test3);
-        assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
+                initialContext.bind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 }, test3);
+                assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
 
-        nc2.rebind(new NameComponent[] { TEST3 }, test3a);
-        assertTestIsBound("Test3a", initialContext, LEVEL1, LEVEL2, TEST3);
+                nc2.rebind(new NameComponent[] { TEST3 }, test3a);
+                assertTestIsBound("Test3a", initialContext, LEVEL1, LEVEL2, TEST3);
 
-        initialContext.unbind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 });
-        assertNameNotBound(nc2, TEST3);
+                initialContext.unbind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 });
+                assertNameNotBound(nc2, TEST3);
 
-        nc2.bind(new NameComponent[] { TEST3 }, test3);
-        assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
-        
-        nc1.unbind(new NameComponent[] { LEVEL2 });
-        assertNameNotBound(initialContext, LEVEL1, LEVEL2, TEST3);
+                nc2.bind(new NameComponent[] { TEST3 }, test3);
+                assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
 
-        nc1.rebind_context(new NameComponent[] { LEVEL2 }, nc2);
+                nc1.unbind(new NameComponent[] { LEVEL2 });
+                assertNameNotBound(initialContext, LEVEL1, LEVEL2, TEST3);
 
-        //
-        // Save reference. This must be done after POA manager
-        // activation, otherwise there is a potential for a race
-        // condition between the client sending a request and the
-        // server not being ready yet.
-        //
-        String refFile = "Test.ref";
-        try {
-            java.io.FileOutputStream file = new java.io.FileOutputStream(
-                    refFile);
-            java.io.PrintWriter out = new java.io.PrintWriter(file);
+                nc1.rebind_context(new NameComponent[] { LEVEL2 }, nc2);
+            } catch (Exception e) {
+                e.printStackTrace(out);
+                e.printStackTrace();
+                return 1;
+            }
+            //
+            // Save reference. This must be done after POA manager
+            // activation, otherwise there is a potential for a race
+            // condition between the client sending a request and the
+            // server not being ready yet.
+            //
             writeRef(orb, out, test1, initialContext, new NameComponent[] { TEST1 });
             writeRef(orb, out, test2, initialContext, new NameComponent[] { LEVEL1, TEST2 });
             writeRef(orb, out, test3, initialContext, new NameComponent[] { LEVEL1, LEVEL2, TEST3 });
             out.flush();
-            file.close();
             //
             // Run implementation
             //
-            orb.run();
         } catch (java.io.IOException ex) {
             System.err.println("Can't write to `" + ex.getMessage() + "'");
             return 1;
+        }
+
+        try {
+            orb.run();
         } finally {
-            //
-            // Delete file
-            //
             new java.io.File(refFile).delete();
         }
 
@@ -169,13 +173,6 @@ public class Server extends test.common.TestBase {
         } catch (NotFound e) {
             // expected exception
         }
-    }
-
-    private static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object obj, NamingContextExt context, NameComponent[] name) throws InvalidName {
-        String ref = orb.object_to_string(obj);
-        out.println(ref);
-        String nameString = context.to_string(name);
-        out.println(nameString);
     }
 
     public static void main(String args[]) throws TransientServiceException {

@@ -31,6 +31,9 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 import org.junit.Assert;
@@ -62,17 +65,24 @@ public class Client extends test.common.TestBase {
 
         final String refFile = "Test.ref";
         final String ref1, name1, ref2, name2, ref3, name3;
-        try (BufferedReader file = new BufferedReader(new FileReader(refFile))) {
-            ref1 = file.readLine();
-            name1 = file.readLine();
-            ref2 = file.readLine();
-            name2 = file.readLine();
-            ref3 = file.readLine();
-            name3 = file.readLine();
-            file.close();
+        try (FileReader fr = new FileReader(refFile); BufferedReader file = new BufferedReader(fr)) {
+            String[] refStrings = new String[2];
+            readRef(file, refStrings);
+            ref1 = refStrings[0];
+            name1 = refStrings[1];
+            readRef(file, refStrings);
+            ref2 = refStrings[0];
+            name2 = refStrings[1];
+            readRef(file, refStrings);
+            ref3 = refStrings[0];
+            name3 = refStrings[1];
         } catch (java.io.IOException ex) {
             System.err.println("Can't read from '" + ex.getMessage() + "'");
             return 1;
+        } finally {
+            try {
+                Files.delete(Paths.get(refFile));
+            } catch (IOException e) {}
         }
         //
         // Get "test" objects
