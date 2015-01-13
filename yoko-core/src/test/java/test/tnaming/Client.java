@@ -34,11 +34,16 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.junit.Assert;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.UserException;
+import org.omg.CosNaming.Binding;
 import org.omg.CosNaming.BindingHolder;
 import org.omg.CosNaming.BindingIteratorHolder;
 import org.omg.CosNaming.BindingListHolder;
@@ -134,32 +139,39 @@ public class Client extends test.common.TestBase {
     private static void testBindingListsAndIterators(ORB orb, POA poa, NamingContext initialContext) throws UserException {
         NamingContext nc = initialContext.bind_new_context(makeName("iterator"));
 
-        for (String name : "test0 test1 test2 test3 test4 test5 test6 test7 test8 test9".split(" "))
-            nc.bind(makeName(name), new Test_impl(poa, name)._this_object(orb));
+        final Set<String> expectedNames = Collections.unmodifiableSet(new TreeSet<>(Arrays.asList("test0 test1 test2 test3 test4 test5 test6 test7 test8 test9".split(" "))));
+        // add the bindings
+        for (String name : expectedNames) nc.bind(makeName(name), new Test_impl(poa, name)._this_object(orb));
+        // check the behaviour of the binding iterators
+        for (int listSize = 0; listSize <= expectedNames.size() + 1; listSize++) {
+            final BindingListHolder blh = new BindingListHolder();
+            final BindingIteratorHolder bih = new BindingIteratorHolder();
+            final BindingHolder bh = new BindingHolder();
+            final Set<String> actualNames = new TreeSet<>();
+            
+            nc.list(listSize, blh, bih); // <-- this is what we are testing
 
-        BindingListHolder blh = new BindingListHolder();
-        BindingIteratorHolder bih = new BindingIteratorHolder();
-        BindingHolder bh = new BindingHolder();
+            System.out.println("List returned count = " + blh.value.length);
 
-        nc.list(10, blh, bih);
-
-        System.out.println("List returned count = " + blh.value.length);
-
-        assertEquals(10, blh.value.length);
-        assertFalse(bih.value.next_one(bh));
-        assertEquals(0, bh.value.binding_name.length);
-
-        nc.list(9, blh, bih);
-
-        assertEquals(9, blh.value.length);
-        assertTrue(bih.value.next_one(bh));
-        assertArrayEquals(makeName("test9"), bh.value.binding_name);
-
-        nc.list(11, blh, bih);
-
-        assertEquals(10, blh.value.length);
-        assertFalse(bih.value.next_one(bh));
-        assertEquals(0, bh.value.binding_name.length);
+            final int expectedListSize = Math.min(listSize, expectedNames.size());
+            assertEquals("Should have as many elements in the list as requested or available", expectedListSize, blh.value.length);
+            for(Binding b : blh.value) {
+                String name = b.binding_name[0].id;
+                assertTrue("Name '"+name+"' should be an expected one", expectedNames.contains(name));
+                assertFalse("Name '"+name+"' should not be a dupe", actualNames.contains(name));
+                actualNames.add(name);
+            }
+            for(int i = expectedListSize; i < expectedNames.size(); i++) {
+                assertTrue(bih.value.next_one(bh));
+                String name = bh.value.binding_name[0].id;
+                assertTrue("Name '"+name+"' should be an expected one", expectedNames.contains(name));
+                assertFalse("Name '"+name+"' should not be a dupe", actualNames.contains(name));
+                actualNames.add(name);
+            }
+            assertFalse(bih.value.next_one(bh));
+            assertEquals(0, bh.value.binding_name.length);
+            assertEquals(expectedNames, actualNames);
+        }
     }
 
     public static void main(String args[]) {

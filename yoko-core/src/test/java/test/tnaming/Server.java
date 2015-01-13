@@ -32,8 +32,8 @@ import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Properties;
 
-import org.apache.yoko.orb.CosNaming.separated.TransientNameService;
-import org.apache.yoko.orb.CosNaming.separated.TransientServiceException;
+import org.apache.yoko.orb.CosNaming.tnaming.TransientNameService;
+import org.apache.yoko.orb.CosNaming.tnaming.TransientServiceException;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.UserException;
 import org.omg.CosNaming.NameComponent;
