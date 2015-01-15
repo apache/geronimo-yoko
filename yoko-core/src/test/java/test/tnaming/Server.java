@@ -1,11 +1,11 @@
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,41 +16,25 @@
  *  limitations under the License.
  */
 
-
 /**
  * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
 
 package test.tnaming;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Properties;
 
-import org.apache.yoko.orb.CosNaming.tnaming.TransientNameService;
-import org.apache.yoko.orb.CosNaming.tnaming.TransientServiceException;
 import org.omg.CORBA.ORB;
-import org.omg.CORBA.UserException;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
-import org.omg.CosNaming.NamingContextPackage.CannotProceed;
-import org.omg.CosNaming.NamingContextPackage.InvalidName;
-import org.omg.CosNaming.NamingContextPackage.NotFound;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
-import org.omg.PortableServer.POAManager;
 
-public class Server extends test.common.TestBase {
-    public static final int NS_PORT = 40001;
-    public static final String NS_LOC = "corbaloc::localhost:40001/TNameService";
-
+final class Server extends test.common.TestBase implements AutoCloseable {
     private static final NameComponent LEVEL1 = new NameComponent("level1", "test");
     private static final NameComponent LEVEL2 = new NameComponent("level2", "");
 
@@ -58,74 +42,81 @@ public class Server extends test.common.TestBase {
     private static final NameComponent TEST2 = new NameComponent("Test2", "");
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
 
-    public static int run(ORB orb, String[] args) throws UserException {
-        final String refFile = "Test.ref";
-        final NamingContextExt initialContext;
-        final org.omg.CORBA.Object test1, test2, test3, test3a;
-        try (FileWriter fw = new FileWriter(refFile); PrintWriter out = new PrintWriter(fw)) {
+    final ORB orb;
+    final POA rootPoa;
+    final NamingContextExt rootNamingContext;
+    final Test test1, test2, test3;
+
+    public Server(Properties props, String... args) throws Exception {
+        try {
+            System.out.println("About to init ORB");
+            this.orb = ORB.init(args, props);
+            System.out.println("create ORB");
+            this.rootPoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            System.out.println("got root poa");
+            this.rootPoa.the_POAManager().activate();
+            System.out.println("activated root poa");
+            this.rootNamingContext = NamingContextExtHelper.narrow(orb.resolve_initial_references("NameService"));
+            System.out.println("got root context");
+
+            //
+            // Create implementation objects
+            //
+            test1 = TestHelper.narrow(new Test_impl(rootPoa, "Test1")._this_object(orb));
+            test2 = TestHelper.narrow(new Test_impl(rootPoa, "Test2")._this_object(orb));
+            test3 = TestHelper.narrow(new Test_impl(rootPoa, "Test3")._this_object(orb));
+            System.out.println("created references");
+        } catch (Throwable t) {
+            System.err.println("Caught throwable: " + t);
+            t.printStackTrace();
+            throw t;
+        }
+    }
+
+    void run(String refFile) throws Exception {
+        System.out.println("server starting to run");
+        try (PrintWriter out = new PrintWriter(new FileWriter(refFile))) {
+            System.out.println("server opened file for writing");
             try {
-                //
-                // Resolve Root POA
-                //
-                POA poa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-
-                //
-                // Get a reference to the POA manager and activate it
-                //
-                POAManager manager = poa.the_POAManager();
-                manager.activate();
-
-                System.out.println("Attempting to resolve NameService reference");
-                org.omg.CORBA.Object obj = orb.resolve_initial_references("NameService");
-                System.out.println("Resolved NameService reference=" + obj);
-                initialContext = NamingContextExtHelper.narrow(obj);
-
-
-                NamingContext nc1 = initialContext.new_context();
+                NamingContext nc1 = rootNamingContext.new_context();
+                System.out.println("server created new naming context");
 
                 System.out.println("Binding context level1");
-                initialContext.bind_context(new NameComponent[] { LEVEL1 }, nc1);
+                rootNamingContext.bind_context(new NameComponent[]{LEVEL1}, nc1);
+                System.out.println("server binding context");
 
-                NamingContext nc2 = initialContext.bind_new_context(new NameComponent[] { LEVEL1, LEVEL2} );
+                NamingContext nc2 = rootNamingContext.bind_new_context(new NameComponent[]{LEVEL1, LEVEL2});
 
-                assertNameNotBound(initialContext, TEST1);
+                Util.assertNameNotBound(rootNamingContext, TEST1);
 
-                //
-                // Create implementation objects
-                //
-                test1 = new Test_impl(poa, "Test1")._this_object(orb);
-                test2 = new Test_impl(poa, "Test2")._this_object(orb);
-                test3 = new Test_impl(poa, "Test3")._this_object(orb);
-                test3a = new Test_impl(poa, "Test3a")._this_object(orb);
+                Util.assertNameNotBound(rootNamingContext, TEST1);
 
-                assertNameNotBound(initialContext, TEST1);
+                rootNamingContext.bind(new NameComponent[]{TEST1}, test1);
+                Util.assertTestIsBound("Test1", rootNamingContext, TEST1);
 
-                initialContext.bind(new NameComponent[] { TEST1 }, test1);
-                assertTestIsBound("Test1", initialContext, TEST1);
+                nc1.bind(new NameComponent[]{TEST2}, test2);
+                Util.assertTestIsBound("Test2", rootNamingContext, LEVEL1, TEST2);
 
-                nc1.bind(new NameComponent[] { TEST2 }, test2);
-                assertTestIsBound("Test2", initialContext, LEVEL1, TEST2);
+                rootNamingContext.bind(new NameComponent[]{LEVEL1, LEVEL2, TEST3}, test3);
+                Util.assertTestIsBound("Test3", rootNamingContext, LEVEL1, LEVEL2, TEST3);
 
-                initialContext.bind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 }, test3);
-                assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
+                Test test3a = TestHelper.narrow(new Test_impl(rootPoa, "Test3a")._this_object(orb));
+                nc2.rebind(new NameComponent[]{TEST3}, test3a);
+                Util.assertTestIsBound("Test3a", rootNamingContext, LEVEL1, LEVEL2, TEST3);
 
-                nc2.rebind(new NameComponent[] { TEST3 }, test3a);
-                assertTestIsBound("Test3a", initialContext, LEVEL1, LEVEL2, TEST3);
+                rootNamingContext.unbind(new NameComponent[]{LEVEL1, LEVEL2, TEST3});
+                Util.assertNameNotBound(nc2, TEST3);
 
-                initialContext.unbind(new NameComponent[] { LEVEL1, LEVEL2, TEST3 });
-                assertNameNotBound(nc2, TEST3);
+                nc2.bind(new NameComponent[]{TEST3}, test3);
+                Util.assertTestIsBound("Test3", rootNamingContext, LEVEL1, LEVEL2, TEST3);
 
-                nc2.bind(new NameComponent[] { TEST3 }, test3);
-                assertTestIsBound("Test3", initialContext, LEVEL1, LEVEL2, TEST3);
+                nc1.unbind(new NameComponent[]{LEVEL2});
+                Util.assertNameNotBound(rootNamingContext, LEVEL1, LEVEL2, TEST3);
 
-                nc1.unbind(new NameComponent[] { LEVEL2 });
-                assertNameNotBound(initialContext, LEVEL1, LEVEL2, TEST3);
-
-                nc1.rebind_context(new NameComponent[] { LEVEL2 }, nc2);
+                nc1.rebind_context(new NameComponent[]{LEVEL2}, nc2);
             } catch (Exception e) {
                 e.printStackTrace(out);
-                e.printStackTrace();
-                return 1;
+                throw e;
             }
             //
             // Save reference. This must be done after POA manager
@@ -133,83 +124,24 @@ public class Server extends test.common.TestBase {
             // condition between the client sending a request and the
             // server not being ready yet.
             //
-            writeRef(orb, out, test1, initialContext, new NameComponent[] { TEST1 });
-            writeRef(orb, out, test2, initialContext, new NameComponent[] { LEVEL1, TEST2 });
-            writeRef(orb, out, test3, initialContext, new NameComponent[] { LEVEL1, LEVEL2, TEST3 });
+            writeRef(orb, out, test1, rootNamingContext, new NameComponent[]{TEST1});
+            writeRef(orb, out, test2, rootNamingContext, new NameComponent[]{LEVEL1, TEST2});
+            writeRef(orb, out, test3, rootNamingContext, new NameComponent[]{LEVEL1, LEVEL2, TEST3});
             out.flush();
-            //
-            // Run implementation
-            //
         } catch (java.io.IOException ex) {
             System.err.println("Can't write to `" + ex.getMessage() + "'");
-            return 1;
+            throw ex;
         }
 
+        orb.run();
+    }
+
+    @Override
+    public void close() throws Exception {
         try {
-            orb.run();
+            Util.unbindEverything(rootNamingContext);
         } finally {
-            new java.io.File(refFile).delete();
+            orb.destroy();
         }
-
-        return 0;
-    }
-
-    private static void assertTestIsBound(String expectedId, NamingContextExt ctx, NameComponent ...path) throws CannotProceed, InvalidName {
-        assertNotNull(path);
-        assertNotEquals(0, path.length);
-        try {
-            org.omg.CORBA.Object o = ctx.resolve(path);
-            Test test = TestHelper.narrow(o);
-            assertTrue(test.get_id().equals(expectedId));
-        } catch (NotFound e) {
-            fail("Should have found Test object at path: " + ctx.to_string(path) );
-        }
-    }
-    
-    private static void assertNameNotBound(NamingContext initialContext, NameComponent...path) throws CannotProceed, InvalidName {
-        try {
-            initialContext.resolve(path);
-            fail("Expected NotFound exception");
-        } catch (NotFound e) {
-            // expected exception
-        }
-    }
-
-    public static void main(String args[]) throws TransientServiceException {
-
-        ORB orb = null;
-        int status = 0;
-        try {
-            TransientNameService service = new TransientNameService("localhost", NS_PORT);
-            System.out.println("Starting SEPARATED transient name service");
-            service.run();
-            System.out.println("Transient name service started");
-
-            java.util.Properties props = new Properties();
-            props.putAll(System.getProperties());
-            props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-            props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-            props.put("yoko.orb.oa.endpoint", "iiop --host localhost --port 40002");
-
-            args = new String[] { "-ORBInitRef", "NameService=" + NS_LOC };
-
-
-            orb = ORB.init(args, props);
-            status = run(orb, args);
-        } catch (Throwable ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

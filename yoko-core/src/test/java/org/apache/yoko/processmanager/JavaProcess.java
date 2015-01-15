@@ -23,7 +23,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.rmi.RemoteException;
 import java.rmi.registry.Registry;
 import java.util.Properties;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.apache.yoko.processmanager.internal.ProcessAgent;
 import org.apache.yoko.processmanager.internal.ProcessAgentImpl;
@@ -31,8 +34,9 @@ import org.apache.yoko.processmanager.internal.Util;
 
 public class JavaProcess {
 
-    private String name;
-    private Properties systemProperties;
+    private final boolean inProcess;
+    private final String name;
+    private final Properties systemProperties;
     private ProcessAgent processAgent;
     private ProcessManager manager;
 
@@ -42,17 +46,11 @@ public class JavaProcess {
     public JavaProcess(String name, ProcessManager manager) {
         this.name = name;
         this.manager = manager;
+        this.inProcess = "false".equals(System.getProperty(name + ".fork"));
         systemProperties = new Properties();
         manager.registerProcess(this);
     }
 
-    /**
-     * Sets the system properties for this process. Must be called before launch().
-     * @param properties
-     */
-    public void setSystemProperties(Properties properties) {
-        this.systemProperties = properties;
-    }
 
     public void addSystemProperty(String key, String value) {
         systemProperties.put(key, value);
@@ -71,29 +69,17 @@ public class JavaProcess {
     }
 
     public void launch(int timeoutMillis) {
-        final String[] javaArgs = {name, "localhost",
-                Integer.toString(Registry.REGISTRY_PORT), manager.getName()};
-        if(systemProperties == null) {
-            systemProperties = new Properties();
-        }
-        if("false".equals(System.getProperty(name + ".fork"))) {
-            try {
-                ProcessAgentImpl.inProcessMain(javaArgs);
-            }
-            catch(Exception e) {
-                throw new Error(e);
-            }
-        }
-        else {
-            try {
-                Process proc = Util.execJava(ProcessAgentImpl.class.getName(), systemProperties, javaArgs);
+        try {
+            if(inProcess) {
+                ProcessAgentImpl.startLocalProcess(manager, this.name);
+            } else {                
+                Process proc = Util.execJava(ProcessAgentImpl.class.getName(), systemProperties, name, "localhost", ""+Registry.REGISTRY_PORT, manager.getName());
                 Util.redirectStream(proc.getInputStream(), System.out, name+":out");
                 Util.redirectStream(proc.getErrorStream(), System.err, name+":err");
                 waitForProcessStartup(timeoutMillis);
             }
-            catch(IOException e) {
-                throw new Error(e);
-            }
+        } catch(Exception e) {
+            throw new Error(e);
         }
     }
 
@@ -101,37 +87,22 @@ public class JavaProcess {
         return invokeStatic(className, "main", new Object[] { args });
     }
 
-    public Thread invokeMainAsync(String className) {
-        return invokeMainAsync(className, new String[0]);
-    }
-
-    public Thread invokeMainAsync(String className, String...args) {
+    public Future<Void> invokeMainAsync(String className, String...args) {
         return invokeStaticAsync(className, "main", new Object[] { args });
-
     }
 
-    public Thread invokeStaticAsync(final String className, final String method, final Object[] args) {
-        Thread thread = new Thread(new Runnable() {
-            public void run() {
-                try {
-                    invokeStatic(className, method, args);
-                }
-                catch(InvocationTargetException e) {
-                    e.printStackTrace();
-                }
+    public Future<Void> invokeStaticAsync(final String className, final String method, final Object[] args) {
+        return Executors.newSingleThreadExecutor().submit(new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+                invokeStatic(className, method, args);
+                return null;
             }
         });
-        thread.start();
-        return thread;
     }
 
     /**
      * Invokes a static method within the process. The static method cannot return a Throwable.
-     * @param className
-     * @param method
-     * @param args
-     * @return
-     * @throws InvocationTargetException
      */
     public Object invokeStatic(String className, String method, Object[] args) throws InvocationTargetException {
         Object result = null;
@@ -164,14 +135,14 @@ public class JavaProcess {
     public String getName() { return name; }
 
     /**
-     * Terminates the process with the given exit code. Waits for the process to terminate.
+     * If this process is forked, this method terminates the process with the given exit code. Waits for the process to terminate.
      * @param exitCode
      */
     public void exit(int exitCode) {
+        if (inProcess) return;
         try {
             processAgent.exit(exitCode);
-        }
-        catch(RemoteException e) {
+        } catch(RemoteException e) {
             //throw new Error(e);
         }
         try {
@@ -188,7 +159,7 @@ public class JavaProcess {
             throw new Error(e);
         }
         if(processAgent == null) {
-            throw new Error("Failed to start client process");
+            throw new Error("Failed to start "+name+" process");
         }
     }
 }

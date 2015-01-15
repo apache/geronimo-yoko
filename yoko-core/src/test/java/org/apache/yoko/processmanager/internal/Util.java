@@ -1,11 +1,11 @@
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -33,87 +33,86 @@ import java.util.List;
 import java.util.Properties;
 
 public class Util {
-	// Forks a new java process.
-	public static Process execJava(String className, Properties props,
-			String[] javaArgs) throws IOException {
-		// Get path to java binary
-		File javaHome = new File(System.getProperty("java.home"));
-		File javaBin = new File(new File(javaHome, "bin"), "java");
+    // Forks a new java process.
+    public static Process execJava(String className, Properties props, String...javaArgs) throws IOException {
+        // Get path to java binary
+        File javaHome = new File(System.getProperty("java.home"));
+        File javaBin = new File(new File(javaHome, "bin"), "java");
 
-		// Get current class path
-		URLClassLoader cl = (URLClassLoader) Util.class.getClassLoader();
-		URL[] classPathUrls = cl.getURLs();
+        // Get current class path
+        URLClassLoader cl = (URLClassLoader) Util.class.getClassLoader();
+        URL[] classPathUrls = cl.getURLs();
 
-		// Construct list of arguments
-		List binArgs = new ArrayList();
+        // Construct list of arguments
+        List binArgs = new ArrayList();
 
-		// First argument is the java binary to run
-		binArgs.add(javaBin.getPath());
+        // First argument is the java binary to run
+        binArgs.add(javaBin.getPath());
 
-		// Add the classpath to argument list
-		binArgs.add("-classpath");
-		String classPath = ""
-				+ new File(classPathUrls[0].getPath().replaceAll("%20", " "));
-		for (int i = 1; i < classPathUrls.length; i++) {
-			classPath += File.pathSeparator
-					+ new File(classPathUrls[i].getPath()
-							.replaceAll("%20", " "));
-		}
-		classPath += "";
-		binArgs.add(classPath);
+        // Add the classpath to argument list
+        binArgs.add("-classpath");
+        String classPath = ""
+                + new File(classPathUrls[0].getPath().replaceAll("%20", " "));
+        for (int i = 1; i < classPathUrls.length; i++) {
+            classPath += File.pathSeparator
+                    + new File(classPathUrls[i].getPath()
+                            .replaceAll("%20", " "));
+        }
+        classPath += "";
+        binArgs.add(classPath);
 
-		// Add properties to argument list
-		Enumeration en = props.keys();
-		while (en.hasMoreElements()) {
-			String key = (String) en.nextElement();
-			binArgs.add("-D" + key + "=" + props.getProperty(key));
-		}
+        // Add properties to argument list
+        Enumeration en = props.keys();
+        while (en.hasMoreElements()) {
+            String key = (String) en.nextElement();
+            binArgs.add("-D" + key + "=" + props.getProperty(key));
+        }
 
-		// Add class containing main method to arg list
-		binArgs.add(className);
+        // Add class containing main method to arg list
+        binArgs.add(className);
 
-		// Add java arguments
-		for (int i = 0; i < javaArgs.length; i++) {
-			binArgs.add(javaArgs[i]);
-		}
+        // Add java arguments
+        for (int i = 0; i < javaArgs.length; i++) {
+            binArgs.add(javaArgs[i]);
+        }
 
-		// Convert arg list to array
-		String[] argArray = new String[binArgs.size()];
-		for (int i = 0; i < argArray.length; i++) {
-			argArray[i] = (String) binArgs.get(i);
-		}
+        // Convert arg list to array
+        String[] argArray = new String[binArgs.size()];
+        for (int i = 0; i < argArray.length; i++) {
+            argArray[i] = (String) binArgs.get(i);
+        }
 
-		/*for (int i = 0; i < argArray.length; i++) {
+        /*for (int i = 0; i < argArray.length; i++) {
 			System.out.print(argArray[i] + " ");
 		}
 		System.out.println(); */
 
-		// Fork process
-		return Runtime.getRuntime().exec(argArray);
-	}
+        // Fork process
+        return Runtime.getRuntime().exec(argArray);
+    }
 
-	public static void redirectStream(final InputStream in,
-			final OutputStream out, final String streamName) {
-		Thread stdoutTransferThread = new Thread() {
-			public void run() {
-				PrintWriter pw = new PrintWriter(new OutputStreamWriter(out),
-						true);
-				try {
-					BufferedReader reader = new BufferedReader(
-							new InputStreamReader(in));
-					String line;
-					while ((line = reader.readLine()) != null) {
-						pw.print("[");
-						pw.print(streamName);
-						pw.print("] ");
-						pw.println(line);
-					}
-				} catch (Throwable e) {
-					e.printStackTrace();
-					// throw new Error(e);
-				}
-			}
-		};
-		stdoutTransferThread.start();
-	}
+    public static void redirectStream(final InputStream in,
+            final OutputStream out, final String streamName) {
+        Thread stdoutTransferThread = new Thread() {
+            public void run() {
+                PrintWriter pw = new PrintWriter(new OutputStreamWriter(out),
+                        true);
+                try {
+                    BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(in));
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        pw.print("[");
+                        pw.print(streamName);
+                        pw.print("] ");
+                        pw.println(line);
+                    }
+                } catch (Throwable e) {
+                    e.printStackTrace();
+                    // throw new Error(e);
+                }
+            }
+        };
+        stdoutTransferThread.start();
+    }
 }

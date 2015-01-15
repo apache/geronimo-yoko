@@ -21,6 +21,8 @@ package org.apache.yoko;
 import java.io.File;
 import java.rmi.registry.Registry;
 import java.util.Map.Entry;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import junit.framework.TestCase;
 
@@ -79,21 +81,25 @@ public class AbstractOrbTestBase extends TestCase {
             getWaitForFile().delete();
         }
     }
+    
+    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass) throws Exception {
+        runServerClientTest(serverClass.getName(), clientClass.getName());
+    }
+    
     protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
         runServerClientTest(serverClass, new String[0], clientClass, new String[0]);
     }
     protected void runServerClientTest(String serverClass, String[] serverArgs, 
                                        String clientClass, String[] clientArgs) throws Exception {
         server.launch();
-        Thread serverThread = server.invokeMainAsync(serverClass, serverArgs);
+        Future<Void> serverFuture = server.invokeMainAsync(serverClass, serverArgs);
         waitForFile();
         // TODO: Need to find a better way, this slows down testing unneccesarily,
         // and is somewhat non-robust.
         Thread.sleep(1000);
         client.invokeMain(clientClass, clientArgs);
-        serverThread.join(10000);
+        serverFuture.get(10000, TimeUnit.MILLISECONDS);
         server.exit(0);
-                
     }
         
     public void setWaitForFile(File file) {
@@ -115,7 +121,7 @@ public class AbstractOrbTestBase extends TestCase {
                     Thread.sleep(50);
                     if(System.currentTimeMillis() > timeBefore + waitForFileTimeout) {
                         fail("The file " + getWaitForFile() + 
-                             "was not created within " + waitForFileTimeout + "ms");
+                             " was not created within " + waitForFileTimeout + "ms");
                     }
                 }
                 catch(InterruptedException e) {
