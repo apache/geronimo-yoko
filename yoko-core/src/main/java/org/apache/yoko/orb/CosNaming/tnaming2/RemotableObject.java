@@ -4,5 +4,5 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.Servant;
 
 public interface RemotableObject {
-	Servant getServant(POA poa, boolean readOnly) throws Exception;
+    Servant getServant(POA poa, boolean readOnly) throws Exception;
 }

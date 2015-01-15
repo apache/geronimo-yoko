@@ -16,30 +16,24 @@
  *  limitations under the License.
  */
 
-
 /**
  * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
 package org.apache.yoko.orb.CosNaming.tnaming2;
 
-public class TransientServiceException extends Exception
-{
-	private static final long serialVersionUID = 1L;
+public class TransientServiceException extends Exception {
+    private static final long serialVersionUID = 1L;
 
-	public TransientServiceException ()
-	{
-		super();
-	}
+    public TransientServiceException() {
+        super();
+    }
 
-	public TransientServiceException(String reason)
-	{
-		super(reason);
-	}
+    public TransientServiceException(String reason) {
+        super(reason);
+    }
 
-	public TransientServiceException(String reason, Exception cause)
-	{
-		super(reason, cause);
-	}
+    public TransientServiceException(String reason, Exception cause) {
+        super(reason, cause);
+    }
 
 }
-
