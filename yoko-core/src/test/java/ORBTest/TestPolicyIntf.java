@@ -17,23 +17,22 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
-
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.PolicyManagerHelper;
 import org.omg.CORBA.SetOverrideType;
 import org.omg.CORBA.PolicyError;
 import org.omg.CORBA.InvalidPolicies;
-
 import org.apache.yoko.orb.OB.RetryPolicy;
 import org.apache.yoko.orb.OB.RetryPolicyHelper;
 import org.apache.yoko.orb.OB.TimeoutPolicy;
 import org.apache.yoko.orb.OB.TimeoutPolicyHelper;
-
 import org.apache.yoko.orb.OB.MinorCodes;
 
 import ORBTest_Basic.*;
@@ -45,10 +44,10 @@ public class TestPolicyIntf extends test.common.TestBase {
             pm = PolicyManagerHelper.narrow(orb
                     .resolve_initial_references("ORBPolicyManager"));
         } catch (InvalidName ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
-        TEST(pm != null);
+        assertTrue(pm != null);
 
         int[] policyTypes = new int[0];
         Policy[] origPolicies = pm.get_policy_overrides(policyTypes);
@@ -63,19 +62,19 @@ public class TestPolicyIntf extends test.common.TestBase {
                 pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
 
             } catch (PolicyError ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (InvalidPolicies ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             policyTypes = new int[1];
             policyTypes[0] = org.apache.yoko.orb.OB.RETRY_POLICY_ID.value;
             Policy[] policy = pm.get_policy_overrides(policyTypes);
-            TEST(policy.length == 1
-                    && policy[0].policy_type() == org.apache.yoko.orb.OB.RETRY_POLICY_ID.value);
+            assertTrue(policy.length == 1
+			&& policy[0].policy_type() == org.apache.yoko.orb.OB.RETRY_POLICY_ID.value);
 
             RetryPolicy p = RetryPolicyHelper.narrow(policy[0]);
-            TEST(p.retry_mode() == org.apache.yoko.orb.OB.RETRY_ALWAYS.value);
+            assertTrue(p.retry_mode() == org.apache.yoko.orb.OB.RETRY_ALWAYS.value);
         }
 
         {
@@ -93,9 +92,9 @@ public class TestPolicyIntf extends test.common.TestBase {
                 pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
 
             } catch (PolicyError ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (InvalidPolicies ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             policyTypes = new int[2];
@@ -103,7 +102,7 @@ public class TestPolicyIntf extends test.common.TestBase {
             policyTypes[1] = org.apache.yoko.orb.OB.TIMEOUT_POLICY_ID.value;
 
             Policy[] policies = pm.get_policy_overrides(policyTypes);
-            TEST(policies.length == 2);
+            assertTrue(policies.length == 2);
 
             for (int i = 0; i < policies.length; ++i) {
                 switch (policies[i].policy_type()) {
@@ -111,10 +110,10 @@ public class TestPolicyIntf extends test.common.TestBase {
                     try {
                         RetryPolicy policy = RetryPolicyHelper
                                 .narrow(policies[i]);
-                        TEST(policy != null);
-                        TEST(policy.retry_mode() == org.apache.yoko.orb.OB.RETRY_STRICT.value);
+                        assertTrue(policy != null);
+                        assertTrue(policy.retry_mode() == org.apache.yoko.orb.OB.RETRY_STRICT.value);
                     } catch (BAD_PARAM ex) {
-                        TEST(false);
+                        assertTrue(false);
                     }
                     break;
                 }
@@ -122,16 +121,16 @@ public class TestPolicyIntf extends test.common.TestBase {
                     try {
                         TimeoutPolicy policy = TimeoutPolicyHelper
                                 .narrow(policies[i]);
-                        TEST(policy != null);
-                        TEST(policy.value() == 3000);
+                        assertTrue(policy != null);
+                        assertTrue(policy.value() == 3000);
                     } catch (BAD_PARAM ex) {
-                        TEST(false);
+                        assertTrue(false);
                     }
                     break;
                 }
                 default:
-                    TEST(("org.omg.CORBA.PolicyManager.get_policy_overrides()"
-                            + " returned policies with unexpected types") == null);
+                    assertTrue(("org.omg.CORBA.PolicyManager.get_policy_overrides()"
+					+ " returned policies with unexpected types") == null);
                 }
             }
         }
@@ -146,14 +145,14 @@ public class TestPolicyIntf extends test.common.TestBase {
                 pl[1] = orb.create_policy(
                         org.apache.yoko.orb.OB.RETRY_POLICY_ID.value, any);
                 pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
-                TEST(("org.omg.CORBA.PolicyManager.set_policy_overrides() "
-                        + "BAD_PARAM(30, COMPLETED_NO) expected") == null);
+                assertTrue(("org.omg.CORBA.PolicyManager.set_policy_overrides() "
+				+ "BAD_PARAM(30, COMPLETED_NO) expected") == null);
             } catch (PolicyError ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (InvalidPolicies ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (BAD_PARAM ex) {
-                TEST(ex.minor == MinorCodes.MinorDuplicatePolicyType);
+                assertTrue(ex.minor == MinorCodes.MinorDuplicatePolicyType);
             }
 
             //
@@ -165,11 +164,11 @@ public class TestPolicyIntf extends test.common.TestBase {
                         SetOverrideType.SET_OVERRIDE);
 
             } catch (InvalidPolicies ex) {
-                TEST(false);
+                assertTrue(false);
             }
             policyTypes = new int[0];
             Policy[] current = pm.get_policy_overrides(policyTypes);
-            TEST(current.length == origPolicies.length);
+            assertTrue(current.length == origPolicies.length);
             for (int i = 0; i < current.length; ++i) {
                 boolean matched = false;
                 for (int j = 0; j < origPolicies.length; ++j) {
@@ -179,7 +178,7 @@ public class TestPolicyIntf extends test.common.TestBase {
                         break;
                     }
                 }
-                TEST(matched);
+                assertTrue(matched);
             }
         }
 

@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectLongLong extends test.common.TestBase implements
@@ -53,32 +55,32 @@ public class TestObjectLongLong extends test.common.TestBase implements
             long ret;
             ti.attrLongLong(-9223372036854775807L - 1);
             ret = ti.attrLongLong();
-            TEST(ret == -9223372036854775807L - 1);
+            assertTrue(ret == -9223372036854775807L - 1);
 
             ti.attrLongLong(9223372036854775807L);
             ret = ti.attrLongLong();
-            TEST(ret == 9223372036854775807L);
+            assertTrue(ret == 9223372036854775807L);
 
             LongHolder inOut = new LongHolder(20);
             LongHolder out = new LongHolder();
             ret = ti.opLongLong(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             long ret;
             ti.attrULongLong(9223372036854775807L);
             ret = ti.attrULongLong();
-            TEST(ret == 9223372036854775807L);
+            assertTrue(ret == 9223372036854775807L);
 
             LongHolder inOut = new LongHolder(20);
             LongHolder out = new LongHolder();
             ret = ti.opULongLong(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
@@ -87,9 +89,9 @@ public class TestObjectLongLong extends test.common.TestBase implements
 
             try {
                 ti.opLongLongEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_LongLong.ExLongLong ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -99,9 +101,9 @@ public class TestObjectLongLong extends test.common.TestBase implements
 
             try {
                 ti.opULongLongEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_LongLong.ExULongLong ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 

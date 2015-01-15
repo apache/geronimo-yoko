@@ -19,36 +19,21 @@
 /**
  * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
-package test.tnaming;
+public class TransientServiceException extends Exception {
+    private static final long serialVersionUID = 1L;
 
-public class Test_impl extends TestPOA {
-    private String name_;
-
-    private org.omg.PortableServer.POA poa_;
-
-    private static void TEST(boolean expr) {
-        if (!expr)
-            throw new test.common.TestException();
+    public TransientServiceException() {
+        super();
     }
 
-    public Test_impl(org.omg.PortableServer.POA poa, String name) {
-        poa_ = poa;
-        name_ = name;
+    public TransientServiceException(String reason) {
+        super(reason);
     }
 
-    public org.omg.PortableServer.POA _default_POA() {
-        if (poa_ != null)
-            return poa_;
-        else
-            return super._default_POA();
+    public TransientServiceException(String reason, Exception cause) {
+        super(reason, cause);
     }
 
-    public String get_id() {
-        return name_;
-    }
-
-    public void shutdown() {
-        _orb().shutdown(false);
-    }
 }

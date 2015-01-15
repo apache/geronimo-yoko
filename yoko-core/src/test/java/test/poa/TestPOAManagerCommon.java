@@ -17,6 +17,8 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -68,7 +70,7 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             info[i].obj.aMethod();
@@ -80,12 +82,12 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             // 
             try {
                 manager.discard_requests(true);
-                TEST(false);
+                assertTrue(false);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER e) {
                 // Expected, ensure the state didn't change
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
             }
 
             //
@@ -93,14 +95,14 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             //
             try {
                 manager.discard_requests(false);
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.DISCARDING);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.DISCARDING);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 info[i].obj.aMethod();
-                TEST(false);
+                assertTrue(false);
             } catch (TRANSIENT ex) {
                 // Expected
             }
@@ -108,7 +110,7 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             info[i].obj.aMethod();
@@ -120,12 +122,12 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             // 
             try {
                 manager.hold_requests(true);
-                TEST(false);
+                assertTrue(false);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER e) {
                 // Expected, ensure the state didn't change
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
             }
 
             //
@@ -133,9 +135,9 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             //
             try {
                 manager.hold_requests(false);
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             TestHoldingState t = new TestHoldingState(info[i].obj);
@@ -150,12 +152,12 @@ final class TestPOAManagerCommon extends test.common.TestBase {
                 // Ignore
             }
 
-            TEST(t.callState() == TestHoldingState.CALL_STARTED);
+            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
 
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             //
@@ -166,16 +168,16 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             } catch (InterruptedException ex) {
             }
 
-            TEST(t.callState() == TestHoldingState.CALL_SUCCESS);
+            assertTrue(t.callState() == TestHoldingState.CALL_SUCCESS);
 
             //
             // Test discard_requests when holding.
             //
             try {
                 manager.hold_requests(false);
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             t = new TestHoldingState(info[i].obj);
@@ -190,18 +192,18 @@ final class TestPOAManagerCommon extends test.common.TestBase {
                 // Ignore
             }
 
-            TEST(t.callState() == TestHoldingState.CALL_STARTED);
+            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
 
             try {
                 manager.discard_requests(false);
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.DISCARDING);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.DISCARDING);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 info[i].obj.aMethod();
-                TEST(false);
+                assertTrue(false);
             } catch (TRANSIENT ex) {
                 // Expected
             }
@@ -215,16 +217,16 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             //
             // Queued call should have been discarded.
             //
-            TEST(t.callState() == TestHoldingState.CALL_FAILURE);
+            assertTrue(t.callState() == TestHoldingState.CALL_FAILURE);
 
             //
             // Test hold_requests when discarding.
             //
             try {
                 manager.hold_requests(false);
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.HOLDING);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             t = new TestHoldingState(info[i].obj);
@@ -239,12 +241,12 @@ final class TestPOAManagerCommon extends test.common.TestBase {
                 // Ignore
             }
 
-            TEST(t.callState() == TestHoldingState.CALL_STARTED);
+            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
 
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             //
@@ -255,7 +257,7 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             } catch (InterruptedException ex) {
             }
 
-            TEST(t.callState() == TestHoldingState.CALL_SUCCESS);
+            assertTrue(t.callState() == TestHoldingState.CALL_SUCCESS);
 
             //
             // Try deactivate with wait completion == true,
@@ -264,12 +266,12 @@ final class TestPOAManagerCommon extends test.common.TestBase {
             // 
             try {
                 manager.deactivate(true, true);
-                TEST(false);
+                assertTrue(false);
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER e) {
                 // Expected, ensure the state didn't change
-                TEST(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
+                assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.ACTIVE);
             }
         }
     }

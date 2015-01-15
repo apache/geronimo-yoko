@@ -17,12 +17,17 @@
 
 package test.common;
 
-public class TestBase {
-    public static void TEST(boolean expr) {
-        if (!expr)
-            throw new TestException();
-    }
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 
+import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextPackage.InvalidName;
+
+public class TestBase {
     public static org.omg.CORBA.TypeCode getOrigType(org.omg.CORBA.TypeCode tc) {
         org.omg.CORBA.TypeCode result = tc;
 
@@ -30,9 +35,37 @@ public class TestBase {
             while (result.kind() == org.omg.CORBA.TCKind.tk_alias)
                 result = result.content_type();
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            throw new AssertionError(ex);
         }
 
         return result;
+    }
+
+    protected static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object obj,
+            NamingContextExt context, NameComponent[] name) throws InvalidName {
+        out.println("ref:");
+        String ref = orb.object_to_string(obj);
+        out.println(ref);
+        String nameString = context.to_string(name);
+        out.println(nameString);
+    }
+    
+    protected static void readRef(BufferedReader reader, String[] refStrings) throws IOException {
+        String line = reader.readLine();
+        if (line == null) {
+            throw new RuntimeException("Unknown Server error");
+        } else if (!!!line.equals("ref:")) {
+            try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+                pw.println("Server error:");
+                do {
+                    pw.print('\t');
+                    pw.println(line);
+                } while ((line = reader.readLine()) != null);
+                pw.flush();
+                throw new RuntimeException(sw.toString());
+            }
+        }
+        refStrings[0] = reader.readLine();
+        refStrings[1] = reader.readLine();
     }
 }

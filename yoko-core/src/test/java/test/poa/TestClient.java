@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 
 public class TestClient extends test.common.TestBase {
@@ -47,13 +50,13 @@ public class TestClient extends test.common.TestBase {
             }
 
             TestServer server = TestServerHelper.narrow(obj);
-            TEST(server != null);
+            assertTrue(server != null);
 
             TestInfo[] info = server.get_info();
             for (int i = 0; i < info.length; i++) {
                 try {
                     info[i].obj.aMethod();
-                    TEST(info[i].except_id.length() == 0);
+                    assertTrue(info[i].except_id.length() == 0);
                 } catch (SystemException ex) {
                     String id = org.apache.yoko.orb.OB.Util.getExceptionId(ex);
                     if (!id.equals(info[i].except_id)) {
@@ -62,7 +65,7 @@ public class TestClient extends test.common.TestBase {
                                 + "unexpected exception");
                         System.err.println("Expected " + info[i].except_id
                                 + " but caught " + id);
-                        TEST(false);
+                        assertTrue(false);
                     }
                 }
             }

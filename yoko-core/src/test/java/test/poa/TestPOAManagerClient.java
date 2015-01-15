@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -56,7 +59,7 @@ public final class TestPOAManagerClient extends test.common.TestBase {
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             TestInfo[] info = server.get_info();

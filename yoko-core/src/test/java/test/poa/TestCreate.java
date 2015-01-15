@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -32,12 +35,12 @@ public final class TestCreate extends test.common.TestBase {
         String str;
 
         POAManager rootMgr = root.the_POAManager();
-        TEST(rootMgr != null);
+        assertTrue(rootMgr != null);
 
         //
         // Test: POAManager should be in HOLDING state
         //
-        TEST(rootMgr.get_state() == State.HOLDING);
+        assertTrue(rootMgr.get_state() == State.HOLDING);
 
         //
         // Create child POA
@@ -54,31 +57,31 @@ public final class TestCreate extends test.common.TestBase {
         // Test: POAManager should NOT be the same as the root's manager
         //
         mgr = poa.the_POAManager();
-        TEST(!mgr._is_equivalent(rootMgr));
+        assertTrue(!mgr._is_equivalent(rootMgr));
 
         //
         // Test: POAManager should be in HOLDING state
         //
-        TEST(mgr.get_state() == State.HOLDING);
+        assertTrue(mgr.get_state() == State.HOLDING);
 
         //
         // Test: Confirm name
         //
         str = poa.the_name();
-        TEST(str.equals("poa1"));
+        assertTrue(str.equals("poa1"));
 
         //
         // Test: Confirm parent
         //
         parent = poa.the_parent();
-        TEST(parent._is_equivalent(root));
+        assertTrue(parent._is_equivalent(root));
 
         //
         // Test: AdapterAlreadyExists exception
         //
         try {
             poa2 = root.create_POA("poa1", null, policies);
-            TEST(false); // create_POA should not have succeeded
+            assertTrue(false); // create_POA should not have succeeded
         } catch (AdapterAlreadyExists ex) {
             // expected
         } catch (InvalidPolicy ex) {
@@ -94,7 +97,7 @@ public final class TestCreate extends test.common.TestBase {
 
         try {
             poa2 = root.create_POA("invalid", null, invalidpolicies);
-            TEST(false); // create_POA should not have succeeded
+            assertTrue(false); // create_POA should not have succeeded
         } catch (InvalidPolicy ex) {
             // expected
         } catch (AdapterAlreadyExists ex) {
@@ -116,7 +119,7 @@ public final class TestCreate extends test.common.TestBase {
         // Test: POAManager should be the same as the root's manager
         //
         mgr = poa2.the_POAManager();
-        TEST(mgr._is_equivalent(rootMgr));
+        assertTrue(mgr._is_equivalent(rootMgr));
 
         //
         // Create child of child POA
@@ -133,7 +136,7 @@ public final class TestCreate extends test.common.TestBase {
         // Test: Confirm parent
         //
         parent = poa3.the_parent();
-        TEST(parent._is_equivalent(poa2));
+        assertTrue(parent._is_equivalent(poa2));
 
         poa.destroy(true, true);
         poa2.destroy(true, true);

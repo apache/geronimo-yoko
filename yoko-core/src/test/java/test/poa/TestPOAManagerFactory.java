@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -39,7 +42,7 @@ final class TestPOAManagerFactory extends test.common.TestBase {
         int count = 1;
 
         managers = pmFactory.list();
-        TEST(managers.length == 1);
+        assertTrue(managers.length == 1);
 
         //
         // Create POA Managers without policies
@@ -53,38 +56,38 @@ final class TestPOAManagerFactory extends test.common.TestBase {
             test = pmFactory.create_POAManager("TestPOAManager", pl);
             count++;
         } catch (ManagerAlreadyExists ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (PolicyError ex) {
         }
 
         POAManager tmp = pmFactory.find("TestPOAManager");
-        TEST(tmp == test);
+        assertTrue(tmp == test);
         managers = pmFactory.list();
 
         //
         // count == 2
         //
-        TEST(count == 2);
-        TEST(managers.length == count);
+        assertTrue(count == 2);
+        assertTrue(managers.length == count);
 
         POAManager test2 = null;
         try {
             test2 = pmFactory.create_POAManager("TestPOAManager2", pl);
             count++;
         } catch (ManagerAlreadyExists ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (PolicyError ex) {
         }
 
         tmp = pmFactory.find("TestPOAManager2");
-        TEST(tmp == test2);
+        assertTrue(tmp == test2);
         managers = pmFactory.list();
 
         //
         // count == 3
         //
-        TEST(count == 3);
-        TEST(managers.length == count);
+        assertTrue(count == 3);
+        assertTrue(managers.length == count);
 
         try {
             test2 = pmFactory.create_POAManager("TestPOAManager2", pl);
@@ -93,7 +96,7 @@ final class TestPOAManagerFactory extends test.common.TestBase {
             //
             // 'create_POAManager' should not have succeeded
             //
-            TEST(false);
+            assertTrue(false);
         } catch (ManagerAlreadyExists ex) {
             //
             // Expected
@@ -101,16 +104,16 @@ final class TestPOAManagerFactory extends test.common.TestBase {
         } catch (PolicyError ex) {
         }
 
-        TEST(tmp == test2);
-        TEST(test != test2);
+        assertTrue(tmp == test2);
+        assertTrue(test != test2);
 
         managers = pmFactory.list();
 
         //
         // count == 3 (still)
         //
-        TEST(count == 3);
-        TEST(managers.length == count);
+        assertTrue(count == 3);
+        assertTrue(managers.length == count);
 
         //
         // Create POA Managers with proprietary policies
@@ -135,12 +138,12 @@ final class TestPOAManagerFactory extends test.common.TestBase {
                         policies);
                 count++;
             } catch (ManagerAlreadyExists ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (PolicyError ex) {
             }
 
             tmp = pmFactory.find("ConfigManager");
-            TEST(tmp == configManager);
+            assertTrue(tmp == configManager);
         }
 
         managers = pmFactory.list();
@@ -148,8 +151,8 @@ final class TestPOAManagerFactory extends test.common.TestBase {
         //
         // count == 4
         //
-        TEST(count == 4);
-        TEST(managers.length == count);
+        assertTrue(count == 4);
+        assertTrue(managers.length == count);
 
         //
         // Check the policy values
@@ -157,13 +160,13 @@ final class TestPOAManagerFactory extends test.common.TestBase {
 
         org.apache.yoko.orb.OBPortableServer.CommunicationsConcurrencyPolicy commsPolicy = org.apache.yoko.orb.OBPortableServer.CommunicationsConcurrencyPolicyHelper
                 .narrow(policies[0]);
-        TEST(commsPolicy.value() == org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_THREADED.value);
-        TEST(commsPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_ID.value);
+        assertTrue(commsPolicy.value() == org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_THREADED.value);
+        assertTrue(commsPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_ID.value);
 
         org.apache.yoko.orb.OBPortableServer.GIOPVersionPolicy giopPolicy = org.apache.yoko.orb.OBPortableServer.GIOPVersionPolicyHelper
                 .narrow(policies[1]);
-        TEST(giopPolicy.value() == org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_1_2.value);
-        TEST(giopPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_ID.value);
+        assertTrue(giopPolicy.value() == org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_1_2.value);
+        assertTrue(giopPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_ID.value);
 
         //
         // EndpointConfigurationPolicy
@@ -183,7 +186,7 @@ final class TestPOAManagerFactory extends test.common.TestBase {
             org.apache.yoko.orb.OBPortableServer.EndpointConfigurationPolicy endpointPolicy = org.apache.yoko.orb.OBPortableServer.EndpointConfigurationPolicyHelper
                     .narrow(policies2[0]);
 
-            TEST(endpointPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.ENDPOINT_CONFIGURATION_POLICY_ID.value);
+            assertTrue(endpointPolicy.policy_type() == org.apache.yoko.orb.OBPortableServer.ENDPOINT_CONFIGURATION_POLICY_ID.value);
 
             //
             // Create POA Manager with endpoint policy
@@ -194,12 +197,12 @@ final class TestPOAManagerFactory extends test.common.TestBase {
                         "EndpointManager", policies2);
                 count++;
             } catch (ManagerAlreadyExists ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (PolicyError ex) {
             }
 
             tmp = pmFactory.find("EndpointManager");
-            TEST(tmp == endpointManager);
+            assertTrue(tmp == endpointManager);
         }
 
         managers = pmFactory.list();
@@ -207,8 +210,8 @@ final class TestPOAManagerFactory extends test.common.TestBase {
         //
         // count == 5
         //
-        TEST(count == 5);
-        TEST(managers.length == count);
+        assertTrue(count == 5);
+        assertTrue(managers.length == count);
     }
 
     static void runtests(ORB orb, POA root) {

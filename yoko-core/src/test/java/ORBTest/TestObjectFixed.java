@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectFixed extends test.common.TestBase implements TestObject {
@@ -54,17 +56,17 @@ public class TestObjectFixed extends test.common.TestBase implements TestObject 
             b = new java.math.BigDecimal("0.00000000");
             ti.attrFixed(b);
             ret = ti.attrFixed();
-            TEST(ret.equals(b));
+            assertTrue(ret.equals(b));
 
             b = new java.math.BigDecimal("1234567890.12345670");
             ti.attrFixed(b);
             ret = ti.attrFixed();
-            TEST(ret.equals(b));
+            assertTrue(ret.equals(b));
 
             b = new java.math.BigDecimal("-9876543210.87654320");
             ti.attrFixed(b);
             ret = ti.attrFixed();
-            TEST(ret.equals(b));
+            assertTrue(ret.equals(b));
 
             FixedHolder inOut = new FixedHolder(new java.math.BigDecimal(
                     "20.00000000"));
@@ -72,9 +74,9 @@ public class TestObjectFixed extends test.common.TestBase implements TestObject 
             ret = ti.opFixed(new java.math.BigDecimal("10.00000000"), inOut,
                     out);
             b = new java.math.BigDecimal("30.00000000");
-            TEST(ret.equals(b));
-            TEST(inOut.value.equals(b));
-            TEST(out.value.equals(b));
+            assertTrue(ret.equals(b));
+            assertTrue(inOut.value.equals(b));
+            assertTrue(out.value.equals(b));
         }
     }
 
@@ -100,7 +102,7 @@ public class TestObjectFixed extends test.common.TestBase implements TestObject 
         if (request.env().exception() != null)
             throw (SystemException) request.env().exception();
         ret = request.return_value().extract_fixed();
-        TEST(ret.equals(new java.math.BigDecimal("1234567890.12345670")));
+        assertTrue(ret.equals(new java.math.BigDecimal("1234567890.12345670")));
 
         request = ti._request("opFixed");
         request.add_in_arg().insert_fixed(
@@ -119,8 +121,8 @@ public class TestObjectFixed extends test.common.TestBase implements TestObject 
         inOut.value = inOutAny.extract_fixed();
         out.value = outAny.extract_fixed();
         ret = request.return_value().extract_fixed();
-        TEST(ret.equals(new java.math.BigDecimal("30.00000000")));
-        TEST(inOut.value.equals(new java.math.BigDecimal("30.00000000")));
-        TEST(out.value.equals(new java.math.BigDecimal("30.00000000")));
+        assertTrue(ret.equals(new java.math.BigDecimal("30.00000000")));
+        assertTrue(inOut.value.equals(new java.math.BigDecimal("30.00000000")));
+        assertTrue(out.value.equals(new java.math.BigDecimal("30.00000000")));
     }
 }
