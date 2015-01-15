@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -112,7 +115,7 @@ public final class TestCollocated extends test.common.TestBase {
         test.aMethod();
         request = obj._request("aMethod");
         request.invoke();
-        TEST(request.env().exception() == null);
+        assertTrue(request.env().exception() == null);
 
         id = ("testDSI").getBytes();
         obj = poa.create_reference_with_id(id, "IDL:Test:1.0");
@@ -120,7 +123,7 @@ public final class TestCollocated extends test.common.TestBase {
         test.aMethod();
         request = obj._request("aMethod");
         request.invoke();
-        TEST(request.env().exception() == null);
+        assertTrue(request.env().exception() == null);
     }
 
     static void TestDefaultServant(ORB orb, POA root, POAManager manager) {

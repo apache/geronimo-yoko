@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -52,10 +55,10 @@ public final class TestActivate extends test.common.TestBase {
 
         public void etherealize(byte[] oid, POA poa, Servant servant,
                 boolean cleanup, boolean remaining) {
-            TEST(TestUtil.Compare(oid_, oid));
-            TEST(poa_._is_equivalent(poa));
-            TEST(servant_ == servant);
-            TEST(remaining_ == remaining);
+            assertTrue(TestUtil.Compare(oid_, oid));
+            assertTrue(poa_._is_equivalent(poa));
+            assertTrue(servant_ == servant);
+            assertTrue(remaining_ == remaining);
             valid_ = true;
         }
     }
@@ -156,7 +159,7 @@ public final class TestActivate extends test.common.TestBase {
         //
         try {
             ether.set_servant_manager(null);
-            TEST(false); // set_servant_manager should not have succeeded
+            assertTrue(false); // set_servant_manager should not have succeeded
         } catch (OBJ_ADAPTER ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -184,7 +187,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(id1, id2));
+        assertTrue(!TestUtil.Compare(id1, id2));
         try {
             tmpserv = system.id_to_servant(id1);
         } catch (ObjectNotActive ex) {
@@ -193,7 +196,7 @@ public final class TestActivate extends test.common.TestBase {
             throw new RuntimeException();
         }
 
-        TEST(tmpserv == servant1);
+        assertTrue(tmpserv == servant1);
         try {
             tmpserv = system.id_to_servant(id2);
         } catch (ObjectNotActive ex) {
@@ -201,14 +204,14 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(tmpserv == servant2);
+        assertTrue(tmpserv == servant2);
 
         //
         // Test: ServantAlreadyActive exception
         //
         try {
             system.activate_object(servant1);
-            TEST(false); // activate_object should not have succeeded
+            assertTrue(false); // activate_object should not have succeeded
         } catch (ServantAlreadyActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -217,7 +220,7 @@ public final class TestActivate extends test.common.TestBase {
 
         try {
             system.activate_object(servant2);
-            TEST(false); // activate_object should not have succeeded
+            assertTrue(false); // activate_object should not have succeeded
         } catch (ServantAlreadyActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -241,7 +244,7 @@ public final class TestActivate extends test.common.TestBase {
         //
         try {
             system.deactivate_object(id1);
-            TEST(false); // deactivate_object should not have succeeded
+            assertTrue(false); // deactivate_object should not have succeeded
         } catch (ObjectNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -250,7 +253,7 @@ public final class TestActivate extends test.common.TestBase {
 
         try {
             system.deactivate_object(id2);
-            TEST(false); // deactivate_object should not have succeeded
+            assertTrue(false); // deactivate_object should not have succeeded
         } catch (ObjectNotActive ex) {
             // expected
         } catch (WrongPolicy ex) {
@@ -262,7 +265,7 @@ public final class TestActivate extends test.common.TestBase {
         //
         try {
             nonretain.activate_object(servant1);
-            TEST(false); // activate_object should not have succeeded
+            assertTrue(false); // activate_object should not have succeeded
         } catch (WrongPolicy ex) {
             // expected
         } catch (ServantAlreadyActive ex) {
@@ -272,7 +275,7 @@ public final class TestActivate extends test.common.TestBase {
         try {
             byte[] id = ("XXX").getBytes();
             nonretain.activate_object_with_id(id, servant1);
-            TEST(false); // activate_object_with_id should not have succeeded
+            assertTrue(false); // activate_object_with_id should not have succeeded
         } catch (WrongPolicy ex) {
             // expected
         } catch (ServantAlreadyActive ex) {
@@ -284,7 +287,7 @@ public final class TestActivate extends test.common.TestBase {
         try {
             byte[] id = ("XXX").getBytes();
             nonretain.deactivate_object(id);
-            TEST(false); // deactivate_object should not have succeeded
+            assertTrue(false); // deactivate_object should not have succeeded
         } catch (ObjectNotActive ex) {
             throw new RuntimeException();
         } catch (WrongPolicy ex) {
@@ -303,7 +306,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(!TestUtil.Compare(id1, id2));
+        assertTrue(!TestUtil.Compare(id1, id2));
         try {
             tmpserv = multiple.id_to_servant(id1);
         } catch (ObjectNotActive ex) {
@@ -311,7 +314,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(tmpserv == servant1);
+        assertTrue(tmpserv == servant1);
         try {
             tmpserv = multiple.id_to_servant(id2);
         } catch (ObjectNotActive ex) {
@@ -319,7 +322,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(tmpserv == servant1);
+        assertTrue(tmpserv == servant1);
 
         //
         // Test: confirm servant1 is no longer active
@@ -370,7 +373,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(activatorImpl.isValid());
+        assertTrue(activatorImpl.isValid());
         activatorImpl.expect(id2, ether, servant1, false);
         try {
             ether.deactivate_object(id2);
@@ -379,7 +382,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(activatorImpl.isValid());
+        assertTrue(activatorImpl.isValid());
         activatorImpl.expect(id3, ether, servant2, false);
         try {
             ether.deactivate_object(id3);
@@ -388,7 +391,7 @@ public final class TestActivate extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        TEST(activatorImpl.isValid());
+        assertTrue(activatorImpl.isValid());
 
         system.destroy(true, true);
         nonretain.destroy(true, true);

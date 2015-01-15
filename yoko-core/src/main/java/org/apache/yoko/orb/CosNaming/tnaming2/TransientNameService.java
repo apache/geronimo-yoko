@@ -19,16 +19,11 @@
 /**
  * @version $Rev: 555715 $ $Date: 2007-07-12 11:36:16 -0700 (Thu, 12 Jul 2007) $
  */
-package org.apache.yoko.orb.CosNaming.tnaming;
+package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.Properties;
 
 import org.omg.CORBA.ORB;
-import org.omg.CORBA.Policy;
-import org.omg.PortableServer.IdAssignmentPolicyValue;
-import org.omg.PortableServer.LifespanPolicyValue;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.ServantRetentionPolicyValue;
 
 /**
  * A transient name service attached to an ORB. This class manages all of the
@@ -42,9 +37,6 @@ public class TransientNameService implements AutoCloseable {
     static public final int DEFAULT_SERVICE_PORT = 900;
     // the default host name
     static public final String DEFAULT_SERVICE_HOST = "localhost";
-
-    // the service root context
-    protected TransientNamingContext initialContext;
     // initial listening port
     protected int port;
     // initial listening host
@@ -98,48 +90,12 @@ public class TransientNameService implements AutoCloseable {
         props.put("org.omg.CORBA.ORBServerId", "1000000");
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
+        props.put("org.omg.PortableInterceptor.ORBInitializerClass." + NameServiceInitializer.class.getName(), "");
         props.put("yoko.orb.oa.endpoint", "iiop --host " + host + " --port " + port);
 
-        createdOrb = ORB.init((String[]) null, props);
+        createdOrb = ORB.init(new String[]{"ORBNameService=" + serviceName}, props);
 
-        // now initialize the service
-        initialize(createdOrb);
-    }
-
-    /**
-     * Initialize a transient name service on a specific ORB.
-     * @param orb The ORB hosting the service.
-     * @exception TransientServiceException
-     */
-    public void initialize(ORB orb) throws TransientServiceException {
-        try {
-            // Fire up the RootPOA
-            POA rootPOA = (POA) orb.resolve_initial_references("RootPOA");
-            rootPOA.the_POAManager().activate();
-
-            // we need to create a POA to manage this named instance, and then activate a context on it.
-            Policy[] policy = new Policy[3];
-            policy[0] = rootPOA.create_lifespan_policy(LifespanPolicyValue.TRANSIENT);
-            policy[1] = rootPOA.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID);
-            policy[2] = rootPOA.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN);
-
-            POA nameServicePOA = rootPOA.create_POA("TNameService", null, policy);
-            nameServicePOA.the_POAManager().activate();
-
-            // create our initial context, and register that with the ORB as the name service
-            initialContext = new TransientNamingContext(orb, nameServicePOA);
-
-            // Resolve the Boot Manager and register the context object so we can resolve it using a corbaloc:: URL
-            org.apache.yoko.orb.OB.BootManager bootManager = org.apache.yoko.orb.OB.BootManagerHelper.narrow(orb
-                    .resolve_initial_references("BootManager"));
-            byte[] objectId = serviceName.getBytes();
-            bootManager.add_binding(objectId, initialContext.getRootContext());
-            // now register this as the naming service for the ORB as well.
-            ((org.apache.yoko.orb.CORBA.ORB) orb).register_initial_reference("NameService",
-                    initialContext.getRootContext());
-        } catch (Exception e) {
-            throw new TransientServiceException("Unable to initialize name service", e);
-        }
+        // service initialized by orb initializer
     }
 
     /**

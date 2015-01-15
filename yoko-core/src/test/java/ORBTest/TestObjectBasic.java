@@ -17,7 +17,10 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
+
 import ORBTest_Basic.*;
 
 public class TestObjectBasic extends test.common.TestBase implements TestObject {
@@ -60,178 +63,178 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             short ret;
             ti.attrShort((short) -32768);
             ret = ti.attrShort();
-            TEST(ret == -32768);
+            assertTrue(ret == -32768);
 
             ti.attrShort((short) 32767);
             ret = ti.attrShort();
-            TEST(ret == 32767);
+            assertTrue(ret == 32767);
 
             ShortHolder inOut = new ShortHolder((short) 20);
             ShortHolder out = new ShortHolder();
             ret = ti.opShort((short) 10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             int ret;
             ti.attrLong(-2147483647 - 1);
             ret = ti.attrLong();
-            TEST(ret == -2147483647 - 1);
+            assertTrue(ret == -2147483647 - 1);
 
             ti.attrLong(2147483647);
             ret = ti.attrLong();
-            TEST(ret == 2147483647);
+            assertTrue(ret == 2147483647);
 
             IntHolder inOut = new IntHolder(20);
             IntHolder out = new IntHolder();
             ret = ti.opLong(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             short ret;
             ti.attrUShort((short) 65535);
             ret = ti.attrUShort();
-            TEST(ret == (short) 65535);
+            assertTrue(ret == (short) 65535);
 
             ShortHolder inOut = new ShortHolder((short) 20);
             ShortHolder out = new ShortHolder();
             ret = ti.opUShort((short) 10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             int ret;
             ti.attrULong(2147483647);
             ret = ti.attrULong();
-            TEST(ret == 2147483647);
+            assertTrue(ret == 2147483647);
 
             IntHolder inOut = new IntHolder(20);
             IntHolder out = new IntHolder();
             ret = ti.opULong(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             float ret;
             ti.attrFloat(3.40282347E+38F);
             ret = ti.attrFloat();
-            TEST(ret == 3.40282347E+38F);
+            assertTrue(ret == 3.40282347E+38F);
 
             ti.attrFloat(1.17549435E-38F);
             ret = ti.attrFloat();
-            TEST(ret == 1.17549435E-38F);
+            assertTrue(ret == 1.17549435E-38F);
 
             FloatHolder inOut = new FloatHolder(20);
             FloatHolder out = new FloatHolder();
             ret = ti.opFloat(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             double ret;
             ti.attrDouble(1.7976931348623157E+308);
             ret = ti.attrDouble();
-            TEST(ret == 1.7976931348623157E+308);
+            assertTrue(ret == 1.7976931348623157E+308);
 
             ti.attrDouble(2.2250738585072014E-308);
             ret = ti.attrDouble();
-            TEST(ret == 2.2250738585072014E-308);
+            assertTrue(ret == 2.2250738585072014E-308);
 
             DoubleHolder inOut = new DoubleHolder(20);
             DoubleHolder out = new DoubleHolder();
             ret = ti.opDouble(10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             boolean ret;
             ti.attrBoolean(true);
             ret = ti.attrBoolean();
-            TEST(ret == true);
+            assertTrue(ret == true);
 
             ti.attrBoolean(false);
             ret = ti.attrBoolean();
-            TEST(ret == false);
+            assertTrue(ret == false);
 
             BooleanHolder inOut = new BooleanHolder(true);
             BooleanHolder out = new BooleanHolder();
             ret = ti.opBoolean(true, inOut, out);
-            TEST(ret == true);
-            TEST(inOut.value == true);
-            TEST(out.value == true);
+            assertTrue(ret == true);
+            assertTrue(inOut.value == true);
+            assertTrue(out.value == true);
 
             inOut.value = true;
             ret = ti.opBoolean(false, inOut, out);
-            TEST(ret == false);
-            TEST(inOut.value == false);
-            TEST(out.value == false);
+            assertTrue(ret == false);
+            assertTrue(inOut.value == false);
+            assertTrue(out.value == false);
 
             inOut.value = false;
             ret = ti.opBoolean(true, inOut, out);
-            TEST(ret == false);
-            TEST(inOut.value == false);
-            TEST(out.value == false);
+            assertTrue(ret == false);
+            assertTrue(inOut.value == false);
+            assertTrue(out.value == false);
         }
 
         {
             char ret;
             ti.attrChar('a');
             ret = ti.attrChar();
-            TEST(ret == 'a');
+            assertTrue(ret == 'a');
             ti.attrChar((char) 224);
             ret = ti.attrChar();
-            TEST(ret == (char) 224);
+            assertTrue(ret == (char) 224);
 
             CharHolder inOut = new CharHolder((char) 1);
             CharHolder out = new CharHolder();
             ret = ti.opChar('a', inOut, out);
-            TEST(ret == 'b');
-            TEST(inOut.value == 'b');
-            TEST(out.value == 'b');
+            assertTrue(ret == 'b');
+            assertTrue(inOut.value == 'b');
+            assertTrue(out.value == 'b');
         }
 
         {
             byte ret;
             ti.attrOctet((byte) 0xff);
             ret = ti.attrOctet();
-            TEST(ret == (byte) 0xff);
+            assertTrue(ret == (byte) 0xff);
 
             ti.attrOctet((byte) 0);
             ret = ti.attrOctet();
-            TEST(ret == (byte) 0);
+            assertTrue(ret == (byte) 0);
 
             ByteHolder inOut = new ByteHolder((byte) 20);
             ByteHolder out = new ByteHolder();
             ret = ti.opOctet((byte) 10, inOut, out);
-            TEST(ret == 30);
-            TEST(inOut.value == 30);
-            TEST(out.value == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut.value == 30);
+            assertTrue(out.value == 30);
         }
 
         {
             String ret;
             ti.attrString("Hello");
             ret = ti.attrString();
-            TEST(ret.equals("Hello"));
+            assertTrue(ret.equals("Hello"));
 
             StringHolder inOut = new StringHolder("world!");
             StringHolder out = new StringHolder();
             ret = ti.opString("Hello, ", inOut, out);
-            TEST(ret.equals("Hello, world!"));
-            TEST(out.value.equals("Hello, world!"));
+            assertTrue(ret.equals("Hello, world!"));
+            assertTrue(out.value.equals("Hello, world!"));
         }
 
         {
@@ -248,7 +251,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     ret = ti.attrAny();
                     String s;
                     s = ret.extract_string();
-                    TEST(s.equals("abc"));
+                    assertTrue(s.equals("abc"));
                 }
 
                 {
@@ -257,7 +260,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     ret = ti.attrAny();
                     int d;
                     d = ret.extract_long();
-                    TEST(d == 3);
+                    assertTrue(d == 3);
                 }
 
                 {
@@ -266,7 +269,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     ret = ti.attrAny();
                     TestEnum e;
                     e = TestEnumHelper.extract(ret);
-                    TEST(e == TestEnum.TestEnum3);
+                    assertTrue(e == TestEnum.TestEnum3);
                 }
 
                 {
@@ -280,9 +283,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     vStructRet = VariableStructHelper.extract(ret);
                     vStructInOut = VariableStructHelper.extract(inOut.value);
                     vStructOut = VariableStructHelper.extract(out.value);
-                    TEST(vStructRet.s.equals("xyz"));
-                    TEST(vStructInOut.s.equals("xyz"));
-                    TEST(vStructOut.s.equals("xyz"));
+                    assertTrue(vStructRet.s.equals("xyz"));
+                    assertTrue(vStructInOut.s.equals("xyz"));
+                    assertTrue(vStructOut.s.equals("xyz"));
                 }
 
                 {
@@ -296,12 +299,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     fUnionRet = FixedUnionHelper.extract(ret);
                     fUnionInOut = FixedUnionHelper.extract(inOut.value);
                     fUnionOut = FixedUnionHelper.extract(out.value);
-                    TEST(fUnionRet.discriminator() == 1);
-                    TEST(fUnionInOut.discriminator() == 1);
-                    TEST(fUnionOut.discriminator() == 1);
-                    TEST(fUnionRet.l() == 1);
-                    TEST(fUnionInOut.l() == 1);
-                    TEST(fUnionOut.l() == 1);
+                    assertTrue(fUnionRet.discriminator() == 1);
+                    assertTrue(fUnionInOut.discriminator() == 1);
+                    assertTrue(fUnionOut.discriminator() == 1);
+                    assertTrue(fUnionRet.l() == 1);
+                    assertTrue(fUnionInOut.l() == 1);
+                    assertTrue(fUnionOut.l() == 1);
                 }
 
                 {
@@ -315,9 +318,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     vUnionRet = VariableUnionHelper.extract(ret);
                     vUnionInOut = VariableUnionHelper.extract(ret);
                     vUnionOut = VariableUnionHelper.extract(ret);
-                    TEST(!vUnionRet.discriminator());
-                    TEST(!vUnionInOut.discriminator());
-                    TEST(!vUnionOut.discriminator());
+                    assertTrue(!vUnionRet.discriminator());
+                    assertTrue(!vUnionInOut.discriminator());
+                    assertTrue(!vUnionOut.discriminator());
                 }
 
                 {
@@ -327,12 +330,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     org.omg.CORBA.Object extract_obj = ret.extract_Object();
                     ORBTest_Basic.Intf ti2 = (ORBTest_Basic.IntfHelper
                             .extract(ret));
-                    TEST(ti._hash(1000) == ti2._hash(1000));
-                    TEST(ti._is_equivalent(ti2));
-                    TEST(ti._hash(1111) == extract_obj._hash(1111));
-                    TEST(ti._is_equivalent(extract_obj));
-                    TEST(extract_obj._hash(1234) == ti2._hash(1234));
-                    TEST(extract_obj._is_equivalent(ti2));
+                    assertTrue(ti._hash(1000) == ti2._hash(1000));
+                    assertTrue(ti._is_equivalent(ti2));
+                    assertTrue(ti._hash(1111) == extract_obj._hash(1111));
+                    assertTrue(ti._is_equivalent(extract_obj));
+                    assertTrue(extract_obj._hash(1234) == ti2._hash(1234));
+                    assertTrue(extract_obj._is_equivalent(ti2));
                 }
 
                 {
@@ -341,9 +344,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     ti.attrAny(any);
                     ret = ti.attrAny();
                     char[] ret_char_seq = CharSeqHelper.extract(any);
-                    TEST(ret_char_seq.length == 4);
+                    assertTrue(ret_char_seq.length == 4);
                     for (int idx = 0; idx < 4; ++idx)
-                        TEST(char_seq[idx] == ret_char_seq[idx]);
+						assertTrue(char_seq[idx] == ret_char_seq[idx]);
                 }
 
                 {
@@ -352,9 +355,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                     ti.attrAny(any);
                     ret = ti.attrAny();
                     char[] ret_wchar_seq = WCharSeqHelper.extract(any);
-                    TEST(ret_wchar_seq.length == 4);
+                    assertTrue(ret_wchar_seq.length == 4);
                     for (int idx = 0; idx < 4; ++idx)
-                        TEST(wchar_seq[idx] == ret_wchar_seq[idx]);
+						assertTrue(wchar_seq[idx] == ret_wchar_seq[idx]);
                 }
             }
         }
@@ -363,37 +366,37 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             TestEnum ret;
             ti.attrTestEnum(TestEnum.TestEnum2);
             ret = ti.attrTestEnum();
-            TEST(ret == TestEnum.TestEnum2);
+            assertTrue(ret == TestEnum.TestEnum2);
 
             ti.attrTestEnum(TestEnum.TestEnum3);
             ret = ti.attrTestEnum();
-            TEST(ret == TestEnum.TestEnum3);
+            assertTrue(ret == TestEnum.TestEnum3);
 
             TestEnumHolder inOut = new TestEnumHolder(TestEnum.TestEnum2);
             TestEnumHolder out = new TestEnumHolder();
             ret = ti.opTestEnum(TestEnum.TestEnum3, inOut, out);
-            TEST(ret == TestEnum.TestEnum3);
-            TEST(inOut.value == TestEnum.TestEnum3);
-            TEST(out.value == TestEnum.TestEnum3);
+            assertTrue(ret == TestEnum.TestEnum3);
+            assertTrue(inOut.value == TestEnum.TestEnum3);
+            assertTrue(out.value == TestEnum.TestEnum3);
         }
 
         {
             ORBTest_Basic.Intf ret;
             ti.attrIntf(ti);
             ret = ti.attrIntf();
-            TEST(ret._hash(999) == ti._hash(999));
-            TEST(ret._is_equivalent(ti));
+            assertTrue(ret._hash(999) == ti._hash(999));
+            assertTrue(ret._is_equivalent(ti));
 
             ORBTest_Basic.IntfHolder inOut = (new ORBTest_Basic.IntfHolder(
                     (ORBTest_Basic.Intf) (ti._duplicate())));
             ORBTest_Basic.IntfHolder out = new ORBTest_Basic.IntfHolder();
             ret = ti.opIntf(ti, inOut, out);
-            TEST(ret._hash(1001) == ti._hash(1001));
-            TEST(ret._is_equivalent(ti));
-            TEST(inOut.value._hash(5000) == ti._hash(5000));
-            TEST(inOut.value._is_equivalent(ti));
-            TEST(out.value._hash(2000) == ti._hash(2000));
-            TEST(out.value._is_equivalent(ti));
+            assertTrue(ret._hash(1001) == ti._hash(1001));
+            assertTrue(ret._is_equivalent(ti));
+            assertTrue(inOut.value._hash(5000) == ti._hash(5000));
+            assertTrue(inOut.value._is_equivalent(ti));
+            assertTrue(out.value._hash(2000) == ti._hash(2000));
+            assertTrue(out.value._is_equivalent(ti));
         }
 
         {
@@ -404,20 +407,20 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             FixedStruct ret;
             ti.attrFixedStruct(st);
             ret = ti.attrFixedStruct();
-            TEST(ret.s == st.s);
-            TEST(ret.l == st.l);
+            assertTrue(ret.s == st.s);
+            assertTrue(ret.l == st.l);
 
             FixedStructHolder inOut = new FixedStructHolder(new FixedStruct());
             inOut.value.s = 10000;
             inOut.value.l = 100000;
             FixedStructHolder out = new FixedStructHolder();
             ret = ti.opFixedStruct(st, inOut, out);
-            TEST(ret.s == st.s);
-            TEST(ret.l == st.l);
-            TEST(inOut.value.s == st.s);
-            TEST(out.value.l == st.l);
-            TEST(inOut.value.s == st.s);
-            TEST(out.value.l == st.l);
+            assertTrue(ret.s == st.s);
+            assertTrue(ret.l == st.l);
+            assertTrue(inOut.value.s == st.s);
+            assertTrue(out.value.l == st.l);
+            assertTrue(inOut.value.s == st.s);
+            assertTrue(out.value.l == st.l);
         }
 
         {
@@ -427,16 +430,16 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             VariableStruct ret;
             ti.attrVariableStruct(st);
             ret = ti.attrVariableStruct();
-            TEST(ret.s.equals(st.s));
+            assertTrue(ret.s.equals(st.s));
 
             VariableStructHolder inOut = new VariableStructHolder(
                     new VariableStruct());
             inOut.value.s = "bla";
             VariableStructHolder out = new VariableStructHolder();
             ret = ti.opVariableStruct(st, inOut, out);
-            TEST(ret.s.equals(st.s));
-            TEST(inOut.value.s.equals(st.s));
-            TEST(out.value.s.equals(st.s));
+            assertTrue(ret.s.equals(st.s));
+            assertTrue(inOut.value.s.equals(st.s));
+            assertTrue(out.value.s.equals(st.s));
         }
 
         {
@@ -446,8 +449,8 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             FixedUnion ret;
             ti.attrFixedUnion(un);
             ret = ti.attrFixedUnion();
-            TEST(ret.discriminator() == 1);
-            TEST(ret.l() == 1);
+            assertTrue(ret.discriminator() == 1);
+            assertTrue(ret.l() == 1);
 
             un.b((short) 999, true);
             FixedUnionHolder inOut = new FixedUnionHolder();
@@ -455,12 +458,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             inOut.value.l(100);
             FixedUnionHolder out = new FixedUnionHolder();
             ret = ti.opFixedUnion(un, inOut, out);
-            TEST(ret.discriminator() == 999);
-            TEST(ret.b() == true);
-            TEST(out.value.discriminator() == 999);
-            TEST(out.value.b() == true);
-            TEST(inOut.value.discriminator() == 999);
-            TEST(inOut.value.b() == true);
+            assertTrue(ret.discriminator() == 999);
+            assertTrue(ret.b() == true);
+            assertTrue(out.value.discriminator() == 999);
+            assertTrue(out.value.b() == true);
+            assertTrue(inOut.value.discriminator() == 999);
+            assertTrue(inOut.value.b() == true);
 
             FixedStruct st = new FixedStruct();
             st.s = 10101;
@@ -469,15 +472,15 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             inOut.value = new FixedUnion();
             inOut.value.l(100);
             ret = ti.opFixedUnion(un, inOut, out);
-            TEST(ret.discriminator() == 3);
-            TEST(ret.st().s == 10101);
-            TEST(ret.st().l == -10101);
-            TEST(out.value.discriminator() == 3);
-            TEST(out.value.st().s == 10101);
-            TEST(out.value.st().l == -10101);
-            TEST(inOut.value.discriminator() == 3);
-            TEST(inOut.value.st().s == 10101);
-            TEST(inOut.value.st().l == -10101);
+            assertTrue(ret.discriminator() == 3);
+            assertTrue(ret.st().s == 10101);
+            assertTrue(ret.st().l == -10101);
+            assertTrue(out.value.discriminator() == 3);
+            assertTrue(out.value.st().s == 10101);
+            assertTrue(out.value.st().l == -10101);
+            assertTrue(inOut.value.discriminator() == 3);
+            assertTrue(inOut.value.st().s == 10101);
+            assertTrue(inOut.value.st().l == -10101);
         }
 
         {
@@ -489,7 +492,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             VariableUnion ret;
             ti.attrVariableUnion(un);
             ret = ti.attrVariableUnion();
-            TEST(ret.st().s.equals("$$$"));
+            assertTrue(ret.st().s.equals("$$$"));
 
             un.ti(ti);
             VariableUnionHolder inOut = new VariableUnionHolder(
@@ -497,12 +500,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             VariableUnionHolder out = new VariableUnionHolder();
             inOut.value.st(st);
             ret = ti.opVariableUnion(un, inOut, out);
-            TEST(ret.ti()._hash(1000) == ti._hash(1000));
-            TEST(ret.ti()._is_equivalent(ti));
-            TEST(inOut.value.ti()._hash(5000) == ti._hash(5000));
-            TEST(inOut.value.ti()._is_equivalent(ti));
-            TEST(out.value.ti()._hash(2000) == ti._hash(2000));
-            TEST(out.value.ti()._is_equivalent(ti));
+            assertTrue(ret.ti()._hash(1000) == ti._hash(1000));
+            assertTrue(ret.ti()._is_equivalent(ti));
+            assertTrue(inOut.value.ti()._hash(5000) == ti._hash(5000));
+            assertTrue(inOut.value.ti()._is_equivalent(ti));
+            assertTrue(out.value.ti()._hash(2000) == ti._hash(2000));
+            assertTrue(out.value.ti()._is_equivalent(ti));
         }
 
         {
@@ -514,34 +517,34 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             String[] ret;
             ti.attrStringSequence(seq);
             ret = ti.attrStringSequence();
-            TEST(ret.length == 3);
-            TEST(ret[0].equals("!!!"));
-            TEST(ret[1].equals("@@@"));
-            TEST(ret[2].equals("###"));
+            assertTrue(ret.length == 3);
+            assertTrue(ret[0].equals("!!!"));
+            assertTrue(ret[1].equals("@@@"));
+            assertTrue(ret[2].equals("###"));
 
             StringSequenceHolder inOut = new StringSequenceHolder(new String[2]);
             inOut.value[0] = "%";
             inOut.value[1] = "^^";
             StringSequenceHolder out = new StringSequenceHolder();
             ret = ti.opStringSequence(seq, inOut, out);
-            TEST(ret.length == 5);
-            TEST(ret[0].equals("!!!"));
-            TEST(ret[1].equals("@@@"));
-            TEST(ret[2].equals("###"));
-            TEST(ret[3].equals("%"));
-            TEST(ret[4].equals("^^"));
-            TEST(inOut.value.length == 5);
-            TEST(inOut.value[0].equals("!!!"));
-            TEST(inOut.value[1].equals("@@@"));
-            TEST(inOut.value[2].equals("###"));
-            TEST(inOut.value[3].equals("%"));
-            TEST(inOut.value[4].equals("^^"));
-            TEST(out.value.length == 5);
-            TEST(out.value[0].equals("!!!"));
-            TEST(out.value[1].equals("@@@"));
-            TEST(out.value[2].equals("###"));
-            TEST(out.value[3].equals("%"));
-            TEST(out.value[4].equals("^^"));
+            assertTrue(ret.length == 5);
+            assertTrue(ret[0].equals("!!!"));
+            assertTrue(ret[1].equals("@@@"));
+            assertTrue(ret[2].equals("###"));
+            assertTrue(ret[3].equals("%"));
+            assertTrue(ret[4].equals("^^"));
+            assertTrue(inOut.value.length == 5);
+            assertTrue(inOut.value[0].equals("!!!"));
+            assertTrue(inOut.value[1].equals("@@@"));
+            assertTrue(inOut.value[2].equals("###"));
+            assertTrue(inOut.value[3].equals("%"));
+            assertTrue(inOut.value[4].equals("^^"));
+            assertTrue(out.value.length == 5);
+            assertTrue(out.value[0].equals("!!!"));
+            assertTrue(out.value[1].equals("@@@"));
+            assertTrue(out.value[2].equals("###"));
+            assertTrue(out.value[3].equals("%"));
+            assertTrue(out.value[4].equals("^^"));
         }
 
         {
@@ -557,7 +560,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++)
                     for (k = 0; k < 4; k++) {
-                        TEST(ar[i][j][k] == ret[i][j][k]);
+                        assertTrue(ar[i][j][k] == ret[i][j][k]);
                     }
 
             FixedArrayHolder inOut = new FixedArrayHolder(new short[2][3][4]);
@@ -570,9 +573,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++)
                     for (k = 0; k < 4; k++) {
-                        TEST(ar[i][j][k] == ret[i][j][k]);
-                        TEST(ar[i][j][k] == inOut.value[i][j][k]);
-                        TEST(ar[i][j][k] == out.value[i][j][k]);
+                        assertTrue(ar[i][j][k] == ret[i][j][k]);
+                        assertTrue(ar[i][j][k] == inOut.value[i][j][k]);
+                        assertTrue(ar[i][j][k] == out.value[i][j][k]);
                     }
         }
 
@@ -584,7 +587,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             ret = ti.attrVariableArray();
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++) {
-                    TEST((ar[i][j].equals(ret[i][j])));
+                    assertTrue((ar[i][j].equals(ret[i][j])));
                 }
 
             VariableArrayHolder inOut = new VariableArrayHolder(
@@ -596,9 +599,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             ret = ti.opVariableArray(ar, inOut, out);
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++) {
-                    TEST(ar[i][j].equals(ret[i][j]));
-                    TEST(ar[i][j].equals(inOut.value[i][j]));
-                    TEST(ar[i][j].equals(out.value[i][j]));
+                    assertTrue(ar[i][j].equals(ret[i][j]));
+                    assertTrue(ar[i][j].equals(inOut.value[i][j]));
+                    assertTrue(ar[i][j].equals(out.value[i][j]));
                 }
         }
 
@@ -635,7 +638,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(seq[l][i][j][k] == ret[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == ret[l][i][j][k]);
                         }
 
             FixedArraySequenceHolder inOut = new FixedArraySequenceHolder(
@@ -650,26 +653,26 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             ret = ti.opFixedArraySequence(seq, inOut, out);
 
-            TEST(ret.length == 7);
-            TEST(inOut.value.length == 7);
-            TEST(out.value.length == 7);
+            assertTrue(ret.length == 7);
+            assertTrue(inOut.value.length == 7);
+            assertTrue(out.value.length == 7);
 
             for (l = 0; l < 3; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(seq[l][i][j][k] == ret[l][i][j][k]);
-                            TEST(seq[l][i][j][k] == inOut.value[l][i][j][k]);
-                            TEST(seq[l][i][j][k] == out.value[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == ret[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == inOut.value[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == out.value[l][i][j][k]);
                         }
 
             for (l = 0; l < 4; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(ret[3 + l][i][j][k] == i + j + k + l);
-                            TEST(inOut.value[3 + l][i][j][k] == i + j + k + l);
-                            TEST(out.value[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(ret[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(inOut.value[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(out.value[3 + l][i][j][k] == i + j + k + l);
                         }
         }
 
@@ -690,7 +693,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             for (l = 0; l < 2; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(seq[l][i][j].equals(ret[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(ret[l][i][j]));
                     }
 
             VariableArraySequenceHolder inOut = new VariableArraySequenceHolder(
@@ -704,24 +707,24 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             ret = ti.opVariableArraySequence(seq, inOut, out);
 
-            TEST(ret.length == 6);
-            TEST(inOut.value.length == 6);
-            TEST(out.value.length == 6);
+            assertTrue(ret.length == 6);
+            assertTrue(inOut.value.length == 6);
+            assertTrue(out.value.length == 6);
 
             for (l = 0; l < 2; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(seq[l][i][j].equals(ret[l][i][j]));
-                        TEST(seq[l][i][j].equals(inOut.value[l][i][j]));
-                        TEST(seq[l][i][j].equals(out.value[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(ret[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(inOut.value[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(out.value[l][i][j]));
                     }
 
             for (l = 0; l < 4; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(ret[2 + l][i][j].equals("***"));
-                        TEST(inOut.value[2 + l][i][j].equals("***"));
-                        TEST(out.value[2 + l][i][j].equals("***"));
+                        assertTrue(ret[2 + l][i][j].equals("***"));
+                        assertTrue(inOut.value[2 + l][i][j].equals("***"));
+                        assertTrue(out.value[2 + l][i][j].equals("***"));
                     }
         }
 
@@ -758,7 +761,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(seq[l][i][j][k] == ret[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == ret[l][i][j][k]);
                         }
 
             FixedArrayBoundSequenceHolder inOut = new FixedArrayBoundSequenceHolder(
@@ -773,26 +776,26 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             ret = ti.opFixedArrayBoundSequence(seq, inOut, out);
 
-            TEST(ret.length == 7);
-            TEST(inOut.value.length == 7);
-            TEST(out.value.length == 7);
+            assertTrue(ret.length == 7);
+            assertTrue(inOut.value.length == 7);
+            assertTrue(out.value.length == 7);
 
             for (l = 0; l < 3; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(seq[l][i][j][k] == ret[l][i][j][k]);
-                            TEST(seq[l][i][j][k] == inOut.value[l][i][j][k]);
-                            TEST(seq[l][i][j][k] == out.value[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == ret[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == inOut.value[l][i][j][k]);
+                            assertTrue(seq[l][i][j][k] == out.value[l][i][j][k]);
                         }
 
             for (l = 0; l < 4; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(ret[3 + l][i][j][k] == i + j + k + l);
-                            TEST(inOut.value[3 + l][i][j][k] == i + j + k + l);
-                            TEST(out.value[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(ret[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(inOut.value[3 + l][i][j][k] == i + j + k + l);
+                            assertTrue(out.value[3 + l][i][j][k] == i + j + k + l);
                         }
         }
 
@@ -813,7 +816,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             for (l = 0; l < 2; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(seq[l][i][j].equals(ret[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(ret[l][i][j]));
                     }
 
             VariableArrayBoundSequenceHolder inOut = new VariableArrayBoundSequenceHolder(
@@ -827,31 +830,31 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             ret = ti.opVariableArrayBoundSequence(seq, inOut, out);
 
-            TEST(ret.length == 6);
-            TEST(inOut.value.length == 6);
-            TEST(out.value.length == 6);
+            assertTrue(ret.length == 6);
+            assertTrue(inOut.value.length == 6);
+            assertTrue(out.value.length == 6);
 
             for (l = 0; l < 2; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(seq[l][i][j].equals(ret[l][i][j]));
-                        TEST(seq[l][i][j].equals(inOut.value[l][i][j]));
-                        TEST(seq[l][i][j].equals(out.value[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(ret[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(inOut.value[l][i][j]));
+                        assertTrue(seq[l][i][j].equals(out.value[l][i][j]));
                     }
 
             for (l = 0; l < 4; l++)
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(ret[2 + l][i][j].equals("***"));
-                        TEST(inOut.value[2 + l][i][j].equals("***"));
-                        TEST(out.value[2 + l][i][j].equals("***"));
+                        assertTrue(ret[2 + l][i][j].equals("***"));
+                        assertTrue(inOut.value[2 + l][i][j].equals("***"));
+                        assertTrue(out.value[2 + l][i][j].equals("***"));
                     }
         }
 
         {
             try {
                 ti.opVoidEx();
-                TEST(false);
+                assertTrue(false);
             } catch (ExVoid ex) {
             }
         }
@@ -862,9 +865,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opShortEx((short) 10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExShort ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -874,9 +877,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opLongEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExLong ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -886,9 +889,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opUShortEx((short) 10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExUShort ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -898,9 +901,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opULongEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExULong ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -910,9 +913,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opFloatEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFloat ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -922,9 +925,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opDoubleEx(10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExDouble ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -934,9 +937,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opBooleanEx(true, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExBoolean ex) {
-                TEST(ex.value == true);
+                assertTrue(ex.value == true);
             }
         }
 
@@ -946,9 +949,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opCharEx('a', inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExChar ex) {
-                TEST(ex.value == 'b');
+                assertTrue(ex.value == 'b');
             }
         }
 
@@ -958,9 +961,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opOctetEx((byte) 10, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExOctet ex) {
-                TEST(ex.value == 30);
+                assertTrue(ex.value == 30);
             }
         }
 
@@ -970,9 +973,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opStringEx("Hello, ", inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExString ex) {
-                TEST(ex.value.equals("Hello, world!"));
+                assertTrue(ex.value.equals("Hello, world!"));
             }
         }
 
@@ -986,11 +989,11 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opAnyEx(any, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExAny ex) {
                 VariableStruct vStructRet;
                 vStructRet = VariableStructHelper.extract(any);
-                TEST(vStructRet.s.equals("xyz"));
+                assertTrue(vStructRet.s.equals("xyz"));
             }
         }
 
@@ -1001,9 +1004,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opTestEnumEx(TestEnum.TestEnum3, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExTestEnum ex) {
-                TEST(ex.value == TestEnum.TestEnum3);
+                assertTrue(ex.value == TestEnum.TestEnum3);
             }
         }
 
@@ -1014,10 +1017,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opIntfEx(ti, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_Basic.ExIntf ex) {
-                TEST(ex.value._hash(1000) == ti._hash(1000));
-                TEST(ex.value._is_equivalent(ti));
+                assertTrue(ex.value._hash(1000) == ti._hash(1000));
+                assertTrue(ex.value._is_equivalent(ti));
             }
         }
 
@@ -1032,10 +1035,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opFixedStructEx(st, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFixedStruct ex) {
-                TEST(ex.value.s == st.s);
-                TEST(ex.value.l == st.l);
+                assertTrue(ex.value.s == st.s);
+                assertTrue(ex.value.l == st.l);
             }
         }
 
@@ -1049,9 +1052,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opVariableStructEx(st, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExVariableStruct ex) {
-                TEST(ex.value.s.equals(st.s));
+                assertTrue(ex.value.s.equals(st.s));
             }
         }
 
@@ -1064,10 +1067,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opFixedUnionEx(un, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFixedUnion ex) {
-                TEST(ex.value.discriminator() == 999);
-                TEST(ex.value.b() == true);
+                assertTrue(ex.value.discriminator() == 999);
+                assertTrue(ex.value.b() == true);
             }
         }
 
@@ -1083,10 +1086,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opVariableUnionEx(un, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExVariableUnion ex) {
-                TEST(ex.value.ti()._hash(2000) == ti._hash(2000));
-                TEST(ex.value.ti()._is_equivalent(ti));
+                assertTrue(ex.value.ti()._hash(2000) == ti._hash(2000));
+                assertTrue(ex.value.ti()._is_equivalent(ti));
             }
         }
 
@@ -1103,14 +1106,14 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opStringSequenceEx(seq, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExStringSequence ex) {
-                TEST(ex.value.length == 5);
-                TEST(ex.value[0].equals("!!!"));
-                TEST(ex.value[1].equals("@@@"));
-                TEST(ex.value[2].equals("###"));
-                TEST(ex.value[3].equals("%"));
-                TEST(ex.value[4].equals("^^"));
+                assertTrue(ex.value.length == 5);
+                assertTrue(ex.value[0].equals("!!!"));
+                assertTrue(ex.value[1].equals("@@@"));
+                assertTrue(ex.value[2].equals("###"));
+                assertTrue(ex.value[3].equals("%"));
+                assertTrue(ex.value[4].equals("^^"));
             }
         }
 
@@ -1131,12 +1134,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opFixedArrayEx(ar, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFixedArray ex) {
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++)
                         for (k = 0; k < 4; k++) {
-                            TEST(ar[i][j][k] == ex.value[i][j][k]);
+                            assertTrue(ar[i][j][k] == ex.value[i][j][k]);
                         }
             }
         }
@@ -1154,11 +1157,11 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opVariableArrayEx(ar, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExVariableArray ex) {
                 for (i = 0; i < 2; i++)
                     for (j = 0; j < 3; j++) {
-                        TEST(ar[i][j].equals(ex.value[i][j]));
+                        assertTrue(ar[i][j].equals(ex.value[i][j]));
                     }
             }
         }
@@ -1200,22 +1203,22 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ret = ti.opFixedArraySequenceEx(seq, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFixedArraySequence ex) {
-                TEST(ex.value.length == 7);
+                assertTrue(ex.value.length == 7);
 
                 for (l = 0; l < 3; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
                             for (k = 0; k < 4; k++) {
-                                TEST(seq[l][i][j][k] == ex.value[l][i][j][k]);
+                                assertTrue(seq[l][i][j][k] == ex.value[l][i][j][k]);
                             }
 
                 for (l = 0; l < 4; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
                             for (k = 0; k < 4; k++) {
-                                TEST(ex.value[3 + l][i][j][k] == i + j + k + l);
+                                assertTrue(ex.value[3 + l][i][j][k] == i + j + k + l);
                             }
             }
         }
@@ -1241,20 +1244,20 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ret = ti.opVariableArraySequenceEx(seq, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExVariableArraySequence ex) {
-                TEST(ex.value.length == 6);
+                assertTrue(ex.value.length == 6);
 
                 for (l = 0; l < 2; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++) {
-                            TEST(seq[l][i][j].equals(ex.value[l][i][j]));
+                            assertTrue(seq[l][i][j].equals(ex.value[l][i][j]));
                         }
 
                 for (l = 0; l < 4; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++) {
-                            TEST(ex.value[2 + l][i][j].equals("***"));
+                            assertTrue(ex.value[2 + l][i][j].equals("***"));
                         }
 
             }
@@ -1297,21 +1300,21 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ret = ti.opFixedArrayBoundSequenceEx(seq, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExFixedArrayBoundSequence ex) {
-                TEST(ex.value.length == 7);
+                assertTrue(ex.value.length == 7);
 
                 for (l = 0; l < 3; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
                             for (k = 0; k < 4; k++)
-                                TEST(seq[l][i][j][k] == ex.value[l][i][j][k]);
+								assertTrue(seq[l][i][j][k] == ex.value[l][i][j][k]);
 
                 for (l = 0; l < 4; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
                             for (k = 0; k < 4; k++)
-                                TEST(ex.value[3 + l][i][j][k] == i + j + k + l);
+								assertTrue(ex.value[3 + l][i][j][k] == i + j + k + l);
             }
         }
 
@@ -1336,33 +1339,33 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 ret = ti.opVariableArrayBoundSequenceEx(seq, inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ExVariableArrayBoundSequence ex) {
-                TEST(ex.value.length == 6);
+                assertTrue(ex.value.length == 6);
 
                 for (l = 0; l < 2; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
-                            TEST(seq[l][i][j].equals(ex.value[l][i][j]));
+							assertTrue(seq[l][i][j].equals(ex.value[l][i][j]));
 
                 for (l = 0; l < 4; l++)
                     for (i = 0; i < 2; i++)
                         for (j = 0; j < 3; j++)
-                            TEST(ex.value[2 + l][i][j].equals("***"));
+							assertTrue(ex.value[2 + l][i][j].equals("***"));
             }
         }
         {
             try {
                 ti.opExRecursiveStruct();
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_Basic.ExRecursiveStruct ex) {
-                TEST(ex.us == 1);
-                TEST(ex.rs.s.equals("test"));
-                TEST(ex.rs.i == 2);
-                TEST(ex.rs.rs.length == 1);
-                TEST(ex.rs.rs[0].s.equals("ORBTest_Basic_RecursiveStruct"));
-                TEST(ex.rs.rs[0].i == 111);
-                TEST(ex.rs.rs[0].rs.length == 0);
+                assertTrue(ex.us == 1);
+                assertTrue(ex.rs.s.equals("test"));
+                assertTrue(ex.rs.i == 2);
+                assertTrue(ex.rs.rs.length == 1);
+                assertTrue(ex.rs.rs[0].s.equals("ORBTest_Basic_RecursiveStruct"));
+                assertTrue(ex.rs.rs[0].i == 111);
+                assertTrue(ex.rs.rs[0].rs.length == 0);
             }
         }
     }
@@ -1399,7 +1402,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = request.return_value().extract_short();
-            TEST(ret == (short) -32768);
+            assertTrue(ret == (short) -32768);
 
             request = ti._request("_set_attrShort");
             request.add_in_arg().insert_short((short) 32767);
@@ -1412,7 +1415,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = request.return_value().extract_short();
-            TEST(ret == (short) 32767);
+            assertTrue(ret == (short) 32767);
 
             request = ti._request("opShort");
             request.add_in_arg().insert_short((short) 10);
@@ -1427,9 +1430,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             inOut = inOutAny.extract_short();
             out = outAny.extract_short();
             ret = request.return_value().extract_short();
-            TEST(ret == 30);
-            TEST(inOut == 30);
-            TEST(out == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut == 30);
+            assertTrue(out == 30);
         }
 
         {
@@ -1450,7 +1453,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = request.return_value().extract_double();
-            TEST(ret == 1.7976931348623157E+308);
+            assertTrue(ret == 1.7976931348623157E+308);
 
             request = ti._request("_set_attrDouble");
             request.add_in_arg().insert_double(2.2250738585072014E-308);
@@ -1463,7 +1466,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = request.return_value().extract_double();
-            TEST(ret == 2.2250738585072014E-308);
+            assertTrue(ret == 2.2250738585072014E-308);
 
             request = ti._request("opDouble");
             request.add_in_arg().insert_double(10.0);
@@ -1478,9 +1481,9 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             inOut = inOutAny.extract_double();
             out = outAny.extract_double();
             ret = request.return_value().extract_double();
-            TEST(ret == 30);
-            TEST(inOut == 30);
-            TEST(out == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut == 30);
+            assertTrue(out == 30);
         }
 
         {
@@ -1501,7 +1504,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = request.return_value().extract_string();
-            TEST(ret.equals("Hello"));
+            assertTrue(ret.equals("Hello"));
 
             request = ti._request("opString");
             request.add_in_arg().insert_string("Hello, ");
@@ -1516,8 +1519,8 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             inOut = inOutAny.extract_string();
             out = outAny.extract_string();
             ret = request.return_value().extract_string();
-            TEST(ret.equals("Hello, world!"));
-            TEST(out.equals("Hello, world!"));
+            assertTrue(ret.equals("Hello, world!"));
+            assertTrue(out.equals("Hello, world!"));
         }
 
         {
@@ -1540,10 +1543,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             if (request.env().exception() != null)
                 throw (SystemException) request.env().exception();
             ret = StringSequenceHelper.extract(request.return_value());
-            TEST(ret.length == 3);
-            TEST(ret[0].equals("!!!"));
-            TEST(ret[1].equals("@@@"));
-            TEST(ret[2].equals("###"));
+            assertTrue(ret.length == 3);
+            assertTrue(ret[0].equals("!!!"));
+            assertTrue(ret[1].equals("@@@"));
+            assertTrue(ret[2].equals("###"));
 
             inOut = new String[2];
             inOut[0] = "%";
@@ -1561,24 +1564,24 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             ret = StringSequenceHelper.extract(request.return_value());
             inOut = StringSequenceHelper.extract(inOutAny);
             out = StringSequenceHelper.extract(outAny);
-            TEST(ret.length == 5);
-            TEST(ret[0].equals("!!!"));
-            TEST(ret[1].equals("@@@"));
-            TEST(ret[2].equals("###"));
-            TEST(ret[3].equals("%"));
-            TEST(ret[4].equals("^^"));
-            TEST(inOut.length == 5);
-            TEST(inOut[0].equals("!!!"));
-            TEST(inOut[1].equals("@@@"));
-            TEST(inOut[2].equals("###"));
-            TEST(inOut[3].equals("%"));
-            TEST(inOut[4].equals("^^"));
-            TEST(out.length == 5);
-            TEST(out[0].equals("!!!"));
-            TEST(out[1].equals("@@@"));
-            TEST(out[2].equals("###"));
-            TEST(out[3].equals("%"));
-            TEST(out[4].equals("^^"));
+            assertTrue(ret.length == 5);
+            assertTrue(ret[0].equals("!!!"));
+            assertTrue(ret[1].equals("@@@"));
+            assertTrue(ret[2].equals("###"));
+            assertTrue(ret[3].equals("%"));
+            assertTrue(ret[4].equals("^^"));
+            assertTrue(inOut.length == 5);
+            assertTrue(inOut[0].equals("!!!"));
+            assertTrue(inOut[1].equals("@@@"));
+            assertTrue(inOut[2].equals("###"));
+            assertTrue(inOut[3].equals("%"));
+            assertTrue(inOut[4].equals("^^"));
+            assertTrue(out.length == 5);
+            assertTrue(out[0].equals("!!!"));
+            assertTrue(out[1].equals("@@@"));
+            assertTrue(out[2].equals("###"));
+            assertTrue(out[3].equals("%"));
+            assertTrue(out[4].equals("^^"));
         }
 
         {
@@ -1599,10 +1602,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             ret = request.return_value().extract_char();
-            TEST(ret == 'a');
+            assertTrue(ret == 'a');
 
             request = ti._request("opChar");
             request.add_in_arg().insert_char('a');
@@ -1615,14 +1618,14 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             inOut = inOutAny.extract_char();
             out = outAny.extract_char();
             ret = request.return_value().extract_char();
-            TEST(ret == 'b');
-            TEST(inOut == 'b');
-            TEST(out == 'b');
+            assertTrue(ret == 'b');
+            assertTrue(inOut == 'b');
+            assertTrue(out == 'b');
         }
 
         {
@@ -1647,12 +1650,12 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request.get_response();
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             ret = VariableArrayHelper.extract(request.return_value());
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++) {
-                    TEST(ar[i][j].equals(ret[i][j]));
+                    assertTrue(ar[i][j].equals(ret[i][j]));
                 }
 
             String[][] ar2 = { { "abc", "abc", "abc" }, { "abc", "abc", "abc" } };
@@ -1670,33 +1673,33 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request.get_response();
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             ret = VariableArrayHelper.extract(request.return_value());
             inOut = VariableArrayHelper.extract(inOutAny);
             out = VariableArrayHelper.extract(outAny);
             for (i = 0; i < 2; i++)
                 for (j = 0; j < 3; j++) {
-                    TEST(ar[i][j].equals(ret[i][j]));
-                    TEST(ar[i][j].equals(inOut[i][j]));
-                    TEST(ar[i][j].equals(out[i][j]));
+                    assertTrue(ar[i][j].equals(ret[i][j]));
+                    assertTrue(ar[i][j].equals(inOut[i][j]));
+                    assertTrue(ar[i][j].equals(out[i][j]));
                 }
         }
 
         try {
             m_orb.poll_next_response();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
             // Expected
         }
 
         try {
             m_orb.get_next_response();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
             // Expected
         } catch (org.omg.CORBA.WrongTransaction ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         {
@@ -1709,35 +1712,35 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 request.invoke();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.send_oneway();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.send_deferred();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.poll_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.get_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
         }
 
@@ -1748,36 +1751,36 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
 
             try {
                 request.poll_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.get_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             request.send_deferred();
 
             try {
                 request.invoke();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.send_oneway();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.send_deferred();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
@@ -1785,22 +1788,22 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request.get_response();
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 request.poll_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             }
             try {
                 request.get_response();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.CORBA.BAD_INV_ORDER ex) {
                 // Expected
             } catch (org.omg.CORBA.WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
         }
 
@@ -1829,11 +1832,11 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                 try {
                     request = m_orb.get_next_response();
                 } catch (org.omg.CORBA.WrongTransaction ex) {
-                    TEST(false);
+                    assertTrue(false);
                 }
 
                 short ret = request.return_value().extract_ushort();
-                TEST(ret == (short) 1234);
+                assertTrue(ret == (short) 1234);
             }
         }
 
@@ -1875,36 +1878,36 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             try {
                 request5.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             inOut = inOutAny.extract_float();
             out = outAny.extract_float();
             ret = request5.return_value().extract_float();
-            TEST(ret == 30);
-            TEST(inOut == 30);
-            TEST(out == 30);
+            assertTrue(ret == 30);
+            assertTrue(inOut == 30);
+            assertTrue(out == 30);
 
             try {
                 request2.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             ret = request2.return_value().extract_float();
-            TEST(ret == 1);
+            assertTrue(ret == 1);
 
             try {
                 request4.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
             ret = request4.return_value().extract_float();
-            TEST(ret == -1);
+            assertTrue(ret == -1);
 
             try {
                 request1.get_response();
                 request3.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
         }
 
@@ -1918,7 +1921,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
                 request.invoke();
                 ex = request.env().exception();
                 UNKNOWN dummy = (UNKNOWN) ex;
-                TEST(dummy != null);
+                assertTrue(dummy != null);
             } catch (UNKNOWN e) {
                 // expected in JDK 1.2
             }
@@ -1929,7 +1932,7 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             ex = request.env().exception();
             UnknownUserException uex;
             uex = (UnknownUserException) ex;
-            TEST(uex != null);
+            assertTrue(uex != null);
             ExVoid iex;
             iex = ExVoidHelper.extract(uex.except);
         }
@@ -1947,10 +1950,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             Exception ex = request.env().exception();
             UnknownUserException uex;
             uex = (UnknownUserException) ex;
-            TEST(uex != null);
+            assertTrue(uex != null);
             ExShort iex;
             iex = ExShortHelper.extract(uex.except);
-            TEST(iex.value == 30);
+            assertTrue(iex.value == 30);
         }
 
         {
@@ -1966,10 +1969,10 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             Exception ex = request.env().exception();
             UnknownUserException uex;
             uex = (UnknownUserException) ex;
-            TEST(uex != null);
+            assertTrue(uex != null);
             ExDouble iex;
             iex = ExDoubleHelper.extract(uex.except);
-            TEST(iex.value == 30);
+            assertTrue(iex.value == 30);
         }
 
         {
@@ -1992,15 +1995,15 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             Exception ex = request.env().exception();
             UnknownUserException uex;
             uex = (UnknownUserException) ex;
-            TEST(uex != null);
+            assertTrue(uex != null);
             ExStringSequence iex;
             iex = ExStringSequenceHelper.extract(uex.except);
-            TEST(iex.value.length == 5);
-            TEST(iex.value[0].equals("!!!"));
-            TEST(iex.value[1].equals("@@@"));
-            TEST(iex.value[2].equals("###"));
-            TEST(iex.value[3].equals("%"));
-            TEST(iex.value[4].equals("^^"));
+            assertTrue(iex.value.length == 5);
+            assertTrue(iex.value[0].equals("!!!"));
+            assertTrue(iex.value[1].equals("@@@"));
+            assertTrue(iex.value[2].equals("###"));
+            assertTrue(iex.value[3].equals("%"));
+            assertTrue(iex.value[4].equals("^^"));
         }
 
         {
@@ -2011,17 +2014,17 @@ public class TestObjectBasic extends test.common.TestBase implements TestObject 
             Exception ex = request.env().exception();
             UnknownUserException uex;
             uex = (UnknownUserException) ex;
-            TEST(uex != null);
+            assertTrue(uex != null);
             ORBTest_Basic.ExRecursiveStruct iex;
             iex = ORBTest_Basic.ExRecursiveStructHelper.extract(uex.except);
 
-            TEST(iex.us == 1);
-            TEST(iex.rs.s.equals("test"));
-            TEST(iex.rs.i == 2);
-            TEST(iex.rs.rs.length == 1);
-            TEST(iex.rs.rs[0].s.equals("ORBTest_Basic_RecursiveStruct"));
-            TEST(iex.rs.rs[0].i == 111);
-            TEST(iex.rs.rs[0].rs.length == 0);
+            assertTrue(iex.us == 1);
+            assertTrue(iex.rs.s.equals("test"));
+            assertTrue(iex.rs.i == 2);
+            assertTrue(iex.rs.rs.length == 1);
+            assertTrue(iex.rs.rs[0].s.equals("ORBTest_Basic_RecursiveStruct"));
+            assertTrue(iex.rs.rs[0].i == 111);
+            assertTrue(iex.rs.rs[0].rs.length == 0);
         }
     }
 }

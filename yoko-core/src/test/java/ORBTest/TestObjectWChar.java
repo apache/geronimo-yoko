@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectWChar extends test.common.TestBase implements TestObject {
@@ -51,20 +53,20 @@ public class TestObjectWChar extends test.common.TestBase implements TestObject 
             char ret;
             ti.attrWChar('a');
             ret = ti.attrWChar();
-            TEST(ret == 'a');
+            assertTrue(ret == 'a');
             ti.attrWChar((char) 224);
             ret = ti.attrWChar();
-            TEST(ret == (char) 224);
+            assertTrue(ret == (char) 224);
             ti.attrWChar((char) 0x20ac);
             ret = ti.attrWChar();
-            TEST(ret == (char) 0x20ac);
+            assertTrue(ret == (char) 0x20ac);
 
             CharHolder inOut = new CharHolder((char) 1);
             CharHolder out = new CharHolder();
             ret = ti.opWChar('a', inOut, out);
-            TEST(ret == 'b');
-            TEST(inOut.value == 'b');
-            TEST(out.value == 'b');
+            assertTrue(ret == 'b');
+            assertTrue(inOut.value == 'b');
+            assertTrue(out.value == 'b');
         }
 
         {
@@ -72,17 +74,17 @@ public class TestObjectWChar extends test.common.TestBase implements TestObject 
 
             ti.attrWString("");
             ret = ti.attrWString();
-            TEST(ret.equals(""));
+            assertTrue(ret.equals(""));
 
             ti.attrWString("Hello");
             ret = ti.attrWString();
-            TEST(ret.equals("Hello"));
+            assertTrue(ret.equals("Hello"));
 
             StringHolder inOut = new StringHolder("world!");
             StringHolder out = new StringHolder();
             ret = ti.opWString("Hello, ", inOut, out);
-            TEST(ret.equals("Hello, world!"));
-            TEST(out.value.equals("Hello, world!"));
+            assertTrue(ret.equals("Hello, world!"));
+            assertTrue(out.value.equals("Hello, world!"));
         }
 
         {
@@ -91,9 +93,9 @@ public class TestObjectWChar extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opWCharEx('a', inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_WChar.ExWChar ex) {
-                TEST(ex.value == 'b');
+                assertTrue(ex.value == 'b');
             }
         }
 
@@ -103,9 +105,9 @@ public class TestObjectWChar extends test.common.TestBase implements TestObject 
 
             try {
                 ti.opWStringEx("Hello, ", inOut, out);
-                TEST(false);
+                assertTrue(false);
             } catch (ORBTest_WChar.ExWString ex) {
-                TEST(ex.value.equals("Hello, world!"));
+                assertTrue(ex.value.equals("Hello, world!"));
             }
         }
 

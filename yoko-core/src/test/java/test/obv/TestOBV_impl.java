@@ -17,6 +17,8 @@
 
 package test.obv;
 
+import static org.junit.Assert.assertTrue;
+
 public class TestOBV_impl extends TestOBVPOA {
     private org.omg.CORBA.ORB orb_;
 
@@ -37,7 +39,7 @@ public class TestOBV_impl extends TestOBVPOA {
     private TestInterfacePOATie valueInterfaceTie_; // Java only
 
     private void TEST(boolean b) {
-        test.common.TestBase.TEST(b);
+        assertTrue(b);
     }
 
     public TestOBV_impl(org.omg.CORBA.ORB orb,

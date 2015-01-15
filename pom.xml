@@ -44,7 +44,7 @@
         <antrun.version>1.1</antrun.version>
         <!--<antlr.version>2.7.5</antlr.version>-->
         <bcel.version>5.2</bcel.version>
-        <junit.version>4.5</junit.version>
+        <junit.version>4.12</junit.version>
         <compile.flags>-Xlint:unchecked,deprecation,fallthrough,finally</compile.flags>
         <java.endorsed.dirs>${basedir}/target/classes</java.endorsed.dirs>
         <compile.forked>false</compile.forked>
@@ -202,8 +202,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <source>1.6</source>
-                    <target>1.6</target>
+                    <source>1.7</source>
+                    <target>1.7</target>
                     <compilerArguments>
                         <endorseddirs>${project.build.directory}/endorsed</endorseddirs>
                     </compilerArguments>

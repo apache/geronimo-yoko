@@ -17,10 +17,13 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 import org.omg.PortableServer.POAManagerPackage.*;
+
 import java.io.*;
 import java.util.Properties;
 
@@ -198,7 +201,7 @@ public final class TestServantActivatorServer extends test.common.TestBase {
             }
             orb.run();
 
-            TEST(activatorImpl.etherealize_called());
+            assertTrue(activatorImpl.etherealize_called());
 
             File file = new File(refFile);
             file.delete();

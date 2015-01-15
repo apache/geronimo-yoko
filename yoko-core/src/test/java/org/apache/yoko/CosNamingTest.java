@@ -22,20 +22,26 @@
  */
 package org.apache.yoko;
 
-import java.io.File;
+import test.tnaming.ClientForReadOnlyNameService;
+import test.tnaming.ClientForWritableNameService;
+import test.tnaming.ServerWithIntegralNameService;
+import test.tnaming.ServerWithReadOnlyNameService;
+import test.tnaming.ServerWithStandaloneNameService;
+import test.tnaming.Util;
 
 public class CosNamingTest extends AbstractOrbTestBase {
-    private static final String SERVER_CLASS = "test.tnaming.Server";
-    private static final String CLIENT_CLASS = "test.tnaming.Client";
-
-    public void setUp() throws Exception {
-        super.setUp();
-        setWaitForFile(new File("Test.ref"));
+    public void testStandaloneNameService() throws Exception {
+        setWaitForFile(Util.useRefFile(ServerWithStandaloneNameService.REF_FILE_NAME));
+        runServerClientTest(ServerWithStandaloneNameService.class, ClientForWritableNameService.class);
     }
-
-    public void testNameService() throws Exception {
-        runServerClientTest(SERVER_CLASS, CLIENT_CLASS);
+    
+    public void testIntegralNameService() throws Exception {
+        setWaitForFile(Util.useRefFile(ServerWithIntegralNameService.REF_FILE_NAME));
+        runServerClientTest(ServerWithIntegralNameService.class, ClientForWritableNameService.class);
+    }
+    
+    public void testReadOnlyNameService() throws Exception {
+        setWaitForFile(Util.useRefFile(ServerWithReadOnlyNameService.REF_FILE_NAME));
+        runServerClientTest(ServerWithReadOnlyNameService.class, ClientForReadOnlyNameService.class);
     }
 }
-
-

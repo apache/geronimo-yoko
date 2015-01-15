@@ -17,13 +17,17 @@
 
 package test.types;
 
+import static org.junit.Assert.assertTrue;
+
 import java.math.*;
 import java.util.Properties;
+
 import org.omg.CORBA.Any;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.ORB;
 import org.omg.DynamicAny.*;
+
 import test.types.DynAnyTypes.*;
 
 public class TestDynAny extends test.common.TestBase {
@@ -120,7 +124,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1 = factory.create_dyn_any_from_type_code(tc);
             TypeCode tcv = d1.type();
-            TEST(tc.equal(tcv));
+            assertTrue(tc.equal(tcv));
             d1.destroy();
 
             //
@@ -130,7 +134,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 d2 = factory.create_dyn_any(badAny);
                 d1.assign(d2);
-                TEST("assign() should not have succeeded" == null);
+                assertTrue("assign() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d1.destroy();
@@ -143,7 +147,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 d1.from_any(badAny);
-                TEST("from_any() should not have succeeded" == null);
+                assertTrue("from_any() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d1.destroy();
@@ -169,7 +173,7 @@ public class TestDynAny extends test.common.TestBase {
                     a.type(tc);
                     d1 = factory.create_dyn_any_from_type_code(tc);
                     d1.from_any(a);
-                    TEST("from_any() should not have succeeded" == null);
+                    assertTrue("from_any() should not have succeeded" == null);
                 } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                     // expected
                     d1.destroy();
@@ -185,35 +189,35 @@ public class TestDynAny extends test.common.TestBase {
                     count = d1.component_count();
                 else
                     count = origTC.member_count();
-                TEST(count > 0);
+                assertTrue(count > 0);
 
                 //
                 // Test: seek
                 //
-                TEST(d1.seek(0) == true);
-                TEST(d1.seek(-1) == false);
-                TEST(d1.seek(count) == false);
-                TEST(d1.seek(count - 1) == true);
+                assertTrue(d1.seek(0) == true);
+                assertTrue(d1.seek(-1) == false);
+                assertTrue(d1.seek(count) == false);
+                assertTrue(d1.seek(count - 1) == true);
 
                 //
                 // Test: next
                 //
                 d1.seek(-1);
-                TEST(d1.next() == true);
+                assertTrue(d1.next() == true);
                 d1.seek(count - 1);
-                TEST(d1.next() == false);
+                assertTrue(d1.next() == false);
 
                 //
                 // Test: component_count()
                 //
-                TEST(d1.component_count() == count);
+                assertTrue(d1.component_count() == count);
 
                 //
                 // Test: current_component
                 //
                 d1.rewind();
                 d2 = d1.current_component();
-                TEST(d2 != null);
+                assertTrue(d2 != null);
 
                 //
                 // Test: destroy
@@ -226,7 +230,7 @@ public class TestDynAny extends test.common.TestBase {
                 //
                 d1.seek(-9);
                 d3 = d1.current_component();
-                TEST(d3 == null);
+                assertTrue(d3 == null);
 
                 d1.destroy();
             } else {
@@ -235,25 +239,25 @@ public class TestDynAny extends test.common.TestBase {
                 //
                 // Test: seek
                 //
-                TEST(d1.seek(0) == false);
-                TEST(d1.seek(-1) == false);
+                assertTrue(d1.seek(0) == false);
+                assertTrue(d1.seek(-1) == false);
 
                 //
                 // Test: next
                 //
-                TEST(d1.next() == false);
+                assertTrue(d1.next() == false);
 
                 //
                 // Test: component_count()
                 //
-                TEST(d1.component_count() == 0);
+                assertTrue(d1.component_count() == 0);
 
                 //
                 // Test: current_component TypeMismatch exception
                 //
                 try {
                     d1.current_component();
-                    TEST("current_component() should not have succeeded" == null);
+                    assertTrue("current_component() should not have succeeded" == null);
                 } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                     // expected
                 }
@@ -261,13 +265,13 @@ public class TestDynAny extends test.common.TestBase {
                 d1.destroy();
             }
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -284,28 +288,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_short);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_short() == (short) 0);
+            assertTrue(d1.get_short() == (short) 0);
             d1.insert_short((short) -53);
-            TEST(d1.get_short() == (short) -53);
+            assertTrue(d1.get_short() == (short) -53);
             d1.insert_short((short) 32000);
-            TEST(d1.get_short() == (short) 32000);
+            assertTrue(d1.get_short() == (short) 32000);
 
             av = d1.to_any();
             short shortVal = av.extract_short();
-            TEST(shortVal == (short) 32000);
+            assertTrue(shortVal == (short) 32000);
 
             any.insert_short((short) 32000);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_short() == (short) 32000);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_short() == (short) 32000);
 
             any.insert_short((short) -99);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -318,28 +322,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_ushort);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_ushort() == (short) 0);
+            assertTrue(d1.get_ushort() == (short) 0);
             d1.insert_ushort((short) 199);
-            TEST(d1.get_ushort() == (short) 199);
+            assertTrue(d1.get_ushort() == (short) 199);
             d1.insert_ushort((short) 65001);
-            TEST(d1.get_ushort() == (short) 65001);
+            assertTrue(d1.get_ushort() == (short) 65001);
 
             av = d1.to_any();
             short ushortVal = av.extract_ushort();
-            TEST(ushortVal == (short) 65001);
+            assertTrue(ushortVal == (short) 65001);
 
             any.insert_ushort((short) 65001);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_ushort() == (short) 65001);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_ushort() == (short) 65001);
 
             any.insert_ushort((short) 501);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -352,28 +356,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_long);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_long() == 0);
+            assertTrue(d1.get_long() == 0);
             d1.insert_long(-530000);
-            TEST(d1.get_long() == -530000);
+            assertTrue(d1.get_long() == -530000);
             d1.insert_long(3200000);
-            TEST(d1.get_long() == 3200000);
+            assertTrue(d1.get_long() == 3200000);
 
             av = d1.to_any();
             int longVal = av.extract_long();
-            TEST(longVal == 3200000);
+            assertTrue(longVal == 3200000);
 
             any.insert_long(3200000);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_long() == 3200000);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_long() == 3200000);
 
             any.insert_long(-99000);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -386,28 +390,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_ulong);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_ulong() == 0);
+            assertTrue(d1.get_ulong() == 0);
             d1.insert_ulong(199000);
-            TEST(d1.get_ulong() == 199000);
+            assertTrue(d1.get_ulong() == 199000);
             d1.insert_ulong(65001000);
-            TEST(d1.get_ulong() == 65001000);
+            assertTrue(d1.get_ulong() == 65001000);
 
             av = d1.to_any();
             int ulongVal = av.extract_ulong();
-            TEST(ulongVal == 65001000);
+            assertTrue(ulongVal == 65001000);
 
             any.insert_ulong(65001000);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_ulong() == 65001000);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_ulong() == 65001000);
 
             any.insert_ulong(501000);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -420,28 +424,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_float);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_float() == 0.0f);
+            assertTrue(d1.get_float() == 0.0f);
             d1.insert_float(199.001f);
-            TEST(d1.get_float() > 199.0f && d1.get_float() < 199.1f);
+            assertTrue(d1.get_float() > 199.0f && d1.get_float() < 199.1f);
             d1.insert_float(6500.10001f);
-            TEST(d1.get_float() > 6500.0f && d1.get_float() < 6501.0f);
+            assertTrue(d1.get_float() > 6500.0f && d1.get_float() < 6501.0f);
 
             av = d1.to_any();
             float floatVal = av.extract_float();
-            TEST(floatVal > 6500.1 && floatVal < 6500.2);
+            assertTrue(floatVal > 6500.1 && floatVal < 6500.2);
 
             any.insert_float((float) 6500.10001);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_float() > 6500.1 && copy.get_float() < 6500.2);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_float() > 6500.1 && copy.get_float() < 6500.2);
 
             any.insert_float((float) 501.001);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -454,28 +458,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_double);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_double() == 0.0);
+            assertTrue(d1.get_double() == 0.0);
             d1.insert_double(199000.001);
-            TEST(d1.get_double() > 199000.0 && d1.get_double() < 199000.1);
+            assertTrue(d1.get_double() > 199000.0 && d1.get_double() < 199000.1);
             d1.insert_double(6500000.10001);
-            TEST(d1.get_double() > 6500000.1 && d1.get_double() < 6500000.2);
+            assertTrue(d1.get_double() > 6500000.1 && d1.get_double() < 6500000.2);
 
             av = d1.to_any();
             double doubleVal = av.extract_double();
-            TEST(doubleVal > 6500000.1 && doubleVal < 6500000.2);
+            assertTrue(doubleVal > 6500000.1 && doubleVal < 6500000.2);
 
             any.insert_double(6500000.10001);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_double() > 6500000.1 && copy.get_double() < 6500000.2);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_double() > 6500000.1 && copy.get_double() < 6500000.2);
 
             any.insert_double(501000.001);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -488,28 +492,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_boolean);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_boolean() == false);
+            assertTrue(d1.get_boolean() == false);
             d1.insert_boolean(false);
-            TEST(d1.get_boolean() == false);
+            assertTrue(d1.get_boolean() == false);
             d1.insert_boolean(true);
-            TEST(d1.get_boolean() == true);
+            assertTrue(d1.get_boolean() == true);
 
             av = d1.to_any();
             boolean boolVal = av.extract_boolean();
-            TEST(boolVal == true);
+            assertTrue(boolVal == true);
 
             any.insert_boolean(true);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_boolean() == true);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_boolean() == true);
 
             any.insert_boolean(false);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -522,28 +526,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_char);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_char() == 0);
+            assertTrue(d1.get_char() == 0);
             d1.insert_char('A');
-            TEST(d1.get_char() == 'A');
+            assertTrue(d1.get_char() == 'A');
             d1.insert_char('z');
-            TEST(d1.get_char() == 'z');
+            assertTrue(d1.get_char() == 'z');
 
             av = d1.to_any();
             char charVal = av.extract_char();
-            TEST(charVal == 'z');
+            assertTrue(charVal == 'z');
 
             any.insert_char('z');
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_char() == 'z');
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_char() == 'z');
 
             any.insert_char('@');
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -556,28 +560,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_octet);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_octet() == 0);
+            assertTrue(d1.get_octet() == 0);
             d1.insert_octet((byte) 255);
-            TEST(d1.get_octet() == (byte) 255);
+            assertTrue(d1.get_octet() == (byte) 255);
             d1.insert_octet((byte) 1);
-            TEST(d1.get_octet() == (byte) 1);
+            assertTrue(d1.get_octet() == (byte) 1);
 
             av = d1.to_any();
             byte octetVal = av.extract_octet();
-            TEST(octetVal == (byte) 1);
+            assertTrue(octetVal == (byte) 1);
 
             any.insert_octet((byte) 1);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_octet() == (byte) 1);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_octet() == (byte) 1);
 
             any.insert_octet((byte) 127);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -594,27 +598,27 @@ public class TestDynAny extends test.common.TestBase {
             d1.insert_any(any);
             av = d1.get_any();
             longVal = av.extract_long();
-            TEST(longVal == 345678);
+            assertTrue(longVal == 345678);
 
             Any anyVal = orb.create_any();
             anyVal.insert_long(345678);
             any.insert_any(anyVal);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             av = d1.to_any();
             Any cap = av.extract_any();
             longVal = cap.extract_long();
-            TEST(longVal == 345678);
+            assertTrue(longVal == 345678);
 
             anyVal.insert_string("anyValue");
             any.insert_any(anyVal);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
 
             d1.destroy();
             d2.destroy();
@@ -630,30 +634,30 @@ public class TestDynAny extends test.common.TestBase {
             d1 = factory.create_dyn_any_from_type_code(type);
             tcVal = d1.get_typecode();
             TypeCode tcNull = orb.get_primitive_tc(TCKind.tk_null);
-            TEST(tcVal.equal(tcNull));
+            assertTrue(tcVal.equal(tcNull));
             TypeCode tcFloat = orb.get_primitive_tc(TCKind.tk_float);
             d1.insert_typecode(tcFloat);
             tcVal = d1.get_typecode();
-            TEST(tcVal.equal(tcFloat));
+            assertTrue(tcVal.equal(tcFloat));
 
             av = d1.to_any();
             tcVal = av.extract_TypeCode();
-            TEST(tcVal.equal(tcFloat));
+            assertTrue(tcVal.equal(tcFloat));
 
             any.insert_TypeCode(tcFloat);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             tcVal = copy.get_typecode();
-            TEST(tcVal.equal(tcFloat));
+            assertTrue(tcVal.equal(tcFloat));
 
             TypeCode tcDouble = orb.get_primitive_tc(TCKind.tk_double);
             any.insert_TypeCode(tcDouble);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -666,34 +670,34 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_objref);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_reference() == null);
+            assertTrue(d1.get_reference() == null);
             org.omg.CORBA.Object objVal1, objVal2;
             objVal1 = orb.string_to_object("corbaloc::localhost:9999/SomeKey");
             d1.insert_reference(objVal1);
             objVal2 = d1.get_reference();
-            TEST(objVal1._is_equivalent(objVal2));
+            assertTrue(objVal1._is_equivalent(objVal2));
 
             av = d1.to_any();
             objVal2 = av.extract_Object();
-            TEST(objVal1._is_equivalent(objVal2));
+            assertTrue(objVal1._is_equivalent(objVal2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
 
             d2 = factory.create_dyn_any_from_type_code(type);
             any.insert_Object(objVal2);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.insert_reference(null);
             objVal1 = d1.get_reference();
-            TEST(objVal1 == null);
+            assertTrue(objVal1 == null);
             d2.assign(d1);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             copy.destroy();
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
 
             d1.destroy();
             d2.destroy();
@@ -708,28 +712,28 @@ public class TestDynAny extends test.common.TestBase {
             String stringVal;
             d1 = factory.create_dyn_any_from_type_code(type);
             stringVal = d1.get_string();
-            TEST(stringVal.length() == 0);
+            assertTrue(stringVal.length() == 0);
             d1.insert_string("polymorph");
             stringVal = d1.get_string();
-            TEST(stringVal.equals("polymorph"));
+            assertTrue(stringVal.equals("polymorph"));
 
             av = d1.to_any();
             String ccp = av.extract_string();
-            TEST(ccp.equals("polymorph"));
+            assertTrue(ccp.equals("polymorph"));
 
             any.insert_string("polymorph");
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             stringVal = copy.get_string();
-            TEST(stringVal.equals("polymorph"));
+            assertTrue(stringVal.equals("polymorph"));
 
             any.insert_string("cloister");
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -743,28 +747,28 @@ public class TestDynAny extends test.common.TestBase {
             long ll1 = -530000999L, ll2 = 3200000999L, ll3 = -99000999L;
             type = orb.get_primitive_tc(TCKind.tk_longlong);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_longlong() == 0);
+            assertTrue(d1.get_longlong() == 0);
             d1.insert_longlong(ll1);
-            TEST(d1.get_longlong() == ll1);
+            assertTrue(d1.get_longlong() == ll1);
             d1.insert_longlong(ll2);
-            TEST(d1.get_longlong() == ll2);
+            assertTrue(d1.get_longlong() == ll2);
 
             av = d1.to_any();
             long longlongVal = av.extract_longlong();
-            TEST(longlongVal == ll2);
+            assertTrue(longlongVal == ll2);
 
             any.insert_longlong(ll2);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_longlong() == ll2);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_longlong() == ll2);
 
             any.insert_longlong(ll3);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -778,28 +782,28 @@ public class TestDynAny extends test.common.TestBase {
             long ul1 = 199000999L, ul2 = 65001000999L, ul3 = 501000999L;
             type = orb.get_primitive_tc(TCKind.tk_ulonglong);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_ulonglong() == 0);
+            assertTrue(d1.get_ulonglong() == 0);
             d1.insert_ulonglong(ul1);
-            TEST(d1.get_ulonglong() == ul1);
+            assertTrue(d1.get_ulonglong() == ul1);
             d1.insert_ulonglong(ul2);
-            TEST(d1.get_ulonglong() == ul2);
+            assertTrue(d1.get_ulonglong() == ul2);
 
             av = d1.to_any();
             long ulonglongVal = av.extract_ulonglong();
-            TEST(ulonglongVal == ul2);
+            assertTrue(ulonglongVal == ul2);
 
             any.insert_ulonglong(ul2);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_ulonglong() == ul2);
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_ulonglong() == ul2);
 
             any.insert_ulonglong(ul3);
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -812,28 +816,28 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = orb.get_primitive_tc(TCKind.tk_wchar);
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.get_wchar() == 0);
+            assertTrue(d1.get_wchar() == 0);
             d1.insert_wchar('A');
-            TEST(d1.get_wchar() == 'A');
+            assertTrue(d1.get_wchar() == 'A');
             d1.insert_wchar('z');
-            TEST(d1.get_wchar() == 'z');
+            assertTrue(d1.get_wchar() == 'z');
 
             av = d1.to_any();
             char wcharVal = av.extract_wchar();
-            TEST(wcharVal == 'z');
+            assertTrue(wcharVal == 'z');
 
             any.insert_wchar('z');
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
-            TEST(copy.get_wchar() == 'z');
+            assertTrue(d1.equal(copy));
+            assertTrue(copy.get_wchar() == 'z');
 
             any.insert_wchar('@');
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -848,29 +852,29 @@ public class TestDynAny extends test.common.TestBase {
             String wstringVal;
             d1 = factory.create_dyn_any_from_type_code(type);
             wstringVal = d1.get_wstring();
-            TEST(wstringVal.length() == 0);
+            assertTrue(wstringVal.length() == 0);
             d1.insert_wstring("polymorph");
             wstringVal = d1.get_wstring();
             String wstr = "polymorph";
-            TEST(wstringVal.equals(wstr));
+            assertTrue(wstringVal.equals(wstr));
 
             av = d1.to_any();
             String cwp = av.extract_wstring();
-            TEST(cwp.equals(wstr));
+            assertTrue(cwp.equals(wstr));
 
             any.insert_wstring(wstr);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             wstringVal = copy.get_wstring();
-            TEST(wstringVal.equals(wstr));
+            assertTrue(wstringVal.equals(wstr));
 
             any.insert_wstring("cloister");
             d2.from_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
 
             d1.destroy();
             d2.destroy();
@@ -885,7 +889,7 @@ public class TestDynAny extends test.common.TestBase {
             d1 = factory.create_dyn_any_from_type_code(type);
             av = d1.to_any();
             tc = av.type();
-            TEST(tc.equal(type));
+            assertTrue(tc.equal(type));
             d2 = d1.copy();
             d1.assign(d2);
             d1.destroy();
@@ -900,7 +904,7 @@ public class TestDynAny extends test.common.TestBase {
             d1 = factory.create_dyn_any_from_type_code(type);
             av = d1.to_any();
             tc = av.type();
-            TEST(tc.equal(type));
+            assertTrue(tc.equal(type));
             d2 = d1.copy();
             d1.assign(d2);
             d1.destroy();
@@ -918,11 +922,11 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             d1.insert_dyn_any(d2);
             copy = d1.get_dyn_any();
-            TEST(copy.get_boolean() == true);
+            assertTrue(copy.get_boolean() == true);
             anyVal.insert_short((short) 53);
             d1.insert_any(anyVal);
             copy = d1.get_dyn_any();
-            TEST(copy.get_short() == (short) 53);
+            assertTrue(copy.get_short() == (short) 53);
             d1.destroy();
             d2.destroy();
 
@@ -933,11 +937,11 @@ public class TestDynAny extends test.common.TestBase {
             d1 = factory.create_dyn_any_from_type_code(type);
             d1.insert_string("123");
             stringVal = d1.get_string();
-            TEST(stringVal.equals("123"));
+            assertTrue(stringVal.equals("123"));
 
             try {
                 d1.insert_string("four");
-                TEST("insert_string() should not have succeeded" == null);
+                assertTrue("insert_string() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -951,21 +955,21 @@ public class TestDynAny extends test.common.TestBase {
             d1 = factory.create_dyn_any_from_type_code(type);
             d1.insert_wstring(wstr);
             wstringVal = d1.get_wstring();
-            TEST(wstringVal.equals(wstr));
+            assertTrue(wstringVal.equals(wstr));
 
             try {
                 d1.insert_wstring("four");
-                TEST("insert_wstring() should not have succeeded" == null);
+                assertTrue("insert_wstring() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -991,15 +995,15 @@ public class TestDynAny extends test.common.TestBase {
             f1 = DynFixedHelper.narrow(d1);
             str = f1.get_value();
             f = new BigDecimal(str);
-            TEST(f.equals(new BigDecimal("0")));
+            assertTrue(f.equals(new BigDecimal("0")));
 
             //
             // Test: set_value()
             //
-            TEST(f1.set_value("1.1"));
-            TEST(f1.set_value("123.1"));
-            TEST(f1.set_value("123.12"));
-            TEST(!f1.set_value("123.123"));
+            assertTrue(f1.set_value("1.1"));
+            assertTrue(f1.set_value("123.1"));
+            assertTrue(f1.set_value("123.12"));
+            assertTrue(!f1.set_value("123.123"));
 
             //
             // Test: from_any()
@@ -1013,13 +1017,13 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = f1.to_any();
             f = av.extract_fixed();
-            TEST(f.equals(new BigDecimal("98")));
+            assertTrue(f.equals(new BigDecimal("98")));
 
             //
             // Test: copy
             //
             copy = f1.copy();
-            TEST(f1.equal(copy));
+            assertTrue(f1.equal(copy));
 
             f1.destroy();
             copy.destroy();
@@ -1031,7 +1035,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 f1 = DynFixedHelper.narrow(d1);
                 f1.set_value("");
-                TEST("set_value() should not have succeeded" == null);
+                assertTrue("set_value() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
                 d1.destroy();
@@ -1044,7 +1048,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 f1 = DynFixedHelper.narrow(d1);
                 f1.set_value("-123D?");
-                TEST("set_value() should not have succeeded" == null);
+                assertTrue("set_value() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d1.destroy();
@@ -1057,7 +1061,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 f1 = DynFixedHelper.narrow(d1);
                 f1.set_value("12345.123"); // too many digits
-                TEST("set_value() should not have succeeded" == null);
+                assertTrue("set_value() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
                 d1.destroy();
@@ -1072,7 +1076,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any(any);
                 d2 = factory.create_dyn_any_from_type_code(tc);
                 d2.assign(d1);
-                TEST("assign() should not have succeeded" == null);
+                assertTrue("assign() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d1.destroy();
@@ -1087,7 +1091,7 @@ public class TestDynAny extends test.common.TestBase {
                 any.insert_fixed(f, orb.create_fixed_tc((short) 4, (short) 2));
                 d1 = factory.create_dyn_any_from_type_code(tc);
                 d1.from_any(any);
-                TEST("from_any() should not have succeeded" == null);
+                assertTrue("from_any() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d1.destroy();
@@ -1095,11 +1099,11 @@ public class TestDynAny extends test.common.TestBase {
 
             testOps(orb, factory, tc, false);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -1118,33 +1122,33 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1 = factory.create_dyn_any_from_type_code(type);
             e1 = DynEnumHelper.narrow(d1);
-            TEST(e1.get_as_ulong() == 0);
+            assertTrue(e1.get_as_ulong() == 0);
             str = e1.get_as_string();
-            TEST(str.equals("red"));
+            assertTrue(str.equals("red"));
 
             //
             // Test: set_as_string()
             //
             e1.set_as_string("green");
-            TEST(e1.get_as_ulong() == 1);
+            assertTrue(e1.get_as_ulong() == 1);
             str = e1.get_as_string();
-            TEST(str.equals("green"));
+            assertTrue(str.equals("green"));
             e1.set_as_string("blue");
-            TEST(e1.get_as_ulong() == 2);
+            assertTrue(e1.get_as_ulong() == 2);
             str = e1.get_as_string();
-            TEST(str.equals("blue"));
+            assertTrue(str.equals("blue"));
 
             //
             // Test: set_as_ulong()
             //
             e1.set_as_ulong(1);
-            TEST(e1.get_as_ulong() == 1);
+            assertTrue(e1.get_as_ulong() == 1);
             str = e1.get_as_string();
-            TEST(str.equals("green"));
+            assertTrue(str.equals("green"));
             e1.set_as_ulong(2);
-            TEST(e1.get_as_ulong() == 2);
+            assertTrue(e1.get_as_ulong() == 2);
             str = e1.get_as_string();
-            TEST(str.equals("blue"));
+            assertTrue(str.equals("blue"));
 
             //
             // Test: from_any()
@@ -1158,13 +1162,13 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = e1.to_any();
             e = test.types.DynAnyTypes.TestEnumHelper.extract(av);
-            TEST(e == test.types.DynAnyTypes.TestEnum.green);
+            assertTrue(e == test.types.DynAnyTypes.TestEnum.green);
 
             //
             // Test: copy
             //
             copy = e1.copy();
-            TEST(e1.equal(copy));
+            assertTrue(e1.equal(copy));
 
             e1.destroy();
             copy.destroy();
@@ -1176,7 +1180,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(type);
                 e1 = DynEnumHelper.narrow(d1);
                 e1.set_as_ulong(3);
-                TEST("set_as_ulong() should not have succeeded" == null);
+                assertTrue("set_as_ulong() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
                 d1.destroy();
@@ -1189,7 +1193,7 @@ public class TestDynAny extends test.common.TestBase {
                 // additional test case not required for C++.
                 //
                 e1.set_as_ulong(-1);
-                TEST("set_as_ulong() should not have succeeded" == null);
+                assertTrue("set_as_ulong() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
                 d1.destroy();
@@ -1202,7 +1206,7 @@ public class TestDynAny extends test.common.TestBase {
                 d1 = factory.create_dyn_any_from_type_code(type);
                 e1 = DynEnumHelper.narrow(d1);
                 e1.set_as_string("alizarin");
-                TEST("set_as_string() should not have succeeded" == null);
+                assertTrue("set_as_string() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
                 d1.destroy();
@@ -1210,11 +1214,11 @@ public class TestDynAny extends test.common.TestBase {
 
             testOps(orb, factory, TestEnumHelper.type(), false);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -1281,23 +1285,23 @@ public class TestDynAny extends test.common.TestBase {
     }
 
     static void checkStruct(final TestStruct ts) {
-        TEST(ts.shortVal == SHORT_VALUE);
-        TEST(ts.ushortVal == USHORT_VALUE);
-        TEST(ts.longVal == LONG_VALUE);
-        TEST(ts.ulongVal == ULONG_VALUE);
-        TEST(ts.floatVal == FLOAT_VALUE);
-        TEST(ts.doubleVal == DOUBLE_VALUE);
-        TEST(ts.boolVal == BOOLEAN_VALUE);
-        TEST(ts.charVal == CHAR_VALUE);
-        TEST(ts.octetVal == OCTET_VALUE);
-        TEST(ts.anyVal.extract_string().equals(ANY_VALUE));
-        TEST(ts.tcVal.equal(TYPECODE_VALUE));
-        TEST(ts.objectVal == null);
-        TEST(ts.stringVal.equals(STRING_VALUE));
-        TEST(ts.longlongVal == LONGLONG_VALUE);
-        TEST(ts.ulonglongVal == ULONGLONG_VALUE);
-        TEST(ts.wcharVal == WCHAR_VALUE);
-        TEST(ts.wstringVal.equals(WSTRING_VALUE));
+        assertTrue(ts.shortVal == SHORT_VALUE);
+        assertTrue(ts.ushortVal == USHORT_VALUE);
+        assertTrue(ts.longVal == LONG_VALUE);
+        assertTrue(ts.ulongVal == ULONG_VALUE);
+        assertTrue(ts.floatVal == FLOAT_VALUE);
+        assertTrue(ts.doubleVal == DOUBLE_VALUE);
+        assertTrue(ts.boolVal == BOOLEAN_VALUE);
+        assertTrue(ts.charVal == CHAR_VALUE);
+        assertTrue(ts.octetVal == OCTET_VALUE);
+        assertTrue(ts.anyVal.extract_string().equals(ANY_VALUE));
+        assertTrue(ts.tcVal.equal(TYPECODE_VALUE));
+        assertTrue(ts.objectVal == null);
+        assertTrue(ts.stringVal.equals(STRING_VALUE));
+        assertTrue(ts.longlongVal == LONGLONG_VALUE);
+        assertTrue(ts.ulonglongVal == ULONGLONG_VALUE);
+        assertTrue(ts.wcharVal == WCHAR_VALUE);
+        assertTrue(ts.wstringVal.equals(WSTRING_VALUE));
     }
 
     static void testStruct(ORB orb, DynAnyFactory factory) {
@@ -1324,72 +1328,72 @@ public class TestDynAny extends test.common.TestBase {
             // Test: current_member_name, current_member_kind
             //
             str = s1.current_member_name();
-            TEST(str.equals("shortVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_short);
+            assertTrue(str.equals("shortVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_short);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("ushortVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_ushort);
+            assertTrue(str.equals("ushortVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_ushort);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("longVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_long);
+            assertTrue(str.equals("longVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_long);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("ulongVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_ulong);
+            assertTrue(str.equals("ulongVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_ulong);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("floatVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_float);
+            assertTrue(str.equals("floatVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_float);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("doubleVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_double);
+            assertTrue(str.equals("doubleVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_double);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("boolVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_boolean);
+            assertTrue(str.equals("boolVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_boolean);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("charVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_char);
+            assertTrue(str.equals("charVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_char);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("octetVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_octet);
+            assertTrue(str.equals("octetVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_octet);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("anyVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_any);
+            assertTrue(str.equals("anyVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_any);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("tcVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_TypeCode);
+            assertTrue(str.equals("tcVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_TypeCode);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("objectVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_objref);
+            assertTrue(str.equals("objectVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_objref);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("stringVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_string);
+            assertTrue(str.equals("stringVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_string);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("longlongVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_longlong);
+            assertTrue(str.equals("longlongVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_longlong);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("ulonglongVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_ulonglong);
+            assertTrue(str.equals("ulonglongVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_ulonglong);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("wcharVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_wchar);
+            assertTrue(str.equals("wcharVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_wchar);
             s1.next();
             str = s1.current_member_name();
-            TEST(str.equals("wstringVal"));
-            TEST(s1.current_member_kind() == TCKind.tk_wstring);
+            assertTrue(str.equals("wstringVal"));
+            assertTrue(s1.current_member_kind() == TCKind.tk_wstring);
 
             //
             // Test: insert values into members
@@ -1435,44 +1439,44 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get values from members
             //
             s1.rewind();
-            TEST(s1.get_short() == SHORT_VALUE);
+            assertTrue(s1.get_short() == SHORT_VALUE);
             s1.next();
-            TEST(s1.get_ushort() == USHORT_VALUE);
+            assertTrue(s1.get_ushort() == USHORT_VALUE);
             s1.next();
-            TEST(s1.get_long() == LONG_VALUE);
+            assertTrue(s1.get_long() == LONG_VALUE);
             s1.next();
-            TEST(s1.get_ulong() == ULONG_VALUE);
+            assertTrue(s1.get_ulong() == ULONG_VALUE);
             s1.next();
-            TEST(s1.get_float() == FLOAT_VALUE);
+            assertTrue(s1.get_float() == FLOAT_VALUE);
             s1.next();
-            TEST(s1.get_double() == DOUBLE_VALUE);
+            assertTrue(s1.get_double() == DOUBLE_VALUE);
             s1.next();
-            TEST(s1.get_boolean() == BOOLEAN_VALUE);
+            assertTrue(s1.get_boolean() == BOOLEAN_VALUE);
             s1.next();
-            TEST(s1.get_char() == CHAR_VALUE);
+            assertTrue(s1.get_char() == CHAR_VALUE);
             s1.next();
-            TEST(s1.get_octet() == OCTET_VALUE);
+            assertTrue(s1.get_octet() == OCTET_VALUE);
             s1.next();
             av = s1.get_any();
             s1.next();
-            TEST(av.extract_string().equals(ANY_VALUE));
+            assertTrue(av.extract_string().equals(ANY_VALUE));
             tc = s1.get_typecode();
             s1.next();
-            TEST(tc.equal(TYPECODE_VALUE));
-            TEST(s1.get_reference() == null);
+            assertTrue(tc.equal(TYPECODE_VALUE));
+            assertTrue(s1.get_reference() == null);
             s1.next();
             str = s1.get_string();
             s1.next();
-            TEST(str.equals(STRING_VALUE));
-            TEST(s1.get_longlong() == LONGLONG_VALUE);
+            assertTrue(str.equals(STRING_VALUE));
+            assertTrue(s1.get_longlong() == LONGLONG_VALUE);
             s1.next();
-            TEST(s1.get_ulonglong() == ULONGLONG_VALUE);
+            assertTrue(s1.get_ulonglong() == ULONGLONG_VALUE);
             s1.next();
-            TEST(s1.get_wchar() == WCHAR_VALUE);
+            assertTrue(s1.get_wchar() == WCHAR_VALUE);
             s1.next();
             wstr = s1.get_wstring();
             s1.next();
-            TEST(wstr.equals(WSTRING_VALUE));
+            assertTrue(wstr.equals(WSTRING_VALUE));
 
             //
             // Initialize struct
@@ -1484,7 +1488,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestStructHelper.insert(any, ts);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -1503,7 +1507,7 @@ public class TestDynAny extends test.common.TestBase {
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             //
@@ -1513,10 +1517,10 @@ public class TestDynAny extends test.common.TestBase {
             s1.rewind();
             for (i = 0; i < nvpseq.length; i++) {
                 str = s1.current_member_name();
-                TEST(str.equals(nvpseq[i].id));
+                assertTrue(str.equals(nvpseq[i].id));
                 DynAny dv = factory.create_dyn_any(nvpseq[i].value);
                 DynAny comp = s1.current_component();
-                TEST(dv.equal(comp));
+                assertTrue(dv.equal(comp));
                 dv.destroy();
                 s1.next();
             }
@@ -1527,10 +1531,10 @@ public class TestDynAny extends test.common.TestBase {
             s1.set_members(nvpseq);
             d2 = s1.current_component();
             tc = d2.type();
-            TEST(tc.kind() == TCKind.tk_short); // ensure index is reset to 0
+            assertTrue(tc.kind() == TCKind.tk_short); // ensure index is reset to 0
             TestStructHelper.insert(any, ts);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -1540,7 +1544,7 @@ public class TestDynAny extends test.common.TestBase {
                 str = nvpseq[2].id;
                 nvpseq[2].id = "totally_wrong";
                 s1.set_members(nvpseq);
-                TEST("set_members should not have succeeded" == null);
+                assertTrue("set_members should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 nvpseq[2].id = str; // restore value
@@ -1553,7 +1557,7 @@ public class TestDynAny extends test.common.TestBase {
                 any = nvpseq[2].value;
                 nvpseq[2].value.insert_string("this is not a long");
                 s1.set_members(nvpseq);
-                TEST("set_members should not have succeeded" == null);
+                assertTrue("set_members should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 nvpseq[2].value = any; // restore value
@@ -1565,7 +1569,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 nvpseq = new NameValuePair[0];
                 s1.set_members(nvpseq);
-                TEST("set_members should not have succeeded" == null);
+                assertTrue("set_members should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -1577,7 +1581,7 @@ public class TestDynAny extends test.common.TestBase {
             s1.rewind();
             for (i = 0; i < ndpseq.length; i++) {
                 str = s1.current_member_name();
-                TEST(str.equals(ndpseq[i].id));
+                assertTrue(str.equals(ndpseq[i].id));
                 s1.next();
             }
 
@@ -1587,10 +1591,10 @@ public class TestDynAny extends test.common.TestBase {
             s1.set_members_as_dyn_any(ndpseq);
             d2 = s1.current_component();
             tc = d2.type();
-            TEST(tc.kind() == TCKind.tk_short); // ensure index is reset to 0
+            assertTrue(tc.kind() == TCKind.tk_short); // ensure index is reset to 0
             TestStructHelper.insert(any, ts);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -1600,7 +1604,7 @@ public class TestDynAny extends test.common.TestBase {
                 str = ndpseq[2].id;
                 ndpseq[2].id = "totally_wrong";
                 s1.set_members_as_dyn_any(ndpseq);
-                TEST("set_members_as_dyn_any should not have succeeded" == null);
+                assertTrue("set_members_as_dyn_any should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 ndpseq[2].id = str; // restore value
@@ -1614,7 +1618,7 @@ public class TestDynAny extends test.common.TestBase {
                 any.insert_boolean(false);
                 ndpseq[2].value = factory.create_dyn_any(any);
                 s1.set_members_as_dyn_any(ndpseq);
-                TEST("set_members_as_dyn_any should not have succeeded" == null);
+                assertTrue("set_members_as_dyn_any should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 ndpseq[2].value.destroy();
@@ -1627,7 +1631,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 ndpseq = new NameDynAnyPair[0];
                 s1.set_members_as_dyn_any(ndpseq);
-                TEST("set_members_as_dyn_any should not have succeeded" == null);
+                assertTrue("set_members_as_dyn_any should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -1645,22 +1649,22 @@ public class TestDynAny extends test.common.TestBase {
             TestEmptyException ex = new TestEmptyException();
             TestEmptyExceptionHelper.insert(any, ex);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d1.assign(d2);
             d1.from_any(any);
             nvpseq = s1.get_members();
-            TEST(nvpseq.length == 0);
+            assertTrue(nvpseq.length == 0);
             s1.set_members(nvpseq);
             d1.destroy();
             d2.destroy();
 
             testOps(orb, factory, type, false);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -1683,11 +1687,11 @@ public class TestDynAny extends test.common.TestBase {
             TestEmptyException ex = new TestEmptyException();
             TestEmptyExceptionHelper.insert(any, ex);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d1.assign(d2);
             d1.from_any(any);
             nvpseq = s1.get_members();
-            TEST(nvpseq.length == 0);
+            assertTrue(nvpseq.length == 0);
             s1.set_members(nvpseq);
             d1.destroy();
             d2.destroy();
@@ -1710,25 +1714,25 @@ public class TestDynAny extends test.common.TestBase {
                     1, org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
             org.omg.CORBA.OBJECT_NOT_EXISTHelper.insert(any, one);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d1.assign(d2);
             d1.from_any(any);
             nvpseq = s1.get_members();
-            TEST(nvpseq.length == 2);
+            assertTrue(nvpseq.length == 2);
             av = d1.to_any();
             one = org.omg.CORBA.OBJECT_NOT_EXISTHelper.extract(av);
-            TEST(one.minor == 1);
-            TEST(one.completed == org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+            assertTrue(one.minor == 1);
+            assertTrue(one.completed == org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
             d1.destroy();
             d2.destroy();
 
             testOps(orb, factory, type, true);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -1751,13 +1755,13 @@ public class TestDynAny extends test.common.TestBase {
             discType = orb.get_primitive_tc(TCKind.tk_short);
             d1 = factory.create_dyn_any_from_type_code(type);
             u1 = DynUnionHelper.narrow(d1);
-            TEST(u1.discriminator_kind() == TCKind.tk_short);
+            assertTrue(u1.discriminator_kind() == TCKind.tk_short);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
             disc = u1.get_discriminator();
-            TEST(disc.get_short() == (short) 0);
-            TEST(u1.component_count() == 2);
+            assertTrue(disc.get_short() == (short) 0);
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: set_discriminator() - ensure member is not deactivated
@@ -1769,14 +1773,14 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_short((short) 1); // change disc to 1
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
-            TEST(u1.get_long() == 55); // also tests current position
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
+            assertTrue(u1.get_long() == 55); // also tests current position
             disc.destroy();
             disc = u1.get_discriminator();
-            TEST(disc.get_short() == (short) 1);
+            assertTrue(disc.get_short() == (short) 1);
             u1.rewind();
-            TEST(u1.get_short() == (short) 1);
+            assertTrue(u1.get_short() == (short) 1);
 
             //
             // Test: set_discriminator() - ensure member is deactivated when
@@ -1786,15 +1790,15 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_short((short) 3); // change disc to 3
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("b"));
-            TEST(u1.member_kind() == TCKind.tk_float);
-            TEST(u1.get_float() == (float) 0);
+            assertTrue(str.equals("b"));
+            assertTrue(u1.member_kind() == TCKind.tk_float);
+            assertTrue(u1.get_float() == (float) 0);
             u1.insert_float(99.99f);
             disc.destroy();
             disc = u1.get_discriminator();
-            TEST(disc.get_short() == (short) 3);
+            assertTrue(disc.get_short() == (short) 3);
             u1.rewind();
-            TEST(u1.get_short() == (short) 3);
+            assertTrue(u1.get_short() == (short) 3);
 
             //
             // Test: set_discriminator() - use discriminator value that
@@ -1804,18 +1808,18 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_short((short) 9); // change disc to 9
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("c"));
-            TEST(u1.member_kind() == TCKind.tk_string);
+            assertTrue(str.equals("c"));
+            assertTrue(u1.member_kind() == TCKind.tk_string);
             str = u1.get_string();
-            TEST(str.length() == 0);
+            assertTrue(str.length() == 0);
             u1.insert_string("hi there");
             disc.insert_short((short) 23); // change disc again - still
             // default member
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("c"));
+            assertTrue(str.equals("c"));
             str = u1.get_string();
-            TEST(str.equals("hi there"));
+            assertTrue(str.equals("hi there"));
             disc.destroy();
 
             //
@@ -1826,7 +1830,7 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_ushort((short) 55);
             try {
                 u1.set_discriminator(disc);
-                TEST("set_discriminator() should not have succeeded" == null);
+                assertTrue("set_discriminator() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -1838,10 +1842,10 @@ public class TestDynAny extends test.common.TestBase {
             //
             u1.set_to_default_member();
             str = u1.member_name();
-            TEST(str.equals("c"));
+            assertTrue(str.equals("c"));
             u1.next();
             str = u1.get_string();
-            TEST(str.equals("hi there"));
+            assertTrue(str.equals("hi there"));
 
             //
             // Test: set_to_default_member() - force a new member to be
@@ -1853,8 +1857,8 @@ public class TestDynAny extends test.common.TestBase {
             disc.destroy();
             u1.set_to_default_member();
             str = u1.member_name();
-            TEST(str.equals("c"));
-            TEST(u1.component_count() == 2);
+            assertTrue(str.equals("c"));
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: is_set_to_default_member()
@@ -1862,38 +1866,38 @@ public class TestDynAny extends test.common.TestBase {
             disc = factory.create_dyn_any_from_type_code(discType);
             disc.insert_short((short) 0);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 1);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 3);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 2);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == true);
+            assertTrue(u1.is_set_to_default_member() == true);
             disc.destroy();
             disc = u1.get_discriminator();
             disc.insert_short((short) 0);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 1);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 3);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 2);
-            TEST(u1.is_set_to_default_member() == true);
+            assertTrue(u1.is_set_to_default_member() == true);
 
             //
             // Test: has_no_active_member()
             //
-            TEST(u1.has_no_active_member() == false);
+            assertTrue(u1.has_no_active_member() == false);
 
             //
             // Test: set_to_no_active_member() TypeMismatch exception
             //
             try {
                 u1.set_to_no_active_member();
-                TEST("set_to_no_active_member() should not have succeeded" == null);
+                assertTrue("set_to_no_active_member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -1907,10 +1911,10 @@ public class TestDynAny extends test.common.TestBase {
             disc = u1.current_component();
             disc.insert_short((short) 0);
             str = u1.member_name();
-            TEST(str.equals("a"));
+            assertTrue(str.equals("a"));
             u1.insert_long(55);
             disc.insert_short((short) 1);
-            TEST(u1.get_long() == 55);
+            assertTrue(u1.get_long() == 55);
 
             //
             // Test: to_any
@@ -1922,8 +1926,8 @@ public class TestDynAny extends test.common.TestBase {
             u1.insert_long(49);
             av = u1.to_any();
             ptu1 = test.types.DynAnyTypes.TestUnion1Helper.extract(av);
-            TEST(ptu1.discriminator() == (short) 1);
-            TEST(ptu1.a() == 49);
+            assertTrue(ptu1.discriminator() == (short) 1);
+            assertTrue(ptu1.a() == 49);
 
             //
             // Test: assign
@@ -1932,30 +1936,30 @@ public class TestDynAny extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion1Helper.insert(any, tu1);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             str = u1.member_name();
-            TEST(str.equals("c"));
+            assertTrue(str.equals("c"));
             u1.seek(1);
             str = u1.get_string();
-            TEST(str.equals("hi there"));
+            assertTrue(str.equals("hi there"));
             d2.destroy();
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             d1.destroy();
 
             testOps(orb, factory, type, true);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -1978,13 +1982,13 @@ public class TestDynAny extends test.common.TestBase {
             discType = orb.get_primitive_tc(TCKind.tk_boolean);
             d1 = factory.create_dyn_any_from_type_code(type);
             u1 = DynUnionHelper.narrow(d1);
-            TEST(u1.discriminator_kind() == TCKind.tk_boolean);
+            assertTrue(u1.discriminator_kind() == TCKind.tk_boolean);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
             disc = u1.get_discriminator();
-            TEST(disc.get_boolean() == true);
-            TEST(u1.component_count() == 2);
+            assertTrue(disc.get_boolean() == true);
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: set_discriminator() - sets union to have no active member
@@ -1992,31 +1996,31 @@ public class TestDynAny extends test.common.TestBase {
             disc = factory.create_dyn_any_from_type_code(discType);
             disc.insert_boolean(false);
             u1.set_discriminator(disc);
-            TEST(u1.component_count() == 1);
+            assertTrue(u1.component_count() == 1);
             disc.destroy();
 
             //
             // Test: seek - with no active member, 0 is only valid position
             //
-            TEST(!u1.seek(1));
+            assertTrue(!u1.seek(1));
 
             //
             // Test: next - with no active member, 0 is only valid position
             //
             u1.rewind();
-            TEST(!u1.next());
+            assertTrue(!u1.next());
 
             //
             // Test: copy
             //
             copy = u1.copy();
-            TEST(u1.equal(copy));
+            assertTrue(u1.equal(copy));
             copy.destroy();
 
             //
             // Test: has_no_active_member()
             //
-            TEST(u1.has_no_active_member());
+            assertTrue(u1.has_no_active_member());
 
             //
             // Test: set_discriminator() TypeMismatch exception
@@ -2026,7 +2030,7 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_ushort((short) 55);
             try {
                 u1.set_discriminator(disc);
-                TEST("set_discriminator() should not have succeeded" == null);
+                assertTrue("set_discriminator() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2037,7 +2041,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 u1.set_to_default_member();
-                TEST("set_to_default_member() should not have succeeded" == null);
+                assertTrue("set_to_default_member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2048,23 +2052,23 @@ public class TestDynAny extends test.common.TestBase {
             disc = factory.create_dyn_any_from_type_code(discType);
             disc.insert_boolean(true);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_boolean(false);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.destroy();
             disc = u1.get_discriminator();
             disc.insert_boolean(true);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_boolean(false);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
 
             //
             // Test: member() InvalidValue exception
             //
             try {
                 member = u1.member();
-                TEST("member() should not have succeeded" == null);
+                assertTrue("member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -2074,7 +2078,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 str = u1.member_name();
-                TEST("member_name() should not have succeeded" == null);
+                assertTrue("member_name() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -2084,7 +2088,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 u1.member_kind();
-                TEST("member_kind() should not have succeeded" == null);
+                assertTrue("member_kind() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -2097,9 +2101,9 @@ public class TestDynAny extends test.common.TestBase {
             u1.set_discriminator(disc);
             disc.destroy();
             u1.insert_long(49);
-            TEST(!u1.has_no_active_member());
+            assertTrue(!u1.has_no_active_member());
             u1.set_to_no_active_member();
-            TEST(u1.has_no_active_member());
+            assertTrue(u1.has_no_active_member());
 
             //
             // Test: change discriminator by manipulating the components
@@ -2107,12 +2111,12 @@ public class TestDynAny extends test.common.TestBase {
             //
             u1.set_to_no_active_member();
             disc = u1.current_component();
-            TEST(disc.get_boolean() == false);
+            assertTrue(disc.get_boolean() == false);
             disc.insert_boolean(true);
             str = u1.member_name();
-            TEST(str.equals("a"));
+            assertTrue(str.equals("a"));
             u1.insert_long(55);
-            TEST(u1.get_long() == 55);
+            assertTrue(u1.get_long() == 55);
 
             //
             // Test: to_any
@@ -2124,8 +2128,8 @@ public class TestDynAny extends test.common.TestBase {
             u1.insert_long(49);
             av = u1.to_any();
             ptu2 = test.types.DynAnyTypes.TestUnion2Helper.extract(av);
-            TEST(ptu2.discriminator() == true);
-            TEST(ptu2.a() == 49);
+            assertTrue(ptu2.discriminator() == true);
+            assertTrue(ptu2.a() == 49);
 
             //
             // Test: assign
@@ -2134,29 +2138,29 @@ public class TestDynAny extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion2Helper.insert(any, tu2);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             str = u1.member_name();
-            TEST(str.equals("a"));
+            assertTrue(str.equals("a"));
             u1.seek(1);
-            TEST(u1.get_long() == 199);
+            assertTrue(u1.get_long() == 199);
             d2.destroy();
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             d1.destroy();
 
             testOps(orb, factory, type, true);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -2180,14 +2184,14 @@ public class TestDynAny extends test.common.TestBase {
             discType = test.types.DynAnyTypes.TestEnumHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             u1 = DynUnionHelper.narrow(d1);
-            TEST(u1.discriminator_kind() == TCKind.tk_enum);
+            assertTrue(u1.discriminator_kind() == TCKind.tk_enum);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
             disc = u1.get_discriminator();
             e = DynEnumHelper.narrow(disc);
-            TEST(e.get_as_ulong() == 0);
-            TEST(u1.component_count() == 2);
+            assertTrue(e.get_as_ulong() == 0);
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: set_discriminator()
@@ -2197,9 +2201,9 @@ public class TestDynAny extends test.common.TestBase {
             e.set_as_string("green");
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("b"));
-            TEST(u1.member_kind() == TCKind.tk_double);
-            TEST(u1.component_count() == 2);
+            assertTrue(str.equals("b"));
+            assertTrue(u1.member_kind() == TCKind.tk_double);
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: change discriminator by manipulating the components
@@ -2208,22 +2212,22 @@ public class TestDynAny extends test.common.TestBase {
             e.set_as_string("blue");
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("c"));
-            TEST(u1.member_kind() == TCKind.tk_char);
-            TEST(u1.component_count() == 2);
+            assertTrue(str.equals("c"));
+            assertTrue(u1.member_kind() == TCKind.tk_char);
+            assertTrue(u1.component_count() == 2);
             disc.destroy();
 
             //
             // Test: copy
             //
             copy = u1.copy();
-            TEST(u1.equal(copy));
+            assertTrue(u1.equal(copy));
             copy.destroy();
 
             //
             // Test: has_no_active_member()
             //
-            TEST(!u1.has_no_active_member());
+            assertTrue(!u1.has_no_active_member());
 
             //
             // Test: set_discriminator() TypeMismatch exception
@@ -2233,7 +2237,7 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_ushort((short) 55);
             try {
                 u1.set_discriminator(disc);
-                TEST("set_discriminator() should not have succeeded" == null);
+                assertTrue("set_discriminator() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2244,7 +2248,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 u1.set_to_default_member();
-                TEST("set_to_default_member() should not have succeeded" == null);
+                assertTrue("set_to_default_member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2256,29 +2260,29 @@ public class TestDynAny extends test.common.TestBase {
             e = DynEnumHelper.narrow(disc);
             e.set_as_string("red");
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             e.set_as_string("green");
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             e.set_as_string("blue");
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.destroy();
             disc = u1.get_discriminator();
             e = DynEnumHelper.narrow(disc);
             e.set_as_string("red");
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             e.set_as_string("green");
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             e.set_as_string("blue");
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
 
             //
             // Test: set_to_no_active_member() exception
             //
             try {
                 u1.set_to_no_active_member();
-                TEST("set_to_no_active_member() should not have succeeded" == null);
+                assertTrue("set_to_no_active_member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2292,8 +2296,8 @@ public class TestDynAny extends test.common.TestBase {
             u1.insert_char('Z');
             av = u1.to_any();
             ptu3 = test.types.DynAnyTypes.TestUnion3Helper.extract(av);
-            TEST(ptu3.discriminator() == test.types.DynAnyTypes.TestEnum.blue);
-            TEST(ptu3.c() == 'Z');
+            assertTrue(ptu3.discriminator() == test.types.DynAnyTypes.TestEnum.blue);
+            assertTrue(ptu3.c() == 'Z');
 
             //
             // Test: assign
@@ -2302,22 +2306,22 @@ public class TestDynAny extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion3Helper.insert(any, tu3);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             str = u1.member_name();
-            TEST(str.equals("b"));
+            assertTrue(str.equals("b"));
             u1.seek(1);
-            TEST(u1.get_double() >= 1.99);
+            assertTrue(u1.get_double() >= 1.99);
             d2.destroy();
 
             d1.destroy();
 
             testOps(orb, factory, type, true);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -2341,12 +2345,12 @@ public class TestDynAny extends test.common.TestBase {
             discType = orb.get_primitive_tc(TCKind.tk_short);
             d1 = factory.create_dyn_any_from_type_code(type);
             u1 = DynUnionHelper.narrow(d1);
-            TEST(u1.discriminator_kind() == TCKind.tk_short);
+            assertTrue(u1.discriminator_kind() == TCKind.tk_short);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
             disc = u1.get_discriminator();
-            TEST(u1.component_count() == 2);
+            assertTrue(u1.component_count() == 2);
 
             //
             // Test: set_discriminator()
@@ -2355,9 +2359,9 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_short((short) 99);
             u1.set_discriminator(disc);
             str = u1.member_name();
-            TEST(str.equals("b"));
-            TEST(u1.member_kind() == TCKind.tk_float);
-            TEST(u1.component_count() == 2);
+            assertTrue(str.equals("b"));
+            assertTrue(u1.member_kind() == TCKind.tk_float);
+            assertTrue(u1.component_count() == 2);
             disc.destroy();
 
             //
@@ -2367,24 +2371,24 @@ public class TestDynAny extends test.common.TestBase {
             disc = u1.get_discriminator();
             disc.insert_short((short) 33);
             str = u1.member_name();
-            TEST(str.equals("a"));
-            TEST(u1.member_kind() == TCKind.tk_long);
-            TEST(u1.component_count() == 2);
+            assertTrue(str.equals("a"));
+            assertTrue(u1.member_kind() == TCKind.tk_long);
+            assertTrue(u1.component_count() == 2);
             u1.insert_long(444);
             disc.insert_short((short) 66);
-            TEST(u1.get_long() == 444);
+            assertTrue(u1.get_long() == 444);
 
             //
             // Test: copy
             //
             copy = u1.copy();
-            TEST(u1.equal(copy));
+            assertTrue(u1.equal(copy));
             copy.destroy();
 
             //
             // Test: has_no_active_member()
             //
-            TEST(!u1.has_no_active_member());
+            assertTrue(!u1.has_no_active_member());
 
             //
             // Test: set_discriminator() TypeMismatch exception
@@ -2394,7 +2398,7 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_ushort((short) 55);
             try {
                 u1.set_discriminator(disc);
-                TEST("set_discriminator() should not have succeeded" == null);
+                assertTrue("set_discriminator() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2407,7 +2411,7 @@ public class TestDynAny extends test.common.TestBase {
             disc.insert_short((short) 99); // select "b"
             u1.set_to_default_member();
             str = u1.member_name();
-            TEST(str.equals("a"));
+            assertTrue(str.equals("a"));
 
             //
             // Test: is_set_to_default_member()
@@ -2415,23 +2419,23 @@ public class TestDynAny extends test.common.TestBase {
             disc = factory.create_dyn_any_from_type_code(discType);
             disc.insert_short((short) 99);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 0);
             u1.set_discriminator(disc);
-            TEST(u1.is_set_to_default_member() == true);
+            assertTrue(u1.is_set_to_default_member() == true);
             disc.destroy();
             disc = u1.get_discriminator();
             disc.insert_short((short) 99);
-            TEST(u1.is_set_to_default_member() == false);
+            assertTrue(u1.is_set_to_default_member() == false);
             disc.insert_short((short) 0);
-            TEST(u1.is_set_to_default_member() == true);
+            assertTrue(u1.is_set_to_default_member() == true);
 
             //
             // Test: set_to_no_active_member() exception
             //
             try {
                 u1.set_to_no_active_member();
-                TEST("set_to_no_active_member() should not have succeeded" == null);
+                assertTrue("set_to_no_active_member() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2444,7 +2448,7 @@ public class TestDynAny extends test.common.TestBase {
             u1.insert_long(888);
             av = u1.to_any();
             ptu4 = test.types.DynAnyTypes.TestUnion4Helper.extract(av);
-            TEST(ptu4.a() == 888);
+            assertTrue(ptu4.a() == 888);
 
             //
             // Test: assign
@@ -2453,22 +2457,22 @@ public class TestDynAny extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion4Helper.insert(any, tu4);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             str = u1.member_name();
-            TEST(str.equals("b"));
+            assertTrue(str.equals("b"));
             u1.seek(1);
-            TEST(u1.get_float() >= 1.99f);
+            assertTrue(u1.get_float() >= 1.99f);
             d2.destroy();
 
             d1.destroy();
 
             testOps(orb, factory, type, true);
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -2490,22 +2494,22 @@ public class TestDynAny extends test.common.TestBase {
             type = TestShortSeqHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             s1 = DynSequenceHelper.narrow(d1);
-            TEST(s1.get_length() == 0);
-            TEST(s1.component_count() == 0);
+            assertTrue(s1.get_length() == 0);
+            assertTrue(s1.component_count() == 0);
 
             //
             // Test: set_length() - increase length - position should be 0
             //
             s1.set_length(5);
-            TEST(s1.get_length() == 5);
-            TEST(s1.component_count() == 5);
+            assertTrue(s1.get_length() == 5);
+            assertTrue(s1.component_count() == 5);
             for (i = 0; i < 5; i++) {
                 s1.insert_short((short) i);
                 s1.next();
             }
             s1.rewind();
             for (i = 0; i < 5; i++) {
-                TEST(s1.get_short() == (short) i);
+                assertTrue(s1.get_short() == (short) i);
                 s1.next();
             }
 
@@ -2514,12 +2518,12 @@ public class TestDynAny extends test.common.TestBase {
             //
             s1.seek(1);
             s1.set_length(3);
-            TEST(s1.get_short() == (short) 1);
-            TEST(s1.get_length() == 3);
-            TEST(s1.component_count() == 3);
+            assertTrue(s1.get_short() == (short) 1);
+            assertTrue(s1.get_length() == 3);
+            assertTrue(s1.component_count() == 3);
             s1.rewind();
             for (i = 0; i < 3; i++) {
-                TEST(s1.get_short() == (short) i);
+                assertTrue(s1.get_short() == (short) i);
                 s1.next();
             }
 
@@ -2528,15 +2532,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = s1.to_any();
             pseq = TestShortSeqHelper.extract(av);
-            TEST(pseq.length == 3);
+            assertTrue(pseq.length == 3);
             for (i = 0; i < 3; i++)
-                TEST(pseq[i] == (short) i);
+				assertTrue(pseq[i] == (short) i);
 
             //
             // Test: copy
             //
             copy = s1.copy();
-            TEST(s1.equal(copy));
+            assertTrue(s1.equal(copy));
             copy.destroy();
 
             //
@@ -2545,7 +2549,7 @@ public class TestDynAny extends test.common.TestBase {
             copy = s1.copy();
             copy.seek(1);
             copy.insert_short((short) -33);
-            TEST(!s1.equal(copy));
+            assertTrue(!s1.equal(copy));
             copy.destroy();
 
             //
@@ -2558,7 +2562,7 @@ public class TestDynAny extends test.common.TestBase {
             s1.from_any(any);
             s1.rewind();
             for (i = 0; i < 8; i++) {
-                TEST(s1.get_short() == (short) (8 - i));
+                assertTrue(s1.get_short() == (short) (8 - i));
                 s1.next();
             }
 
@@ -2569,9 +2573,9 @@ public class TestDynAny extends test.common.TestBase {
             s1.rewind();
             for (i = 0; i < 8; i++) {
                 comp = s1.current_component();
-                TEST(comp.get_short() == (short) (8 - i));
+                assertTrue(comp.get_short() == (short) (8 - i));
                 comp.insert_short((short) i);
-                TEST(s1.get_short() == (short) i);
+                assertTrue(s1.get_short() == (short) i);
                 s1.next();
             }
 
@@ -2579,10 +2583,10 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements()
             //
             Any[] anySeq = s1.get_elements();
-            TEST(anySeq.length == 8);
+            assertTrue(anySeq.length == 8);
             for (i = 0; i < 8; i++) {
                 short n = anySeq[i].extract_short();
-                TEST(n == (short) i);
+                assertTrue(n == (short) i);
             }
 
             //
@@ -2596,7 +2600,7 @@ public class TestDynAny extends test.common.TestBase {
             s1.set_elements(anySeq);
             s1.rewind();
             for (i = 0; i < 3; i++) {
-                TEST(s1.get_short() == (short) (i + 10));
+                assertTrue(s1.get_short() == (short) (i + 10));
                 s1.next();
             }
 
@@ -2604,9 +2608,9 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements_as_dyn_any()
             //
             DynAny[] dynAnySeq = s1.get_elements_as_dyn_any();
-            TEST(dynAnySeq.length == 3);
+            assertTrue(dynAnySeq.length == 3);
             for (i = 0; i < 3; i++)
-                TEST(dynAnySeq[i].get_short() == (short) (i + 10));
+				assertTrue(dynAnySeq[i].get_short() == (short) (i + 10));
 
             //
             // Test: set_elements_as_dyn_any
@@ -2619,7 +2623,7 @@ public class TestDynAny extends test.common.TestBase {
             s1.set_elements_as_dyn_any(dynAnySeq);
             s1.rewind();
             for (i = 0; i < 4; i++) {
-                TEST(s1.get_short() == (short) (i + 100));
+                assertTrue(s1.get_short() == (short) (i + 100));
                 s1.next();
             }
             for (i = 0; i < 4; i++)
@@ -2635,13 +2639,13 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             s2 = DynSequenceHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(s1.get_length() == 10);
-            TEST(s1.component_count() == 10);
+            assertTrue(s1.get_length() == 10);
+            assertTrue(s1.component_count() == 10);
             s1.rewind();
             for (i = 0; i < 10; i++) {
-                TEST(s1.get_short() == (short) (i * 10));
+                assertTrue(s1.get_short() == (short) (i * 10));
                 s1.next();
             }
 
@@ -2649,25 +2653,25 @@ public class TestDynAny extends test.common.TestBase {
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -2680,15 +2684,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -2710,18 +2714,18 @@ public class TestDynAny extends test.common.TestBase {
             type = TestBoundedString10SeqHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             s1 = DynSequenceHelper.narrow(d1);
-            TEST(s1.get_length() == 0);
-            TEST(s1.component_count() == 0);
+            assertTrue(s1.get_length() == 0);
+            assertTrue(s1.component_count() == 0);
 
             //
             // Test: set_length() - increase length - position should be 0
             //
             s1.set_length(5);
-            TEST(s1.get_length() == 5);
-            TEST(s1.component_count() == 5);
+            assertTrue(s1.get_length() == 5);
+            assertTrue(s1.component_count() == 5);
             for (i = 0; i < 5; i++) {
                 str = s1.get_string();
-                TEST(str.length() == 0);
+                assertTrue(str.length() == 0);
                 str += "str ";
                 str += i;
                 s1.insert_string(str);
@@ -2731,7 +2735,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 5; i++) {
                 str = s1.get_string();
                 String s = "str " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
 
@@ -2742,26 +2746,26 @@ public class TestDynAny extends test.common.TestBase {
             s1.seek(1);
             s1.set_length(3);
             str = s1.get_string();
-            TEST(str.equals("str 1"));
-            TEST(s1.get_length() == 3);
-            TEST(s1.component_count() == 3);
+            assertTrue(str.equals("str 1"));
+            assertTrue(s1.get_length() == 3);
+            assertTrue(s1.component_count() == 3);
 
             //
             // Test: to_any
             //
             av = s1.to_any();
             pseq = TestBoundedString10SeqHelper.extract(av);
-            TEST(pseq.length == 3);
+            assertTrue(pseq.length == 3);
             for (i = 0; i < 3; i++) {
                 String s = "str " + i;
-                TEST(pseq[i].equals(s));
+                assertTrue(pseq[i].equals(s));
             }
 
             //
             // Test: copy
             //
             copy = s1.copy();
-            TEST(s1.equal(copy));
+            assertTrue(s1.equal(copy));
             copy.destroy();
 
             //
@@ -2770,7 +2774,7 @@ public class TestDynAny extends test.common.TestBase {
             copy = s1.copy();
             copy.seek(1);
             copy.insert_string("hi there");
-            TEST(!s1.equal(copy));
+            assertTrue(!s1.equal(copy));
             copy.destroy();
 
             //
@@ -2785,7 +2789,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 8; i++) {
                 str = s1.get_string();
                 String s = "STR " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
 
@@ -2798,11 +2802,11 @@ public class TestDynAny extends test.common.TestBase {
                 comp = s1.current_component();
                 str = comp.get_string();
                 String s = "STR " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s = "string " + i;
                 comp.insert_string(s);
                 str = s1.get_string();
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
 
@@ -2810,11 +2814,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements()
             //
             Any[] anySeq = s1.get_elements();
-            TEST(anySeq.length == 8);
+            assertTrue(anySeq.length == 8);
             for (i = 0; i < 8; i++) {
                 String cp = anySeq[i].extract_string();
                 String s = "string " + i;
-                TEST(cp.equals(s));
+                assertTrue(cp.equals(s));
             }
 
             //
@@ -2831,7 +2835,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 3; i++) {
                 str = s1.get_string();
                 String s = "String " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
 
@@ -2839,11 +2843,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements_as_dyn_any()
             //
             DynAny[] dynAnySeq = s1.get_elements_as_dyn_any();
-            TEST(dynAnySeq.length == 3);
+            assertTrue(dynAnySeq.length == 3);
             for (i = 0; i < 3; i++) {
                 str = dynAnySeq[i].get_string();
                 String s = "String " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
             }
 
             //
@@ -2860,7 +2864,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 4; i++) {
                 str = s1.get_string();
                 String s = "STRING " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
             for (i = 0; i < 4; i++)
@@ -2876,15 +2880,15 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             s2 = DynSequenceHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(s1.get_length() == 10);
-            TEST(s1.component_count() == 10);
+            assertTrue(s1.get_length() == 10);
+            assertTrue(s1.component_count() == 10);
             s1.rewind();
             for (i = 0; i < 10; i++) {
                 str = s1.get_string();
                 String s = "Str " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s1.next();
             }
 
@@ -2894,11 +2898,11 @@ public class TestDynAny extends test.common.TestBase {
             i = s1.component_count();
             try {
                 s1.set_length(11);
-                TEST("set_length() should not have succeeded" == null);
+                assertTrue("set_length() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
-            TEST(s1.component_count() == i);
+            assertTrue(s1.component_count() == i);
 
             //
             // Test: set_elements() TypeMismatch exception
@@ -2911,7 +2915,7 @@ public class TestDynAny extends test.common.TestBase {
             }
             try {
                 s1.set_elements(anySeq);
-                TEST("set_elements() should not have succeeded" == null);
+                assertTrue("set_elements() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -2920,25 +2924,25 @@ public class TestDynAny extends test.common.TestBase {
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -2951,15 +2955,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -2982,15 +2986,15 @@ public class TestDynAny extends test.common.TestBase {
             type = TestAnySeqHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             s1 = DynSequenceHelper.narrow(d1);
-            TEST(s1.get_length() == 0);
-            TEST(s1.component_count() == 0);
+            assertTrue(s1.get_length() == 0);
+            assertTrue(s1.component_count() == 0);
 
             //
             // Test: set_length() - increase length - position should be 0
             //
             s1.set_length(5);
-            TEST(s1.get_length() == 5);
-            TEST(s1.component_count() == 5);
+            assertTrue(s1.get_length() == 5);
+            assertTrue(s1.component_count() == 5);
             for (i = 0; i < 5; i++) {
                 any.insert_short((short) i);
                 s1.insert_any(any);
@@ -3000,7 +3004,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 5; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) i);
+                assertTrue(s == (short) i);
                 s1.next();
             }
 
@@ -3012,14 +3016,14 @@ public class TestDynAny extends test.common.TestBase {
             s1.set_length(3);
             av = s1.get_any();
             s = av.extract_short();
-            TEST(s == (short) 1);
-            TEST(s1.get_length() == 3);
-            TEST(s1.component_count() == 3);
+            assertTrue(s == (short) 1);
+            assertTrue(s1.get_length() == 3);
+            assertTrue(s1.component_count() == 3);
             s1.rewind();
             for (i = 0; i < 3; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) i);
+                assertTrue(s == (short) i);
                 s1.next();
             }
 
@@ -3028,17 +3032,17 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = s1.to_any();
             pseq = TestAnySeqHelper.extract(av);
-            TEST(pseq.length == 3);
+            assertTrue(pseq.length == 3);
             for (i = 0; i < 3; i++) {
                 s = pseq[i].extract_short();
-                TEST(s == (short) i);
+                assertTrue(s == (short) i);
             }
 
             //
             // Test: copy
             //
             copy = s1.copy();
-            TEST(s1.equal(copy));
+            assertTrue(s1.equal(copy));
             copy.destroy();
 
             //
@@ -3048,7 +3052,7 @@ public class TestDynAny extends test.common.TestBase {
             copy.seek(1);
             any.insert_short((short) -33);
             copy.insert_any(any);
-            TEST(!s1.equal(copy));
+            assertTrue(!s1.equal(copy));
             copy.destroy();
 
             //
@@ -3065,7 +3069,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 8; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) (8 - i));
+                assertTrue(s == (short) (8 - i));
                 s1.next();
             }
 
@@ -3078,12 +3082,12 @@ public class TestDynAny extends test.common.TestBase {
                 comp = s1.current_component();
                 av = comp.get_any();
                 s = av.extract_short();
-                TEST(s == (short) (8 - i));
+                assertTrue(s == (short) (8 - i));
                 any.insert_short((short) i);
                 comp.insert_any(any);
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) i);
+                assertTrue(s == (short) i);
                 s1.next();
             }
 
@@ -3091,11 +3095,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements()
             //
             Any[] anySeq = s1.get_elements();
-            TEST(anySeq.length == 8);
+            assertTrue(anySeq.length == 8);
             for (i = 0; i < 8; i++) {
                 Any p = anySeq[i].extract_any();
                 s = p.extract_short();
-                TEST(s == (short) i);
+                assertTrue(s == (short) i);
             }
 
             //
@@ -3113,7 +3117,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 3; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) (i + 10));
+                assertTrue(s == (short) (i + 10));
                 s1.next();
             }
 
@@ -3121,11 +3125,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements_as_dyn_any()
             //
             DynAny[] dynAnySeq = s1.get_elements_as_dyn_any();
-            TEST(dynAnySeq.length == 3);
+            assertTrue(dynAnySeq.length == 3);
             for (i = 0; i < 3; i++) {
                 av = dynAnySeq[i].get_any();
                 s = av.extract_short();
-                TEST(s == (short) (i + 10));
+                assertTrue(s == (short) (i + 10));
             }
 
             //
@@ -3143,7 +3147,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 4; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) (i + 100));
+                assertTrue(s == (short) (i + 100));
                 s1.next();
             }
             for (i = 0; i < 4; i++)
@@ -3161,15 +3165,15 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             s2 = DynSequenceHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(s1.get_length() == 10);
-            TEST(s1.component_count() == 10);
+            assertTrue(s1.get_length() == 10);
+            assertTrue(s1.component_count() == 10);
             s1.rewind();
             for (i = 0; i < 10; i++) {
                 av = s1.get_any();
                 s = av.extract_short();
-                TEST(s == (short) (i * 10));
+                assertTrue(s == (short) (i * 10));
                 s1.next();
             }
 
@@ -3177,25 +3181,25 @@ public class TestDynAny extends test.common.TestBase {
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -3208,15 +3212,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -3237,10 +3241,10 @@ public class TestDynAny extends test.common.TestBase {
             type = TestStringArrayHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             a1 = DynArrayHelper.narrow(d1);
-            TEST(a1.component_count() == 10);
+            assertTrue(a1.component_count() == 10);
             for (i = 0; i < 10; i++) {
                 str = a1.get_string();
-                TEST(str.length() == 0);
+                assertTrue(str.length() == 0);
                 String s = "str " + i;
                 a1.insert_string(s);
                 a1.next();
@@ -3253,14 +3257,14 @@ public class TestDynAny extends test.common.TestBase {
             arr = TestStringArrayHelper.extract(av);
             for (i = 0; i < 10; i++) {
                 String s = "str " + i;
-                TEST(arr[i].equals(s));
+                assertTrue(arr[i].equals(s));
             }
 
             //
             // Test: copy
             //
             copy = a1.copy();
-            TEST(a1.equal(copy));
+            assertTrue(a1.equal(copy));
             copy.destroy();
 
             //
@@ -3269,7 +3273,7 @@ public class TestDynAny extends test.common.TestBase {
             copy = a1.copy();
             copy.seek(1);
             copy.insert_string("hi there");
-            TEST(!a1.equal(copy));
+            assertTrue(!a1.equal(copy));
             copy.destroy();
 
             //
@@ -3283,7 +3287,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 10; i++) {
                 str = a1.get_string();
                 String s = "STR " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 a1.next();
             }
 
@@ -3296,11 +3300,11 @@ public class TestDynAny extends test.common.TestBase {
                 comp = a1.current_component();
                 str = comp.get_string();
                 String s = "STR " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 s = "string " + i;
                 comp.insert_string(s);
                 str = a1.get_string();
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 a1.next();
             }
 
@@ -3308,11 +3312,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements()
             //
             Any[] anySeq = a1.get_elements();
-            TEST(anySeq.length == 10);
+            assertTrue(anySeq.length == 10);
             for (i = 0; i < 10; i++) {
                 String cp = anySeq[i].extract_string();
                 String s = "string " + i;
-                TEST(cp.equals(s));
+                assertTrue(cp.equals(s));
             }
 
             //
@@ -3327,7 +3331,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 10; i++) {
                 str = a1.get_string();
                 String s = "String " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 a1.next();
             }
 
@@ -3335,11 +3339,11 @@ public class TestDynAny extends test.common.TestBase {
             // Test: get_elements_as_dyn_any()
             //
             DynAny[] dynAnySeq = a1.get_elements_as_dyn_any();
-            TEST(dynAnySeq.length == 10);
+            assertTrue(dynAnySeq.length == 10);
             for (i = 0; i < 10; i++) {
                 str = dynAnySeq[i].get_string();
                 String s = "String " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
             }
 
             //
@@ -3356,7 +3360,7 @@ public class TestDynAny extends test.common.TestBase {
             for (i = 0; i < 10; i++) {
                 str = a1.get_string();
                 String s = "STRING " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 a1.next();
             }
             for (i = 0; i < 10; i++)
@@ -3371,14 +3375,14 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             a2 = DynArrayHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(a1.component_count() == 10);
+            assertTrue(a1.component_count() == 10);
             a1.rewind();
             for (i = 0; i < 10; i++) {
                 str = a1.get_string();
                 String s = "Str " + i;
-                TEST(str.equals(s));
+                assertTrue(str.equals(s));
                 a1.next();
             }
 
@@ -3393,35 +3397,35 @@ public class TestDynAny extends test.common.TestBase {
                     anySeq[i].insert_string(s);
                 }
                 a1.set_elements(anySeq);
-                TEST("set_elements() should not have succeeded" == null);
+                assertTrue("set_elements() should not have succeeded" == null);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
-            TEST(a1.component_count() == 10);
+            assertTrue(a1.component_count() == 10);
 
             //
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -3434,15 +3438,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -3464,22 +3468,22 @@ public class TestDynAny extends test.common.TestBase {
             type = TestStructBoxHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueBoxHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
-            TEST(v1.current_component() == null);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
+            assertTrue(v1.current_component() == null);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             pts = TestStructBoxHelper.extract(av);
-            TEST(pts == null);
+            assertTrue(pts == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             //
@@ -3487,7 +3491,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestStructBoxHelper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -3496,16 +3500,16 @@ public class TestDynAny extends test.common.TestBase {
             TestStructBoxHelper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: get_boxed_value (null)
             //
             try {
                 v1.get_boxed_value();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3515,7 +3519,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 v1.get_boxed_value_as_dyn_any();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3526,7 +3530,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 any.insert_string("hi");
                 v1.set_boxed_value(any);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -3537,7 +3541,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 any.type(TestStructHelper.type());
                 v1.set_boxed_value(any);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3549,7 +3553,7 @@ public class TestDynAny extends test.common.TestBase {
                 any.insert_long(123);
                 d2 = factory.create_dyn_any(any);
                 v1.set_boxed_value_as_dyn_any(d2);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d2.destroy();
@@ -3558,10 +3562,10 @@ public class TestDynAny extends test.common.TestBase {
             //
             // Test: set_to_value
             //
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 1);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 1);
 
             //
             // Test: component
@@ -3583,7 +3587,7 @@ public class TestDynAny extends test.common.TestBase {
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             //
@@ -3593,7 +3597,7 @@ public class TestDynAny extends test.common.TestBase {
             loadStruct(orb, tsbv);
             TestStructBoxHelper.insert(any, tsbv);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -3610,7 +3614,7 @@ public class TestDynAny extends test.common.TestBase {
             TestStructHelper.insert(any, ts);
             copy = v1.copy();
             v1.set_boxed_value(any);
-            TEST(!v1.equal(copy));
+            assertTrue(!v1.equal(copy));
             copy.destroy();
 
             //
@@ -3635,54 +3639,54 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             v2 = DynValueBoxHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 1);
+            assertTrue(v1.component_count() == 1);
 
             //
             // Test: set_boxed_value (from null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             ts.shortVal = (short) -99;
             TestStructHelper.insert(any, ts);
             v1.set_boxed_value(any);
-            TEST(!v1.is_null());
-            TEST(v1.current_component() != null);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.current_component() != null);
 
             //
             // Test: set_boxed_value_as_dyn_any (from null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             TestStructHelper.insert(any, ts);
             d2 = factory.create_dyn_any(any);
             v1.set_boxed_value_as_dyn_any(d2);
             d2.destroy();
-            TEST(!v1.is_null());
-            TEST(v1.current_component() != null);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.current_component() != null);
 
             //
             // Test: seek
             //
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(1) == false);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(1) == false);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(0);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -3695,15 +3699,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -3724,22 +3728,22 @@ public class TestDynAny extends test.common.TestBase {
             type = TestStringBoxHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueBoxHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
-            TEST(v1.current_component() == null);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
+            assertTrue(v1.current_component() == null);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             str = TestStringBoxHelper.extract(av);
-            TEST(str == null);
+            assertTrue(str == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             //
@@ -3747,7 +3751,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestStringBoxHelper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
@@ -3756,16 +3760,16 @@ public class TestDynAny extends test.common.TestBase {
             TestStringBoxHelper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: get_boxed_value (null)
             //
             try {
                 v1.get_boxed_value();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3775,7 +3779,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             try {
                 v1.get_boxed_value_as_dyn_any();
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3786,7 +3790,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 any.insert_boolean(false);
                 v1.set_boxed_value(any);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
             }
@@ -3797,7 +3801,7 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 any.type(orb.get_primitive_tc(org.omg.CORBA.TCKind.tk_string));
                 v1.set_boxed_value(any);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
                 // expected
             }
@@ -3809,7 +3813,7 @@ public class TestDynAny extends test.common.TestBase {
                 any.insert_long(123);
                 d2 = factory.create_dyn_any(any);
                 v1.set_boxed_value_as_dyn_any(d2);
-                TEST(false);
+                assertTrue(false);
             } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
                 // expected
                 d2.destroy();
@@ -3818,17 +3822,17 @@ public class TestDynAny extends test.common.TestBase {
             //
             // Test: set_to_value
             //
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 1);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 1);
 
             //
             // Test: component
             //
             comp = v1.current_component();
             str = comp.get_string();
-            TEST(str.length() == 0);
+            assertTrue(str.length() == 0);
             any.insert_string("hi");
             comp.from_any(any);
 
@@ -3837,13 +3841,13 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = d1.to_any();
             str = TestStringBoxHelper.extract(av);
-            TEST(str.equals("hi"));
+            assertTrue(str.equals("hi"));
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             copy.destroy();
 
             //
@@ -3851,14 +3855,14 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestStringBoxHelper.insert(any, "hi");
             d2 = factory.create_dyn_any(any);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
 
             //
             // Test: get_boxed_value
             //
             av = v1.get_boxed_value();
-            TEST(av.extract_string().equals("hi"));
+            assertTrue(av.extract_string().equals("hi"));
 
             //
             // Test: set_boxed_value
@@ -3866,14 +3870,14 @@ public class TestDynAny extends test.common.TestBase {
             any.insert_string("bye");
             copy = v1.copy();
             v1.set_boxed_value(any);
-            TEST(!v1.equal(copy));
+            assertTrue(!v1.equal(copy));
             copy.destroy();
 
             //
             // Test: get_boxed_value_as_dyn_any
             //
             d2 = v1.get_boxed_value_as_dyn_any();
-            TEST(d2.get_string().equals("bye"));
+            assertTrue(d2.get_string().equals("bye"));
 
             //
             // Test: set_boxed_value_as_dyn_any
@@ -3890,53 +3894,53 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             v2 = DynValueBoxHelper.narrow(d2);
             d1.assign(d2);
-            TEST(d1.equal(d2));
+            assertTrue(d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 1);
+            assertTrue(v1.component_count() == 1);
 
             //
             // Test: set_boxed_value (from null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             any.insert_string("foo");
             v1.set_boxed_value(any);
-            TEST(!v1.is_null());
-            TEST(v1.current_component() != null);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.current_component() != null);
 
             //
             // Test: set_boxed_value_as_dyn_any (from null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             any.insert_string("bar");
             d2 = factory.create_dyn_any(any);
             v1.set_boxed_value_as_dyn_any(d2);
             d2.destroy();
-            TEST(!v1.is_null());
-            TEST(v1.current_component() != null);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.current_component() != null);
 
             //
             // Test: seek
             //
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(1) == false);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(1) == false);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(0);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -3949,15 +3953,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -3977,21 +3981,21 @@ public class TestDynAny extends test.common.TestBase {
             type = TestValue1Helper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             ptv1 = TestValue1Helper.extract(av);
-            TEST(ptv1 == null);
+            assertTrue(ptv1 == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4000,7 +4004,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestValue1Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
@@ -4009,17 +4013,17 @@ public class TestDynAny extends test.common.TestBase {
             TestValue1Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: set_to_value
             //
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 0);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: current_component TypeMismatch exception
@@ -4035,13 +4039,13 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = d1.to_any();
             ptv1 = TestValue1Helper.extract(av);
-            TEST(ptv1 != null);
+            assertTrue(ptv1 != null);
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4052,14 +4056,14 @@ public class TestDynAny extends test.common.TestBase {
             TestValue1Helper.insert(any, tv1v);
             d2 = factory.create_dyn_any(any);
             v2 = DynValueHelper.narrow(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
             // Test: get_members
             //
             NameValuePair[] nvpSeq = v1.get_members();
-            TEST(nvpSeq.length == 0);
+            assertTrue(nvpSeq.length == 0);
 
             //
             // Test: set_members
@@ -4070,15 +4074,15 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_members (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members(nvpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: get_members_as_dyn_any
             //
             NameDynAnyPair[] ndpSeq = v1.get_members_as_dyn_any();
-            TEST(ndpSeq.length == 0);
+            assertTrue(ndpSeq.length == 0);
 
             //
             // Test: set_elements_as_dyn_any
@@ -4090,9 +4094,9 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_elements_as_dyn_any (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members_as_dyn_any(ndpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: assign
@@ -4102,29 +4106,29 @@ public class TestDynAny extends test.common.TestBase {
             d2 = factory.create_dyn_any(any);
             v2 = DynValueHelper.narrow(d2);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 0);
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: seek
             //
-            TEST(d1.seek(0) == false);
-            TEST(d1.seek(-1) == false);
+            assertTrue(d1.seek(0) == false);
+            assertTrue(d1.seek(-1) == false);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -4147,21 +4151,21 @@ public class TestDynAny extends test.common.TestBase {
             type = TestValue2Helper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             ptv2 = TestValue2Helper.extract(av);
-            TEST(ptv2 == null);
+            assertTrue(ptv2 == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4170,7 +4174,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestValue2Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
@@ -4179,17 +4183,17 @@ public class TestDynAny extends test.common.TestBase {
             TestValue2Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: set_to_value
             //
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 3);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 3);
 
             //
             // Test: components
@@ -4205,15 +4209,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = d1.to_any();
             ptv2 = TestValue2Helper.extract(av);
-            TEST(ptv2.shortVal == (short) -55);
-            TEST(ptv2.longVal == 333);
-            TEST(ptv2.stringVal.equals("hi there"));
+            assertTrue(ptv2.shortVal == (short) -55);
+            assertTrue(ptv2.longVal == 333);
+            assertTrue(ptv2.stringVal.equals("hi there"));
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4226,20 +4230,20 @@ public class TestDynAny extends test.common.TestBase {
             tv2v.stringVal = "hi there";
             TestValue2Helper.insert(any, tv2v);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
             // Test: get_members
             //
             NameValuePair[] nvpSeq = v1.get_members();
-            TEST(nvpSeq.length == 3);
+            assertTrue(nvpSeq.length == 3);
             shortVal = nvpSeq[0].value.extract_short();
-            TEST(shortVal == (short) -55);
+            assertTrue(shortVal == (short) -55);
             longVal = nvpSeq[1].value.extract_long();
-            TEST(longVal == 333);
+            assertTrue(longVal == 333);
             cp = nvpSeq[2].value.extract_string();
-            TEST(cp.equals("hi there"));
+            assertTrue(cp.equals("hi there"));
 
             //
             // Test: set_members
@@ -4253,19 +4257,19 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_members (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members(nvpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: get_members_as_dyn_any
             //
             NameDynAnyPair[] ndpSeq = v1.get_members_as_dyn_any();
-            TEST(ndpSeq.length == 3);
-            TEST(ndpSeq[0].value.get_short() == (short) 237);
-            TEST(ndpSeq[1].value.get_long() == 680580);
+            assertTrue(ndpSeq.length == 3);
+            assertTrue(ndpSeq[0].value.get_short() == (short) 237);
+            assertTrue(ndpSeq[1].value.get_long() == 680580);
             str = ndpSeq[2].value.get_string();
-            TEST(str.equals("ho there"));
+            assertTrue(str.equals("ho there"));
 
             //
             // Test: set_elements_as_dyn_any
@@ -4289,9 +4293,9 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_elements_as_dyn_any (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members_as_dyn_any(ndpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: assign
@@ -4303,36 +4307,36 @@ public class TestDynAny extends test.common.TestBase {
             TestValue2Helper.insert(any, tv2v);
             d2 = factory.create_dyn_any(any);
             v2 = DynValueHelper.narrow(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.insert_short((short) 980);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 3);
+            assertTrue(v1.component_count() == 3);
 
             //
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -4345,15 +4349,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -4379,21 +4383,21 @@ public class TestDynAny extends test.common.TestBase {
             type = TestValue3Helper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             ptv3 = TestValue3Helper.extract(av);
-            TEST(ptv3 == null);
+            assertTrue(ptv3 == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4402,7 +4406,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestValue3Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
@@ -4411,16 +4415,16 @@ public class TestDynAny extends test.common.TestBase {
             TestValue3Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: set_to_value
             //
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 4);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 4);
 
             //
             // Test: components
@@ -4442,17 +4446,17 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = d1.to_any();
             ptv3 = TestValue3Helper.extract(av);
-            TEST(ptv3.shortVal == (short) -55);
-            TEST(ptv3.longVal == 333);
-            TEST(ptv3.stringVal.equals("hi there"));
-            TEST(ptv3.unionVal.discriminator() == (short) 0);
-            TEST(ptv3.unionVal.a() == 333);
+            assertTrue(ptv3.shortVal == (short) -55);
+            assertTrue(ptv3.longVal == 333);
+            assertTrue(ptv3.stringVal.equals("hi there"));
+            assertTrue(ptv3.unionVal.discriminator() == (short) 0);
+            assertTrue(ptv3.unionVal.a() == 333);
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4467,23 +4471,23 @@ public class TestDynAny extends test.common.TestBase {
             tv3v.unionVal.a((short) 0, 333);
             TestValue3Helper.insert(any, tv3v);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
             // Test: get_members
             //
             NameValuePair[] nvpSeq = v1.get_members();
-            TEST(nvpSeq.length == 4);
+            assertTrue(nvpSeq.length == 4);
             shortVal = nvpSeq[0].value.extract_short();
-            TEST(shortVal == (short) -55);
+            assertTrue(shortVal == (short) -55);
             longVal = nvpSeq[1].value.extract_long();
-            TEST(longVal == 333);
+            assertTrue(longVal == 333);
             cp = nvpSeq[2].value.extract_string();
-            TEST(cp.equals("hi there"));
+            assertTrue(cp.equals("hi there"));
             ptu4 = test.types.DynAnyTypes.TestUnion4Helper
                     .extract(nvpSeq[3].value);
-            TEST(ptu4.a() == 333);
+            assertTrue(ptu4.a() == 333);
 
             //
             // Test: set_members
@@ -4500,21 +4504,21 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_members (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members(nvpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: get_members_as_dyn_any
             //
             NameDynAnyPair[] ndpSeq = v1.get_members_as_dyn_any();
-            TEST(ndpSeq.length == 4);
-            TEST(ndpSeq[0].value.get_short() == (short) 237);
-            TEST(ndpSeq[1].value.get_long() == 680580);
+            assertTrue(ndpSeq.length == 4);
+            assertTrue(ndpSeq[0].value.get_short() == (short) 237);
+            assertTrue(ndpSeq[1].value.get_long() == 680580);
             str = ndpSeq[2].value.get_string();
-            TEST(str.equals("ho there"));
+            assertTrue(str.equals("ho there"));
             ndpSeq[3].value.seek(1);
-            TEST(ndpSeq[3].value.get_float() < 2.0f);
+            assertTrue(ndpSeq[3].value.get_float() < 2.0f);
 
             //
             // Test: set_elements_as_dyn_any
@@ -4543,9 +4547,9 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_elements_as_dyn_any (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members_as_dyn_any(ndpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: assign
@@ -4559,36 +4563,36 @@ public class TestDynAny extends test.common.TestBase {
             TestValue3Helper.insert(any, tv3v);
             d2 = factory.create_dyn_any(any);
             v2 = DynValueHelper.narrow(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.insert_short((short) 980);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 4);
+            assertTrue(v1.component_count() == 4);
 
             //
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -4601,15 +4605,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -4634,21 +4638,21 @@ public class TestDynAny extends test.common.TestBase {
             type = TestValue4Helper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
             v1 = DynValueHelper.narrow(d1);
-            TEST(v1.is_null());
-            TEST(v1.component_count() == 0);
+            assertTrue(v1.is_null());
+            assertTrue(v1.component_count() == 0);
 
             //
             // Test: to_any (null)
             //
             av = d1.to_any();
             ptv4 = TestValue4Helper.extract(av);
-            TEST(ptv4 == null);
+            assertTrue(ptv4 == null);
 
             //
             // Test: copy (null)
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4657,7 +4661,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             TestValue4Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
@@ -4666,16 +4670,16 @@ public class TestDynAny extends test.common.TestBase {
             TestValue4Helper.insert(any, null);
             d2 = factory.create_dyn_any(any);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
 
             //
             // Test: set_to_value
             //
             v1.set_to_value();
-            TEST(!v1.is_null());
-            TEST(v1.component_count() == 5);
+            assertTrue(!v1.is_null());
+            assertTrue(v1.component_count() == 5);
 
             //
             // Test: components
@@ -4695,17 +4699,17 @@ public class TestDynAny extends test.common.TestBase {
             //
             av = d1.to_any();
             ptv4 = TestValue4Helper.extract(av);
-            TEST(ptv4.shortVal == (short) -55);
-            TEST(ptv4.longVal == 333);
-            TEST(ptv4.stringVal.equals("hi there"));
-            TEST(ptv4.charVal == 'A');
-            TEST(ptv4.longlongVal == 7890123L);
+            assertTrue(ptv4.shortVal == (short) -55);
+            assertTrue(ptv4.longVal == 333);
+            assertTrue(ptv4.stringVal.equals("hi there"));
+            assertTrue(ptv4.charVal == 'A');
+            assertTrue(ptv4.longlongVal == 7890123L);
 
             //
             // Test: copy
             //
             copy = d1.copy();
-            TEST(d1.equal(copy));
+            assertTrue(d1.equal(copy));
             // destroying copy would also destroy d1
             // copy.destroy();
 
@@ -4720,24 +4724,24 @@ public class TestDynAny extends test.common.TestBase {
             tv4v.longlongVal = 7890123L;
             TestValue4Helper.insert(any, tv4v);
             d2 = factory.create_dyn_any(any);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
 
             //
             // Test: get_members
             //
             NameValuePair[] nvpSeq = v1.get_members();
-            TEST(nvpSeq.length == 5);
+            assertTrue(nvpSeq.length == 5);
             shortVal = nvpSeq[0].value.extract_short();
-            TEST(shortVal == (short) -55);
+            assertTrue(shortVal == (short) -55);
             longVal = nvpSeq[1].value.extract_long();
-            TEST(longVal == 333);
+            assertTrue(longVal == 333);
             cp = nvpSeq[2].value.extract_string();
-            TEST(cp.equals("hi there"));
+            assertTrue(cp.equals("hi there"));
             charVal = nvpSeq[3].value.extract_char();
-            TEST(charVal == 'A');
+            assertTrue(charVal == 'A');
             longlongVal = nvpSeq[4].value.extract_longlong();
-            TEST(longlongVal == 7890123L);
+            assertTrue(longlongVal == 7890123L);
 
             //
             // Test: set_members
@@ -4753,21 +4757,21 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_members (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members(nvpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: get_members_as_dyn_any
             //
             NameDynAnyPair[] ndpSeq = v1.get_members_as_dyn_any();
-            TEST(ndpSeq.length == 5);
-            TEST(ndpSeq[0].value.get_short() == (short) 237);
-            TEST(ndpSeq[1].value.get_long() == 680580);
+            assertTrue(ndpSeq.length == 5);
+            assertTrue(ndpSeq[0].value.get_short() == (short) 237);
+            assertTrue(ndpSeq[1].value.get_long() == 680580);
             str = ndpSeq[2].value.get_string();
-            TEST(str.equals("ho there"));
-            TEST(ndpSeq[3].value.get_char() == 'Z');
-            TEST(ndpSeq[4].value.get_longlong() == 1237890L);
+            assertTrue(str.equals("ho there"));
+            assertTrue(ndpSeq[3].value.get_char() == 'Z');
+            assertTrue(ndpSeq[4].value.get_longlong() == 1237890L);
 
             //
             // Test: set_elements_as_dyn_any
@@ -4799,9 +4803,9 @@ public class TestDynAny extends test.common.TestBase {
             // Test: set_elements_as_dyn_any (null)
             //
             v1.set_to_null();
-            TEST(v1.is_null());
+            assertTrue(v1.is_null());
             v1.set_members_as_dyn_any(ndpSeq);
-            TEST(!v1.is_null());
+            assertTrue(!v1.is_null());
 
             //
             // Test: assign
@@ -4815,36 +4819,36 @@ public class TestDynAny extends test.common.TestBase {
             TestValue4Helper.insert(any, tv4v);
             d2 = factory.create_dyn_any(any);
             v2 = DynValueHelper.narrow(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.insert_short((short) 980);
             d1.assign(d2);
-            TEST(!d1.equal(d2));
+            assertTrue(!d1.equal(d2));
             d2.destroy();
-            TEST(v1.component_count() == 5);
+            assertTrue(v1.component_count() == 5);
 
             //
             // Test: seek
             //
             int count = d1.component_count();
-            TEST(d1.seek(0) == true);
-            TEST(d1.seek(-1) == false);
-            TEST(d1.seek(count) == false);
-            TEST(d1.seek(count - 1) == true);
+            assertTrue(d1.seek(0) == true);
+            assertTrue(d1.seek(-1) == false);
+            assertTrue(d1.seek(count) == false);
+            assertTrue(d1.seek(count - 1) == true);
 
             //
             // Test: next
             //
             d1.seek(-1);
-            TEST(d1.next() == true);
+            assertTrue(d1.next() == true);
             d1.seek(count - 1);
-            TEST(d1.next() == false);
+            assertTrue(d1.next() == false);
 
             //
             // Test: current_component
             //
             d1.rewind();
             d2 = d1.current_component();
-            TEST(d2 != null);
+            assertTrue(d2 != null);
 
             //
             // Test: destroy
@@ -4857,15 +4861,15 @@ public class TestDynAny extends test.common.TestBase {
             //
             d1.seek(-9);
             d2 = d1.current_component();
-            TEST(d2 == null);
+            assertTrue(d2 == null);
 
             d1.destroy();
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -4883,7 +4887,7 @@ public class TestDynAny extends test.common.TestBase {
             //
             type = TestValueStructHelper.type();
             d1 = factory.create_dyn_any_from_type_code(type);
-            TEST(d1.component_count() == 2);
+            assertTrue(d1.component_count() == 2);
 
             //
             // Test: components
@@ -4892,7 +4896,7 @@ public class TestDynAny extends test.common.TestBase {
             d1.next();
             comp = d1.current_component();
             dv = DynValueHelper.narrow(comp);
-            TEST(dv.is_null());
+            assertTrue(dv.is_null());
             dv.set_to_value();
             comp.insert_short((short) -55);
             comp.next();
@@ -4908,11 +4912,11 @@ public class TestDynAny extends test.common.TestBase {
             try {
                 ptv2 = (TestValue2) vb;
             } catch (ClassCastException ex) {
-                TEST(false);
+                assertTrue(false);
             }
-            TEST(ptv2.shortVal == (short) -55);
-            TEST(ptv2.longVal == 333);
-            TEST(ptv2.stringVal.equals("hi there"));
+            assertTrue(ptv2.shortVal == (short) -55);
+            assertTrue(ptv2.longVal == 333);
+            assertTrue(ptv2.stringVal.equals("hi there"));
 
             //
             // Test: insert_val()
@@ -4930,33 +4934,33 @@ public class TestDynAny extends test.common.TestBase {
             // truncated to TestValue2
             //
             comp = d1.current_component();
-            TEST(comp.component_count() == 3);
+            assertTrue(comp.component_count() == 3);
             comp.rewind();
-            TEST(comp.get_short() == (short) -77);
+            assertTrue(comp.get_short() == (short) -77);
             comp.next();
-            TEST(comp.get_long() == 555);
+            assertTrue(comp.get_long() == 555);
             comp.next();
             str = comp.get_string();
-            TEST(str.equals("ho there"));
+            assertTrue(str.equals("ho there"));
             vb = d1.get_val();
             try {
                 ptv2 = (TestValue2) vb;
             } catch (ClassCastException ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 TestValue4 ptv4 = (TestValue4) vb;
-                TEST(false);
+                assertTrue(false);
             } catch (ClassCastException ex) {
                 // expected
             }
         } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -4965,9 +4969,9 @@ public class TestDynAny extends test.common.TestBase {
 
         try {
             obj = orb.resolve_initial_references("DynAnyFactory");
-            TEST(obj != null);
+            assertTrue(obj != null);
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //

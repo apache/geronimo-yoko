@@ -17,6 +17,8 @@
 
 package ORBTest;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestObjectExceptionsExt_2_3 extends test.common.TestBase implements
@@ -52,50 +54,50 @@ public class TestObjectExceptionsExt_2_3 extends test.common.TestBase implements
 
         try {
             ti.op_CODESET_INCOMPATIBLE_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (CODESET_INCOMPATIBLE ex) {
-            TEST(ex.minor == 31);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 31);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_REBIND_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (REBIND ex) {
-            TEST(ex.minor == 32);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 32);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_TIMEOUT_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (TIMEOUT ex) {
-            TEST(ex.minor == 33);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 33);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_TRANSACTION_UNAVAILABLE_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (TRANSACTION_UNAVAILABLE ex) {
-            TEST(ex.minor == 34);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 34);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_TRANSACTION_MODE_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (TRANSACTION_MODE ex) {
-            TEST(ex.minor == 35);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 35);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
 
         try {
             ti.op_BAD_QOS_Ex();
-            TEST(false);
+            assertTrue(false);
         } catch (BAD_QOS ex) {
-            TEST(ex.minor == 36);
-            TEST(ex.completed == CompletionStatus.COMPLETED_NO);
+            assertTrue(ex.minor == 36);
+            assertTrue(ex.completed == CompletionStatus.COMPLETED_NO);
         }
     }
 

@@ -17,10 +17,14 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
+
 import java.util.*;
 
 final public class TestLocationForwardClient extends test.common.TestBase {
@@ -90,7 +94,7 @@ final public class TestLocationForwardClient extends test.common.TestBase {
             }
             TestLocationForwardServer server = TestLocationForwardServerHelper
                     .narrow(obj);
-            TEST(server != null);
+            assertTrue(server != null);
             org.omg.CORBA.Object servant = server.get_servant();
 
             activatorImpl.setForwardRequest(servant);
