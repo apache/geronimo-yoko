@@ -649,24 +649,16 @@ public final class Client extends test.common.TestBase {
         ClientORBInitializer_impl._OB_setLocal(local);
     }
 
-    static int ClientRun(ORB orb, boolean nonBlocking, String[] args)
-            throws org.omg.CORBA.UserException {
+    static int ClientRun(ORB orb, boolean nonBlocking, String[] args) throws Exception {
         String impl;
         String dsiImpl;
 
         //
         // Get TestInterface
         //
-        try {
-            String refFile = "TestInterface.ref";
-            FileInputStream file = new FileInputStream(refFile);
-            BufferedReader in = new BufferedReader(new InputStreamReader(file));
-            impl = in.readLine();
-            dsiImpl = in.readLine();
-            file.close();
-        } catch (IOException ex) {
-            System.err.println("Can't read from `" + ex.getMessage() + "'");
-            return 1;
+        try (BufferedReader in = new BufferedReader(new FileReader("TestInterface.ref"))) {
+            impl = readRef(in);
+            dsiImpl = readRef(in);
         }
 
         System.out.print("Testing initial reference registration... ");
@@ -695,55 +687,79 @@ public final class Client extends test.common.TestBase {
         obj = obj._set_policy_override(pl,
                 org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
         TestInterface ti = TestInterfaceHelper.narrow(obj);
-        dsiObj = dsiObj._set_policy_override(pl,
-                org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
-        TestInterface tiDSI = TestInterfaceHelper.narrow(dsiObj);
         assertTrue(ti != null);
-        assertTrue(tiDSI != null);
-        System.out.println("Done!");
+        try {
+            dsiObj = dsiObj._set_policy_override(pl,
+                    org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
+            TestInterface tiDSI = TestInterfaceHelper.narrow(dsiObj);
+            assertTrue(tiDSI != null);
+            System.out.println("Done!");
 
-        //
-        // Test: Codec
-        //
-        System.out.print("Testing Codec... ");
-        System.out.flush();
-        TestCodec(orb);
-        System.out.println("Done!");
+            //
+            // Test: Codec
+            //
+            System.out.print("Testing Codec... ");
+            System.out.flush();
+            TestCodec(orb);
+            System.out.println("Done!");
 
-        //
-        // Test: Exception translation
-        //
-        System.out.print("Testing client side exception translation... ");
-        System.out.flush();
-        TestTranslation(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            //
+            // Test: Exception translation
+            //
+            System.out.print("Testing client side exception translation... ");
+            System.out.flush();
+            TestTranslation(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        //
-        // Run tests
-        //
-        System.out.print("Testing standard method calls with static stubs... ");
-        System.out.flush();
-        TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            //
+            // Run tests
+            //
+            System.out.print("Testing standard method calls with static stubs... ");
+            System.out.flush();
+            TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        System.out.print("Ditto, but with the DSI implementation... ");
-        System.out.flush();
-        TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
-        System.out.println("Done!");
+            System.out.print("Ditto, but with the DSI implementation... ");
+            System.out.flush();
+            TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
+            System.out.println("Done!");
 
-        System.out.print("Testing standard method calls with the DII... ");
-        System.out.flush();
-        TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            System.out.print("Testing standard method calls with the DII... ");
+            System.out.flush();
+            TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        System.out.print("Ditto, but with the DSI implementation... ");
-        System.out.flush();
-        TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
-        System.out.println("Done!");
+            System.out.print("Ditto, but with the DSI implementation... ");
+            System.out.flush();
+            TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
+            System.out.println("Done!");
+            return 0;
+        } finally {
+            ti.deactivate();
+        }
+    }
 
-        ti.deactivate();
-
-        return 0;
+    /**
+     * @param in
+     * @return
+     * @throws IOException
+     */
+    private static String readRef(BufferedReader in) throws Exception {
+        String line = in.readLine();
+        if (line == null) {
+            throw new RuntimeException("Unknown Server error");
+        } else if (!!!line.equals("ref:")) {
+            try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+                pw.println("Server error:");
+                do {
+                    pw.print('\t');
+                    pw.println(line);
+                } while ((line = in.readLine()) != null);
+                pw.flush();
+                throw new RuntimeException(sw.toString());
+            }
+        }
+        return in.readLine();
     }
 
     public static void main(String[] args) {

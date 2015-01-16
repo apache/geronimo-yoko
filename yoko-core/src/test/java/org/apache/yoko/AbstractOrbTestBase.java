@@ -82,8 +82,8 @@ public class AbstractOrbTestBase extends TestCase {
         }
     }
     
-    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass) throws Exception {
-        runServerClientTest(serverClass.getName(), clientClass.getName());
+    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass, String...commonArgs) throws Exception {
+        runServerClientTest(serverClass.getName(), commonArgs, clientClass.getName(), commonArgs);
     }
     
     protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
@@ -102,8 +102,8 @@ public class AbstractOrbTestBase extends TestCase {
         server.exit(0);
     }
         
-    public void setWaitForFile(File file) {
-        this.waitForFile = file;
+    public void setWaitForFile(String file) {
+        this.waitForFile = new File(file);
     }
         
     public File getWaitForFile() {
