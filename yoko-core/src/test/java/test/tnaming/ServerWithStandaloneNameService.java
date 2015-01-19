@@ -5,8 +5,8 @@ import java.util.Properties;
 import org.apache.yoko.orb.CosNaming.tnaming.TransientNameService;
 
 public class ServerWithStandaloneNameService {
-    public static final String REF_FILE_NAME = ServerWithStandaloneNameService.class.getName() + ".ref";
     public static void main(String args[]) throws Exception {
+        final String refFile = args[0];
         try (TransientNameService service = new TransientNameService("localhost", Util.NS_PORT)) {
             System.out.println("Starting transient name service");
             service.run();
@@ -16,8 +16,8 @@ public class ServerWithStandaloneNameService {
             props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
             props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
             
-            try (Server s = new Server(props, "-ORBInitRef", "NameService=" + Util.NS_LOC)) {
-                s.run(REF_FILE_NAME);
+            try (Server s = new Server(refFile, props, "-ORBInitRef", "NameService=" + Util.NS_LOC)) {
+                s.run();
             }
         }
     }

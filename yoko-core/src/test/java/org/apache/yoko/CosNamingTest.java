@@ -30,18 +30,22 @@ import test.tnaming.ServerWithStandaloneNameService;
 import test.tnaming.Util;
 
 public class CosNamingTest extends AbstractOrbTestBase {
+    
     public void testStandaloneNameService() throws Exception {
-        setWaitForFile(Util.useRefFile(ServerWithStandaloneNameService.REF_FILE_NAME));
-        runServerClientTest(ServerWithStandaloneNameService.class, ClientForWritableNameService.class);
+        final String refFile = "standalone.ref";
+        setWaitForFile(refFile);
+        runServerClientTest(ServerWithStandaloneNameService.class, ClientForWritableNameService.class, refFile);
     }
     
     public void testIntegralNameService() throws Exception {
-        setWaitForFile(Util.useRefFile(ServerWithIntegralNameService.REF_FILE_NAME));
-        runServerClientTest(ServerWithIntegralNameService.class, ClientForWritableNameService.class);
+        final String refFile = "integral.ref";
+        setWaitForFile(refFile);
+        runServerClientTest(ServerWithIntegralNameService.class, ClientForWritableNameService.class, refFile);
     }
     
     public void testReadOnlyNameService() throws Exception {
-        setWaitForFile(Util.useRefFile(ServerWithReadOnlyNameService.REF_FILE_NAME));
-        runServerClientTest(ServerWithReadOnlyNameService.class, ClientForReadOnlyNameService.class);
+        final String refFile = "readonly.ref";
+        setWaitForFile(refFile);
+        runServerClientTest(ServerWithReadOnlyNameService.class, ClientForReadOnlyNameService.class, refFile);
     }
 }

@@ -18,11 +18,14 @@
 
 package org.apache.yoko;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import java.io.File;
 import java.rmi.registry.Registry;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import junit.framework.TestCase;
 
@@ -82,8 +85,8 @@ public class AbstractOrbTestBase extends TestCase {
         }
     }
     
-    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass) throws Exception {
-        runServerClientTest(serverClass.getName(), clientClass.getName());
+    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass, String...commonArgs) throws Exception {
+        runServerClientTest(serverClass.getName(), commonArgs, clientClass.getName(), commonArgs);
     }
     
     protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
@@ -98,12 +101,16 @@ public class AbstractOrbTestBase extends TestCase {
         // and is somewhat non-robust.
         Thread.sleep(1000);
         client.invokeMain(clientClass, clientArgs);
-        serverFuture.get(10000, TimeUnit.MILLISECONDS);
+        try {
+            serverFuture.get(2, SECONDS);
+        } catch (TimeoutException e) {
+            System.out.println("Ignoring server exception: " + e);
+        }
         server.exit(0);
     }
         
-    public void setWaitForFile(File file) {
-        this.waitForFile = file;
+    public void setWaitForFile(String file) {
+        this.waitForFile = new File(file);
     }
         
     public File getWaitForFile() {
