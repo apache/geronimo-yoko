@@ -19,8 +19,10 @@ package org.apache.yoko.orb.OBCORBA;
 
 import java.security.AccessController;
 import java.util.Properties;
+
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
 
 // This class must be public and not final
 public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
@@ -1340,7 +1342,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // ORBControl methods
         //
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
         orbControl_.run();
     }
 
@@ -1350,7 +1352,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // ORBControl methods
         //
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
         orbControl_.shutdownServer(wait_for_completion);
     }
 
