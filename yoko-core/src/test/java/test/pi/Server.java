@@ -57,23 +57,22 @@ public final class Server extends test.common.TestBase {
         props.put("org.omg.PortableInterceptor.ORBInitializerClass." + "test.pi.ServerORBInitializer_impl", "");
     }
 
-    static int ServerRun(ORB orb, boolean nonBlocking, String[] args)
-            throws Exception {
+    static void ServerRun(ORB orb, boolean nonBlocking, String[] args) throws Exception {
         try (PrintWriter out = new PrintWriter(new FileWriter(refFile))) {
             try {
-                Class.forName("test.pi.ServerORBInitializer_impl");
-
+                Object c = Class.forName("test.pi.ServerORBInitializer_impl");
+                System.out.println("Got class " + c);
                 //
                 // Resolve Root POA
                 //
                 POA poa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-
+                System.out.println("Got root POA");
                 //
                 // Activate the POA manager
                 //
                 POAManager manager = poa.the_POAManager();
                 manager.activate();
-
+                System.out.println("Activated root poa manager");
                 //
                 // This will use ORB::create_policy to create all the POA policies
                 // and our custom policy
@@ -87,20 +86,14 @@ public final class Server extends test.common.TestBase {
 
                 LifespanPolicyValueHelper.insert(any, LifespanPolicyValue.PERSISTENT);
                 policies[0] = orb.create_policy(LIFESPAN_POLICY_ID.value, any);
-                IdAssignmentPolicyValueHelper.insert(any,
-                        IdAssignmentPolicyValue.USER_ID);
+                IdAssignmentPolicyValueHelper.insert(any, IdAssignmentPolicyValue.USER_ID);
                 policies[1] = orb.create_policy(ID_ASSIGNMENT_POLICY_ID.value, any);
-                RequestProcessingPolicyValueHelper.insert(any,
-                        RequestProcessingPolicyValue.USE_SERVANT_MANAGER);
-                policies[2] = orb
-                        .create_policy(REQUEST_PROCESSING_POLICY_ID.value, any);
-                ServantRetentionPolicyValueHelper.insert(any,
-                        ServantRetentionPolicyValue.NON_RETAIN);
+                RequestProcessingPolicyValueHelper.insert(any, RequestProcessingPolicyValue.USE_SERVANT_MANAGER);
+                policies[2] = orb.create_policy(REQUEST_PROCESSING_POLICY_ID.value, any);
+                ServantRetentionPolicyValueHelper.insert(any, ServantRetentionPolicyValue.NON_RETAIN);
                 policies[3] = orb.create_policy(SERVANT_RETENTION_POLICY_ID.value, any);
-                ImplicitActivationPolicyValueHelper.insert(any,
-                        ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION);
-                policies[4] = orb.create_policy(IMPLICIT_ACTIVATION_POLICY_ID.value,
-                        any);
+                ImplicitActivationPolicyValueHelper.insert(any, ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION);
+                policies[4] = orb.create_policy(IMPLICIT_ACTIVATION_POLICY_ID.value, any);
                 any.insert_long(10);
                 policies[5] = orb.create_policy(MY_SERVER_POLICY_ID.value, any);
 
@@ -111,27 +104,23 @@ public final class Server extends test.common.TestBase {
                 //
                 TestInterface_impl impl = new TestInterface_impl(orb, persistentPOA);
                 byte[] oid = ("test").getBytes();
-                org.omg.CORBA.Object objImpl = persistentPOA.create_reference_with_id(
-                        oid, "IDL:TestInterface:1.0");
-                TestInterfaceDSI_impl dsiImpl = new TestInterfaceDSI_impl(orb,
-                        persistentPOA);
+                org.omg.CORBA.Object objImpl = persistentPOA.create_reference_with_id(oid, "IDL:TestInterface:1.0");
+                TestInterfaceDSI_impl dsiImpl = new TestInterfaceDSI_impl(orb, persistentPOA);
                 oid = ("testDSI").getBytes();
-                org.omg.CORBA.Object objDSIImpl = persistentPOA
-                        .create_reference_with_id(oid, "IDL:TestInterface:1.0");
+                org.omg.CORBA.Object objDSIImpl = persistentPOA.create_reference_with_id(oid, "IDL:TestInterface:1.0");
 
                 locatorImpl = new TestLocator_impl(orb, impl, dsiImpl);
                 ServantLocator locator = locatorImpl._this(orb);
                 persistentPOA.set_servant_manager(locator);
 
-                org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper
-                        .narrow(orb.resolve_initial_references("CodecFactory"));
+                org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
                 assertTrue(factory != null);
 
-                ServerRequestInterceptor interceptor = new ServerTestInterceptor_impl(
-                        orb, factory);
-                ServerORBInitializer_impl.serverProxyManager.setInterceptor(0,
-                        interceptor);
+                ServerRequestInterceptor interceptor = new ServerTestInterceptor_impl(orb, factory);
+                ServerORBInitializer_impl.serverProxyManager.setInterceptor(0, interceptor);
 
+                System.out.println("About to write refs");
+                
                 //
                 // Save references. This must be done after POA manager
                 // activation, otherwise there is a potential for a race
@@ -140,21 +129,25 @@ public final class Server extends test.common.TestBase {
                 //
                 writeRef(orb, out, objImpl);
                 writeRef(orb, out, objDSIImpl);
+                out.flush();
+                System.out.println("Wrote refs");
 
+                
                 if (!nonBlocking) {
                     //
                     // Give up control to the ORB
                     //
+                    System.out.println("About to call orb.run()");
                     orb.run();
-
+                    System.out.println("orb.run() returned");
                     //
                     // Clean up
                     //
                     ServerCleanup();
                 }
 
-                return 0;
-            } catch (Exception e) {
+                return;
+            } catch (Throwable e) {
                 e.printStackTrace(out);
                 e.printStackTrace(System.out);
                 throw e;
@@ -162,11 +155,6 @@ public final class Server extends test.common.TestBase {
         }
     }
 
-    /**
-     * @param orb
-     * @param out
-     * @param objImpl
-     */
     private static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object objImpl) {
         out.println("ref:");
         out.println(orb.object_to_string(objImpl));
@@ -177,14 +165,12 @@ public final class Server extends test.common.TestBase {
         file.delete();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         java.util.Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
+        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
 
-        int status = 0;
         ORB orb = null;
 
         try {
@@ -192,21 +178,11 @@ public final class Server extends test.common.TestBase {
 
             props.put("yoko.orb.id", "myORB");
             orb = ORB.init(args, props);
-            status = ServerRun(orb, false, args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
+            ServerRun(orb, false, args);
+        } finally {
+            if (orb != null) {
                 orb.destroy();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                status = 1;
             }
         }
-
-        System.exit(status);
     }
 }

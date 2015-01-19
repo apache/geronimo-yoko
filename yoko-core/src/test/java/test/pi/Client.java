@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,19 +18,49 @@
 package test.pi;
 
 import static org.junit.Assert.assertTrue;
+import static org.omg.CORBA.SetOverrideType.ADD_OVERRIDE;
 
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Properties;
 
-import org.omg.CORBA.*;
-import org.omg.PortableInterceptor.*;
+import org.apache.yoko.orb.OB.Assert;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.NO_PERMISSION;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.Request;
+import org.omg.CORBA.StringHolder;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.WrongTransaction;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryHelper;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
+import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.omg.IOP.CodecPackage.InvalidTypeForEncoding;
+import org.omg.IOP.CodecPackage.TypeMismatch;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
+import org.omg.PortableInterceptor.Current;
+import org.omg.PortableInterceptor.CurrentHelper;
+import org.omg.PortableInterceptor.InvalidSlot;
 
-import test.pi.TestInterfacePackage.*;
-
-import java.io.*;
+import test.pi.TestInterfacePackage.s;
+import test.pi.TestInterfacePackage.sHelper;
+import test.pi.TestInterfacePackage.sHolder;
+import test.pi.TestInterfacePackage.user;
+import test.pi.TestInterfacePackage.userHelper;
 
 public final class Client extends test.common.TestBase {
-    private static void TestTranslation(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
+    private static void TestTranslation(ORB orb, ClientProxyManager manager, TestInterface ti) {
         //
         // Set up the correct interceptor
         //
@@ -97,14 +127,12 @@ public final class Client extends test.common.TestBase {
         manager.clearInterceptors();
     }
 
-    private static void TestCalls(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
-        org.omg.PortableInterceptor.Current pic = null;
+    private static void TestCalls(ORB orb, ClientProxyManager manager, TestInterface ti) {
+        Current pic = null;
         try {
-            org.omg.CORBA.Object obj = orb
-                    .resolve_initial_references("PICurrent");
-            pic = org.omg.PortableInterceptor.CurrentHelper.narrow(obj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            org.omg.CORBA.Object obj = orb.resolve_initial_references("PICurrent");
+            pic = CurrentHelper.narrow(obj);
+        } catch (InvalidName ex) {
         }
         assertTrue(pic != null);
 
@@ -229,14 +257,12 @@ public final class Client extends test.common.TestBase {
         assertTrue(v == 10);
     }
 
-    private static void TestDIICalls(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
-        org.omg.PortableInterceptor.Current pic = null;
+    private static void TestDIICalls(ORB orb, ClientProxyManager manager, TestInterface ti) {
+        Current pic = null;
         try {
-            org.omg.CORBA.Object obj = orb
-                    .resolve_initial_references("PICurrent");
-            pic = org.omg.PortableInterceptor.CurrentHelper.narrow(obj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            org.omg.CORBA.Object obj = orb.resolve_initial_references("PICurrent");
+            pic = CurrentHelper.narrow(obj);
+        } catch (InvalidName ex) {
         }
         assertTrue(pic != null);
 
@@ -562,16 +588,15 @@ public final class Client extends test.common.TestBase {
         //
         // Test: Resolve CodecFactory
         //
-        org.omg.IOP.CodecFactory factory = null;
+        CodecFactory factory = null;
         try {
-            factory = org.omg.IOP.CodecFactoryHelper.narrow(orb
-                    .resolve_initial_references("CodecFactory"));
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            factory = CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
+        } catch (InvalidName ex) {
             assertTrue(false);
         }
         assertTrue(factory != null);
 
-        org.omg.IOP.Encoding how = new org.omg.IOP.Encoding();
+        Encoding how = new Encoding();
         how.major_version = 0;
         how.minor_version = 0;
 
@@ -580,23 +605,23 @@ public final class Client extends test.common.TestBase {
         //
         try {
             how.format = 1; // Some unknown value
-            org.omg.IOP.Codec codec = factory.create_codec(how);
+            factory.create_codec(how);
             assertTrue(false);
-        } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
+        } catch (UnknownEncoding ex) {
             // Expected
         }
 
         //
         // Test: CDR Codec
         //
-        how.format = org.omg.IOP.ENCODING_CDR_ENCAPS.value;
-        org.omg.IOP.Codec cdrCodec = null;
+        how.format = ENCODING_CDR_ENCAPS.value;
+        Codec cdrCodec = null;
         try {
             cdrCodec = factory.create_codec(how);
-        } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
+        } catch (UnknownEncoding ex) {
             assertTrue(false);
         }
-        org.apache.yoko.orb.OB.Assert._OB_assert(cdrCodec != null);
+        Assert._OB_assert(cdrCodec != null);
 
         //
         // Test: Encode/decode
@@ -609,13 +634,13 @@ public final class Client extends test.common.TestBase {
         byte[] encoding = null;
         try {
             encoding = cdrCodec.encode(any);
-        } catch (org.omg.IOP.CodecPackage.InvalidTypeForEncoding ex) {
+        } catch (InvalidTypeForEncoding ex) {
             assertTrue(false);
         }
         Any result = null;
         try {
             result = cdrCodec.decode(encoding);
-        } catch (org.omg.IOP.CodecPackage.FormatMismatch ex) {
+        } catch (FormatMismatch ex) {
             assertTrue(false);
         }
 
@@ -627,14 +652,14 @@ public final class Client extends test.common.TestBase {
         //
         try {
             encoding = cdrCodec.encode_value(any);
-        } catch (org.omg.IOP.CodecPackage.InvalidTypeForEncoding ex) {
+        } catch (InvalidTypeForEncoding ex) {
             assertTrue(false);
         }
         try {
             result = cdrCodec.decode_value(encoding, fooHelper.type());
-        } catch (org.omg.IOP.CodecPackage.FormatMismatch ex) {
+        } catch (FormatMismatch ex) {
             assertTrue(false);
-        } catch (org.omg.IOP.CodecPackage.TypeMismatch ex) {
+        } catch (TypeMismatch ex) {
             assertTrue(false);
         }
 
@@ -642,14 +667,12 @@ public final class Client extends test.common.TestBase {
         assertTrue(newf.l == 10);
     }
 
-    static void ClientRegisterInterceptors(java.util.Properties props,
-            boolean local) {
-        props.put("org.omg.PortableInterceptor.ORBInitializerClass."
-                + "test.pi.ClientORBInitializer_impl", "");
+    static void ClientRegisterInterceptors(Properties props, boolean local) {
+        props.put("org.omg.PortableInterceptor.ORBInitializerClass." + ClientORBInitializer_impl.class.getName(), "");
         ClientORBInitializer_impl._OB_setLocal(local);
     }
 
-    static int ClientRun(ORB orb, boolean nonBlocking, String[] args) throws Exception {
+    static void ClientRun(ORB orb, boolean nonBlocking, String[] args) throws Exception {
         String impl;
         String dsiImpl;
 
@@ -660,11 +683,6 @@ public final class Client extends test.common.TestBase {
             impl = readRef(in);
             dsiImpl = readRef(in);
         }
-
-        System.out.print("Testing initial reference registration... ");
-        System.out.flush();
-        // TODO
-        System.out.println("Done!");
 
         System.out.print("Testing string_to_object()... ");
         System.out.flush();
@@ -684,13 +702,12 @@ public final class Client extends test.common.TestBase {
 
         System.out.print("Testing _narrow()... ");
         System.out.flush();
-        obj = obj._set_policy_override(pl,
-                org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
+        obj = obj._set_policy_override(pl, ADD_OVERRIDE);
         TestInterface ti = TestInterfaceHelper.narrow(obj);
         assertTrue(ti != null);
         try {
-            dsiObj = dsiObj._set_policy_override(pl,
-                    org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
+            if ("".isEmpty()) return;
+            dsiObj = dsiObj._set_policy_override(pl, ADD_OVERRIDE);
             TestInterface tiDSI = TestInterfaceHelper.narrow(dsiObj);
             assertTrue(tiDSI != null);
             System.out.println("Done!");
@@ -733,17 +750,13 @@ public final class Client extends test.common.TestBase {
             System.out.flush();
             TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
             System.out.println("Done!");
-            return 0;
         } finally {
+            System.out.println("About to call deactivate");
             ti.deactivate();
+            System.out.println("Deactivate returned normally");
         }
     }
 
-    /**
-     * @param in
-     * @return
-     * @throws IOException
-     */
     private static String readRef(BufferedReader in) throws Exception {
         String line = in.readLine();
         if (line == null) {
@@ -762,35 +775,23 @@ public final class Client extends test.common.TestBase {
         return in.readLine();
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
         java.util.Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
+        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
 
-        int status = 0;
         ORB orb = null;
 
         try {
             ClientRegisterInterceptors(props, false);
 
             orb = ORB.init(args, props);
-            status = ClientRun(orb, false, args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
+            ClientRun(orb, false, args);
+        } finally {
+            if (orb != null) {
                 orb.destroy();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                status = 1;
             }
         }
-
-        System.exit(status);
     }
 }

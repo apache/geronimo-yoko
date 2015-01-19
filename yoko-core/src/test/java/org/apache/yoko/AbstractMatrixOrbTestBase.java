@@ -29,9 +29,9 @@ import junit.framework.TestSuite;
  */
 public class AbstractMatrixOrbTestBase extends AbstractOrbTestBase {
     protected static String[][] defaultServers = new String[][] { 
-//        new String[] { "-OAthreaded" },
-//        new String[] { "-OAthread_per_client" },
-//        new String[] { "-OAthread_per_request" },
+        new String[] { "-OAthreaded" },
+        new String[] { "-OAthread_per_client" },
+        new String[] { "-OAthread_per_request" },
         new String[] { "-OAthread_pool" , "10" } };
         
     private static String[][] defaultClients = new String[][] {
