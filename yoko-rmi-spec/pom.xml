@@ -50,7 +50,8 @@
                     <instructions>
                         <Export-Package>
                             org.apache.yoko.rmispec.util;version=1.0, 
-                            javax.rmi.*;version=2.4
+                            javax.rmi.*;version=2.4,
+                            org.omg.stub.java.rmi;version=2.4
                         </Export-Package>
                     </instructions>
                 </configuration>
