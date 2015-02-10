@@ -32,7 +32,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
 
     private java.io.OutputStream out_; // The socket's output stream
 
-    private boolean shutdown_; // True if shutdown() was called
+    private volatile boolean shutdown_; // True if shutdown() was called
 
     private int soTimeout_ = 0; // The value for setSoTimeout()
 
@@ -179,6 +179,8 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public void shutdown() {
+        logger.info("shutdown: " + this); 
+        shutdown_ = true;
         shutdownSocket(socket_, 2); // Shutdown send side only
         if (socket_ != null) {
             // blocking in recv()
@@ -210,6 +212,14 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
 
                 if (!block)
                     return;
+                if (shutdown_)
+                    throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
+                            org.apache.yoko.orb.OB.MinorCodes
+                                    .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
+                                    + ": IOInterrupted exception during shutdown: " + ex.getMessage(), 
+                            org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
+                            org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
+                    
             } catch (java.io.IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
                 throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
