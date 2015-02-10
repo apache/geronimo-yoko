@@ -32,7 +32,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
 
     private java.io.OutputStream out_; // The socket's output stream
 
-    private boolean shutdown_; // True if shutdown() was called
+    private volatile boolean shutdown_; // True if shutdown() was called
 
     private int soTimeout_ = 0; // The value for setSoTimeout()
 
