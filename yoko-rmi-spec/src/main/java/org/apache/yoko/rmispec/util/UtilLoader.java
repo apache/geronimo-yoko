@@ -36,24 +36,24 @@ public class UtilLoader {
     // since that method will call loadClass0 which uses this field... if it is below the static
     // initializer the _secman field will be null
     private static final SecMan _secman = getSecMan();
-    
+
     static public Class<?> loadServiceClass(String delegateName, String delegateKey) throws ClassNotFoundException {
-    	
-    	try {
-    		Class<?> cls = ProviderLocator.getServiceClass(delegateKey, null, null);
+
+        try {
+            Class<?> cls = ProviderLocator.getServiceClass(delegateKey, null, null);
             if (cls != null) {
                 return cls;
             }
-    	} catch (ClassNotFoundException e){
-    		// skip
-    	}
-    	
-    	return loadClass0(delegateName, null, null);
+        } catch (ClassNotFoundException e){
+            // skip
+        }
+
+        return loadClass0(delegateName, null, null);
     }
 
     static public Class loadClass(String name, String codebase, ClassLoader loader)
             throws ClassNotFoundException {
-        
+
 
         try {
             return ProviderLocator.loadClass(name, null, loader);
@@ -63,12 +63,12 @@ public class UtilLoader {
 
         return loadClass0(name, codebase, loader);
     }
-    
+
     private static Class<?> loadClass0(String name, String codebase, ClassLoader loader) 
-    	throws ClassNotFoundException {
-    	Class result = null;
-    	
-    	ClassLoader stackLoader = null;
+            throws ClassNotFoundException {
+        Class result = null;
+
+        ClassLoader stackLoader = null;
         ClassLoader thisLoader = UtilLoader.class.getClassLoader(); 
         Class[] stack = _secman.getClassContext();
         for (int i = 1; i < stack.length; i++) {
@@ -170,11 +170,13 @@ public class UtilLoader {
             loader = getContextClassLoader();
         }
 
-        try {
-            logger.finer("trying local loader");
-            result = loader.loadClass(name);
-        } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINER, "LocalLoader says " + ex.getMessage(), ex);
+        if (loader != null) { 
+            try {
+                logger.finer("trying local loader");
+                result = loader.loadClass(name);
+            } catch (ClassNotFoundException ex) {
+                logger.log(Level.FINER, "LocalLoader says " + ex.getMessage(), ex);
+            }
         }
 
         if (result != null) {

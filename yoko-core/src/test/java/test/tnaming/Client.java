@@ -29,6 +29,11 @@ import static org.junit.Assert.assertTrue;
 import static test.tnaming.Client.NameServiceAccessibility.WRITABLE;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
@@ -58,7 +63,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
     final String name1, name2, name3;
     final Test test1, test2, test3;
 
-    Client(NameServiceAccessibility accessibility, Properties props, String... args) throws Exception {
+    Client(NameServiceAccessibility accessibility, final String refFile, Properties props, String... args) throws Exception {
         assertNotNull(accessibility);
         this.accessibility = accessibility;
         this.orb = ORB.init(args, props);
@@ -68,7 +73,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
         //
         // Get "test" objects
         //
-        try (BufferedReader file = Util.getRefFileReader()) {
+        try (BufferedReader file = openFileReader(refFile)) {
             String[] refStrings = new String[2];
             readRef(file, refStrings);
             test1 = getTestObjectFromReference(refStrings[0]);
@@ -85,6 +90,19 @@ final class Client extends test.common.TestBase implements AutoCloseable {
             System.err.println("Can't read from '" + ex.getMessage() + "'");
             throw ex;
         }
+    }
+
+    private BufferedReader openFileReader(final String refFile) throws FileNotFoundException {
+        return new BufferedReader(new FileReader(refFile)) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                } finally {
+                    Files.delete(Paths.get(refFile));
+                }
+            }
+        };
     }
 
     private Test getTestObjectFromReference(String ref) {

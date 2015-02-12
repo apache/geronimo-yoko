@@ -150,7 +150,9 @@ final class TestInterface_impl extends TestInterfacePOA {
     }
 
     public void deactivate() {
+        System.out.println("TestInterface_Impl.deactivate() - calling orb.shutdown(false)");
         orb_.shutdown(false);
+        System.out.println("TestInterface_Impl.deactivate() - returned from orb.shutdown(false)");
     }
 
     public POA _default_POA() {

@@ -28,6 +28,7 @@ import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.ServerSocket;
+import java.net.SocketException;
 
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
@@ -40,19 +41,30 @@ public class DefaultConnectionHelper implements ConnectionHelper {
     }
 
     public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException {
-        return new Socket(address, port);
+        return setOptions(new Socket(address, port));
     }
 
     public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException {
-        return new Socket(address, port);
+        return setOptions(new Socket(address, port));
+    }
+
+    private Socket setOptions(Socket socket) throws SocketException {
+        socket.setTcpNoDelay(true);
+        return socket;
     }
 
     public ServerSocket createServerSocket(int port, int backlog)  throws IOException, ConnectException {
-        return new ServerSocket(port, backlog);
+        return setOptions(new ServerSocket(port, backlog));
     }
 
     public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException, ConnectException {
-        return new ServerSocket(port, backlog, address);
+        return setOptions(new ServerSocket(port, backlog, address));
+    }
+
+    private ServerSocket setOptions(ServerSocket serverSocket) throws SocketException {
+        serverSocket.setReuseAddress(true);
+        serverSocket.setPerformancePreferences(0, 2, 1);
+        return serverSocket;
     }
 }
 

@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,7 +17,23 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.DispatchStrategyFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorDestroyWouldBlock;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+import java.util.concurrent.CountDownLatch;
+
+import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
+import org.apache.yoko.orb.OBPortableServer.POA_impl;
+import org.apache.yoko.orb.PortableServer.Current_impl;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.CurrentPackage.NoContext;
 
 public final class ORBControl {
     //
@@ -28,38 +44,24 @@ public final class ORBControl {
     //
     // The ORBControl state
     //
-    private final static int StateNotRunning = 0;
-
-    private final static int StateRunning = 1;
-
-    private final static int StateServerShutdown = 2;
-
-    private final static int StateClientShutdown = 3;
-
-    private final static int StateDestroyed = 4;
-
-    private int state_; // State of the ORB
+    private enum State { NOT_RUNNING, RUNNING, SERVER_SHUTDOWN, CLIENT_SHUTDOWN, DESTROYED };
+    private volatile State state; // State of the ORB
 
     //
     // Has shutdown been called?
     //
-    private boolean shutdown_;
-
-    //
-    // Condition variable used to block until the server has been shutdown
-    //
-    private java.lang.Object shutdownCond_ = new java.lang.Object();
+    private final CountDownLatch shutdown = new CountDownLatch(1);
 
     //
     // The Root POA
     //
-    private org.omg.PortableServer.POA rootPOA_; // The Root POA
+    private POA rootPOA_; // The Root POA
 
     //
     // The thread id of the main thread (that is the first thread that
     // calls run, perform_work or work_pending)
     //
-    private Thread mainThread_;
+    private volatile Thread mainThread_;
 
     // ----------------------------------------------------------------------
     // ORBControl private and protected member implementations
@@ -73,26 +75,21 @@ public final class ORBControl {
         // If the shutdown_ is false, or the server side has already
         // shutdown then do nothing
         //
-        if (!shutdown_ || state_ == StateServerShutdown)
+        if (shutdown.getCount() != 0 || state == State.SERVER_SHUTDOWN)
             return;
 
-        Assert._OB_assert(state_ != StateClientShutdown
-                && state_ != StateDestroyed);
+        Assert._OB_assert(state != State.CLIENT_SHUTDOWN && state != State.DESTROYED);
 
         //
         // If run was called then only the main thread may complete the
         // shutdown
         //
-        Assert._OB_assert(state_ == StateNotRunning
-                || mainThread_ == Thread.currentThread());
+        Assert._OB_assert(state == State.NOT_RUNNING || mainThread_ == Thread.currentThread());
 
         //
         // Get the POAManagerFactory implementation
         //
-        org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory = orbInstance_
-                .getPOAManagerFactory();
-
-        org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl factory = (org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl) pmFactory;
+        POAManagerFactory_impl factory = (POAManagerFactory_impl) orbInstance_.getPOAManagerFactory();
 
         //
         // Deactivate all of the POAManagers
@@ -103,9 +100,14 @@ public final class ORBControl {
         // Wait for all the threads in the server worker group to
         // terminate
         //
+        waitForServerThreads();
+        notifyAll();
+    }
+
+    private void waitForServerThreads() {
         ThreadGroup group = orbInstance_.getServerWorkerGroup();
         synchronized (group) {
-            int timeOuts = 0; 
+            int timeOuts = 0;
 
             // it's possible that a thread will get stalled in a read(), which seems 
             // to happen most often with SSLSockets.  We'll do some retry loops here 
@@ -120,11 +122,11 @@ public final class ORBControl {
                 int newCount = group.activeCount();
                 // we woke up because of a timeout.  
                 if (newCount == count) {
-                    timeOuts++; 
+                    timeOuts++;
                     // after 2 timeouts, interrupt any remaining threads in the 
                     // group. 
                     if (timeOuts == 2) {
-                        group.interrupt(); 
+                        group.interrupt();
                     }
                     // we've waited a full second, and we still have active threads. 
                     // time to give up waiting. 
@@ -132,7 +134,7 @@ public final class ORBControl {
                         break;
                     }
                 }
-                count = newCount; 
+                count = newCount;
             }
 
             //
@@ -143,8 +145,7 @@ public final class ORBControl {
             // POA. Otherwise, thread specific data for the thread
             // pool threads will not get released.
             //
-            DispatchStrategyFactory dsFactory = orbInstance_
-                    .getDispatchStrategyFactory();
+            DispatchStrategyFactory dsFactory = orbInstance_.getDispatchStrategyFactory();
 
             DispatchStrategyFactory_impl dsFactoryImpl = (DispatchStrategyFactory_impl) dsFactory;
 
@@ -154,7 +155,7 @@ public final class ORBControl {
             // Mark the server side state as shutdown and notify any
             // waiting threads
             //
-            state_ = StateServerShutdown;
+            state = State.SERVER_SHUTDOWN;
 
             //
             // Destroy the root POA
@@ -163,8 +164,6 @@ public final class ORBControl {
                 rootPOA_.destroy(true, true);
                 rootPOA_ = null;
             }
-
-            notifyAll();
         }
     }
 
@@ -176,28 +175,26 @@ public final class ORBControl {
         // The ORB destroys this object, so it's an initialization
         // error if the this operation is called after ORB destruction
         //
-        if (state_ == StateDestroyed)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (state == State.DESTROYED)
+            throw new org.omg.CORBA.INITIALIZE(
+                    org.apache.yoko.orb.OB.MinorCodes.describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
+                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
-        if (state_ == StateServerShutdown || state_ == StateClientShutdown)
-            throw new org.omg.CORBA.BAD_INV_ORDER(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (state == State.SERVER_SHUTDOWN || state == State.CLIENT_SHUTDOWN)
+            throw new org.omg.CORBA.BAD_INV_ORDER(
+                    org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
+                    org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
-        if (state_ == StateNotRunning) {
+        if (state == State.NOT_RUNNING) {
             //
             // Remember the main thread id
             //
             mainThread_ = Thread.currentThread();
 
             //
-            // Set the state to StateRunning
+            // Set the state to State.RUNNING
             //
-            state_ = StateRunning;
+            state = State.RUNNING;
         }
     }
 
@@ -207,7 +204,7 @@ public final class ORBControl {
         // side shutting down or the state being destroyed also
         // implies that the server side has shutdown
         //
-        while (state_ == StateRunning) {
+        while (state == State.RUNNING) {
             try {
                 wait();
             } catch (InterruptedException ex) {
@@ -220,8 +217,7 @@ public final class ORBControl {
     // ----------------------------------------------------------------------
 
     public ORBControl() {
-        state_ = StateNotRunning;
-        shutdown_ = false;
+        state = State.NOT_RUNNING;
     }
 
     //
@@ -232,8 +228,8 @@ public final class ORBControl {
         // destroy() may not be called unless the client side has been
         // shutdown
         //
-        Assert._OB_assert(state_ == StateClientShutdown);
-        state_ = StateDestroyed;
+        Assert._OB_assert(state == State.CLIENT_SHUTDOWN);
+        state = State.DESTROYED;
 
         //
         // Set the ORBInstance object to nil
@@ -266,10 +262,7 @@ public final class ORBControl {
         // ServerShutdown, ClientShutdown or Destroyed. Therefore if
         // shutdown_ is true, then a server side shutdown is pending.
         //
-        if (shutdown_)
-            return true;
-
-        return false;
+        return (shutdown.getCount() == 0);
     }
 
     //
@@ -308,7 +301,7 @@ public final class ORBControl {
         // shutdown_ is true, then a server side shutdown is pending
         // so complete it now.
         //
-        if (shutdown_) {
+        if (shutdown.getCount() == 0) {
             completeServerShutdown();
             return;
         }
@@ -319,11 +312,9 @@ public final class ORBControl {
         // implies that the server side has shutdown
         //
         do {
-            synchronized (shutdownCond_) {
-                try {
-                    shutdownCond_.wait();
-                } catch (InterruptedException ex) {
-                }
+            try {
+                shutdown.await();
+            } catch (InterruptedException ignored) {
             }
 
             //
@@ -331,7 +322,7 @@ public final class ORBControl {
             // Running
             //
             completeServerShutdown();
-        } while (state_ == StateRunning);
+        } while (state == State.RUNNING);
     }
 
     //
@@ -344,17 +335,11 @@ public final class ORBControl {
         // The ORB destroys this object, so it's an initialization error
         // if the this operation is called after ORB destruction
         //
-        if (state_ == StateDestroyed)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (state == State.DESTROYED)
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
-        if (state_ == StateServerShutdown || state_ == StateClientShutdown)
-            throw new org.omg.CORBA.BAD_INV_ORDER(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (state == State.SERVER_SHUTDOWN || state == State.CLIENT_SHUTDOWN)
+            throw new BAD_INV_ORDER(describeBadInvOrder(MinorShutdownCalled), MinorShutdownCalled, COMPLETED_NO);
 
         //
         // If waitForCompletion is true then find out whether we're inside
@@ -363,11 +348,9 @@ public final class ORBControl {
         if (waitForCompletion) {
             boolean inInvocation = false;
             try {
-                InitialServiceManager initialServiceManager = orbInstance_
-                        .getInitialServiceManager();
-                org.omg.CORBA.Object o = initialServiceManager
-                        .resolveInitialReferences("POACurrent");
-                org.apache.yoko.orb.PortableServer.Current_impl current = (org.apache.yoko.orb.PortableServer.Current_impl) o;
+                InitialServiceManager initialServiceManager = orbInstance_.getInitialServiceManager();
+                org.omg.CORBA.Object o = initialServiceManager.resolveInitialReferences("POACurrent");
+                Current_impl current = (Current_impl) o;
                 inInvocation = current._OB_inUpcall();
                 if (inInvocation) {
                     //
@@ -375,25 +358,18 @@ public final class ORBControl {
                     // POAManager's ORB or another ORB.
                     //
                     try {
-                        org.apache.yoko.orb.OBPortableServer.POA_impl p = (org.apache.yoko.orb.OBPortableServer.POA_impl) current
-                                .get_POA();
+                        POA_impl p = (POA_impl) current.get_POA();
                         inInvocation = (p._OB_ORBInstance() == orbInstance_);
-                    } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
+                    } catch (NoContext ex) {
                     }
                 }
             } catch (ClassCastException ex) {
-            } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            } catch (InvalidName ex) {
             }
 
             if (inInvocation)
-                throw new org.omg.CORBA.BAD_INV_ORDER(
-                        MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorDestroyWouldBlock),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorDestroyWouldBlock,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                throw new BAD_INV_ORDER(describeBadInvOrder(MinorDestroyWouldBlock), MinorDestroyWouldBlock, COMPLETED_NO);
         }
-
-        shutdown_ = true;
 
         //
         // Unblock run(). This should be done immediately before
@@ -401,9 +377,7 @@ public final class ORBControl {
         // complete the shutdown (thus, for instance, destroying the
         // POAManagerFactory).
         //
-        synchronized (shutdownCond_) {
-            shutdownCond_.notifyAll();
-        }
+        shutdown.countDown();
 
         //
         // waitForCompletion false? We're done.
@@ -416,7 +390,7 @@ public final class ORBControl {
         // waitForCompletion is true then wait for the shutdown to
         // complete.
         //
-        if (state_ == StateRunning && mainThread_ != Thread.currentThread()) {
+        if (state == State.RUNNING && mainThread_ != Thread.currentThread()) {
             blockServerShutdownComplete();
             return;
         }
@@ -435,29 +409,28 @@ public final class ORBControl {
         // The ORB destroys this object, so it's an initialization
         // error if the this operation is called after ORB destruction
         //
-        if (state_ == StateDestroyed)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (state == State.DESTROYED)
+            throw new org.omg.CORBA.INITIALIZE(
+                    org.apache.yoko.orb.OB.MinorCodes.describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
+                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         //
         // If the ORB client side is already shutdown, then we're done
         //
-        if (state_ == StateClientShutdown)
+        if (state == State.CLIENT_SHUTDOWN)
             return;
 
         if (orbInstance_ != null) {
             //
             // First shutdown the server side, if necessary
             //
-            if (state_ != StateServerShutdown)
+            if (state != State.SERVER_SHUTDOWN)
                 shutdownServer(true);
 
             //
             // The server shutdown must have completed
             //
-            Assert._OB_assert(state_ == StateServerShutdown);
+            Assert._OB_assert(state == State.SERVER_SHUTDOWN);
 
             //
             // Shutdown the client side. Continue to dispatch events until all
@@ -485,7 +458,7 @@ public final class ORBControl {
         // Mark the ORB's client side as shutdown and notify any
         // waiters
         //
-        state_ = StateClientShutdown;
+        state = State.CLIENT_SHUTDOWN;
         notifyAll();
     }
 
@@ -511,8 +484,7 @@ public final class ORBControl {
         //
         org.apache.yoko.orb.OBPortableServer.POAManagerFactory factory = null;
         try {
-            factory = org.apache.yoko.orb.OBPortableServer.POAManagerFactoryHelper
-                    .narrow(ism.resolveInitialReferences("POAManagerFactory"));
+            factory = org.apache.yoko.orb.OBPortableServer.POAManagerFactoryHelper.narrow(ism.resolveInitialReferences("POAManagerFactory"));
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
             Assert._OB_assert(ex);
         }
@@ -536,8 +508,7 @@ public final class ORBControl {
         if (manager == null) {
             try {
                 org.omg.CORBA.Policy[] emptyPl = new org.omg.CORBA.Policy[0];
-                manager = (org.apache.yoko.orb.OBPortableServer.POAManager) (factory
-                        .create_POAManager("RootPOAManager", emptyPl));
+                manager = (org.apache.yoko.orb.OBPortableServer.POAManager) (factory.create_POAManager("RootPOAManager", emptyPl));
             } catch (org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists ex) {
                 Assert._OB_assert(ex);
             }
@@ -558,8 +529,7 @@ public final class ORBControl {
         //
         // Create the Root POA
         //
-        org.apache.yoko.orb.OBPortableServer.POA_impl root = new org.apache.yoko.orb.OBPortableServer.POA_impl(
-                orb, orbInstance_, serverId, manager);
+        org.apache.yoko.orb.OBPortableServer.POA_impl root = new org.apache.yoko.orb.OBPortableServer.POA_impl(orb, orbInstance_, serverId, manager);
         root._OB_addPolicyFactory();
         rootPOA_ = root;
 

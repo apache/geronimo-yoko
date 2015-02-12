@@ -40,7 +40,6 @@ public class Util {
     static final Set<String> EXPECTED_NAMES = Collections.unmodifiableSet(new TreeSet<>(Arrays.asList("test0 test1 test2 test3 test4 test5 test6 test7 test8 test9".split(" "))));
     static final int NS_PORT = 40001;
     static final String NS_LOC = "corbaloc::localhost:40001/NameService";
-    private static String refFileName = null;
     
     static void assertTestIsBound(String expectedId, NamingContextExt ctx, NameComponent ...path) throws CannotProceed, InvalidName {
         assertNotNull(path);
@@ -70,25 +69,6 @@ public class Util {
         Test test1a = TestHelper.narrow(initialContext.resolve_str(name));
         assertNotNull(test1a);
         assertEquals(test1a.get_id(),expected.get_id());
-    }
-
-    public static File useRefFile(String fileName) {
-        refFileName = fileName;
-        return new File(fileName);
-    }
-    
-    static BufferedReader getRefFileReader() throws IOException {
-        Reader reader = new FileReader(refFileName);
-        return new BufferedReader(reader) {
-            @Override
-            public void close() throws IOException {
-                try {
-                    super.close();
-                } finally {
-                    Files.delete(Paths.get(refFileName));
-                }
-            }
-        };
     }
 
     static void createBindingsOverWhichToIterate(ORB orb, NamingContext initialContext) throws Exception {

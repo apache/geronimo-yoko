@@ -42,12 +42,14 @@ final class Server extends test.common.TestBase implements AutoCloseable {
     private static final NameComponent TEST2 = new NameComponent("Test2", "");
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
 
+    final String refFile;
     final ORB orb;
     final POA rootPoa;
     final NamingContextExt rootNamingContext;
     final Test test1, test2, test3;
 
-    public Server(Properties props, String... args) throws Exception {
+    public Server(String refFile, Properties props, String... args) throws Exception {
+        this.refFile = refFile;
         try {
             System.out.println("About to init ORB");
             this.orb = ORB.init(args, props);
@@ -73,7 +75,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
         }
     }
 
-    void run(String refFile) throws Exception {
+    void run() throws Exception {
         System.out.println("server starting to run");
         try (PrintWriter out = new PrintWriter(new FileWriter(refFile))) {
             System.out.println("server opened file for writing");

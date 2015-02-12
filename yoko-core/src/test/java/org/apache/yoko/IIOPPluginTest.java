@@ -22,7 +22,6 @@
  */
 package org.apache.yoko;
 
-import java.io.File;
 
 public class IIOPPluginTest extends AbstractOrbTestBase {
     private static final String SERVER_CLASS = "test.iiopplugin.Server";
@@ -31,7 +30,7 @@ public class IIOPPluginTest extends AbstractOrbTestBase {
 
     public void setUp() throws Exception {
         super.setUp();
-        setWaitForFile(new File(OUTPUT_FILE));
+        setWaitForFile(OUTPUT_FILE);
     }
     public void testLocal() throws Exception {
         runServerClientTest(SERVER_CLASS, CLIENT_CLASS);
