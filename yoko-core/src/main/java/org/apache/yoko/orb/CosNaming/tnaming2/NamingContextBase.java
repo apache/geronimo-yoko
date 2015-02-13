@@ -24,6 +24,7 @@ package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -613,8 +614,14 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
         // we have at least one name, so validate the toplevel item
         NameComponent name = n[0];
 
-        // more name validation
-        if (name.id.length() == 0 && name.kind.length() == 0) {
+        // for remote invocation, client would have received an NPE on marshalling a NameComponent with a null field
+        // for local invocation, ok to propagate the NPE and not a CORBA BAD_PARAM
+        Objects.requireNonNull(name.id, "A NameComponent must not have a null id field");
+        Objects.requireNonNull(name.kind, "A NameComponent must not have a null kind field");
+
+        // This ensures the name is not completely empty, but is this correct? CosNaming1.4 2.4.1 says:
+        // > The single '.' character is the only representation of a name with empty id and kind fields.
+        if (name.id.isEmpty() && name.kind.isEmpty()) {
             throw new InvalidName();
         }
     }
