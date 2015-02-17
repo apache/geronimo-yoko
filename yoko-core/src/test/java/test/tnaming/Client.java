@@ -26,7 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static test.tnaming.Client.NameServiceAccessibility.WRITABLE;
+import static test.tnaming.Client.NameServiceType.READ_ONLY;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -49,21 +49,23 @@ import org.omg.CosNaming.BindingListHolder;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
+import org.omg.CosNaming.NamingContextPackage.CannotProceed;
+import org.omg.CosNaming.NamingContextPackage.InvalidName;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 
 final class Client extends test.common.TestBase implements AutoCloseable {
-    enum NameServiceAccessibility {
-        READ_ONLY, WRITABLE
+    enum NameServiceType {
+        READ_ONLY, INTEGRAL, STANDALONE
     };
-    final NameServiceAccessibility accessibility;
+    final NameServiceType accessibility;
     final ORB orb;
     final POA rootPoa;
     final NamingContextExt rootNamingContext;
     final String name1, name2, name3;
     final Test test1, test2, test3;
 
-    Client(NameServiceAccessibility accessibility, final String refFile, Properties props, String... args) throws Exception {
+    Client(NameServiceType accessibility, final String refFile, Properties props, String... args) throws Exception {
         assertNotNull(accessibility);
         this.accessibility = accessibility;
         this.orb = ORB.init(args, props);
@@ -118,10 +120,19 @@ final class Client extends test.common.TestBase implements AutoCloseable {
         switch (accessibility) {
             case READ_ONLY :
                 testReadOnly();
-                // FALLTHRU
-            case WRITABLE :
                 testBoundReferences();
                 testIterators();
+                testObjectFactory();
+                break;
+            case INTEGRAL:
+                testBoundReferences();
+                testIterators();
+                testObjectFactory();
+                break;
+            case STANDALONE:
+            	testBoundReferences();
+                testIterators();
+                break;
         }
     }
 
@@ -210,7 +221,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
     @Override
     public void close() throws Exception {
         try {
-            if (accessibility == WRITABLE)
+            if (accessibility != READ_ONLY)
                 Util.unbindEverything(rootNamingContext);
         } finally {
             try {
@@ -220,4 +231,8 @@ final class Client extends test.common.TestBase implements AutoCloseable {
             }
         }
     }
+
+	public void testObjectFactory() throws CannotProceed, InvalidName {
+        Util.assertFactoryIsBound(rootNamingContext, Server.FACTORY_TEST1);
+	}
 }

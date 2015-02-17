@@ -22,15 +22,23 @@
 
 package test.tnaming;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.Properties;
 
+import org.apache.yoko.orb.spi.naming.Resolvable;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextExt;
 import org.omg.CosNaming.NamingContextExtHelper;
+import org.omg.CosNaming.NamingContextPackage.AlreadyBound;
+import org.omg.CosNaming.NamingContextPackage.CannotProceed;
+import org.omg.CosNaming.NamingContextPackage.InvalidName;
+import org.omg.CosNaming.NamingContextPackage.NotFound;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 
@@ -41,12 +49,15 @@ final class Server extends test.common.TestBase implements AutoCloseable {
     private static final NameComponent TEST1 = new NameComponent("Test1", "");
     private static final NameComponent TEST2 = new NameComponent("Test2", "");
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
+    
+    public static final NameComponent FACTORY_TEST1 = new NameComponent("FactoryTest1", "");
 
     final String refFile;
     final ORB orb;
     final POA rootPoa;
     final NamingContextExt rootNamingContext;
     final Test test1, test2, test3;
+    final Resolvable objectFactory1;
 
     public Server(String refFile, Properties props, String... args) throws Exception {
         this.refFile = refFile;
@@ -67,6 +78,9 @@ final class Server extends test.common.TestBase implements AutoCloseable {
             test1 = TestHelper.narrow(new Test_impl(rootPoa, "Test1")._this_object(orb));
             test2 = TestHelper.narrow(new Test_impl(rootPoa, "Test2")._this_object(orb));
             test3 = TestHelper.narrow(new Test_impl(rootPoa, "Test3")._this_object(orb));
+            
+            objectFactory1 = new TestFactory_impl (rootPoa, orb, FACTORY_TEST1.id);
+            
             System.out.println("created references");
         } catch (Throwable t) {
             System.err.println("Caught throwable: " + t);
@@ -94,6 +108,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
                 Util.assertNameNotBound(rootNamingContext, TEST1);
 
                 rootNamingContext.bind(new NameComponent[]{TEST1}, test1);
+                
                 Util.assertTestIsBound("Test1", rootNamingContext, TEST1);
 
                 nc1.bind(new NameComponent[]{TEST2}, test2);
@@ -138,6 +153,11 @@ final class Server extends test.common.TestBase implements AutoCloseable {
         orb.run();
     }
 
+    public void bindObjectFactories() throws NotFound, CannotProceed, InvalidName, AlreadyBound { 
+        rootNamingContext.bind(new NameComponent[]{FACTORY_TEST1}, objectFactory1);
+        Util.assertFactoryIsBound(rootNamingContext, FACTORY_TEST1);
+    }
+    
     @Override
     public void close() throws Exception {
         try {

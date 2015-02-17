@@ -16,7 +16,9 @@ public class ServerWithIntegralNameService {
         System.out.println("4");
         try (Server s = new Server(refFile, props)) {
             System.out.println("5");
+            s.bindObjectFactories();
             s.run();
+            
         }
     }
 }
