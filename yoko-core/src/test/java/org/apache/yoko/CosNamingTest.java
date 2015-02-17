@@ -23,24 +23,23 @@
 package org.apache.yoko;
 
 import test.tnaming.ClientForReadOnlyNameService;
-import test.tnaming.ClientForWritableNameService;
+import test.tnaming.ClientForStandaloneNameService;
 import test.tnaming.ServerWithIntegralNameService;
 import test.tnaming.ServerWithReadOnlyNameService;
 import test.tnaming.ServerWithStandaloneNameService;
-import test.tnaming.Util;
 
 public class CosNamingTest extends AbstractOrbTestBase {
     
     public void testStandaloneNameService() throws Exception {
         final String refFile = "standalone.ref";
         setWaitForFile(refFile);
-        runServerClientTest(ServerWithStandaloneNameService.class, ClientForWritableNameService.class, refFile);
+        runServerClientTest(ServerWithStandaloneNameService.class, ClientForStandaloneNameService.class, refFile);
     }
     
     public void testIntegralNameService() throws Exception {
         final String refFile = "integral.ref";
         setWaitForFile(refFile);
-        runServerClientTest(ServerWithIntegralNameService.class, ClientForWritableNameService.class, refFile);
+        runServerClientTest(ServerWithIntegralNameService.class, ClientForStandaloneNameService.class, refFile);
     }
     
     public void testReadOnlyNameService() throws Exception {
@@ -48,4 +47,5 @@ public class CosNamingTest extends AbstractOrbTestBase {
         setWaitForFile(refFile);
         runServerClientTest(ServerWithReadOnlyNameService.class, ClientForReadOnlyNameService.class, refFile);
     }
+    
 }

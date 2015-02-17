@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.spi.naming.Resolvable;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.SystemException;
@@ -278,7 +279,11 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
                 // Object was not found
                 throw new NotFound(NotFoundReason.missing_node, n);
             }
-            return obj;
+            if (obj instanceof Resolvable) { 
+            	return ((Resolvable)obj).resolve();
+            } else { 
+            	return obj;
+            }
         }
     }
 
