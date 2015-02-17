@@ -12,7 +12,9 @@ public class ServerWithReadOnlyNameService {
         props.put("yoko.orb.oa.endpoint", "iiop --host localhost --port " + Util.NS_PORT);
         try (Server s = new Server(refFile, props)) {
             Util.createBindingsOverWhichToIterate(s.orb, s.rootNamingContext);
+            s.bindObjectFactories();
             s.run();
+            
         }
     }
 

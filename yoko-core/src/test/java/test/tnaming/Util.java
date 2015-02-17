@@ -1,23 +1,18 @@
 package test.tnaming;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.Reader;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.junit.Assert;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.UserException;
 import org.omg.CosNaming.BindingHolder;
@@ -52,6 +47,25 @@ public class Util {
             fail("Should have found Test object at path: " + ctx.to_string(path) );
         }
     }
+    
+    static void assertFactoryIsBound(NamingContextExt ctx, NameComponent ...path) throws CannotProceed, InvalidName {
+    	assertNotNull(path);
+    	assertNotEquals(0, path.length);
+
+    	try { 
+    		org.omg.CORBA.Object o1 = ctx.resolve(path);
+    		org.omg.CORBA.Object o2 = ctx.resolve(path);
+    		assertFalse(o1._is_equivalent(o2));
+    		
+    		String id1 = TestHelper.narrow(o1).get_id();
+    		String id2 = TestHelper.narrow(o2).get_id();
+    		assertNotEquals(id1, id2);
+    		
+    	} catch (NotFound nf) { 
+    		fail("Should have found Test object at path: " + ctx.to_string(path) );
+    	}
+    }
+
     
     static void assertNameNotBound(NamingContext initialContext, NameComponent...path) throws CannotProceed, InvalidName {
         try {
