@@ -75,9 +75,6 @@
                             org.apache.yoko.orb.activator,
                             org.apache.yoko.osgi.locator.activator
                         </Private-Package>
-                        <Export-Package>
-                            org.apache.yoko.orb.spi.naming;version=1.0
-                        </Export-Package>
                     </instructions>
                 </configuration>
             </plugin>
