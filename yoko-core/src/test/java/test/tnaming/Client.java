@@ -122,12 +122,12 @@ final class Client extends test.common.TestBase implements AutoCloseable {
                 testReadOnly();
                 testBoundReferences();
                 testIterators();
-                testObjectFactory();
+                testObjectFactories();
                 break;
             case INTEGRAL:
                 testBoundReferences();
                 testIterators();
-                testObjectFactory();
+                testObjectFactories();
                 break;
             case STANDALONE:
             	testBoundReferences();
@@ -218,6 +218,11 @@ final class Client extends test.common.TestBase implements AutoCloseable {
         }
     }
 
+    public void testObjectFactories() throws CannotProceed, InvalidName {
+        Util.assertFactoryIsBound(rootNamingContext, Server.RESOLVABLE_TEST);
+        Util.assertFactoryIsBound(rootNamingContext, Server.RESOLVER_TEST);
+    }
+
     @Override
     public void close() throws Exception {
         try {
@@ -231,8 +236,4 @@ final class Client extends test.common.TestBase implements AutoCloseable {
             }
         }
     }
-
-	public void testObjectFactory() throws CannotProceed, InvalidName {
-        Util.assertFactoryIsBound(rootNamingContext, Server.FACTORY_TEST1);
-	}
 }

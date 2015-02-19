@@ -30,7 +30,8 @@ import java.io.PrintWriter;
 import java.util.Properties;
 
 import org.apache.yoko.orb.spi.naming.Resolvable;
-import org.omg.CORBA.ORB;
+import org.apache.yoko.orb.spi.naming.Resolver;
+import org.omg.CORBA.*;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextExt;
@@ -50,14 +51,16 @@ final class Server extends test.common.TestBase implements AutoCloseable {
     private static final NameComponent TEST2 = new NameComponent("Test2", "");
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
     
-    public static final NameComponent FACTORY_TEST1 = new NameComponent("FactoryTest1", "");
+    public static final NameComponent RESOLVABLE_TEST = new NameComponent("ResolvableTest", "");
+    public static final NameComponent RESOLVER_TEST = new NameComponent("ResolverTest", "");
 
     final String refFile;
     final ORB orb;
     final POA rootPoa;
     final NamingContextExt rootNamingContext;
     final Test test1, test2, test3;
-    final Resolvable objectFactory1;
+    final Resolvable resolvable;
+    final Resolver resolver;
 
     public Server(String refFile, Properties props, String... args) throws Exception {
         this.refFile = refFile;
@@ -78,8 +81,15 @@ final class Server extends test.common.TestBase implements AutoCloseable {
             test1 = TestHelper.narrow(new Test_impl(rootPoa, "Test1")._this_object(orb));
             test2 = TestHelper.narrow(new Test_impl(rootPoa, "Test2")._this_object(orb));
             test3 = TestHelper.narrow(new Test_impl(rootPoa, "Test3")._this_object(orb));
-            
-            objectFactory1 = new TestFactory_impl (rootPoa, orb, FACTORY_TEST1.id);
+
+            // two ways to provide a Resolvable - both should be treated identically
+            resolvable = new TestFactory_impl (rootPoa, orb, RESOLVABLE_TEST.id);
+            resolver = new Resolver(){
+                @Override
+                public org.omg.CORBA.Object resolve() {
+                    return resolvable.resolve();
+                }
+            };
             
             System.out.println("created references");
         } catch (Throwable t) {
@@ -154,8 +164,10 @@ final class Server extends test.common.TestBase implements AutoCloseable {
     }
 
     public void bindObjectFactories() throws NotFound, CannotProceed, InvalidName, AlreadyBound { 
-        rootNamingContext.bind(new NameComponent[]{FACTORY_TEST1}, objectFactory1);
-        Util.assertFactoryIsBound(rootNamingContext, FACTORY_TEST1);
+        rootNamingContext.bind(new NameComponent[]{RESOLVABLE_TEST}, resolvable);
+        Util.assertFactoryIsBound(rootNamingContext, RESOLVABLE_TEST);
+        rootNamingContext.bind(new NameComponent[]{RESOLVER_TEST}, resolver);
+        Util.assertFactoryIsBound(rootNamingContext, RESOLVER_TEST);
     }
     
     @Override
