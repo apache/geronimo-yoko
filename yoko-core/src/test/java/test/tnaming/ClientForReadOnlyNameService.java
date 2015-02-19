@@ -13,7 +13,7 @@ public class ClientForReadOnlyNameService {
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
 
         try (Client client = new Client(READ_ONLY, refFile, props, "-ORBInitRef", "NameService=" + Util.NS_LOC )) {
-        	client.testObjectFactory();
+        	client.testObjectFactories();
             client.run();
         }
     }
