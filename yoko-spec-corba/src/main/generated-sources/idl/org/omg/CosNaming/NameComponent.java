@@ -20,6 +20,13 @@ public final class NameComponent implements org.omg.CORBA.portable.IDLEntity {
 
     @Override
     public String toString() {
-        return id + "." + kind;
+        final String eid = escape(id);
+        return ((!!!"".equals(eid)) && "".equals(kind)) ? eid : (eid + '.' + escape(kind));
+    }
+    
+    /** escape DOT, SLASH, and BACKSLASH as per CosNaming v1.4 section 2.4.2 */
+    private static String escape(String s) {
+        if (s == null) return s;
+        return s.replaceAll("([\\\\\\./])", "\\\\$1");
     }
 }
