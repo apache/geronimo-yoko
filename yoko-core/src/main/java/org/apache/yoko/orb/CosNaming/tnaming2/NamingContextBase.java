@@ -672,8 +672,8 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
             // scan the string adding the escapes
             for (int i = 0; i < name.length(); i++) {
                 char ch = name.charAt(i);
-                if (ch == '.' || ch == '/') {
-                    out.append('/');
+                if (ch == '.' || ch == '/' || ch == '\\') {
+                    out.append('\\');
                 }
                 out.append(ch);
             }
