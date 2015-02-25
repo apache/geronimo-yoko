@@ -140,6 +140,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
         Util.assertTestIsBound(test1, rootNamingContext, name1);
         Util.assertTestIsBound(test2, rootNamingContext, name2);
         Util.assertTestIsBound(test3, rootNamingContext, name3);
+        Util.assertCorbanameIsBound(test1, orb, "corbaname:rir:/NameService#"+name1);
     }
 
     private void testIterators() throws Exception {
