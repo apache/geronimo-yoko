@@ -85,6 +85,12 @@ public class Util {
         assertEquals(test1a.get_id(),expected.get_id());
     }
 
+    static void assertCorbanameIsBound(Test expected, ORB orb, String corbaname) throws UserException {
+        Test test1a = TestHelper.narrow(orb.string_to_object(corbaname));
+        assertNotNull(test1a);
+        assertEquals(test1a.get_id(),expected.get_id());
+    }
+
     static void createBindingsOverWhichToIterate(ORB orb, NamingContext initialContext) throws Exception {
         System.out.println("creating bindings");
         // get the root poa
