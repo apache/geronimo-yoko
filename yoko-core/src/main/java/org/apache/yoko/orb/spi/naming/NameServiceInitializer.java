@@ -20,6 +20,9 @@ import org.omg.PortableServer.LifespanPolicyValue;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantRetentionPolicyValue;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.AdapterNonExistent;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
 
 public class NameServiceInitializer extends LocalObject implements ORBInitializer {
     /** The property name to use to initialize an ORB with this initializer. */
@@ -94,24 +97,33 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
 
                     try {
                         rootPOA.the_POAManager().activate();
-                        final Policy[] policies = new Policy[3];
-                        policies[0] = rootPOA.create_lifespan_policy(LifespanPolicyValue.TRANSIENT);
-                        policies[1] = rootPOA.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID);
-                        policies[2] = rootPOA.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN);
-
-                        // create_POA must happen only once, so make sure to set
-                        // add.value to true
-                        final POA nameServicePOA = rootPOA.create_POA("TNameService", null, policies);
+                        
+                        final POA nameServicePOA = findOrCreatePOA(rootPOA);
                         nameServicePOA.the_POAManager().activate();
 
                         final Servant nameServant = local.getServant(nameServicePOA, remoteAccess);
-
+                        
+                        // return the context stub via the object holder
                         obj.value = nameServant._this_object();
-                        // tell the boot manager to re-use this result so we
-                        // only get called once
+                        // return true via the boolean holder
+                        // to tell the boot manager to re-use 
+                        // this result so we only get called once
                         add.value = true;
                     } catch (Exception e) {
                         throw (NotFound) (new NotFound("Unexpected").initCause(e));
+                    }
+                }
+
+                private POA findOrCreatePOA(final POA rootPOA) throws AdapterAlreadyExists, InvalidPolicy {
+                    try {
+                        return rootPOA.find_POA(POA_NAME, true);
+                    } catch (AdapterNonExistent e) {
+                        final Policy[] policies = {
+                                rootPOA.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
+                                rootPOA.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
+                                rootPOA.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)
+                        };
+                        return rootPOA.create_POA(POA_NAME, null, policies);
                     }
                 }
             });
