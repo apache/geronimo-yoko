@@ -4,7 +4,7 @@ import java.util.Properties;
 
 import org.apache.yoko.orb.CosNaming.tnaming.TransientNameService;
 
-public class ServerWithStandaloneNameService {
+public class ServerWithReadWriteStandaloneNameService {
     public static void main(String args[]) throws Exception {
         final String refFile = args[0];
         try (TransientNameService service = new TransientNameService("localhost", Util.NS_PORT)) {

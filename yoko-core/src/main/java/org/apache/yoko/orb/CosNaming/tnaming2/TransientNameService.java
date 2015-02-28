@@ -23,6 +23,7 @@ package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.Properties;
 
+import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
 import org.omg.CORBA.ORB;
 
 /**

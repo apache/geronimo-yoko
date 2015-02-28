@@ -1,11 +1,11 @@
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,36 +16,33 @@
  *  limitations under the License.
  */
 
-
 /**
  * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
 package org.apache.yoko;
 
 import test.tnaming.ClientForReadOnlyNameService;
-import test.tnaming.ClientForStandaloneNameService;
-import test.tnaming.ServerWithIntegralNameService;
-import test.tnaming.ServerWithReadOnlyNameService;
-import test.tnaming.ServerWithStandaloneNameService;
+import test.tnaming.ClientForReadWriteNameService;
+import test.tnaming.ServerWithReadWriteIntegralNameService;
+import test.tnaming.ServerWithReadOnlyIntegralNameService;
+import test.tnaming.ServerWithReadWriteStandaloneNameService;
 
 public class CosNamingTest extends AbstractOrbTestBase {
-    
-    public void testStandaloneNameService() throws Exception {
-        final String refFile = "standalone.ref";
+    public void testReadOnlyIntegralNameService() throws Exception {
+        final String refFile = "readonlyintegralnameservice.ref";
         setWaitForFile(refFile);
-        runServerClientTest(ServerWithStandaloneNameService.class, ClientForStandaloneNameService.class, refFile);
+        runServerClientTest(ServerWithReadOnlyIntegralNameService.class, ClientForReadOnlyNameService.class, refFile);
     }
-    
-    public void testIntegralNameService() throws Exception {
-        final String refFile = "integral.ref";
+
+    public void testReadWriteIntegralNameService() throws Exception {
+        final String refFile = "readwriteintegralnameservice.ref";
         setWaitForFile(refFile);
-        runServerClientTest(ServerWithIntegralNameService.class, ClientForStandaloneNameService.class, refFile);
+        runServerClientTest(ServerWithReadWriteIntegralNameService.class, ClientForReadWriteNameService.class, refFile);
     }
-    
-    public void testReadOnlyNameService() throws Exception {
-        final String refFile = "readonly.ref";
+
+    public void testReadWriteStandaloneNameService() throws Exception {
+        final String refFile = "readwritestandalonenameservice.ref";
         setWaitForFile(refFile);
-        runServerClientTest(ServerWithReadOnlyNameService.class, ClientForReadOnlyNameService.class, refFile);
+        runServerClientTest(ServerWithReadWriteStandaloneNameService.class, ClientForReadWriteNameService.class, refFile);
     }
-    
 }

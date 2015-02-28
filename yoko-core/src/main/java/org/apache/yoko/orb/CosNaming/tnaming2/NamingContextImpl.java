@@ -3,6 +3,7 @@ package org.apache.yoko.orb.CosNaming.tnaming2;
 import java.util.HashMap;
 import java.util.Objects;
 
+import org.apache.yoko.orb.spi.naming.RemoteAccess;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_PERMISSION;
@@ -53,7 +54,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
          * @return A new NamingContext item.
          */
         @Override
-        public NamingContext new_context() throws SystemException {
+        public NamingContext new_context() {
             try {
                 // create a new context.
                 NamingContextImpl newContext = new NamingContextImpl(rootContext);
@@ -89,7 +90,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
          *            the BindingIterator.
          */
         @Override
-        public synchronized void list(int how_many, BindingListHolder bl, BindingIteratorHolder bi) throws SystemException {
+        public synchronized void list(int how_many, BindingListHolder bl, BindingIteratorHolder bi) {
             BindingIteratorImpl iterator = new BindingIteratorImpl(bindings.values());
             // have the iterator fill in the entries here
             iterator.next_n(how_many, bl);
@@ -107,7 +108,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
          *         in the context.
          */
         @Override
-        protected org.omg.CORBA.Object resolveObject(NameComponent n, BindingTypeHolder type) throws SystemException {
+        protected org.omg.CORBA.Object resolveObject(NameComponent n, BindingTypeHolder type) {
             // special call to resolve the root context. This is the only one
             // that goes backwards.
             if (n.id.length() == 0 && n.kind.length() == 0) {
@@ -136,8 +137,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
          * @param type
          */
         @Override
-        protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type)
-                throws SystemException {
+        protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type) {
             // fairly simple table put...
             bindings.put(new BindingKey(n), new BoundObject(n, obj, type.value));
         }
@@ -149,7 +149,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
          *         was no binding currently associated with this name.
          */
         @Override
-        protected org.omg.CORBA.Object unbindObject(NameComponent n) throws SystemException {
+        protected org.omg.CORBA.Object unbindObject(NameComponent n) {
             // remove the object from the hash table, returning the bound object
             // if it exists.
             BindingKey key = new BindingKey(n);
@@ -208,37 +208,36 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
 
     }
 
-    private static class POAServant extends NamingContextBase {
-        private final NamingContextImpl local;
-        private final Core core;
-        final POA poa;
-
-        protected POAServant(final POA poa, final NamingContextImpl local, final Core core) throws Exception {
-            this.poa = poa;
-            this.local = local;
-            this.core = core;
-            poa.activate_object(this);
-        }
-
-        @Override
-        public NamingContext new_context() throws SystemException {
-            try {
-                Servant newContext = ((NamingContextImpl) core.new_context()).getServant(poa, false);
-                return NamingContextHelper.narrow(newContext._this_object());
-            } catch (SystemException e) {
-                // just propagate system exceptions
-                throw e;
-            } catch (Exception e) {
-                throw (INTERNAL) (new INTERNAL("Unable to create new naming context").initCause(e));
+    private static abstract class POAServant extends NamingContextBase {
+        static POAServant create(NamingContextImpl localContext, Core core, POA poa, RemoteAccess remoteAccess) throws Exception {
+            switch (remoteAccess) {
+                case readOnly :
+                    return new ReadOnly(localContext, core, poa);
+                case readWrite :
+                    return new ReadWrite(localContext, core, poa);
+                default :
+                    throw new IllegalArgumentException("Unsupported remote access type: " + remoteAccess);
             }
         }
 
+        final Object localContext;
+        final NamingContextBase core;
+        final POA poa;
+
+        protected POAServant(NamingContextImpl localContext, Core core, POA poa) throws Exception {
+            this.localContext = localContext;
+            this.core = core;
+            this.poa = poa;
+            poa.activate_object(this);
+        }
+
+        abstract Servant convertLocalContextToRemoteContext(NamingContextImpl o) throws Exception;
+
         @Override
-        protected final org.omg.CORBA.Object resolveObject(NameComponent n, BindingTypeHolder type)
-                throws SystemException {
+        protected final org.omg.CORBA.Object resolveObject(NameComponent n, BindingTypeHolder type) {
             try {
                 org.omg.CORBA.Object o = core.resolveObject(n, type);
-                if (o == local) {
+                if (o == localContext) {
                     return _this_object();
                 } else if (!!!(o instanceof NamingContextImpl)) {
                     return o;
@@ -253,38 +252,11 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
             }
         }
 
-        protected Servant convertLocalContextToRemoteContext(NamingContextImpl context) throws Exception {
-            return context.getServant(poa, false);
-        }
-
         @Override
-        protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type)
-                throws SystemException, CannotProceed {
-            core.bindObject(n, obj, type);
-        }
-
-        @Override
-        protected org.omg.CORBA.Object unbindObject(NameComponent n) throws SystemException, CannotProceed {
-            return core.unbindObject(n);
-        }
-
-        @Override
-        public void destroy() throws NotEmpty {
-            try {
-                // we need to deactivate this from the POA.
-                byte[] objectId = poa.servant_to_id(this);
-                if (objectId != null) {
-                    poa.deactivate_object(objectId);
-                }
-            } catch (Exception e) {
-            }
-        }
-
-        @Override
-        public final void list(int how_many, BindingListHolder bl, BindingIteratorHolder bi) throws SystemException {
+        public final void list(int how_many, BindingListHolder bl, BindingIteratorHolder bi) {
             core.list(how_many, bl, bi);
             try {
-                Servant iterator = ((BindingIteratorImpl) bi.value).getServant(poa, false);
+                Servant iterator = ((BindingIteratorImpl) bi.value).getServant(poa, null);
                 bi.value = BindingIteratorHelper.narrow(iterator._this_object());
             } catch (SystemException e) {
                 // just propagate system exceptions
@@ -295,34 +267,83 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
         }
 
         private static final class ReadOnly extends POAServant {
-            public ReadOnly(POA poa, NamingContextImpl local, Core core) throws Exception {
-                super(poa, local, core);
+            ReadOnly(NamingContextImpl localContext, Core core, POA poa) throws Exception {
+                super(localContext, core, poa);
+            }
+            
+            private SystemException newSystemException() {
+                return new NO_PERMISSION();
             }
 
             @Override
-            public NamingContext new_context() throws SystemException {
-                throw new NO_PERMISSION();
+            public NamingContext new_context() {
+                throw newSystemException();
             }
 
             @Override
-            protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type)
-                    throws SystemException, CannotProceed {
-                throw new NO_PERMISSION();
+            protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type) {
+                throw newSystemException();
             }
 
             @Override
-            protected org.omg.CORBA.Object unbindObject(NameComponent n) throws SystemException, CannotProceed {
-                throw new NO_PERMISSION();
+            protected org.omg.CORBA.Object unbindObject(NameComponent n) {
+                throw newSystemException();
             }
 
             @Override
             protected Servant convertLocalContextToRemoteContext(NamingContextImpl context) throws Exception {
-                return context.getServant(poa, true);
+                return context.getServant(poa, RemoteAccess.readOnly);
+            }
+
+            @Override
+            public void destroy() {
+                throw newSystemException();
+            }
+        }
+
+        private static final class ReadWrite extends POAServant {
+            ReadWrite(NamingContextImpl localContext, Core core, POA poa) throws Exception {
+                super(localContext, core, poa);
+            }
+
+            @Override
+            public NamingContext new_context() {
+                try {
+                    NamingContextImpl nci = (NamingContextImpl) core.new_context();
+                    Servant newContext = nci.getServant(poa, RemoteAccess.readWrite);
+                    return NamingContextHelper.narrow(newContext._this_object());
+                } catch (SystemException e) {
+                    // just propagate system exceptions
+                    throw e;
+                } catch (Exception e) {
+                    throw (INTERNAL) (new INTERNAL("Unable to create new naming context").initCause(e));
+                }
+            }
+
+            @Override
+            protected void bindObject(NameComponent n, org.omg.CORBA.Object obj, BindingTypeHolder type) throws SystemException, CannotProceed {
+                core.bindObject(n, obj, type);
+            }
+
+            @Override
+            protected org.omg.CORBA.Object unbindObject(NameComponent n) throws SystemException, CannotProceed {
+                return core.unbindObject(n);
+            }
+
+            protected Servant convertLocalContextToRemoteContext(NamingContextImpl context) throws Exception {
+                return context.getServant(poa, RemoteAccess.readWrite);
             }
 
             @Override
             public void destroy() throws NotEmpty {
-                throw new NO_PERMISSION();
+                try {
+                    // we need to deactivate this from the POA.
+                    byte[] objectId = poa.servant_to_id(this);
+                    if (objectId != null) {
+                        poa.deactivate_object(objectId);
+                    }
+                } catch (Exception e) {
+                }
             }
         }
     }
@@ -362,14 +383,12 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
     }
 
     @Override
-    public void bind(NameComponent[] n, org.omg.CORBA.Object obj) throws NotFound, CannotProceed, InvalidName,
-            AlreadyBound {
+    public void bind(NameComponent[] n, org.omg.CORBA.Object obj) throws NotFound, CannotProceed, InvalidName, AlreadyBound {
         core.bind(n, obj);
     }
 
     @Override
-    public void bind_context(NameComponent[] n, NamingContext nc) throws NotFound, CannotProceed, InvalidName,
-            AlreadyBound {
+    public void bind_context(NameComponent[] n, NamingContext nc) throws NotFound, CannotProceed, InvalidName, AlreadyBound {
         core.bind_context(n, nc);
     }
 
@@ -414,8 +433,8 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
     }
 
     @Override
-    public Servant getServant(POA poa, boolean readOnly) throws Exception {
-        return readOnly ? new POAServant.ReadOnly(poa, this, core) : new POAServant(poa, this, core);
+    public Servant getServant(POA poa, RemoteAccess remoteAccess) throws Exception {
+        return POAServant.create(this, core, poa, remoteAccess);
     }
 
     @Override
