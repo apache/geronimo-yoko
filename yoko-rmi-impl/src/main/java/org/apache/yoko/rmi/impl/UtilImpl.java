@@ -184,7 +184,7 @@ public class UtilImpl implements UtilDelegate {
         } catch (SystemException catchAll) {
             result = new RemoteException(s);
         }
-        result.initCause(sysEx);
+        result.detail = sysEx;
         return result;
     }
     
