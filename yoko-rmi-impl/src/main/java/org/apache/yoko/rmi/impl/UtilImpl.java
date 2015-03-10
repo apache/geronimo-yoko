@@ -19,12 +19,15 @@
 package org.apache.yoko.rmi.impl;
 
 import java.io.Externalizable;
+import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Constructor;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.rmi.AccessException;
 import java.rmi.MarshalException;
+import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.ServerError;
@@ -32,54 +35,85 @@ import java.rmi.ServerException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
-import java.util.logging.Logger;
+import java.security.PrivilegedExceptionAction;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.rmi.PortableRemoteObject;
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.UtilDelegate;
 import javax.rmi.CORBA.ValueHandler;
-import javax.rmi.PortableRemoteObject;
 
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.CORBA.INVALID_TRANSACTION;
+import org.omg.CORBA.INV_OBJREF;
 import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.NO_PERMISSION;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TRANSACTION_REQUIRED;
+import org.omg.CORBA.TRANSACTION_ROLLEDBACK;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.IDLEntity;
 import org.omg.CORBA.portable.UnknownException;
 
 public class UtilImpl implements UtilDelegate {
-    static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
+    private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
 
     // Note: this field must be declared before the static intializer that calls Util.loadClass
     // since that method will call loadClass0 which uses this field... if it is below the static
     // initializer the _secman field will be null
     private static final SecMan _secman = getSecMan();
 
-    static Class JAVAX_TRANSACTION_USERTRANSACTION_CLASS;
+    private static final ClassLoader BEST_GUESS_AT_EXTENSION_CLASS_LOADER;
+    static {
+        ClassLoader candidateLoader = getClassLoader(UtilImpl.class);
 
-    public UtilImpl() {
-        Class userTransactionClass;
-        try {
-            userTransactionClass = Util.loadClass("javax.transaction.UserTransaction", null, null);
+        if (candidateLoader == null) {
+            // looks like this class was loaded by the boot class loader
+            // so it is safe to try loading stuff by reflection without
+            // worrying about whether we have imported the packages into the OSGi bundle
+            candidateLoader = findFirstNonNullLoader(
+                    "sun.net.spi.nameservice.dns.DNSNameService",
+                    "javax.transaction.UserTransaction");
         }
-        catch (ClassNotFoundException e) {
-            logger.log(Level.FINE, "error loading transaction class", e);
-            userTransactionClass = null;
+
+        // We will try to find the extension class
+        // loader by ascending the loader hierarchy 
+        // starting from whatever loader we found.
+        for (ClassLoader l = candidateLoader; l != null; l = l.getParent()) {
+            candidateLoader = l;
         }
-        JAVAX_TRANSACTION_USERTRANSACTION_CLASS = userTransactionClass;
+        
+        BEST_GUESS_AT_EXTENSION_CLASS_LOADER = candidateLoader;
+    }
+
+    private static ClassLoader findFirstNonNullLoader(String...classNames) {
+        for (String className : classNames) {
+            try {
+                final Class<?> c = Class.forName(className);
+                ClassLoader cl = getClassLoader(c);
+                if (cl != null) return cl;
+            } catch (Exception|NoClassDefFoundError swallowed) {
+            }
+        }
+        return null;
     }
 
     /**
      * Translate a CORBA SystemException to the corresponding RemoteException
      */
-    public RemoteException mapSystemException(
-            final org.omg.CORBA.SystemException theException) {
+    public RemoteException mapSystemException(final SystemException theException) {
 
-        org.omg.CORBA.SystemException ex = theException;
+        SystemException ex = theException;
 
         if (ex instanceof UnknownException) {
             Throwable orig = ((UnknownException) ex).originalEx;
@@ -95,27 +129,10 @@ public class UtilImpl implements UtilDelegate {
             }
         }
 
-        Class exclass = ex.getClass();
+        Class<? extends SystemException> exclass = ex.getClass();
         String name = exclass.getName();
 
-        Class exclz = (Class) CORBA_TO_RMI_MAP.get(name);
-
-        if (exclz == null) {
-            exclz = RemoteException.class;
-
-            Class exc = ex.getClass();
-
-            for (int i = 0; i < CORBA_TO_RMI_EXCEPTION.length; i += 2) {
-                if (CORBA_TO_RMI_EXCEPTION[i].isAssignableFrom(exc)) {
-                    exclz = CORBA_TO_RMI_EXCEPTION[i + 1];
-                    break;
-                }
-            }
-        }
-
-        RemoteException rex = null;
-
-        // construct the exception message according to �1.4.8
+         // construct the exception message according to �1.4.8
 
         StringBuffer buf = new StringBuffer("CORBA ");
 
@@ -145,97 +162,96 @@ public class UtilImpl implements UtilDelegate {
 
         String exceptionMessage = buf.toString();
 
-        try {
-
-            rex = (RemoteException) newInstance(exclz,
-                    new Class[]{String.class},
-                    new Object[]{exceptionMessage});
-
-            rex.detail = ex;
-
-        } catch (RuntimeException ex2) {
-
-            rex = new RemoteException(exceptionMessage, ex2);
-        }
-
-        return rex;
+        return createRemoteException(ex, exceptionMessage);
     }
 
-    static org.omg.CORBA.SystemException mapRemoteException(RemoteException rex) {
-        if (rex.detail != null
-                && rex.detail instanceof org.omg.CORBA.SystemException)
+    private RemoteException createRemoteException(SystemException sysEx, String s) {
+        RemoteException result;
+        try {
+            throw sysEx;
+        } catch (BAD_PARAM|COMM_FAILURE|MARSHAL e) {
+            result = new MarshalException(s);
+        } catch (INV_OBJREF|NO_IMPLEMENT|OBJECT_NOT_EXIST e) {
+            result = new NoSuchObjectException(s);
+        } catch(NO_PERMISSION e) {
+            result = new AccessException(s);
+        } catch (TRANSACTION_REQUIRED e) {
+            result = createRemoteException("javax.transaction.TransactionRequiredException", s);
+        } catch (TRANSACTION_ROLLEDBACK e) {
+            result = createRemoteException("javax.transaction.TransactionRolledbackException", s);
+        } catch (INVALID_TRANSACTION e) {
+            result = createRemoteException("javax.transaction.InvalidTransactionException", s);
+        } catch (SystemException catchAll) {
+            result = new RemoteException(s);
+        }
+        result.initCause(sysEx);
+        return result;
+    }
+    
+    private static RemoteException createRemoteException(String className, String s) {
+        RemoteException result;
+        try {
+            @SuppressWarnings("unchecked")
+            Class<? extends RemoteException> clazz =  Util.loadClass(className, null, null);
+            Constructor<? extends RemoteException> ctor = clazz.getConstructor(String.class);
+            result = ctor.newInstance(s);
+        } catch (Throwable t) {
+            result = new RemoteException(s);
+            result.addSuppressed(t);
+        }
+        return result;
+    }
+
+    static SystemException mapRemoteException(RemoteException rex) {
+        if (rex.detail instanceof org.omg.CORBA.SystemException)
             return (org.omg.CORBA.SystemException) rex.detail;
 
-        if (rex.detail != null && rex.detail instanceof RemoteException)
+        if (rex.detail instanceof RemoteException)
             rex = (RemoteException) rex.detail;
+        
+        SystemException sysEx;
 
         if (rex instanceof java.rmi.NoSuchObjectException) {
-            throw new org.omg.CORBA.INV_OBJREF(rex.getMessage());
-
+            sysEx = new org.omg.CORBA.INV_OBJREF(rex.getMessage());
         } else if (rex instanceof java.rmi.AccessException) {
-            throw new org.omg.CORBA.NO_PERMISSION(rex.getMessage());
-
+            sysEx = new org.omg.CORBA.NO_PERMISSION(rex.getMessage());
         } else if (rex instanceof java.rmi.MarshalException) {
-            throw new org.omg.CORBA.MARSHAL(rex.getMessage());
-
-        } else if (rex instanceof javax.transaction.TransactionRequiredException) {
-            throw new org.omg.CORBA.TRANSACTION_REQUIRED(rex.getMessage());
-
-        } else if (rex instanceof javax.transaction.TransactionRolledbackException) {
-            throw new org.omg.CORBA.TRANSACTION_ROLLEDBACK(rex.getMessage());
-
-        } else if (rex instanceof javax.transaction.InvalidTransactionException) {
-            throw new org.omg.CORBA.INVALID_TRANSACTION(rex.getMessage());
-
-            /*
-             * } else if (rex.detail != null) { throw new
-             * org.omg.CORBA.portable.UnknownException (rex.detail);
-             */
-
+            sysEx = new org.omg.CORBA.MARSHAL(rex.getMessage());
         } else {
-            throw new org.omg.CORBA.portable.UnknownException(rex);
-
+            sysEx = createSystemException(rex);
         }
-
+        sysEx.initCause(rex);
+        throw sysEx;
     }
-
+    
+    private static SystemException createSystemException(RemoteException rex) {
+        return createSystemException(rex, rex.getClass());
+    }
+    
     /**
-     * Generic function for reflective instantiation
+     * utility method to check for JTA exception types without linking to the JTA classes directly
      */
-    private Object newInstance(final Class cls, final Class[] arg_types,
-                               final Object[] args) {
-        return java.security.AccessController
-                .doPrivileged(new java.security.PrivilegedAction() {
-                    public Object run() {
-                        try {
-                            java.lang.reflect.Constructor cons = cls
-                                    .getConstructor(arg_types);
-
-                            return cons.newInstance(args);
-
-                        } catch (NoSuchMethodException ex) {
-                            return new RuntimeException("cannot instantiate "
-                                    + cls + ": " + ex.getMessage(), ex);
-
-                        } catch (InstantiationException ex) {
-                            return new RuntimeException("cannot instantiate "
-                                    + cls + ": " + ex.getMessage(), ex);
-
-                        } catch (IllegalAccessException ex) {
-                            return new RuntimeException("cannot instantiate "
-                                    + cls + ": " + ex.getMessage(), ex);
-
-                        } catch (IllegalArgumentException ex) {
-                            return new RuntimeException("cannot instantiate "
-                                    + cls + ": " + ex.getMessage(), ex);
-
-                        } catch (InvocationTargetException ex) {
-                            return new RuntimeException("cannot instantiate "
-                                    + cls + ": " + ex.getMessage(), ex);
-
-                        }
-                    }
-                });
+    private static SystemException createSystemException(RemoteException rex, Class<?> fromClass) {
+        // Recurse up the parent chain,
+        // until we reach a known JTA type. 
+        switch(fromClass.getName()) {
+            // Of course, we place some known elephants in Cairo.
+            case "java.lang.Object":
+            case "java.lang.Throwable":
+            case "java.lang.Exception":
+            case "java.lang.RuntimeException":
+            case "java.lang.Error":
+            case "java.io.IOException":
+            case "java.rmi.RemoteException":
+                return new UnknownException(rex);
+            case "javax.transaction.InvalidTransactionException":
+                return new INVALID_TRANSACTION(rex.getMessage());
+            case "javax.transaction.TransactionRolledbackException":
+                return new TRANSACTION_ROLLEDBACK(rex.getMessage());
+            case "javax.transaction.TransactionRequiredException":
+                return new TRANSACTION_REQUIRED(rex.getMessage());
+        }
+        return createSystemException(rex, fromClass.getSuperclass());
     }
 
     /**
@@ -321,7 +337,7 @@ public class UtilImpl implements UtilDelegate {
 
             case TCKind._tk_abstract_interface:
                 org.omg.CORBA_2_3.portable.InputStream in23 = (org.omg.CORBA_2_3.portable.InputStream) any
-                        .create_input_stream();
+                .create_input_stream();
                 return in23.read_abstract_interface();
 
             case TCKind._tk_string:
@@ -353,7 +369,7 @@ public class UtilImpl implements UtilDelegate {
      * instances of java.rmi.Remote for objects that have already been exported.
      */
     public void writeRemoteObject(org.omg.CORBA.portable.OutputStream out,
-                                  Object obj) throws org.omg.CORBA.SystemException {
+            Object obj) throws org.omg.CORBA.SystemException {
         org.omg.CORBA.Object objref = null;
 
         if (obj == null) {
@@ -391,8 +407,7 @@ public class UtilImpl implements UtilDelegate {
         out.write_Object(objref);
     }
 
-    public void writeAbstractObject(org.omg.CORBA.portable.OutputStream out,
-                                    Object obj) {
+    public void writeAbstractObject(org.omg.CORBA.portable.OutputStream out, Object obj) {
         logger.finer("writeAbstractObject.1 " + " out=" + out);
 
         if (obj instanceof org.omg.CORBA.Object || obj instanceof Serializable) {
@@ -428,7 +443,8 @@ public class UtilImpl implements UtilDelegate {
         out_.write_abstract_interface(obj);
     }
 
-    protected java.util.Map tie_map() {
+    @SuppressWarnings("unchecked")
+    protected java.util.Map<Remote, Tie> tie_map() {
         return RMIState.current().tie_map;
     }
 
@@ -447,7 +463,7 @@ public class UtilImpl implements UtilDelegate {
         if (obj == null)
             return null;
 
-        return (Tie) tie_map().get(obj);
+        return tie_map().get(obj);
     }
 
     public ValueHandler createValueHandler() {
@@ -455,7 +471,7 @@ public class UtilImpl implements UtilDelegate {
         // return new ValueHandlerImpl (null);
     }
 
-    public String getCodebase(Class clz) {
+    public String getCodebase(@SuppressWarnings("rawtypes") Class clz) {
         if (clz == null)
             return null;
 
@@ -476,8 +492,7 @@ public class UtilImpl implements UtilDelegate {
             return null;
 
         // ignore standard extensions
-        if (JAVAX_TRANSACTION_USERTRANSACTION_CLASS != null &&
-                theLoader == JAVAX_TRANSACTION_USERTRANSACTION_CLASS.getClassLoader())
+        if (theLoader == BEST_GUESS_AT_EXTENSION_CLASS_LOADER)
             return null;
 
         RMIState state = RMIState.current();
@@ -501,10 +516,11 @@ public class UtilImpl implements UtilDelegate {
             // ignore
         }
 
-        return (String) AccessController.doPrivileged(new GetSystemPropertyAction("java.rmi.server.codebase"));
+        return AccessController.doPrivileged(new GetSystemPropertyAction("java.rmi.server.codebase"));
     }
 
     static class SecMan extends java.rmi.RMISecurityManager {
+        @SuppressWarnings("rawtypes")
         public Class[] getClassContext() {
             return super.getClassContext();
         }
@@ -512,18 +528,18 @@ public class UtilImpl implements UtilDelegate {
 
     private static SecMan getSecMan() {
         try {
-            return (SecMan) AccessController
-                    .doPrivileged(new java.security.PrivilegedExceptionAction() {
-                        public Object run() {
-                            return new SecMan();
-                        }
-                    });
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<SecMan>() {
+                public SecMan run() {
+                    return new SecMan();
+                }
+            });
         } catch (PrivilegedActionException e) {
             throw new RuntimeException(e);
         }
 
     }
 
+    @SuppressWarnings("rawtypes")
     public Class loadClass(String name, String codebase, ClassLoader loader)
             throws ClassNotFoundException {
         try {
@@ -535,7 +551,7 @@ public class UtilImpl implements UtilDelegate {
         }
     }
 
-    static public Class loadClass0(String name, String codebase, ClassLoader loader)
+    static public Class<?> loadClass0(String name, String codebase, ClassLoader loader)
             throws ClassNotFoundException {
 
         try {
@@ -543,11 +559,11 @@ public class UtilImpl implements UtilDelegate {
         } catch (ClassNotFoundException e) {
             //skip
         }
-        Class result = null;
+        Class<?> result = null;
 
         ClassLoader stackLoader = null;
         ClassLoader thisLoader = Util.class.getClassLoader();
-        Class[] stack = _secman.getClassContext();
+        Class<?>[] stack = _secman.getClassContext();
         for (int i = 1; i < stack.length; i++) {
             ClassLoader testLoader = stack[i].getClassLoader();
             if (testLoader != null && testLoader != thisLoader) {
@@ -584,36 +600,17 @@ public class UtilImpl implements UtilDelegate {
 
         if (codebase != null && !"".equals(codebase)
                 && !Boolean.getBoolean("java.rmi.server.useCodeBaseOnly")) {
-            try {
-                logger.finer("trying RMIClassLoader");
-
-                URLClassLoader url_loader = new URLClassLoader(
-                        new URL[]{new URL(codebase)}, loader);
-
+            logger.finer("trying RMIClassLoader");
+            try (URLClassLoader url_loader = new URLClassLoader(new URL[]{new URL(codebase)}, loader)) {
                 result = url_loader.loadClass(name);
-
-                // log.info("SUCESSFUL class download "+name+" from "+codebase,
-                // new Throwable("TRACE"));
-
             } catch (ClassNotFoundException ex) {
                 logger.log(Level.FINER, "RMIClassLoader says " + ex.getMessage(), ex);
-
-                // log.info("FAILED class download "+name+" from "+codebase,
-                // ex);
-
-                // skip //
             } catch (MalformedURLException ex) {
                 logger.log(Level.FINER, "RMIClassLoader says " + ex.getMessage(), ex);
-
-                logger.finer("FAILED class download " + name + " from "
-                        + codebase + " " + ex.getMessage());
-
-                // skip //
+                logger.finer("FAILED class download " + name + " from " + codebase + " " + ex.getMessage());
             } catch (RuntimeException ex) {
-
-                logger.log(Level.FINER, "FAILED class download " + name + " from "
-                        + codebase + " " + ex.getMessage(), ex);
-
+                logger.log(Level.FINER, "FAILED class download " + name + " from " + codebase + " " + ex.getMessage(), ex);
+            } catch (IOException unimportant) {
             }
 
             if (result != null) {
@@ -696,24 +693,22 @@ public class UtilImpl implements UtilDelegate {
     }
 
     static ClassLoader getContextClassLoader() {
-        return (ClassLoader) AccessController
-                .doPrivileged(new PrivilegedAction() {
-                    public Object run() {
-                        return Thread.currentThread().getContextClassLoader();
-                    }
-                });
+        return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+            public ClassLoader run() {
+                return Thread.currentThread().getContextClassLoader();
+            }
+        });
     }
 
-    static ClassLoader getClassLoader(final Class clz) {
+    static ClassLoader getClassLoader(final Class<?> clz) {
         if (System.getSecurityManager() == null) {
             return clz.getClassLoader();
         } else {
-            return (ClassLoader) AccessController
-                    .doPrivileged(new PrivilegedAction() {
-                        public Object run() {
-                            return clz.getClassLoader();
-                        }
-                    });
+            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
+                public ClassLoader run() {
+                    return clz.getClassLoader();
+                }
+            });
         }
     }
 
@@ -726,7 +721,7 @@ public class UtilImpl implements UtilDelegate {
 
         RemoteDescriptor desc = stub._descriptor;
 
-        Class targetClass;
+        Class<?> targetClass;
 
         try {
             targetClass = Util.loadClass(desc.getJavaClass().getName(), stub
@@ -862,12 +857,12 @@ public class UtilImpl implements UtilDelegate {
         if (obj == null)
             return;
 
-        java.util.Map tie_map = tie_map();
+        java.util.Map<Remote, Tie> tie_map = tie_map();
 
         if (tie_map == null)
             return;
 
-        Tie tie = (Tie) tie_map.remove(obj);
+        Tie tie = tie_map.remove(obj);
 
         if (tie == null) {
             logger.fine("unexporting unknown instance of "
@@ -880,83 +875,5 @@ public class UtilImpl implements UtilDelegate {
         }
 
         tie.deactivate();
-    }
-
-//    static final Class[] RMI_TO_CORBA_EXCEPTION;
-//
-////  We want to avoid a dependency on JTA, so we add these classes only if JTA is available.
-//
-//    static {
-//        Class[] rmiToCorba;
-//        try {
-//            rmiToCorba = new Class[]{
-//                    Util.loadClass("javax.transaction.HeuristicMixedException", null, null),
-//                    org.omg.CosTransactions.HeuristicMixed.class,
-//
-//                    Util.loadClass("javax.transaction.HeuristicRollbackException", null, null),
-//                    org.omg.CosTransactions.HeuristicRollback.class,
-//
-//                    Util.loadClass("javax.transaction.HeuristicCommitException", null, null),
-//                    org.omg.CosTransactions.HeuristicCommit.class,
-//
-//                    Util.loadClass("javax.transaction.NotSupportedException", null, null),
-//                    org.omg.CosTransactions.SubtransactionsUnavailable.class,
-//
-//                    Util.loadClass("javax.transaction.InvalidTransactionException", null, null),
-//                    org.omg.CORBA.INVALID_TRANSACTION.class,
-//
-//                    Util.loadClass("javax.transaction.TransactionRequiredException", null, null),
-//                    org.omg.CORBA.TRANSACTION_REQUIRED.class,
-//
-//                    Util.loadClass("javax.transaction.TransactionRolledbackException", null, null),
-//                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
-//
-//                    Util.loadClass("javax.transaction.RollbackException", null, null),
-//                    org.omg.CORBA.TRANSACTION_ROLLEDBACK.class
-//            };
-//
-//        }
-//        catch (ClassNotFoundException e) {
-//            rmiToCorba = new Class[0];
-//        }
-//        RMI_TO_CORBA_EXCEPTION = rmiToCorba;
-//    }
-
-    static final Class[] CORBA_TO_RMI_EXCEPTION = {
-            org.omg.CORBA.BAD_PARAM.class, java.rmi.MarshalException.class,
-
-            org.omg.CORBA.COMM_FAILURE.class, java.rmi.MarshalException.class,
-
-            org.omg.CORBA.INV_OBJREF.class,
-            java.rmi.NoSuchObjectException.class,
-
-            org.omg.CORBA.MARSHAL.class, java.rmi.MarshalException.class,
-
-            org.omg.CORBA.NO_IMPLEMENT.class,
-            java.rmi.NoSuchObjectException.class,
-
-            org.omg.CORBA.NO_PERMISSION.class, java.rmi.AccessException.class,
-
-            org.omg.CORBA.OBJECT_NOT_EXIST.class,
-            java.rmi.NoSuchObjectException.class,
-
-            org.omg.CORBA.TRANSACTION_REQUIRED.class,
-            javax.transaction.TransactionRequiredException.class,
-
-            org.omg.CORBA.TRANSACTION_ROLLEDBACK.class,
-            javax.transaction.TransactionRolledbackException.class,
-
-            org.omg.CORBA.INVALID_TRANSACTION.class,
-            javax.transaction.InvalidTransactionException.class};
-
-    static final java.util.Map CORBA_TO_RMI_MAP = new java.util.HashMap();
-
-    static {
-        for (int i = 0; i < CORBA_TO_RMI_EXCEPTION.length; i += 2) {
-            Class corba = CORBA_TO_RMI_EXCEPTION[i];
-            Class rmi = CORBA_TO_RMI_EXCEPTION[i + 1];
-
-            CORBA_TO_RMI_MAP.put(corba.getName(), rmi);
-        }
     }
 }
