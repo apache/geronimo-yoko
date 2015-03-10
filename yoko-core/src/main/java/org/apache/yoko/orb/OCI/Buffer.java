@@ -66,14 +66,14 @@ public final class Buffer {
      */
     public String dumpData() 
     {
-        StringBuffer dump = new StringBuffer(); 
+        StringBuilder dump = new StringBuilder(); 
         dump.append("Buffer pos="); 
         dump.append(pos_); 
         dump.append(" Buffer len="); 
         dump.append(len_); 
         dump.append(" Remaining buffer data=\n\n"); 
         
-        dump.append(org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length())); 
+        org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length(), dump); 
         return dump.toString(); 
     }
 

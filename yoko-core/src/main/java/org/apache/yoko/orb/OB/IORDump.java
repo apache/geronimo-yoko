@@ -19,22 +19,21 @@ package org.apache.yoko.orb.OB;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.util.Properties;
 
 public class IORDump {
 
     public static String PrintObjref(org.omg.CORBA.ORB orb,
             org.omg.IOP.IOR ior) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(baos);
-        PrintObjref(orb, ps, ior);
-        ps.flush();
-        return baos.toString();
+        StringBuilder sb = new StringBuilder();
+        PrintObjref(orb, sb, ior);
+        return sb.toString();
     }
 
-    static public void PrintObjref(org.omg.CORBA.ORB orb, java.io.PrintStream out,
+    static public void PrintObjref(org.omg.CORBA.ORB orb, StringBuilder sb,
             org.omg.IOP.IOR ior) {
-        out.println("type_id: " + ior.type_id);
+        sb.append("type_id: ").append(ior.type_id).append('\n');
 
         org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = null;
         try {
@@ -49,9 +48,9 @@ public class IORDump {
                 .get_factories();
 
         for (int i = 0; i < ior.profiles.length; i++) {
-            out.print("Profile #" + (i + 1) + ": ");
+            sb.append("Profile #" + (i + 1) + ": ");
             if (ior.profiles[i].tag == org.omg.IOP.TAG_MULTIPLE_COMPONENTS.value) {
-                out.print("multiple components");
+                sb.append("multiple components");
 
                 byte[] data = ior.profiles[i].profile_data;
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
@@ -62,55 +61,55 @@ public class IORDump {
 
                 int cnt = in.read_ulong();
                 if (cnt == 0)
-                    out.println();
+                    sb.append('\n');
                 else {
                     for (int j = 0; j < cnt; j++) {
                         org.omg.IOP.TaggedComponent comp = org.omg.IOP.TaggedComponentHelper
                                 .read(in);
 
-                        String desc = IORUtil.describe_component(comp);
-                        out.println(desc);
+                        IORUtil.describe_component(comp, sb);
                     }
                 }
             } else {
                 int j;
                 for (j = 0; j < factories.length; j++) {
                     if (factories[j].tag() == ior.profiles[i].tag) {
-                        out.println(factories[j].id());
+                        sb.append(factories[j].id()).append('\n');
                         String desc = factories[j]
                                 .describe_profile(ior.profiles[i]);
-                        out.print(desc);
+                        sb.append(desc);
                         break;
                     }
                 }
 
                 if (j >= factories.length) {
-                    out.println("unknown profile tag " + ior.profiles[i].tag);
-                    out.println("profile_data: ("
-                            + ior.profiles[i].profile_data.length + ")");
-                    String data = IORUtil.dump_octets(
-                            ior.profiles[i].profile_data, 0,
-                            ior.profiles[i].profile_data.length);
-                    out.print(data); // No newline
+                    sb.append("unknown profile tag ").append(ior.profiles[i].tag).append('\n');
+                    sb.append("profile_data: (")
+                            .append(ior.profiles[i].profile_data.length ).append(")\n");
+                    IORUtil.dump_octets(
+                            ior.profiles[i].profile_data, sb);
                 }
             }
         }
     }
 
     static public void DumpIOR(org.omg.CORBA.ORB orb, String ref, boolean hasEndian) {
-        DumpIOR(orb, ref, hasEndian, System.out);
+        StringBuilder sb = new StringBuilder();
+        DumpIOR(orb, ref, hasEndian, sb);
+        PrintWriter pw = new PrintWriter(System.out);
+        pw.write(sb.toString());
+        pw.flush();
     }
 
     static public String DumpIORToString(org.omg.CORBA.ORB orb, String ref, boolean hasEndian) {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        PrintStream ps = new PrintStream(baos);
-        DumpIOR(orb, ref, hasEndian, ps);
-        return baos.toString();
+        StringBuilder sb = new StringBuilder();
+        DumpIOR(orb, ref, hasEndian, sb);
+        return sb.toString();
     }
 
-    static public void DumpIOR(org.omg.CORBA.ORB orb, String ref, boolean hasEndian, PrintStream ps) {
+    static public void DumpIOR(org.omg.CORBA.ORB orb, String ref, boolean hasEndian, StringBuilder sb) {
         if (!ref.startsWith("IOR:")) {
-            ps.println("IOR is invalid");
+            sb.append("IOR is invalid\n");
             return;
         }
 
@@ -125,15 +124,14 @@ public class IORDump {
 
         org.omg.IOP.IOR ior = org.omg.IOP.IORHelper.read(in);
 
-        ps.print("byteorder: ");
+        sb.append("byteorder: ");
         if (hasEndian)
-            ps.println((endian ? "little" : "big") + " endian");
+            sb.append((endian ? "little" : "big") + " endian\n");
         else
-            ps.println("n/a");
+            sb.append("n/a\n");
 
-        PrintObjref(orb, ps, ior);
+        PrintObjref(orb, sb, ior);
 
-        ps.flush();
     }
 
     static void usage() {

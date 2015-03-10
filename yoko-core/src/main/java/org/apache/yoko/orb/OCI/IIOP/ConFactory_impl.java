@@ -67,7 +67,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                 .read(in);
 
-        StringBuffer result = new StringBuffer();
+        StringBuilder result = new StringBuilder();
 
         //
         // Show general info
@@ -82,9 +82,8 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             port = body.port;
         result.append("port: " + port + '\n');
         result.append("object_key: (" + body.object_key.length + ")\n");
-        String tmp = org.apache.yoko.orb.OB.IORUtil.dump_octets(
-                body.object_key, 0, body.object_key.length);
-        result.append(tmp);
+        org.apache.yoko.orb.OB.IORUtil.dump_octets(
+                body.object_key, 0, body.object_key.length, result);
 
         //
         // Print IIOP 1.1 information (components)
@@ -96,9 +95,8 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                 org.omg.IOP.TaggedComponent component = org.omg.IOP.TaggedComponentHelper
                         .read(in);
 
-                String desc = org.apache.yoko.orb.OB.IORUtil
-                        .describe_component(component);
-                result.append(desc);
+                org.apache.yoko.orb.OB.IORUtil
+                        .describe_component(component, result);
             }
         }
 
