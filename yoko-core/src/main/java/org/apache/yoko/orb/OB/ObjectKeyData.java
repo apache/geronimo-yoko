@@ -44,7 +44,7 @@ final public class ObjectKeyData {
     }
     
     public String toString() {
-        StringBuffer buf = new StringBuffer(); 
+        StringBuilder buf = new StringBuilder(); 
         buf.append(serverId); 
         buf.append(':'); 
         if (poaId != null) {
@@ -55,7 +55,7 @@ final public class ObjectKeyData {
         }
         buf.append(':'); 
         if (oid != null) {
-            buf.append(IORUtil.format_octets(oid)); 
+            IORUtil.format_octets(oid, buf); 
         }
         return buf.toString(); 
     }
