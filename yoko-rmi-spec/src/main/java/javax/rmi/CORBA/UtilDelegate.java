@@ -20,6 +20,7 @@ package javax.rmi.CORBA;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.NoSuchObjectException;
+
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.InputStream;
@@ -29,9 +30,10 @@ public interface UtilDelegate {
     Object copyObject(Object o, ORB orb) throws RemoteException;
     Object[] copyObjects(Object[] objs, ORB orb) throws RemoteException;
     ValueHandler createValueHandler();
-    String getCodebase(Class clz);
+    String getCodebase(@SuppressWarnings("rawtypes") Class clz);
     Tie getTie(Remote t);
     boolean isLocal(Stub s) throws RemoteException;
+    @SuppressWarnings("rawtypes")
     Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException;
     RemoteException mapSystemException(SystemException e);
     Object readAny(InputStream is);

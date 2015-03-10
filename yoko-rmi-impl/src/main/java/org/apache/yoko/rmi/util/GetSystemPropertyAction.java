@@ -23,7 +23,7 @@ import java.security.PrivilegedAction;
  * Simple utility class for retrieving a system property
  * value using the AccessController.
  */
-public class GetSystemPropertyAction implements PrivilegedAction {
+public class GetSystemPropertyAction implements PrivilegedAction<String> {
     // property name to retrieve
     String name;
     // potential default value
@@ -57,7 +57,7 @@ public class GetSystemPropertyAction implements PrivilegedAction {
      * @return The retrieved property.  Returns either null or the
      *         specified default value if this has not been set.
      */
-    public java.lang.Object run() {
+    public String run() {
         if (defaultValue == null) {
             return System.getProperty(name);
         }
