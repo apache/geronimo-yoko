@@ -6,6 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.yoko.orb.CosNaming.tnaming2.NamingContextImpl.BoundObject;
+import org.apache.yoko.orb.spi.naming.RemoteAccess;
 import org.omg.CORBA.LocalObject;
 import org.omg.CosNaming.Binding;
 import org.omg.CosNaming.BindingHolder;
@@ -160,7 +161,7 @@ public final class BindingIteratorImpl extends LocalObject implements BindingIte
     }
 
     @Override
-    public Servant getServant(POA poa, boolean readOnly) throws Exception {
+    public Servant getServant(POA poa, RemoteAccess ignored) throws Exception {
         return new POAServant(poa, core);
     }
 }

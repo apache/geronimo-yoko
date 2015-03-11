@@ -19,6 +19,8 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.rmi.api.PortableRemoteObjectExt;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.Delegate;
 import org.omg.CORBA.portable.ServantObject;
 
@@ -62,7 +64,11 @@ public abstract class RMIStub extends javax.rmi.CORBA.Stub {
 
     // apparently this implementation is expected!
     public String toString() {
-        return _orb().object_to_string(this);
+        try {
+            return _orb().object_to_string(this);
+        } catch (SystemException e) {
+            return super.toString() + " (unconnected)";
+        }
     }
 
     /**
