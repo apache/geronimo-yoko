@@ -3,6 +3,7 @@ package org.apache.yoko.rmi.osgi.activator;
 import org.apache.yoko.osgi.locator.ProviderRegistryImpl;
 import org.apache.yoko.osgi.locator.Register;
 import org.apache.yoko.osgi.locator.activator.AbstractBundleActivator;
+import org.omg.stub.java.rmi._Remote_Stub;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;
 
@@ -12,7 +13,7 @@ public class Activator extends AbstractBundleActivator {
     private ProviderRegistryImpl register;
     
     public Activator() {
-        super(new Info[] {}, 
+        super(new Info[] {new Info(_Remote_Stub.class.getName(), _Remote_Stub.class.getName(), 1)}, 
                 new Info[] {new Info("javax.rmi.CORBA.PortableRemoteObjectClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectImpl", 1),
                 new Info("javax.rmi.CORBA.UtilClass", "org.apache.yoko.rmi.impl.UtilImpl", 1),
                 new Info("org.apache.yoko.rmi.PortableRemoteObjectExtClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl", 1),
