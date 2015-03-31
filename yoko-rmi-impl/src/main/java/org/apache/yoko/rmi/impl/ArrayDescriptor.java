@@ -158,15 +158,15 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
                 throw new RuntimeException("unknown array type " + type);
             }
         }
+        if (java.io.Serializable.class.equals(elemType) || 
+                java.io.Externalizable.class.equals(elemType) || Object.class.equals(elemType)) {
+            return new ObjectArrayDescriptor(type, elemType, rep);
 
-        if (java.io.Serializable.class.isAssignableFrom(elemType)) {
+        } else if (java.io.Serializable.class.isAssignableFrom(elemType)) {
             return new ValueArrayDescriptor(type, elemType, rep);
 
         } else if (java.rmi.Remote.class.isAssignableFrom(elemType)) {
             return new RemoteArrayDescriptor(type, elemType, rep);
-
-        } else if (Object.class.equals(elemType)) {
-            return new ObjectArrayDescriptor(type, elemType, rep);
 
         } else {
             return new AbstractObjectArrayDescriptor(type, elemType, rep);
