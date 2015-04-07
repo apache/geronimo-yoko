@@ -1,4 +1,4 @@
-package org.apache.yoko.orb.cmsf;
+package org.apache.yoko.rmi.cmsf;
 
 public final class CmsfThreadLocalStack {
     private static final ThreadLocal<Frame> cmsfFrames = 
@@ -23,15 +23,15 @@ public final class CmsfThreadLocalStack {
         }
     }
     
-    static void push(int value) {
+    public static void push(int value) {
         cmsfFrames.set(new Frame(value, cmsfFrames.get()));
     }
     
-    static int peek() {
+    public static int peek() {
         return cmsfFrames.get().value;
     }
     
-    static int pop() {
+    public static int pop() {
         Frame f = cmsfFrames.get();
         cmsfFrames.set(f.prev);
         return f.value;
