@@ -15,21 +15,21 @@ import org.omg.IOP.TaggedComponent;
 public enum CmsfVersion {
     CMSFv1(1), CMSFv2(2);
     private final byte value;
-    private final byte[] data;
     private final TaggedComponent tc;
     private final ServiceContext sc;
     private final Any any;
+    
     private CmsfVersion(int value) {
-        this.value = (byte)value;
-        this.data = genData(value);
-        this.tc = new TaggedComponent(TAG_RMI_CUSTOM_MAX_STREAM_FORMAT.value, data);
+        this((byte)(value & 0xff));
+    }
+    
+    private CmsfVersion(byte value) {
+        this.value = value;
+        final byte[] data = genData(value);
+        this.tc = new TaggedComponent(TAG_RMI_CUSTOM_MAX_STREAM_FORMAT.value, data.clone());
         this.sc = new ServiceContext(RMICustomMaxStreamFormat.value, data);
         this.any = ORB.init().create_any();
         this.any.insert_octet((byte)value);
-    }
-    
-    byte[] getData() {
-        return data.clone();
     }
     
     byte getValue() {
@@ -60,19 +60,19 @@ public enum CmsfVersion {
         try (org.apache.yoko.orb.CORBA.InputStream in = 
                 new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false)) {
             in._OB_readEndian();
-            cmsf = in.read();
+            cmsf = in.read_octet();
         } catch (Exception e) {
             throw (MARSHAL)(new MARSHAL(e.getMessage())).initCause(e);
         }
         return (cmsf >= 2) ? CMSFv2 : CMSFv1;
     }
     
-    private static byte[] genData(int value) {
+    private static byte[] genData(byte value) {
         Buffer buf = new Buffer();
         try (org.apache.yoko.orb.CORBA.OutputStream out = 
                 new org.apache.yoko.orb.CORBA.OutputStream(buf)) {
             out._OB_writeEndian();
-            out.write(value);
+            out.write_octet(value);
             return buf.data();
         } catch (IOException e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
