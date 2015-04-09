@@ -20,7 +20,9 @@ package org.apache.yoko.orb.CORBA;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream {
+import org.omg.CORBA.portable.ValueOutputStream;
+
+final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
     static final Logger logger = Logger.getLogger(OutputStream.class.getName());
     
     private org.apache.yoko.orb.OB.ORBInstance orbInstance_; // Java only
@@ -1932,5 +1934,17 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Java only
     public java.lang.Object _OB_delegateContext() {
         return delegateContext_;
+    }
+
+    @Override
+    public void end_value() {
+        _OB_endValue();
+    }
+
+    @Override
+    public void start_value(String rep_id) {
+        final int tag = 0x7fffff02;
+        final String[] ids = { rep_id };
+        _OB_beginValue(tag, ids, true);
     }
 }

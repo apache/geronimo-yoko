@@ -1,5 +1,6 @@
 package org.apache.yoko.orb.cmsf;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
 import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv1;
 
 import java.io.IOException;
@@ -7,8 +8,10 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
 import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
 import org.omg.IOP.RMICustomMaxStreamFormat;
 import org.omg.IOP.ServiceContext;
@@ -33,13 +36,14 @@ public class CmsfServerInterceptor extends LocalObject implements ServerRequestI
             ServiceContext sc = ri.get_request_service_context(RMICustomMaxStreamFormat.value);
             cmsf = CmsfVersion.readData(sc.context_data);
         } catch (BAD_PARAM e) {
-            if (e.minor != 26) {
+            if (e.minor != MinorInvalidServiceContextId) {
                 throw e;
             }
         }
         try {
             ri.set_slot(slotId, cmsf.getAny());
         } catch (InvalidSlot e) {
+            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 
@@ -49,6 +53,7 @@ public class CmsfServerInterceptor extends LocalObject implements ServerRequestI
         try {
             cmsf = CmsfVersion.readAny(ri.get_slot(slotId));
         } catch (InvalidSlot e) {
+            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
         CmsfThreadLocalStack.push(cmsf.getValue());
     }

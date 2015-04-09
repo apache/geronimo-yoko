@@ -9,7 +9,7 @@ public final class CmsfThreadLocalStack {
             };
     private final static class Frame {
         final static Frame DEFAULT = new Frame();
-        final int value;
+        final byte value;
         final Frame prev;
         
         private Frame() {
@@ -17,21 +17,21 @@ public final class CmsfThreadLocalStack {
             this.prev = this;
         }
         
-        Frame(int value, Frame prev) {
+        Frame(byte value, Frame prev) {
             this.value = value;
             this.prev = prev;
         }
     }
     
-    public static void push(int value) {
+    public static void push(byte value) {
         cmsfFrames.set(new Frame(value, cmsfFrames.get()));
     }
     
-    public static int peek() {
+    public static byte peek() {
         return cmsfFrames.get().value;
     }
     
-    public static int pop() {
+    public static byte pop() {
         Frame f = cmsfFrames.get();
         cmsfFrames.set(f.prev);
         return f.value;

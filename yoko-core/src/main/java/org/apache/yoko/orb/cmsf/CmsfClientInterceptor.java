@@ -1,5 +1,6 @@
 package org.apache.yoko.orb.cmsf;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
 import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv1;
 import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv2;
 
@@ -27,7 +28,7 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
             TaggedComponent tc = ri.get_effective_component(TAG_RMI_CUSTOM_MAX_STREAM_FORMAT.value);
             cmsf = CmsfVersion.readData(tc.component_data);
         } catch (BAD_PARAM e) {
-            if (e.minor != 28) {
+            if (e.minor != MinorInvalidComponentId) {
                 throw e;
             }
         }

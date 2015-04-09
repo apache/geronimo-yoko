@@ -26,6 +26,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 
+import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
+
 abstract class ObjectWriter extends java.io.ObjectOutputStream {
     protected final java.io.Serializable object;
 
@@ -114,7 +116,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
             writer.writeBoolean(false);
 
             if (writer.getStreamFormatVersion() == 2) {
-                writer._startValue(writer._desc.getRepositoryID());
+                writer._startValue(writer._desc.getCustomRepositoryID());
             }
 
         }
@@ -176,7 +178,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
             writer.state = WROTE_CUSTOM_DATA;
 
             if (writer.getStreamFormatVersion() == 2) {
-                writer._startValue(writer._desc.getRepositoryID());
+                writer._startValue(writer._desc.getCustomRepositoryID());
             }
 
         }
@@ -220,6 +222,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
 
     ObjectWriter(java.io.Serializable obj) throws java.io.IOException {
         object = obj;
+        streamFormatVersion = CmsfThreadLocalStack.peek();
     }
 
     /**

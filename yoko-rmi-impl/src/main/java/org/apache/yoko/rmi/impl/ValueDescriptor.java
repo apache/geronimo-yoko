@@ -76,6 +76,8 @@ public class ValueDescriptor extends TypeDescriptor {
     protected boolean _is_immutable_value;
 
     protected boolean _is_rmi_stub;
+    
+    protected String _custom_repid;
 
     private static Set _immutable_value_classes;
 
@@ -122,6 +124,13 @@ public class ValueDescriptor extends TypeDescriptor {
         }
 
         return _repid;
+    }
+    
+    public String getCustomRepositoryID() {
+        if (_custom_repid == null) {
+            _custom_repid = "RMI:org.omg.custom." + getRepositoryID().substring(4);
+        }
+        return _custom_repid;
     }
 
     long getSerialVersionUID() {
@@ -501,6 +510,9 @@ public class ValueDescriptor extends TypeDescriptor {
         if (_write_object_method != null)
             return true;
 
+        if (_super_descriptor != null)
+            return _super_descriptor.isCustomMarshalled();
+        
         return false;
     }
 

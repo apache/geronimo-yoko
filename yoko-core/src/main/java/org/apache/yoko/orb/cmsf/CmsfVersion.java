@@ -4,6 +4,8 @@ import java.io.IOException;
 
 import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.Any;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
 import org.omg.IOP.RMICustomMaxStreamFormat;
 import org.omg.IOP.ServiceContext;
@@ -12,13 +14,13 @@ import org.omg.IOP.TaggedComponent;
 
 public enum CmsfVersion {
     CMSFv1(1), CMSFv2(2);
-    private final int value;
+    private final byte value;
     private final byte[] data;
     private final TaggedComponent tc;
     private final ServiceContext sc;
     private final Any any;
     private CmsfVersion(int value) {
-        this.value = value;
+        this.value = (byte)value;
         this.data = genData(value);
         this.tc = new TaggedComponent(TAG_RMI_CUSTOM_MAX_STREAM_FORMAT.value, data);
         this.sc = new ServiceContext(RMICustomMaxStreamFormat.value, data);
@@ -30,7 +32,7 @@ public enum CmsfVersion {
         return data.clone();
     }
     
-    int getValue() {
+    byte getValue() {
         return value;
     }
     
@@ -60,7 +62,7 @@ public enum CmsfVersion {
             in._OB_readEndian();
             cmsf = in.read();
         } catch (Exception e) {
-            //ignore
+            throw (MARSHAL)(new MARSHAL(e.getMessage())).initCause(e);
         }
         return (cmsf >= 2) ? CMSFv2 : CMSFv1;
     }
@@ -73,7 +75,7 @@ public enum CmsfVersion {
             out.write(value);
             return buf.data();
         } catch (IOException e) {
-            return null;
+            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 }

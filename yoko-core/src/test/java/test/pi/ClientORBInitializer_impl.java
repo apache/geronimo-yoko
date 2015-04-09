@@ -48,7 +48,7 @@ final public class ClientORBInitializer_impl extends org.omg.CORBA.LocalObject
         //
         if (!local_) {
             int id = info.allocate_slot_id();
-            TEST(id == 0);
+            TEST(id >= 0);
         }
 
         //
