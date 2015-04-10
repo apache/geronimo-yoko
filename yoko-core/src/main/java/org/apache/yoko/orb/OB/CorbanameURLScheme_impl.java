@@ -17,10 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorOther;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.apache.yoko.orb.OB.CorbalocURLScheme;
 import org.apache.yoko.orb.OB.CorbalocURLSchemeHelper;
 import org.apache.yoko.orb.OB.URLRegistry;
 import org.apache.yoko.orb.OB.URLScheme;
+import org.omg.CORBA.BAD_PARAM;
 
 public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
         implements URLScheme {
@@ -115,6 +122,7 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
         // Make a DII invocation on the Naming Service to resolve the
         // specified context
         //
+        Exception failureCause;
         try {
             //
             // Create typecodes for Name and NameComponent
@@ -144,7 +152,7 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                                + ": invalid stringified name",
+                                + ": invalid stringified name \"" + fragment + "\"",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
@@ -209,18 +217,22 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
             //
             // Return the result if there was no exception
             //
-            if (request.env().exception() == null)
+            failureCause = request.env().exception();
+            if (failureCause == null)
                 return request.return_value().extract_Object();
+            
         } catch (org.omg.CORBA.SystemException ex) {
+            failureCause = ex;
             // Fall through
         } catch (org.omg.CORBA.UserException ex) {
+            failureCause = ex;
             // Fall through
         }
 
-        throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorOther)
-                + ": corbaname evaluation error", org.apache.yoko.orb.OB.MinorCodes.MinorOther,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        final BAD_PARAM bp = new BAD_PARAM(MinorCodes.describeBadParam(MinorOther)
+                + ": corbaname evaluation error:" + failureCause.getMessage(), MinorOther,
+                COMPLETED_NO);
+        throw (BAD_PARAM)bp.initCause(failureCause);
     }
 
     public void destroy() {
