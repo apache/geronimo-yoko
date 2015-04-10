@@ -22,6 +22,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.ObjectStreamField;
+import java.io.Reader;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -51,6 +52,7 @@ public class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class
             .getName());
 
+    protected boolean _is_enum;
     protected boolean _is_externalizable;
 
     protected boolean _is_serializable;
@@ -134,6 +136,7 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     long getSerialVersionUID() {
+        if (_is_enum) return 0L;
         if (_serial_version_uid_field != null) {
 
             try {
@@ -166,6 +169,7 @@ public class ValueDescriptor extends TypeDescriptor {
         final Class type = getJavaClass();
         final Class superClass = type.getSuperclass();
 
+        _is_enum = Enum.class.isAssignableFrom(type);
         _is_rmi_stub = RMIStub.class.isAssignableFrom(type);
         _is_externalizable = java.io.Externalizable.class
                 .isAssignableFrom(type);
@@ -669,6 +673,18 @@ public class ValueDescriptor extends TypeDescriptor {
     public java.io.Serializable readValue(
             final org.omg.CORBA.portable.InputStream in,
             final java.util.Map offsetMap, final java.lang.Integer offset) {
+        if (_is_enum) {
+            try {
+                in.read_long(); // read in and ignore Enum ordinal
+                final String name = (String)((org.omg.CORBA_2_3.portable.InputStream)in).read_value(String.class);
+                final Enum value = Enum.valueOf(getJavaClass(), name);
+                offsetMap.put(offset, value);
+                return value;
+            } catch (org.omg.CORBA.portable.IndirectionException ex) {
+                return (Serializable)offsetMap.get(new Integer(ex.offset));
+            }
+        } 
+        
         final java.io.Serializable value = createBlankInstance();
 
         offsetMap.put(offset, value);
