@@ -24,6 +24,7 @@ import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Vector;
 
@@ -194,6 +195,20 @@ public class ClientMain extends Assert {
 			SampleSerializable ser2 = (SampleSerializable) sample.getSerializable();
 		}
 		
+		public void testEnum() throws RemoteException {
+		    SampleEnum se = SampleEnum.SAMPLE2;
+		    sample.setSerializable(se);
+		    Serializable s = sample.getSerializable();
+		    assertSame(se, s);
+		}
+		
+		public void testEnumArray() throws RemoteException {
+		    SampleEnum[] sa = { SampleEnum.SAMPLE3, SampleEnum.SAMPLE1, SampleEnum.SAMPLE3 };
+		    sample.setSerializable(sa);
+		    Object[] oa = (Object[])sample.getSerializable();
+		    assertTrue(Arrays.deepEquals(sa, oa));
+		}
+		
 		public void testRemoteAttributeOnServer() throws RemoteException {
 			SampleSerializable ser = new SampleSerializable();
 			ser.setRemote(sample);
@@ -334,6 +349,8 @@ public class ClientMain extends Assert {
 		test.testCorbaAttribute(SampleCorbaHelper.narrow(sampleCorbaRef));
 		test.testComplexCorbaAttribute(SampleCorbaHelper.narrow(sampleCorbaRef));
 		test.testHashMap();
+		test.testEnum();
+		test.testEnumArray();
 		//myORB.destroy();
         System.out.println("Testing complete"); 
 	}
