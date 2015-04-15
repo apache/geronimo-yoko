@@ -34,7 +34,7 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
         }
         CmsfThreadLocalStack.push(cmsf.getValue());
         
-        ri.add_request_service_context(CMSFv2.getSc(), false);
+        if (CmsfVersion.ENABLED) ri.add_request_service_context(CMSFv2.getSc(), false);
     }
 
     @Override

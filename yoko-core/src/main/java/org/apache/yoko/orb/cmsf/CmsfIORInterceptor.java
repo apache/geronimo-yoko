@@ -16,7 +16,7 @@ public final class CmsfIORInterceptor extends LocalObject implements IORIntercep
 
     @Override
     public void establish_components(IORInfo info) {
-        info.add_ior_component(CMSFv2.getTc());
+        if (CmsfVersion.ENABLED) info.add_ior_component(CMSFv2.getTc());
     }
 
     @Override

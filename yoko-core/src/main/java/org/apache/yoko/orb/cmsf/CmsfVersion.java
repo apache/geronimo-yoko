@@ -14,6 +14,7 @@ import org.omg.IOP.TaggedComponent;
 
 public enum CmsfVersion {
     CMSFv1(1), CMSFv2(2);
+    public static final boolean ENABLED = false;
     private final byte value;
     private final TaggedComponent tc;
     private final ServiceContext sc;
