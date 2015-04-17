@@ -72,7 +72,7 @@ public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
             // 
             throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
                     .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                    + ": invalid IOR", org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
+                    + ": invalid IOR \"" + url + "\"", org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
     }

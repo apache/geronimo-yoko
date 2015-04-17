@@ -284,7 +284,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
                     "internal problem: cannot instantiate stub", ex);
         } catch (InvocationTargetException ex) {
             throw new RuntimeException(
-                    "internal problem: cannot instantiate stub", ex);
+                    "internal problem: cannot instantiate stub", ex.getCause());
         } catch (IllegalAccessException ex) {
             throw new RuntimeException(
                     "internal problem: cannot instantiate stub", ex);

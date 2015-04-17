@@ -23,7 +23,9 @@ import javax.rmi.CORBA.ValueHandler;
 
 import org.apache.yoko.orb.CORBA.ORB;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
+import org.omg.CORBA.portable.IDLEntity;
 
 final public class ValueWriter {
     //
@@ -183,7 +185,14 @@ final public class ValueWriter {
         BoxedValueHelper result = null;
 
         Class helperClass = null;
+        final Class<?> valueClass = value.getClass();
 
+        //Short-cuts
+        if (String.class == valueClass) {
+            return new WStringValueHelper();
+        } else if (!!!IDLEntity.class.isAssignableFrom(valueClass)) {
+            return null;
+        }
         //
         // First try constructing a class name based on the class of
         // the value. This will only work for primitive types, because
