@@ -1,35 +1,38 @@
 /**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
+
 import java.io.Externalizable;
 import java.io.IOException;
+import java.io.NotActiveException;
 import java.io.ObjectOutput;
+import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.Map;
 
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
-
-abstract class ObjectWriter extends java.io.ObjectOutputStream {
-    protected final java.io.Serializable object;
+abstract class ObjectWriter extends ObjectOutputStream {
+    protected final Serializable object;
 
     private ValueDescriptor _desc;
 
@@ -41,7 +44,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
 
     private enum WriteObjectState {
         NOT_IN_WRITE_OBJECT {
-            void beforeWriteObject(ObjectWriter writer) throws IOException {
+            void beforeWriteObject(ObjectWriter writer) {
                 writer.state = IN_WRITE_OBJECT;
             }
         },
@@ -77,7 +80,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
             }
         },
         IN_DEFAULT_WRITE_OBJECT {
-            void afterDefaultWriteObject(ObjectWriter writer) throws IOException {
+            void afterDefaultWriteObject(ObjectWriter writer) {
                 writer.state = WROTE_DEFAULT_DATA;
             }
         },
@@ -115,7 +118,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
         }
         ;
 
-        void beforeWriteObject(ObjectWriter writer) throws IOException {
+        void beforeWriteObject(ObjectWriter writer) {
             throw new IllegalStateException();
         }
 
@@ -127,7 +130,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
             throw new IllegalStateException();
         }
 
-        void afterDefaultWriteObject(ObjectWriter writer) throws IOException {
+        void afterDefaultWriteObject(ObjectWriter writer) {
             throw new IllegalStateException();
         }
 
@@ -139,26 +142,25 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
         state.beforeWriteData(this);
     }
 
-    ObjectWriter(java.io.Serializable obj) throws java.io.IOException {
+    ObjectWriter(Serializable obj) throws IOException {
         object = obj;
         streamFormatVersion = CmsfThreadLocalStack.peek();
     }
 
-    protected byte getStreamFormatVersion() {
+    private byte getStreamFormatVersion() {
         return streamFormatVersion;
     }
 
     abstract ObjectReader getObjectReader(Object newObject);
 
-    void setCurrentValueDescriptor(ValueDescriptor desc) {
+    private void setCurrentValueDescriptor(ValueDescriptor desc) {
         _desc = desc;
         _putFields = null;
     }
 
-    public final void defaultWriteObject() throws java.io.IOException,
-            java.io.NotActiveException {
+    public final void defaultWriteObject() throws IOException {
         if (_desc == null) {
-            throw new java.io.NotActiveException();
+            throw new NotActiveException();
         }
 
         state.beforeDefaultWriteObject(this);
@@ -169,10 +171,10 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
         }
     }
 
-    public java.io.ObjectOutputStream.PutField putFields()
-            throws java.io.IOException {
+    public ObjectOutputStream.PutField putFields()
+            throws IOException {
         if (_desc == null) {
-            throw new java.io.NotActiveException();
+            throw new NotActiveException();
         }
 
         _putFields = new PutFieldImpl(_desc);
@@ -182,11 +184,11 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
 
     public void writeFields() throws IOException {
         if (_putFields == null) {
-            throw new java.io.NotActiveException("no current PutFields");
+            throw new NotActiveException("no current PutFields");
         }
 
         if (_putFields.slice != _desc) {
-            throw new java.io.NotActiveException(
+            throw new NotActiveException(
                     "PutField cannot survive writeObject invocation");
         }
 
@@ -207,15 +209,15 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
     public abstract void writeValueObject(Object obj) throws IOException;
 
     public abstract void writeRemoteObject(Object obj) throws IOException;
-    
+
     public abstract void writeCorbaObject(Object obj) throws IOException;
 
     public abstract void writeAny(Object obj) throws IOException;
-    
-    static class PutFieldImpl extends PutField {
-        ValueDescriptor slice;
 
-        java.util.Map valueMap = new HashMap();
+    static class PutFieldImpl extends PutField {
+        final ValueDescriptor slice;
+
+        final Map<String, Object> valueMap = new HashMap<>();
 
         PutFieldImpl(ValueDescriptor slice) {
             this.slice = slice;
@@ -223,37 +225,37 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
 
         @Override
         public void put(String name, boolean val) {
-            valueMap.put(name, new Boolean(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, byte val) {
-            valueMap.put(name, new Byte(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, char val) {
-            valueMap.put(name, new Character(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, double val) {
-            valueMap.put(name, new Double(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, float val) {
-            valueMap.put(name, new Float(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, int val) {
-            valueMap.put(name, new Integer(val));
+            valueMap.put(name, val);
         }
 
         @Override
         public void put(String name, long val) {
-            valueMap.put(name, new Long(val));
+            valueMap.put(name, val);
         }
 
         @Override
@@ -263,7 +265,7 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
 
         @Override
         public void put(String name, short val) {
-            valueMap.put(name, new Short(val));
+            valueMap.put(name, val);
         }
 
         @Override
@@ -273,16 +275,16 @@ abstract class ObjectWriter extends java.io.ObjectOutputStream {
     }
 
     void invokeWriteObject(ValueDescriptor descriptor, Serializable val,
-            Method _write_object_method) throws IllegalArgumentException,
+                           Method _write_object_method) throws IllegalArgumentException,
             IllegalAccessException, InvocationTargetException, IOException {
-        ValueDescriptor desc = _desc;
-        WriteObjectState old_state = state;
+        final ValueDescriptor desc = _desc;
+        final WriteObjectState old_state = state;
         state = WriteObjectState.NOT_IN_WRITE_OBJECT;
         try {
             setCurrentValueDescriptor(descriptor);
             writeByte(getStreamFormatVersion());
             state.beforeWriteObject(this);
-            _write_object_method.invoke(val, new Object[] { this });
+            _write_object_method.invoke(val, this);
             state.afterWriteObject(this);
         } finally {
             state = old_state;
