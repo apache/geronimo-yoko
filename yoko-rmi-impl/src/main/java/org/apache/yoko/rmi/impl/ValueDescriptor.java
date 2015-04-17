@@ -509,16 +509,17 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     public boolean isCustomMarshalled() {
-        if (_is_externalizable)
-            return true;
-
-        if (_write_object_method != null)
+        if (isCustomUnmarshalled())
             return true;
 
         if (_super_descriptor != null)
             return _super_descriptor.isCustomMarshalled();
         
         return false;
+    }
+    
+    private boolean isCustomUnmarshalled() {
+        return (_is_externalizable || (_write_object_method != null));
     }
 
     public java.io.Serializable writeReplace(java.io.Serializable val) {
@@ -848,13 +849,15 @@ public class ValueDescriptor extends TypeDescriptor {
 
         // System.out.println ("readValue "+getJavaClass());
 
-        if (isCustomMarshalled()) {
+        Byte customMarshalStreamFormatVersion;
+        Boolean wasDefaultWriteObjectCalled;
+        if (isCustomUnmarshalled()) {
 
             // read custom marshalling value header
-            byte streamFormatVersion = reader.readByte();
-            boolean writeDefaultStateCalled = reader.readBoolean();
-            logger.log(Level.FINE, "Reading value in streamFormatVersion=" + streamFormatVersion 
-                    + " IsCalleddefaultWriteObject=" + writeDefaultStateCalled);
+            customMarshalStreamFormatVersion = reader.readByte();
+            wasDefaultWriteObjectCalled = reader.readBoolean();
+            logger.log(Level.FINE, "Reading value in streamFormatVersion=" + customMarshalStreamFormatVersion 
+                    + " defaultWriteObject=" + wasDefaultWriteObjectCalled);
         }
 
         if (_read_object_method != null) {
