@@ -43,6 +43,7 @@ import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueMember;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.portable.UnknownException;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
@@ -521,8 +522,8 @@ public class ValueDescriptor extends TypeDescriptor {
                 throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw new org.omg.CORBA.portable.UnknownException(ex
-                        .getTargetException());
+                throw (UnknownException)new UnknownException(ex
+                        .getTargetException()).initCause(ex.getTargetException());
             }
 
         }
@@ -543,8 +544,8 @@ public class ValueDescriptor extends TypeDescriptor {
                 throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw new org.omg.CORBA.portable.UnknownException(ex
-                        .getTargetException());
+                throw (UnknownException)new UnknownException(ex
+                        .getTargetException()).initCause(ex.getTargetException());
             }
 
         }
@@ -615,8 +616,8 @@ public class ValueDescriptor extends TypeDescriptor {
 
             } catch (InvocationTargetException ex) {
 
-                throw new org.omg.CORBA.portable.UnknownException(ex
-                        .getTargetException());
+                throw (UnknownException)new UnknownException(ex
+                        .getTargetException()).initCause(ex.getTargetException());
             }
 
         } else {
@@ -642,8 +643,8 @@ public class ValueDescriptor extends TypeDescriptor {
                 throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw new org.omg.CORBA.portable.UnknownException(ex
-                        .getTargetException());
+                throw (UnknownException)new UnknownException(ex
+                        .getTargetException()).initCause(ex.getTargetException());
 
             } catch (NullPointerException ex) {
                 logger.log(Level.WARNING, 
@@ -859,8 +860,8 @@ public class ValueDescriptor extends TypeDescriptor {
             } catch (IllegalArgumentException ex) {
                 throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
             } catch (InvocationTargetException ex) {
-                throw new org.omg.CORBA.portable.UnknownException(ex
-                        .getTargetException());
+                throw (UnknownException)new UnknownException(ex
+                        .getTargetException()).initCause(ex.getTargetException());
             }
 
         } else {

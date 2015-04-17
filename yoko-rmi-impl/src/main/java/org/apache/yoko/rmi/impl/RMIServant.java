@@ -127,7 +127,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
             try {
                 return m.invoke(_target, args);
             } catch (java.lang.reflect.InvocationTargetException ex) {
-                logger.log(Level.FINER, "Error invoking local method", ex);
+                logger.log(Level.FINER, "Error invoking local method", ex.getCause());
                 throw ex.getTargetException();
             }
         } else {

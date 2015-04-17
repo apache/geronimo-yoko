@@ -266,7 +266,7 @@ public class RMIState implements PortableRemoteObjectState {
                     + ex.getMessage(), ex);
         } catch (InvocationTargetException ex) {
             logger.log(Level.FINE, "cannot instantiate stub class for " + type + " :: "
-                    + ex.getMessage(), ex);
+                    + ex.getCause(), ex.getCause());
         }
 
         return null;
