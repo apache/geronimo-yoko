@@ -84,7 +84,7 @@ public class IDLEntityDescriptor extends ValueDescriptor {
 
                             } catch (InvocationTargetException ex) {
                                 throw new RuntimeException(
-                                        "cannot initialize: " + ex, ex);
+                                        "cannot initialize: " + ex.getCause(), ex.getCause());
 
                             } catch (IllegalAccessException ex) {
                                 throw new RuntimeException(
@@ -143,7 +143,7 @@ public class IDLEntityDescriptor extends ValueDescriptor {
         try {
             return _read_method.invoke(null, new Object[] { in });
         } catch (InvocationTargetException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(""+ex.getCause()).initCause(ex.getCause());
         } catch (IllegalAccessException ex) {
             throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
         }
@@ -178,7 +178,7 @@ public class IDLEntityDescriptor extends ValueDescriptor {
         try {
             _write_method.invoke(null, new Object[] { out, val });
         } catch (InvocationTargetException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(""+ ex.getCause()).initCause(ex.getCause());
         } catch (IllegalAccessException ex) {
             throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
         }
@@ -191,7 +191,7 @@ public class IDLEntityDescriptor extends ValueDescriptor {
                 _type_code = (org.omg.CORBA.TypeCode) _type_method.invoke(null,
                         new Object[0]);
             } catch (InvocationTargetException ex) {
-                throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+                throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(""+ex.getCause()).initCause(ex.getCause());
             } catch (IllegalAccessException ex) {
                 throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
             }
