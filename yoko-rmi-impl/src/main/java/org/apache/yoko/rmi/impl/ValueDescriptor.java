@@ -1,104 +1,93 @@
 /**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.yoko.rmi.impl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.ObjectStreamField;
-import java.io.Reader;
-import java.io.Serializable;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.security.DigestOutputStream;
-import java.security.MessageDigest;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.logging.Logger;
-import java.util.logging.Level;
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
 
 import org.apache.yoko.rmi.util.StringUtil;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.*;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA.portable.UnknownException;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
-
+import org.omg.SendingContext.RunTime;
 import sun.reflect.ReflectionFactory;
 
+import java.io.*;
+import java.io.DataOutputStream;
+import java.lang.reflect.*;
+import java.security.AccessController;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.PrivilegedAction;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.lang.Object;
+
 public class ValueDescriptor extends TypeDescriptor {
-    static final Logger logger = Logger.getLogger(ValueDescriptor.class
-            .getName());
+    static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
 
-    protected boolean _is_enum;
-    protected boolean _is_externalizable;
+    private boolean _is_enum;
+    private boolean _is_externalizable;
 
-    protected boolean _is_serializable;
+    private boolean _is_serializable;
 
-    protected Method _write_replace_method;
+    private Method _write_replace_method;
 
-    protected Method _read_resolve_method;
+    private Method _read_resolve_method;
 
-    protected Constructor _constructor;
+    private Constructor _constructor;
 
-    protected Method _write_object_method;
+    private Method _write_object_method;
 
-    protected Method _read_object_method;
+    private Method _read_object_method;
 
-    protected Field _serial_version_uid_field;
+    private Field _serial_version_uid_field;
 
     protected ValueDescriptor _super_descriptor;
 
     protected FieldDescriptor[] _fields;
 
-    protected ObjectDeserializer _object_deserializer;
+    private ObjectDeserializer _object_deserializer;
 
-    protected boolean _is_immutable_value;
+    private boolean _is_immutable_value;
 
-    protected boolean _is_rmi_stub;
-    
-    protected String _custom_repid;
+    private boolean _is_rmi_stub;
 
-    private static Set _immutable_value_classes;
+    private String _custom_repid;
 
-    private static Object[] NO_ARGS = new Object[0];
+    private static final Set<? extends Class<? extends Serializable>> _immutable_value_classes =
+            unmodifiableSet(new HashSet<>(asList(
+                    Integer.class,
+                    Character.class,
+                    Boolean.class,
+                    Byte.class,
+                    Long.class,
+                    Float.class,
+                    Double.class,
+                    Short.class)));
 
-    static {
-        _immutable_value_classes = new HashSet();
-        _immutable_value_classes.add(Integer.class);
-        _immutable_value_classes.add(Character.class);
-        _immutable_value_classes.add(Boolean.class);
-        _immutable_value_classes.add(Byte.class);
-        _immutable_value_classes.add(Long.class);
-        _immutable_value_classes.add(Float.class);
-        _immutable_value_classes.add(Double.class);
-        _immutable_value_classes.add(Short.class);
-    }
-
-    protected long _hash_code;
+    private long _hash_code;
 
     ValueDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
@@ -106,7 +95,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
     public String getRepositoryID() {
         if (_repid == null) {
-            StringBuffer buf = new StringBuffer("RMI:");
+            StringBuilder buf = new StringBuilder("RMI:");
             buf.append(StringUtil.convertToValidIDLNames(getJavaClass().getName()));
             buf.append(":");
 
@@ -128,7 +117,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
         return _repid;
     }
-    
+
     public String getCustomRepositoryID() {
         if (_custom_repid == null) {
             _custom_repid = "RMI:org.omg.custom." + getRepositoryID().substring(4);
@@ -136,7 +125,7 @@ public class ValueDescriptor extends TypeDescriptor {
         return _custom_repid;
     }
 
-    long getSerialVersionUID() {
+    private long getSerialVersionUID() {
         if (_is_enum) return 0L;
         if (_serial_version_uid_field != null) {
 
@@ -146,9 +135,9 @@ public class ValueDescriptor extends TypeDescriptor {
                 // skip //
             }
         }
-        java.io.ObjectStreamClass serialForm = java.io.ObjectStreamClass.lookup(getJavaClass());
-       
-        return serialForm != null ? serialForm.getSerialVersionUID() : 0L;
+        ObjectStreamClass serialForm = ObjectStreamClass.lookup(getJavaClass());
+
+        return (serialForm != null) ? serialForm.getSerialVersionUID() : 0L;
     }
 
     public void init() {
@@ -159,28 +148,25 @@ public class ValueDescriptor extends TypeDescriptor {
                 throw new RuntimeException("fields==null after init!");
             }
 
-        } catch (RuntimeException ex) {
-            logger.log(Level.FINE, "runtime error in ValueDescriptor.init " + ex.getMessage(), ex);
-        } catch (Error ex) {
+        } catch (RuntimeException | Error ex) {
             logger.log(Level.FINE, "runtime error in ValueDescriptor.init " + ex.getMessage(), ex);
         }
     }
 
-    public void init0() {
-        final Class type = getJavaClass();
-        final Class superClass = type.getSuperclass();
+    private void init0() {
+        final Class<?> type = getJavaClass();
+        final Class<?> superClass = type.getSuperclass();
 
         _is_enum = Enum.class.isAssignableFrom(type);
         _is_rmi_stub = RMIStub.class.isAssignableFrom(type);
-        _is_externalizable = java.io.Externalizable.class
+        _is_externalizable = Externalizable.class
                 .isAssignableFrom(type);
-        _is_serializable = java.io.Serializable.class.isAssignableFrom(type);
+        _is_serializable = Serializable.class.isAssignableFrom(type);
 
         _is_immutable_value = _immutable_value_classes.contains(type);
 
-        if (superClass != null && superClass != java.lang.Object.class) {
-            TypeDescriptor superDesc = getTypeRepository().getDescriptor(
-                    superClass);
+        if ((superClass != null) && (superClass != Object.class)) {
+            TypeDescriptor superDesc = getTypeRepository().getDescriptor(superClass);
 
             if (superDesc instanceof ValueDescriptor) {
                 _super_descriptor = (ValueDescriptor) superDesc;
@@ -188,24 +174,20 @@ public class ValueDescriptor extends TypeDescriptor {
 
         }
 
-        java.security.AccessController
-                .doPrivileged(new java.security.PrivilegedAction() {
+        AccessController
+                .doPrivileged(new PrivilegedAction() {
                     public Object run() {
 
-                        for (Class curr = type; curr != null; curr = curr
-                                .getSuperclass()) {
-
+                        for (Class<?> curr = type; curr != null; curr = curr.getSuperclass()) {
                             //
                             // get writeReplace, if any
                             //
                             try {
-                                _write_replace_method = curr.getDeclaredMethod(
-                                        "writeReplace", new Class[0]);
+                                _write_replace_method = curr.getDeclaredMethod("writeReplace");
                                 _write_replace_method.setAccessible(true);
 
                                 break;
-                            } catch (NoSuchMethodException ex) {
-
+                            } catch (NoSuchMethodException ignored) {
                             }
                         }
 
@@ -213,49 +195,37 @@ public class ValueDescriptor extends TypeDescriptor {
                         // Get readResolve, if present
                         //
                         try {
-                            _read_resolve_method = type.getDeclaredMethod(
-                                    "readResolve", new Class[0]);
+                            _read_resolve_method = type.getDeclaredMethod("readResolve");
                             _read_resolve_method.setAccessible(true);
 
-                        } catch (NoSuchMethodException ex) {
-                            // skip //
+                        } catch (NoSuchMethodException ignored) {
                         }
 
                         // 
                         // get readObject
                         //
                         try {
-                            _read_object_method = type
-                                    .getDeclaredMethod(
-                                            "readObject",
-                                            new Class[] { java.io.ObjectInputStream.class });
+                            _read_object_method = type.getDeclaredMethod("readObject", ObjectInputStream.class);
                             _read_object_method.setAccessible(true);
-                        } catch (NoSuchMethodException ex) {
-                            // skip //
+                        } catch (NoSuchMethodException ignored) {
                         }
 
                         // 
                         // get readObject
                         //
                         try {
-                            _write_object_method = type
-                                    .getDeclaredMethod(
-                                            "writeObject",
-                                            new Class[] { java.io.ObjectOutputStream.class });
+                            _write_object_method = type.getDeclaredMethod("writeObject", ObjectOutputStream.class);
                             _write_object_method.setAccessible(true);
-                        } catch (NoSuchMethodException ex) {
-                            // skip //
+                        } catch (NoSuchMethodException ignored) {
                         }
 
                         // 
                         // validate readObject
                         //
-                        if (_write_object_method == null
-                                || !Modifier.isPrivate(_write_object_method
-                                        .getModifiers())
-                                || Modifier.isStatic(_write_object_method
-                                        .getModifiers())
-                                || _write_object_method.getDeclaringClass() != getJavaClass()) {
+                        if ((_write_object_method == null)
+                                || !Modifier.isPrivate(_write_object_method.getModifiers())
+                                || Modifier.isStatic(_write_object_method.getModifiers())
+                                || (_write_object_method.getDeclaringClass() != getJavaClass())) {
 
                             _write_object_method = null;
 
@@ -264,11 +234,9 @@ public class ValueDescriptor extends TypeDescriptor {
                         // 
                         // validate writeObject
                         //
-                        if (_read_object_method == null
-                                || !Modifier.isPrivate(_read_object_method
-                                        .getModifiers())
-                                || Modifier.isStatic(_read_object_method
-                                        .getModifiers())) {
+                        if ((_read_object_method == null)
+                                || !Modifier.isPrivate(_read_object_method.getModifiers())
+                                || Modifier.isStatic(_read_object_method.getModifiers())) {
 
                             _read_object_method = null;
                         }
@@ -277,10 +245,8 @@ public class ValueDescriptor extends TypeDescriptor {
                         // get serialVersionUID field
                         //
                         try {
-                            _serial_version_uid_field = type
-                                    .getDeclaredField("serialVersionUID");
-                            if (Modifier.isStatic(_serial_version_uid_field
-                                    .getModifiers())) {
+                            _serial_version_uid_field = type.getDeclaredField("serialVersionUID");
+                            if (Modifier.isStatic(_serial_version_uid_field.getModifiers())) {
                                 _serial_version_uid_field.setAccessible(true);
                             } else {
                                 _serial_version_uid_field = null;
@@ -301,9 +267,7 @@ public class ValueDescriptor extends TypeDescriptor {
                             serial_persistent_fields = (ObjectStreamField[]) _serial_persistent_fields_field
                                     .get(null);
 
-                        } catch (IllegalAccessException ex) {
-                            // skip //
-                        } catch (NoSuchFieldException ex) {
+                        } catch (IllegalAccessException | NoSuchFieldException ex) {
                             // skip //
                         }
 
@@ -313,7 +277,7 @@ public class ValueDescriptor extends TypeDescriptor {
                             //
                             try {
                                 _constructor = type
-                                        .getDeclaredConstructor(new Class[0]);
+                                        .getDeclaredConstructor();
                                 _constructor.setAccessible(true);
 
                             } catch (NoSuchMethodException ex) {
@@ -324,11 +288,11 @@ public class ValueDescriptor extends TypeDescriptor {
 
                         } else if (_is_serializable && !type.isInterface()) {
 
-                            Class initClass = type;
+                            Class<?> initClass = type;
 
-                            while (initClass != null
-                                    && java.io.Serializable.class
-                                            .isAssignableFrom(initClass)) {
+                            while ((initClass != null)
+                                    && Serializable.class
+                                    .isAssignableFrom(initClass)) {
                                 initClass = initClass.getSuperclass();
                             }
 
@@ -340,13 +304,10 @@ public class ValueDescriptor extends TypeDescriptor {
                                                 + "It has no non-serializable super-class");
                             } else {
                                 try {
-                                    Constructor init_cons = initClass
-                                            .getDeclaredConstructor(new Class[0]);
+                                    Constructor init_cons = initClass.getDeclaredConstructor();
 
-                                    if (Modifier.isPublic(init_cons
-                                            .getModifiers())
-                                            || Modifier.isProtected(init_cons
-                                                    .getModifiers())) {
+                                    if (Modifier.isPublic(init_cons.getModifiers())
+                                            || Modifier.isProtected(init_cons.getModifiers())) {
                                         // do nothing - it's accessible
 
                                     } else if (!samePackage(type, initClass)) {
@@ -360,27 +321,23 @@ public class ValueDescriptor extends TypeDescriptor {
                                                         + ") is not accessible.");
                                     }
 
-                                    _constructor = ReflectionFactory
-                                            .getReflectionFactory()
-                                            .newConstructorForSerialization(
-                                                    type, init_cons);
+                                    _constructor = ReflectionFactory.getReflectionFactory()
+                                            .newConstructorForSerialization(type, init_cons);
 
                                     if (_constructor == null) {
-                                        logger
-                                                .warning("Unable to get constructor for serialization for class "
-                                                        + getJavaName());
+                                        logger.warning("Unable to get constructor for serialization for class " + getJavaName());
                                     } else {
                                         _constructor.setAccessible(true);
                                     }
 
                                 } catch (NoSuchMethodException ex) {
-                                    logger.log(Level.WARNING, 
-                                                     "Class "
+                                    logger.log(Level.WARNING,
+                                            "Class "
                                                     + type.getName()
                                                     + " is not properly serializable.  "
                                                     + "First non-serializable super-class ("
                                                     + initClass.getName()
-                                                    + ") has not default constructor.", ex);
+                                                    + ") has no default constructor.", ex);
                                 }
                             }
                         }
@@ -393,14 +350,13 @@ public class ValueDescriptor extends TypeDescriptor {
 
                             Field[] ff = type.getDeclaredFields();
 
-                            if (ff == null || ff.length == 0) {
+                            if ((ff == null) || (ff.length == 0)) {
                                 _fields = new FieldDescriptor[0];
 
                             } else {
-                                java.util.List flist = new java.util.ArrayList();
+                                List<FieldDescriptor> flist = new ArrayList<>();
 
-                                for (int i = 0; i < ff.length; i++) {
-                                    Field f = ff[i];
+                                for (Field f : ff) {
                                     int mod = f.getModifiers();
                                     if (Modifier.isStatic(mod)
                                             || Modifier.isTransient(mod)) {
@@ -414,13 +370,12 @@ public class ValueDescriptor extends TypeDescriptor {
                                 }
 
                                 _fields = new FieldDescriptor[flist.size()];
-                                _fields = (FieldDescriptor[]) flist
-                                        .toArray(_fields);
+                                _fields = flist.toArray(_fields);
 
                                 //
                                 // sort the fields
                                 //
-                                java.util.Arrays.sort(_fields);
+                                Arrays.sort(_fields);
                             }
 
                         } else {
@@ -432,15 +387,14 @@ public class ValueDescriptor extends TypeDescriptor {
                                 FieldDescriptor fd = null;
 
                                 try {
-                                    java.lang.reflect.Field rf = type
+                                    Field rf = type
                                             .getField(f.getName());
                                     rf.setAccessible(true);
 
                                     if (rf.getType() == f.getType()) {
                                         fd = FieldDescriptor.get(rf);
                                     }
-                                } catch (SecurityException ex) {
-                                } catch (NoSuchFieldException ex) {
+                                } catch (SecurityException | NoSuchFieldException ex) {
                                 }
 
                                 if (fd == null) {
@@ -457,11 +411,11 @@ public class ValueDescriptor extends TypeDescriptor {
                             // fields, because they have to map to some foreign
                             // IDL).
                             //
-                            java.util.Arrays.sort(_fields);
+                            Arrays.sort(_fields);
                         }
 
                         //
-                        // Compute the structural hasn
+                        // Compute the structural hash
                         //
                         _hash_code = computeHashCode();
 
@@ -487,55 +441,44 @@ public class ValueDescriptor extends TypeDescriptor {
     private String getPackageName(Class type) {
         String name = type.getName();
         int idx = name.lastIndexOf('.');
-        if (idx == -1) {
-            return "";
-        } else {
-            return name.substring(0, idx);
-        }
+        return (idx == -1) ? "" : name.substring(0, idx);
     }
 
     /** Read an instance of this value from a CDR stream */
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
-
-        return _in.read_value();
+        return ((org.omg.CORBA_2_3.portable.InputStream) in).read_value();
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object value) {
-        org.omg.CORBA_2_3.portable.OutputStream _out = (org.omg.CORBA_2_3.portable.OutputStream) out;
-
-        _out.write_value((java.io.Serializable) value);
+    public void write(OutputStream out, Object value) {
+        ((org.omg.CORBA_2_3.portable.OutputStream) out).write_value((Serializable) value);
     }
 
     public boolean isCustomMarshalled() {
         if (isCustomUnmarshalled())
             return true;
 
-        if (_super_descriptor != null)
-            return _super_descriptor.isCustomMarshalled();
-        
-        return false;
+        return (_super_descriptor != null) && _super_descriptor.isCustomMarshalled();
+
     }
-    
+
     private boolean isCustomUnmarshalled() {
         return (_is_externalizable || (_write_object_method != null));
     }
 
-    public java.io.Serializable writeReplace(java.io.Serializable val) {
+    public Serializable writeReplace(Serializable val) {
         if (_write_replace_method != null) {
             try {
-                return (java.io.Serializable) _write_replace_method.invoke(val,
-                        NO_ARGS);
+                return (Serializable) _write_replace_method.invoke(val);
 
-            } catch (java.lang.IllegalAccessException ex) {
-                throw (MARSHAL)new MARSHAL("cannot call " + _write_replace_method).initCause(ex);
+            } catch (IllegalAccessException ex) {
+                throw (MARSHAL) new MARSHAL("cannot call " + _write_replace_method).initCause(ex);
 
             } catch (IllegalArgumentException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw (UnknownException)new UnknownException(ex
+                throw (UnknownException) new UnknownException(ex
                         .getTargetException()).initCause(ex.getTargetException());
             }
 
@@ -544,20 +487,19 @@ public class ValueDescriptor extends TypeDescriptor {
         return val;
     }
 
-    public java.io.Serializable readResolve(java.io.Serializable val) {
+    public Serializable readResolve(Serializable val) {
         if (_read_resolve_method != null) {
             try {
-                return (java.io.Serializable) _read_resolve_method.invoke(val,
-                        NO_ARGS);
+                return (Serializable) _read_resolve_method.invoke(val);
 
-            } catch (java.lang.IllegalAccessException ex) {
-                throw (MARSHAL)new MARSHAL("cannot call " + _read_resolve_method).initCause(ex);
+            } catch (IllegalAccessException ex) {
+                throw (MARSHAL) new MARSHAL("cannot call " + _read_resolve_method).initCause(ex);
 
             } catch (IllegalArgumentException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw (UnknownException)new UnknownException(ex
+                throw (UnknownException) new UnknownException(ex
                         .getTargetException()).initCause(ex.getTargetException());
             }
 
@@ -566,30 +508,30 @@ public class ValueDescriptor extends TypeDescriptor {
         return val;
     }
 
-    public void writeValue(final org.omg.CORBA.portable.OutputStream out,
-            final java.io.Serializable value) {
+    public void writeValue(final OutputStream out,
+                           final Serializable value) {
         try {
 
-            ObjectWriter writer = (ObjectWriter) java.security.AccessController
-                    .doPrivileged(new java.security.PrivilegedAction() {
+            ObjectWriter writer = (ObjectWriter) AccessController
+                    .doPrivileged(new PrivilegedAction() {
                         public Object run() {
                             try {
                                 return new CorbaObjectWriter(out, value);
-                            } catch (java.io.IOException ex) {
-                                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+                            } catch (IOException ex) {
+                                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
                             }
                         }
                     });
 
             writeValue(writer, value);
 
-        } catch (java.io.IOException ex) {
-            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+        } catch (IOException ex) {
+            throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
     protected void defaultWriteValue(ObjectWriter writer,
-            java.io.Serializable val) throws java.io.IOException {
+                                     Serializable val) throws IOException {
         logger.finer("writing fields for " + getJavaClass());
         FieldDescriptor[] fields = _fields;
 
@@ -604,11 +546,11 @@ public class ValueDescriptor extends TypeDescriptor {
         }
     }
 
-    protected void writeValue(ObjectWriter writer, java.io.Serializable val)
-            throws java.io.IOException {
+    protected void writeValue(ObjectWriter writer, Serializable val)
+            throws IOException {
 
         if (_is_externalizable) {
-            writer.invokeWriteExternal((java.io.Externalizable) val);
+            writer.invokeWriteExternal((Externalizable) val);
             return;
         }
 
@@ -620,17 +562,10 @@ public class ValueDescriptor extends TypeDescriptor {
 
             try {
                 writer.invokeWriteObject(this, val, _write_object_method);
-
-            } catch (IllegalAccessException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
-
-            } catch (IllegalArgumentException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
-
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
+                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
             } catch (InvocationTargetException ex) {
-
-                throw (UnknownException)new UnknownException(ex
-                        .getTargetException()).initCause(ex.getTargetException());
+                throw (UnknownException) new UnknownException(ex.getTargetException()).initCause(ex.getTargetException());
             }
 
         } else {
@@ -639,29 +574,26 @@ public class ValueDescriptor extends TypeDescriptor {
 
     }
 
-    public java.io.Serializable createBlankInstance() {
+    private Serializable createBlankInstance() {
         if (_constructor != null) {
 
             try {
-                return (java.io.Serializable) _constructor
-                        .newInstance(new Object[0]);
+                return (Serializable) _constructor
+                        .newInstance();
 
-            } catch (java.lang.IllegalAccessException ex) {
-                throw (MARSHAL)new MARSHAL("cannot call " + _constructor).initCause(ex);
+            } catch (IllegalAccessException ex) {
+                throw (MARSHAL) new MARSHAL("cannot call " + _constructor).initCause(ex);
 
-            } catch (IllegalArgumentException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
-
-            } catch (InstantiationException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+            } catch (IllegalArgumentException | InstantiationException ex) {
+                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
 
             } catch (InvocationTargetException ex) {
-                throw (UnknownException)new UnknownException(ex
+                throw (UnknownException) new UnknownException(ex
                         .getTargetException()).initCause(ex.getTargetException());
 
             } catch (NullPointerException ex) {
-                logger.log(Level.WARNING, 
-                    "unable to create instance of " + getJavaClass().getName(), ex);
+                logger.log(Level.WARNING,
+                        "unable to create instance of " + getJavaClass().getName(), ex);
                 logger.warning("constructor => " + _constructor);
 
                 throw ex;
@@ -672,34 +604,32 @@ public class ValueDescriptor extends TypeDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            final org.omg.CORBA.portable.InputStream in,
-            final java.util.Map offsetMap, final java.lang.Integer offset) {
+    public Serializable readValue(final InputStream in, final Map<Integer, Object> offsetMap, final Integer offset) {
         if (_is_enum) {
             try {
                 in.read_long(); // read in and ignore Enum ordinal
-                final String name = (String)((org.omg.CORBA_2_3.portable.InputStream)in).read_value(String.class);
+                final String name = (String) ((org.omg.CORBA_2_3.portable.InputStream) in).read_value(String.class);
                 final Enum value = Enum.valueOf(getJavaClass(), name);
                 offsetMap.put(offset, value);
                 return value;
-            } catch (org.omg.CORBA.portable.IndirectionException ex) {
-                return (Serializable)offsetMap.get(new Integer(ex.offset));
+            } catch (IndirectionException ex) {
+                return (Serializable) offsetMap.get(ex.offset);
             }
-        } 
-        
-        final java.io.Serializable value = createBlankInstance();
+        }
+
+        final Serializable value = createBlankInstance();
 
         offsetMap.put(offset, value);
 
         try {
-            ObjectReader reader = (ObjectReader) java.security.AccessController
-                    .doPrivileged(new java.security.PrivilegedAction() {
+            ObjectReader reader = (ObjectReader) AccessController
+                    .doPrivileged(new PrivilegedAction() {
                         public Object run() {
                             try {
                                 return new CorbaObjectReader(in, offsetMap,
                                         value);
-                            } catch (java.io.IOException ex) {
-                                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+                            } catch (IOException ex) {
+                                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
                             }
                         }
                     });
@@ -708,26 +638,26 @@ public class ValueDescriptor extends TypeDescriptor {
 
             return readResolve(value);
 
-        } catch (java.io.IOException ex) {
-            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+        } catch (IOException ex) {
+            throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
         }
 
     }
 
-    void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    void print(PrintWriter pw, Map<Object, Integer> recurse, Object val) {
         if (val == null) {
             pw.print("null");
         }
 
-        Integer old = (Integer) recurse.get(val);
+        Integer old = recurse.get(val);
         if (old != null) {
             pw.print("^" + old);
         } else {
-            Integer key = new Integer(System.identityHashCode(val));
+            int key = System.identityHashCode(val);
             recurse.put(val, key);
 
             pw.println(getJavaClass().getName() + "@"
-                    + Integer.toHexString(key.intValue()) + "[");
+                    + Integer.toHexString(key) + "[");
 
             printFields(pw, recurse, val);
 
@@ -735,7 +665,7 @@ public class ValueDescriptor extends TypeDescriptor {
         }
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         pw.print("(" + getClass().getName() + ")");
 
         if (_super_descriptor != null) {
@@ -756,7 +686,7 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     protected void defaultReadValue(ObjectReader reader,
-            java.io.Serializable value) throws java.io.IOException {
+                                    Serializable value) throws IOException {
         // System.out.println ("defaultReadValue "+getJavaClass());
 
         if (_fields == null) {
@@ -766,20 +696,20 @@ public class ValueDescriptor extends TypeDescriptor {
 
         logger.fine("reading fields for " + getJavaClass().getName());
 
-        for (int i = 0; i < _fields.length; i++) {
+        for (FieldDescriptor _field : _fields) {
 
-            logger.fine("reading field " + _fields[i].getJavaName() + " of type " + _fields[i].getType().getName() + " using " + _fields[i].getClass().getName());
+            logger.fine("reading field " + _field.getJavaName() + " of type " + _field.getType().getName() + " using " + _field.getClass().getName());
 
             try {
-                _fields[i].read(reader, value);
-            } catch (org.omg.CORBA.MARSHAL ex) {
+                _field.read(reader, value);
+            } catch (MARSHAL ex) {
                 if (ex.getMessage() == null) {
-                    org.omg.CORBA.MARSHAL exx = new org.omg.CORBA.MARSHAL(ex
+                    MARSHAL exx = new MARSHAL(ex
                             .getMessage()
                             + ", while reading "
                             + getJavaName()
                             + "."
-                            + _fields[i].getJavaName(), ex.minor, ex.completed);
+                            + _field.getJavaName(), ex.minor, ex.completed);
                     exx.initCause(ex);
                     throw exx;
                 } else {
@@ -789,38 +719,38 @@ public class ValueDescriptor extends TypeDescriptor {
         }
     }
 
-    java.util.Map readFields(ObjectReader reader) throws java.io.IOException {
-        if (_fields == null || _fields.length == 0) {
+    Map readFields(ObjectReader reader) throws IOException {
+        if ((_fields == null) || (_fields.length == 0)) {
             return Collections.EMPTY_MAP;
         }
 
         logger.finer("reading fields for " + getJavaClass().getName());
 
-        java.util.Map map = new HashMap();
+        Map map = new HashMap();
 
-        for (int i = 0; i < _fields.length; i++) {
+        for (FieldDescriptor _field : _fields) {
 
-            logger.finer("reading field " + _fields[i].getJavaName());
+            logger.finer("reading field " + _field.getJavaName());
 
-            _fields[i].readFieldIntoMap(reader, map);
+            _field.readFieldIntoMap(reader, map);
         }
 
         return map;
     }
 
-    void writeFields(ObjectWriter writer, java.util.Map fieldMap)
-            throws java.io.IOException {
-        if (_fields == null || _fields.length == 0) {
+    void writeFields(ObjectWriter writer, Map fieldMap)
+            throws IOException {
+        if ((_fields == null) || (_fields.length == 0)) {
             return;
         }
 
         logger.finer("writing fields for " + getJavaClass().getName());
 
-        for (int i = 0; i < _fields.length; i++) {
+        for (FieldDescriptor _field : _fields) {
 
-            logger.finer("writing field " + _fields[i].getJavaName());
+            logger.finer("writing field " + _field.getJavaName());
 
-            _fields[i].writeFieldFromMap(writer, fieldMap);
+            _field.writeFieldFromMap(writer, fieldMap);
         }
 
     }
@@ -828,10 +758,10 @@ public class ValueDescriptor extends TypeDescriptor {
     /**
      * This methods reads the fields of a single class slice.
      */
-    protected void readValue(ObjectReader reader, java.io.Serializable value)
-            throws java.io.IOException {
+    protected void readValue(ObjectReader reader, Serializable value)
+            throws IOException {
         if (_is_externalizable) {
-            java.io.Externalizable ext = (java.io.Externalizable) value;
+            Externalizable ext = (Externalizable) value;
 
             try {
                 reader.readExternal(ext);
@@ -856,7 +786,7 @@ public class ValueDescriptor extends TypeDescriptor {
             // read custom marshalling value header
             customMarshalStreamFormatVersion = reader.readByte();
             wasDefaultWriteObjectCalled = reader.readBoolean();
-            logger.log(Level.FINE, "Reading value in streamFormatVersion=" + customMarshalStreamFormatVersion 
+            logger.log(Level.FINE, "Reading value in streamFormatVersion=" + customMarshalStreamFormatVersion
                     + " defaultWriteObject=" + wasDefaultWriteObjectCalled);
         }
 
@@ -867,15 +797,13 @@ public class ValueDescriptor extends TypeDescriptor {
 
             try {
                 reader.setCurrentValueDescriptor(this);
-                _read_object_method.invoke(value, new Object[] { reader });
+                _read_object_method.invoke(value, reader);
                 reader.setCurrentValueDescriptor(null);
 
-            } catch (IllegalAccessException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
-            } catch (IllegalArgumentException ex) {
-                throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+            } catch (IllegalAccessException | IllegalArgumentException ex) {
+                throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
             } catch (InvocationTargetException ex) {
-                throw (UnknownException)new UnknownException(ex
+                throw (UnknownException) new UnknownException(ex
                         .getTargetException()).initCause(ex.getTargetException());
             }
 
@@ -887,74 +815,72 @@ public class ValueDescriptor extends TypeDescriptor {
 
     protected long computeHashCode() {
         Class type = getJavaClass();
-        long hash = 0L;
 
         if (_is_externalizable) {
             return 1L;
+        }
 
-        } else if (!java.io.Serializable.class.isAssignableFrom(type)) {
+        if (!Serializable.class.isAssignableFrom(type)) {
             return 0;
+        }
 
-        } else
-            try {
-                ByteArrayOutputStream barr = new ByteArrayOutputStream(512);
-                MessageDigest md = MessageDigest.getInstance("SHA");
-                DigestOutputStream digestout = new DigestOutputStream(barr, md);
-                DataOutputStream out = new DataOutputStream(digestout);
+        long hash = 0L;
+        try {
+            ByteArrayOutputStream barr = new ByteArrayOutputStream(512);
+            MessageDigest md = MessageDigest.getInstance("SHA");
+            DigestOutputStream digestout = new DigestOutputStream(barr, md);
+            DataOutputStream out = new DataOutputStream(digestout);
 
-                Class superType = type.getSuperclass();
-                if (superType != null) {
-                    TypeDescriptor desc = getTypeRepository().getDescriptor(
-                            superType);
-                    out.writeLong(desc.getHashCode());
-                }
-
-                if (_write_object_method == null)
-                    out.writeInt(1);
-                else
-                    out.writeInt(2);
-
-                FieldDescriptor[] fds = new FieldDescriptor[_fields.length];
-                for (int i = 0; i < _fields.length; i++) {
-                    fds[i] = _fields[i];
-                }
-
-                if (fds.length > 1)
-                    java.util.Arrays.sort(fds, compareByName);
-
-                for (int i = 0; i < fds.length; i++) {
-                    FieldDescriptor f = fds[i];
-                    out.writeUTF(f.getJavaName());
-                    out.writeUTF(makeSignature(f.getType()));
-                }
-
-                /*
-                 * Field[] fields = type.getDeclaredFields ();
-                 * 
-                 * if (fields.length > 1) java.util.Arrays.sort (fields,
-                 * compareByName);
-                 * 
-                 * for(int i = 0; i < fields.length; i++) { Field f = fields[i];
-                 * int mod = f.getModifiers (); if (!Modifier.isTransient(mod) &&
-                 * !Modifier.isStatic (mod)) { out.writeUTF(f.getName());
-                 * out.writeUTF( makeSignature (f.getType ())); } }
-                 */
-
-                out.flush();
-
-                byte data[] = md.digest();
-                int end = Math.min(8, data.length);
-                for (int j = 0; j < end; j++) {
-                    hash += (long) (data[j] & 0xff) << j * 8;
-                }
-            } catch (java.lang.Exception ex) {
-                throw new RuntimeException("cannot compute RMI hash code", ex);
+            Class superType = type.getSuperclass();
+            if (superType != null) {
+                TypeDescriptor desc = getTypeRepository().getDescriptor(
+                        superType);
+                out.writeLong(desc.getHashCode());
             }
+
+            if (_write_object_method == null)
+                out.writeInt(1);
+            else
+                out.writeInt(2);
+
+            FieldDescriptor[] fds = new FieldDescriptor[_fields.length];
+            System.arraycopy(_fields, 0, fds, 0, _fields.length);
+
+            if (fds.length > 1)
+                Arrays.sort(fds, compareByName);
+
+            for (FieldDescriptor f : fds) {
+                out.writeUTF(f.getJavaName());
+                out.writeUTF(makeSignature(f.getType()));
+            }
+
+            /*
+             * Field[] fields = type.getDeclaredFields ();
+             *
+             * if (fields.length > 1) java.util.Arrays.sort (fields,
+             * compareByName);
+             *
+             * for(int i = 0; i < fields.length; i++) { Field f = fields[i];
+             * int mod = f.getModifiers (); if (!Modifier.isTransient(mod) &&
+             * !Modifier.isStatic (mod)) { out.writeUTF(f.getName());
+             * out.writeUTF( makeSignature (f.getType ())); } }
+             */
+
+            out.flush();
+
+            byte[] data = md.digest();
+            int end = Math.min(8, data.length);
+            for (int j = 0; j < end; j++) {
+                hash += (long) (data[j] & 0xff) << (j * 8);
+            }
+        } catch (Exception ex) {
+            throw new RuntimeException("cannot compute RMI hash code", ex);
+        }
 
         return hash;
     }
 
-    private static java.util.Comparator compareByName = new java.util.Comparator() {
+    private static final Comparator compareByName = new Comparator() {
         public int compare(Object f1, Object f2) {
             String n1 = ((FieldDescriptor) f1).getJavaName();
             String n2 = ((FieldDescriptor) f2).getJavaName();
@@ -966,11 +892,11 @@ public class ValueDescriptor extends TypeDescriptor {
         return _hash_code;
     }
 
-    protected org.omg.CORBA.ValueMember[] _value_members = null;
+    protected ValueMember[] _value_members = null;
 
-    org.omg.CORBA.ValueMember[] getValueMembers() {
+    ValueMember[] getValueMembers() {
         if (_value_members == null) {
-            _value_members = new org.omg.CORBA.ValueMember[_fields.length];
+            _value_members = new ValueMember[_fields.length];
             for (int i = 0; i < _fields.length; i++) {
                 _value_members[i] = _fields[i]
                         .getValueMember(getTypeRepository());
@@ -980,41 +906,41 @@ public class ValueDescriptor extends TypeDescriptor {
         return _value_members;
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
+    TypeCode getTypeCode() {
         if (_type_code != null)
             return _type_code;
 
-        org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
+        ORB orb = ORB.init();
         _type_code = orb.create_recursive_tc(getRepositoryID());
 
-        org.omg.CORBA.TypeCode _base = (_super_descriptor == null ? null
+        TypeCode _base = ((_super_descriptor == null) ? null
                 : _super_descriptor.getTypeCode());
 
         Class javaClass = getJavaClass();
-        if (!javaClass.isArray()) {
-            _type_code = orb.create_value_tc(getRepositoryID(), javaClass
-                    .getSimpleName(), org.omg.CORBA.VM_NONE.value, _base,
-                    getValueMembers());
-        } else {
+        if (javaClass.isArray()) {
             TypeDescriptor desc = getTypeRepository().getDescriptor(javaClass.getComponentType());
             _type_code = desc.getTypeCode();
             _type_code = orb.create_sequence_tc(0, _type_code);
             _type_code = orb.create_value_box_tc(getRepositoryID(), "Sequence", _type_code);
+        } else {
+            _type_code = orb.create_value_tc(getRepositoryID(), javaClass
+                            .getSimpleName(), VM_NONE.value, _base,
+                    getValueMembers());
         }
 
         return _type_code;
     }
 
-    org.omg.CORBA.ValueDefPackage.FullValueDescription getFullValueDescription() {
-        return new org.omg.CORBA.ValueDefPackage.FullValueDescription(
+    FullValueDescription getFullValueDescription() {
+        return new FullValueDescription(
                 getJavaClass().getName(), getRepositoryID(), false, // is_abstract
                 isCustomMarshalled(), "", "1.0",
-                new org.omg.CORBA.OperationDescription[0],
-                new org.omg.CORBA.AttributeDescription[0],
+                new OperationDescription[0],
+                new AttributeDescription[0],
                 getValueMembers(),
-                new org.omg.CORBA.Initializer[0], new String[0], new String[0],
+                new Initializer[0], new String[0], new String[0],
                 false, // is_truncatable
-                (_super_descriptor == null ? "" : _super_descriptor
+                ((_super_descriptor == null) ? "" : _super_descriptor
                         .getRepositoryID()), getTypeCode());
     }
 
@@ -1024,11 +950,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
         String repository_id;
 
-        FieldDescriptor[] fields;
-
-        ValueDescriptor localDescriptor() {
-            return ValueDescriptor.this;
-        }
+        final FieldDescriptor[] fields;
 
         ObjectDeserializer(ValueDescriptor desc) {
             fields = desc._fields;
@@ -1039,8 +961,7 @@ public class ValueDescriptor extends TypeDescriptor {
             }
         }
 
-        ObjectDeserializer(FullValueDescription desc,
-                org.omg.SendingContext.RunTime runtime) throws IOException {
+        ObjectDeserializer(FullValueDescription desc, RunTime runtime) throws IOException {
             Class myClass = ValueDescriptor.this.getJavaClass();
             ValueMember[] members = desc.members;
             fields = new FieldDescriptor[members.length];
@@ -1051,20 +972,17 @@ public class ValueDescriptor extends TypeDescriptor {
             }
 
             if (!"".equals(desc.base_value)) {
-                Class clz = ValueHandlerImpl
-                        .getClassFromRepositoryID(desc.base_value);
+                Class clz = ValueHandlerImpl.getClassFromRepositoryID(desc.base_value);
                 TypeDescriptor tdesc = getTypeRepository().getDescriptor(clz);
 
-                if (tdesc != null && tdesc instanceof ValueDescriptor) {
-                    super_descriptor = ((ValueDescriptor) tdesc)
-                            .getObjectDeserializer(desc.base_value, runtime);
+                if ((tdesc instanceof ValueDescriptor)) {
+                    super_descriptor = ((ValueDescriptor) tdesc).getObjectDeserializer(desc.base_value, runtime);
                 }
             }
         }
     }
 
-    ObjectDeserializer getObjectDeserializer(String repositoryID,
-            org.omg.SendingContext.RunTime runtime) throws java.io.IOException {
+    private ObjectDeserializer getObjectDeserializer(String repositoryID, RunTime runtime) throws IOException {
         if (repositoryID.equals(getRepositoryID())) {
             return _object_deserializer;
         }
@@ -1079,7 +997,7 @@ public class ValueDescriptor extends TypeDescriptor {
         return new ObjectDeserializer(desc, codebase);
     }
 
-    static Class getClassFromTypeCode(TypeCode tc) {
+    private static Class getClassFromTypeCode(TypeCode tc) {
         return null;
     }
 
@@ -1093,21 +1011,19 @@ public class ValueDescriptor extends TypeDescriptor {
             return orig;
         }
 
-        java.io.Serializable oorig = (java.io.Serializable) orig;
+        Serializable oorig = (Serializable) orig;
 
         logger.finer("copying " + orig);
 
         oorig = writeReplace(oorig);
 
         ValueDescriptor wdesc;
-        if (oorig != orig) {
-            wdesc = (ValueDescriptor) getTypeRepository().getDescriptor(
-                    oorig.getClass());
+        if (oorig == orig) {
+            wdesc = this;
+        } else {
+            wdesc = (ValueDescriptor) getTypeRepository().getDescriptor(oorig.getClass());
 
             logger.finer("writeReplace -> " + getJavaClass().getName());
-
-        } else {
-            wdesc = this;
         }
 
         return wdesc.copyObject2(oorig, state);
@@ -1117,7 +1033,7 @@ public class ValueDescriptor extends TypeDescriptor {
      * this is called after write-replace on the type descriptor of the correct
      * type for writing
      */
-    Serializable copyObject2(Serializable oorig, CopyState state) {
+    private Serializable copyObject2(Serializable oorig, CopyState state) {
 
         // create instance of copied object, and register
         Serializable copy = createBlankInstance();
@@ -1130,41 +1046,29 @@ public class ValueDescriptor extends TypeDescriptor {
         return readObject(writer, copy);
     }
 
-    ObjectWriter writeObject(java.io.Serializable oorig, CopyState state) {
-
-        ObjectWriter writer = null;
-
+    private ObjectWriter writeObject(Serializable oorig, CopyState state) {
         try {
-
-            writer = state.createObjectWriter(oorig);
+            ObjectWriter writer = state.createObjectWriter(oorig);
             writeValue(writer, oorig);
-
             return writer;
-
-        } catch (java.io.IOException ex) {
-            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
+        } catch (IOException ex) {
+            throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
-    java.io.Serializable readObject(ObjectWriter writer,
-            java.io.Serializable copy) {
-
-        ObjectReader reader = writer.getObjectReader(copy);
-
+    private Serializable readObject(ObjectWriter writer, Serializable copy) {
         try {
+            ObjectReader reader = writer.getObjectReader(copy);
             readValue(reader, copy);
-        } catch (java.io.IOException ex) {
-            MARSHAL m = new MARSHAL(ex.getMessage() + " reading instance of "
-                    + getJavaClass().getName());
+            return readResolve(copy);
+        } catch (IOException ex) {
+            MARSHAL m = new MARSHAL(ex.getMessage() + " reading instance of " + getJavaClass().getName());
             m.initCause(ex);
             throw m;
         }
-
-        return readResolve(copy);
     }
 
-    void writeMarshalValue(java.io.PrintWriter pw, String outName,
-            String paramName) {
+    void writeMarshalValue(PrintWriter pw, String outName, String paramName) {
         pw.print(outName);
         pw.print('.');
         pw.print("write_value");
@@ -1182,7 +1086,7 @@ public class ValueDescriptor extends TypeDescriptor {
         pw.print(".class)");
     }
 
-    void writeUnmarshalValue(java.io.PrintWriter pw, String inName) {
+    void writeUnmarshalValue(PrintWriter pw, String inName) {
         pw.print(inName);
         pw.print('.');
         pw.print("read_value");
@@ -1191,33 +1095,32 @@ public class ValueDescriptor extends TypeDescriptor {
         pw.print(".class)");
     }
 
-    void addDependencies(java.util.Set classes) {
+    void addDependencies(Set<Class<?>> classes) {
         Class c = getJavaClass();
 
-        if (c == java.lang.Object.class || classes.contains(c))
+        if ((c == Object.class) || classes.contains(c))
             return;
 
         classes.add(c);
 
         if (c.getSuperclass() != null) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(
-                    c.getSuperclass());
+            TypeDescriptor desc = getTypeRepository().getDescriptor(c.getSuperclass());
             desc.addDependencies(classes);
         }
 
         Class[] ifaces = c.getInterfaces();
-        for (int i = 0; i < ifaces.length; i++) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(ifaces[i]);
+        for (Class iface : ifaces) {
+            TypeDescriptor desc = getTypeRepository().getDescriptor(iface);
             desc.addDependencies(classes);
         }
 
         if (_fields != null) {
-            for (int i = 0; i < _fields.length; i++) {
-                if (_fields[i].isPrimitive())
+            for (FieldDescriptor _field : _fields) {
+                if (_field.isPrimitive())
                     continue;
 
                 TypeDescriptor desc = getTypeRepository().getDescriptor(
-                        _fields[i].type);
+                        _field.type);
                 desc.addDependencies(classes);
             }
         }

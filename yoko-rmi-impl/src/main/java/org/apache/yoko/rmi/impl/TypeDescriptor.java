@@ -193,7 +193,7 @@ public abstract class TypeDescriptor extends ModelElement {
         pw.print(')');
     }
 
-    void addDependencies(java.util.Set classes) {
+    void addDependencies(java.util.Set<Class<?>> classes) {
         return;
     }
 
@@ -201,7 +201,7 @@ public abstract class TypeDescriptor extends ModelElement {
         return true;
     }
 
-    void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    void print(java.io.PrintWriter pw, java.util.Map<Object,Integer> recurse, Object val) {
         if (val == null) {
             pw.print("null");
         }
