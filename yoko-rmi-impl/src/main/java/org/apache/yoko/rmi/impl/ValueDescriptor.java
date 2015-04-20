@@ -20,8 +20,46 @@ package org.apache.yoko.rmi.impl;
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableSet;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
+import java.io.ObjectStreamField;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.DigestOutputStream;
+import java.security.MessageDigest;
+import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import org.apache.yoko.rmi.util.StringUtil;
-import org.omg.CORBA.*;
+import org.omg.CORBA.AttributeDescription;
+import org.omg.CORBA.Initializer;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.OperationDescription;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.VM_NONE;
+import org.omg.CORBA.ValueMember;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.InputStream;
@@ -30,19 +68,8 @@ import org.omg.CORBA.portable.UnknownException;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 import org.omg.SendingContext.RunTime;
-import sun.reflect.ReflectionFactory;
 
-import java.io.*;
-import java.io.DataOutputStream;
-import java.lang.reflect.*;
-import java.security.AccessController;
-import java.security.DigestOutputStream;
-import java.security.MessageDigest;
-import java.security.PrivilegedAction;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.lang.Object;
+import sun.reflect.ReflectionFactory;
 
 public class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
@@ -703,18 +730,11 @@ public class ValueDescriptor extends TypeDescriptor {
             try {
                 _field.read(reader, value);
             } catch (MARSHAL ex) {
-                if (ex.getMessage() == null) {
-                    MARSHAL exx = new MARSHAL(ex
-                            .getMessage()
-                            + ", while reading "
-                            + getJavaName()
-                            + "."
-                            + _field.getJavaName(), ex.minor, ex.completed);
-                    exx.initCause(ex);
-                    throw exx;
-                } else {
+                if (ex.getMessage() != null) 
                     throw ex;
-                }
+
+                String msg = String.format("%s, while reading %s.%s", ex, getJavaName(), _field.getJavaName());
+                throw (MARSHAL)new MARSHAL(msg, ex.minor, ex.completed).initCause(ex);
             }
         }
     }
@@ -1052,7 +1072,8 @@ public class ValueDescriptor extends TypeDescriptor {
             writeValue(writer, oorig);
             return writer;
         } catch (IOException ex) {
-            throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);
+            String msg = String.format("%s writing %s", ex, getJavaClass().getName());
+            throw (MARSHAL) new MARSHAL(msg).initCause(ex);
         }
     }
 
@@ -1062,9 +1083,8 @@ public class ValueDescriptor extends TypeDescriptor {
             readValue(reader, copy);
             return readResolve(copy);
         } catch (IOException ex) {
-            MARSHAL m = new MARSHAL(ex.getMessage() + " reading instance of " + getJavaClass().getName());
-            m.initCause(ex);
-            throw m;
+            String msg = String.format("%s reading instance of %s", ex, getJavaClass().getName());
+            throw (MARSHAL) new MARSHAL(msg).initCause(ex);
         }
     }
 
