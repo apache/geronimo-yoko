@@ -19,23 +19,43 @@ package org.apache.yoko.orb.OB;
 
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.Hashtable;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.rmi.CORBA.ValueHandler;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.CustomMarshal;
+import org.omg.CORBA.DataInputStream;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.StringHolder;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CORBA.TypeCodePackage.Bounds;
+import org.omg.CORBA.VM_CUSTOM;
+import org.omg.CORBA.VM_NONE;
+import org.omg.CORBA.VM_TRUNCATABLE;
 import org.omg.CORBA.WStringValueHelper;
+import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.StreamableValue;
+import org.omg.CORBA.portable.ValueFactory;
 import org.omg.SendingContext.CodeBase;
 
-final public class ValueReader {
-    static final Logger logger = Logger.getLogger(ValueReader.class.getName());
+public final class ValueReader {
+    private static final Logger logger = Logger.getLogger(ValueReader.class.getName());
     //
     // Chunk data
     //
-    static private class ChunkState {
+    private static class ChunkState {
         boolean chunked;
 
         int nestingLevel;
@@ -62,7 +82,7 @@ final public class ValueReader {
     //
     // Valuetype header data
     //
-    static private class Header {
+    private static class Header {
         int tag;
 
         int headerPos;
@@ -82,76 +102,73 @@ final public class ValueReader {
         }
         
         boolean isRMIValue () {
-            return ids != null
-                && ids.length > 0
-                && ids[0].startsWith ("RMI:");
+            return (ids != null)
+                    && (ids.length > 0)
+                    && ids[0].startsWith("RMI:");
         }
 
     }
 
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    private final ORBInstance orbInstance_;
 
-    private org.apache.yoko.orb.CORBA.InputStream in_;
+    private final InputStream in_;
 
-    private org.apache.yoko.orb.OCI.Buffer buf_;
+    private final Buffer buf_;
 
-    private java.util.Hashtable instanceTable_;
+    private final Map<Integer, Serializable> instanceTable_;
 
-    private java.util.Hashtable headerTable_;
+    private final Map<Integer, Header> headerTable_;
 
-    private java.util.Hashtable positionTable_ = null;
+    private Map<Integer, Integer> positionTable_;
 
-    private ChunkState chunkState_ = new ChunkState();
+    private final ChunkState chunkState_ = new ChunkState();
 
-    private Header currentHeader_ = null; // Java only
+    private Header currentHeader_;
 	private ValueHandler valueHandler;
-	private org.omg.SendingContext.CodeBase remoteCodeBase;
+	private CodeBase remoteCodeBase;
 
     // ------------------------------------------------------------------
     // Valuetype creation strategies
     // ------------------------------------------------------------------
 
-    private static abstract class CreationStrategy {
-        protected ValueReader reader_;
+    private abstract static class CreationStrategy {
+        final ValueReader reader_;
 
-        protected org.apache.yoko.orb.CORBA.InputStream is_;
+        final InputStream is_;
 
         CreationStrategy(ValueReader reader,
-                org.apache.yoko.orb.CORBA.InputStream is) {
+                InputStream is) {
             reader_ = reader;
             is_ = is;
         }
 
-        abstract java.io.Serializable create(Header h);
+        abstract Serializable create(Header h);
     }
 
     //
     // Create a valuebox using a BoxedValueHelper
     //
     private static class BoxCreationStrategy extends CreationStrategy {
-        private org.omg.CORBA.portable.BoxedValueHelper helper_;
+        private final BoxedValueHelper helper_;
 
-        BoxCreationStrategy(ValueReader reader,
-                org.apache.yoko.orb.CORBA.InputStream is,
-                org.omg.CORBA.portable.BoxedValueHelper helper) {
+        BoxCreationStrategy(ValueReader reader, InputStream is, BoxedValueHelper helper) {
             super(reader, is);
             helper_ = helper;
         }
 
-        java.io.Serializable create(Header h) {
-            Assert._OB_assert(h.tag >= 0x7fffff00 && h.tag != -1);
+        Serializable create(Header h) {
+            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
-            java.io.Serializable result = helper_.read_value(is_);
+            final Serializable result = helper_.read_value(is_);
 
             if (result != null) {
                 reader_.addInstance(h.headerPos, result);
                 return result;
             }
 
-            throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
-                    + ": " + helper_.get_id(), org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
+                    + ": " + helper_.get_id(), MinorCodes.MinorNoValueFactory,
+                    CompletionStatus.COMPLETED_NO);
         }
     }
 
@@ -159,43 +176,37 @@ final public class ValueReader {
     // Create a value using a class
     //
     private static class ClassCreationStrategy extends CreationStrategy {
-        private Class clz_;
+        private final Class<? extends Serializable> clz_;
 
-        ClassCreationStrategy(ValueReader reader,
-                org.apache.yoko.orb.CORBA.InputStream is, Class clz) {
+        ClassCreationStrategy(ValueReader reader, InputStream is, Class<? extends Serializable> clz) {
             super(reader, is);
             clz_ = clz;
         }
 
-        java.io.Serializable create(Header h) {
+        Serializable create(Header h) {
             logger.fine("Creating a value object with tag value " + Integer.toHexString(h.tag)); 
-            Assert._OB_assert(h.tag >= 0x7fffff00 && h.tag != -1);
+            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
             	return reader_.readRMIValue(h, clz_, h.ids[0]);
             }
 
-            java.io.Serializable result = null;
-
             try {
-                result = (java.io.Serializable) clz_.newInstance();
+                Serializable result = clz_.newInstance();
                 reader_.addInstance(h.headerPos, result);
                 try {
                     reader_.unmarshalValueState(result);
-                } catch (org.omg.CORBA.SystemException ex) {
+                } catch (SystemException ex) {
                     reader_.removeInstance(h.headerPos);
                     throw ex;
                 }
                 return result;
-            } catch (ClassCastException ex) {
-            } catch (IllegalAccessException ex) {
-            } catch (InstantiationException ex) {
+            } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
             }
 
-            throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
-                    + ": " + clz_.getName(), org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
+                    + ": " + clz_.getName(), MinorCodes.MinorNoValueFactory,
+                    CompletionStatus.COMPLETED_NO);
         }
     }
 
@@ -203,23 +214,21 @@ final public class ValueReader {
     // Create a value using a factory
     //
     private class FactoryCreationStrategy extends CreationStrategy {
-        private String id_;
+        private final String id_;
 
-        private ORBInstance orbInstance_;
+        private final ORBInstance orbInstance_;
 
-        FactoryCreationStrategy(ValueReader reader,
-                org.apache.yoko.orb.CORBA.InputStream is, String id) {
+        FactoryCreationStrategy(ValueReader reader, InputStream is, String id) {
             super(reader, is);
             id_ = id;
             orbInstance_ = is._OB_ORBInstance();
         }
 
-        private org.omg.CORBA.portable.ValueFactory findFactory(Header h,
-                org.omg.CORBA.StringHolder id) {
-            org.omg.CORBA.portable.ValueFactory f = null;
+        private ValueFactory findFactory(Header h, StringHolder id) {
+            ValueFactory f = null;
 
             if (orbInstance_ != null) {
-                ValueFactoryManager manager = orbInstance_.getValueFactoryManager();
+                final ValueFactoryManager manager = orbInstance_.getValueFactoryManager();
 
                 if (h.ids.length > 0) {
                     for (int i = 0; i < h.ids.length; i++) {
@@ -233,8 +242,9 @@ final public class ValueReader {
                         // If we have a formal ID, and we haven't found
                         // a factory yet, then give up
                         //
-                        if (id_ != null && h.ids[i].equals(id_))
+                        if ((id_ != null) && h.ids[i].equals(id_)) {
                             break;
+                        }
                     }
                 } else if (id_ != null) {
                     f = manager.lookupValueFactoryWithClass(id_);
@@ -245,8 +255,7 @@ final public class ValueReader {
             return f;
         }
 
-        private java.io.Serializable createWithFactory(Header h,
-                org.omg.CORBA.portable.ValueFactory factory) {
+        private Serializable createWithFactory(Header h, ValueFactory factory) {
             //
             // The factory's read_value method is expected to create
             // an instance of the valuetype and then call the method
@@ -263,49 +272,43 @@ final public class ValueReader {
             }
         }
 
-        private org.omg.CORBA.portable.BoxedValueHelper getBoxedHelper(String id) {
-            org.omg.CORBA.portable.BoxedValueHelper result = null;
-
-            Class helperClass = Util.idToClass(id, "Helper");
+        private BoxedValueHelper getBoxedHelper(String id) {
+            final Class helperClass = Util.idToClass(id, "Helper");
 
             if (helperClass != null) {
                 try {
-                    return (org.omg.CORBA.portable.BoxedValueHelper) helperClass
-                            .newInstance();
-                } catch (ClassCastException ex) {
-                } catch (IllegalAccessException ex) {
-                } catch (InstantiationException ex) {
+                    return (BoxedValueHelper) helperClass.newInstance();
+                } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
                 }
 
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
+                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
                         + ": invalid BoxedValueHelper for " + id,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorNoValueFactory,
+                        CompletionStatus.COMPLETED_NO);
             }
 
             return null;
         }
 
-        java.io.Serializable create(Header h) {
-            org.omg.CORBA.StringHolder idH = new org.omg.CORBA.StringHolder();
+        Serializable create(Header h) {
+            final StringHolder idH = new StringHolder();
             return create(h, idH);
         }
 
-        java.io.Serializable create(Header h, org.omg.CORBA.StringHolder id) {
-            Assert._OB_assert(h.tag >= 0x7fffff00 && h.tag != -1);
+        Serializable create(Header h, StringHolder id) {
+            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue ()) {
-                Serializable result = readRMIValue (h, null, h.ids[0]);
+                final Serializable result = readRMIValue (h, null, h.ids[0]);
                 addInstance (h.headerPos, result);
                 return result;
             }
             //
             // See if a factory exists that can create the value
             //
-            org.omg.CORBA.portable.ValueFactory factory = findFactory(h, id);
+            final ValueFactory factory = findFactory(h, id);
             if (factory != null) {
-                java.io.Serializable result = createWithFactory(h, factory);
+                final Serializable result = createWithFactory(h, factory);
                 reader_.addInstance(h.headerPos, result);
                 return result;
             }
@@ -314,37 +317,39 @@ final public class ValueReader {
             // Another possibility is that we're unmarshalling a valuebox,
             // so we'll try to load the Helper class dynamically
             //
-            org.omg.CORBA.portable.BoxedValueHelper helper = null;
+            BoxedValueHelper helper = null;
             if (h.ids.length > 0) {
                 //
                 // If it's a valuebox, at most one id will be marshalled
                 //
                 helper = getBoxedHelper(h.ids[0]);
-                if (helper != null)
+                if (helper != null) {
                     id.value = h.ids[0];
+                }
             }
 
-            if (helper == null && id_ != null) {
+            if ((helper == null) && (id_ != null)) {
                 helper = getBoxedHelper(id_);
-                if (helper != null)
+                if (helper != null) {
                     id.value = id_;
+                }
             }
 
             if (helper != null) {
-                java.io.Serializable result = helper.read_value(is_);
+                final Serializable result = helper.read_value(is_);
                 reader_.addInstance(h.headerPos, result);
                 return result;
             }
 
             String type = "<unknown>";
-            if (h.ids.length > 0)
+            if (h.ids.length > 0) {
                 type = h.ids[0];
-            else if (id_ != null)
+            } else if (id_ != null) {
                 type = id_;
-            throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
-                    + ": " + type, org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            }
+            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
+                    + ": " + type, MinorCodes.MinorNoValueFactory,
+                    CompletionStatus.COMPLETED_NO);
         }
     }
 
@@ -353,16 +358,16 @@ final public class ValueReader {
     // ------------------------------------------------------------------
 
     // Java only
-    private void addInstance(int pos, java.io.Serializable instance) {
+    private void addInstance(int pos, Serializable instance) {
         // only add this if we have a real value 
         if (instance != null) {
-            instanceTable_.put(new Integer(pos), instance);
+            instanceTable_.put(pos, instance);
         }
     }
 
     // Java only
     private void removeInstance(int pos) {
-        instanceTable_.remove(new Integer(pos));
+        instanceTable_.remove(pos);
     }
 
     private void readHeader(Header h) {
@@ -372,7 +377,7 @@ final public class ValueReader {
         //
         // Special cases are handled elsewhere
         //
-        Assert._OB_assert(h.tag != 0 && h.tag != -1);
+        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
         //
         // Check if the value is chunked
@@ -390,23 +395,21 @@ final public class ValueReader {
             //
             // Check for indirection tag
             //
-            int save = buf_.pos_;
-            int indTag = in_.read_long();
+            final int save = buf_.pos_;
+            final int indTag = in_.read_long();
             if (indTag == -1) {
-                int offs = in_.read_long();
+                final int offs = in_.read_long();
                 if (offs >= -4) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                        MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
-                int tmp = buf_.pos_;
-                buf_.pos_ = buf_.pos_ - 4 + offs;
+                final int tmp = buf_.pos_;
+                buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                        MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
                 h.codebase = in_.read_string();
                 buf_.pos_ = tmp;
@@ -437,28 +440,27 @@ final public class ValueReader {
             //
             int saveList = buf_.pos_;
             int indTag = in_.read_long();
-            boolean indList = (indTag == -1);
+            final boolean indList = (indTag == -1);
 
             if (indList) {
-                int offs = in_.read_long();
+                final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                        MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
                 saveList = buf_.pos_;
-                buf_.pos_ = buf_.pos_ - 4 + offs;
+                buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                        MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
-            } else
+            } else {
                 buf_.pos_ = saveList;
+            }
 
-            int count = in_.read_long();
+            final int count = in_.read_long();
             h.ids = new String[count];
 
             for (int i = 0; i < count; i++) {
@@ -468,20 +470,18 @@ final public class ValueReader {
                 int saveRep = buf_.pos_;
                 indTag = in_.read_long();
                 if (indTag == -1) {
-                    int offs = in_.read_long();
+                    final int offs = in_.read_long();
                     if (offs > -4) {
-                        throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                            .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                            org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                            MinorCodes.MinorReadInvalidIndirection,
+                            CompletionStatus.COMPLETED_NO);
                     }
                     saveRep = buf_.pos_;
-                    buf_.pos_ = buf_.pos_ - 4 + offs;
+                    buf_.pos_ = (buf_.pos_ - 4) + offs;
                     if (buf_.pos_ < 0) {
-                        throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                            .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                            org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                            MinorCodes.MinorReadInvalidIndirection,
+                            CompletionStatus.COMPLETED_NO);
                     }
                     h.ids[i] = in_.read_string();
                     buf_.pos_ = saveRep;
@@ -495,34 +495,32 @@ final public class ValueReader {
             //
             // Restore buffer position (case of indirected list)
             //
-            if (indList)
+            if (indList) {
                 buf_.pos_ = saveList;
+            }
         } else if ((h.tag & 0x00000006) == 2) {
             //
             // Extract a single repository ID
             //
-            String id;
+            final String id;
 
             //
             // Check for indirection tag
             //
             int save = buf_.pos_;
-            int indTag = in_.read_long();
+            final int indTag = in_.read_long();
             if (indTag == -1) {
-                int offs = in_.read_long();
+                final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
                 save = buf_.pos_;
-                buf_.pos_ = buf_.pos_ - 4 + offs;
+                buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                        MinorCodes.MinorReadInvalidIndirection,
+                        CompletionStatus.COMPLETED_NO);
                 }
                 id = in_.read_string();
                 buf_.pos_ = save;
@@ -544,16 +542,16 @@ final public class ValueReader {
         //
         // Add entry to header table
         //
-        headerTable_.put(new Integer(h.headerPos), h);
+        headerTable_.put(h.headerPos, h);
     }
 
     private void readChunk(ChunkState state) {
         //
         // Check for a chunk size
         //
-        int size = in_._OB_readLongUnchecked();
+        final int size = in_._OB_readLongUnchecked();
         logger.finest("Reading new chunk.  Size value is " + Integer.toHexString(size) + " current nest is " + state.nestingLevel + " current position=" + buf_.pos_); 
-        if (size >= 0 && size < 0x7fffff00) // chunk size
+        if ((size >= 0) && (size < 0x7fffff00)) // chunk size
         {
             state.chunkStart = buf_.pos_;
             state.chunkSize = size;
@@ -574,7 +572,7 @@ final public class ValueReader {
         //
         // Null values and indirections must be handled by caller
         //
-        Assert._OB_assert(h.tag != 0 && h.tag != -1);
+        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
         h.headerPos = buf_.pos_ - 4; // adjust for alignment
         h.state.copyFrom(chunkState_);
@@ -629,7 +627,7 @@ final public class ValueReader {
             int level = chunkState_.nestingLevel;
             int tag = in_._OB_readLongUnchecked();
             logger.finest("Skipping chunk:  read tag value =" + tag); 
-            while (tag >= 0 || (tag < 0 && tag < -chunkState_.nestingLevel)) {
+            while ((tag >= 0) || ((tag < 0) && (tag < -chunkState_.nestingLevel))) {
                 if (tag >= 0x7fffff00) {
                     logger.finest("Skipping chunk:  reading a nested chunk value"); 
                     //
@@ -638,7 +636,7 @@ final public class ValueReader {
                     // indirection refers to this value.
                     //
                     level++;
-                    Header nest = new Header();
+                    final Header nest = new Header();
                     nest.tag = tag;
                     nest.headerPos = buf_.pos_ - 4; // adjust for alignment
                     nest.state.nestingLevel = level;
@@ -699,26 +697,26 @@ final public class ValueReader {
     //
     // Java only
     //
-    private void unmarshalValueState(java.io.Serializable v) {
-        if (v instanceof org.omg.CORBA.portable.StreamableValue) {
-            ((org.omg.CORBA.portable.StreamableValue) v)._read(in_);
+    private void unmarshalValueState(Serializable v) {
+        if (v instanceof StreamableValue) {
+            ((StreamableValue) v)._read(in_);
         }
-        else if (v instanceof org.omg.CORBA.CustomMarshal) {
-            org.omg.CORBA.DataInputStream dis = new org.apache.yoko.orb.CORBA.DataInputStream(
+        else if (v instanceof CustomMarshal) {
+            final DataInputStream dis = new org.apache.yoko.orb.CORBA.DataInputStream(
                     in_);
-            ((org.omg.CORBA.CustomMarshal) v).unmarshal(dis);
+            ((CustomMarshal) v).unmarshal(dis);
         } else {
-            throw new org.omg.CORBA.MARSHAL("Valuetype does not implement "
+            throw new MARSHAL("Valuetype does not implement "
                     + "StreamableValue or " + "CustomMarshal");
         }
     }
 
-    private java.io.Serializable readIndirection(CreationStrategy strategy) {
-        int offs = in_.read_long();
-        int pos = buf_.pos_ - 4 + offs;
+    private Serializable readIndirection(CreationStrategy strategy) {
+        final int offs = in_.read_long();
+        int pos = (buf_.pos_ - 4) + offs;
         pos += 3; // adjust for alignment
         pos -= (pos & 0x3);
-        Integer posObj = new Integer(pos);
+        final Integer posObj = pos;
 
         //
         // Check the history for a value that was seen at the specified
@@ -728,13 +726,12 @@ final public class ValueReader {
         // of an enclosing value, or to a value that we could not
         // instantiate.
         //
-        java.io.Serializable v = (java.io.Serializable) instanceTable_
-                .get(posObj);
+        Serializable v = (Serializable) instanceTable_.get(posObj);
 
         if (v != null) {
             return v;
         } else {
-            int save = buf_.pos_;
+            final int save = buf_.pos_;
 
             //
             // Check for indirection to null value
@@ -751,14 +748,14 @@ final public class ValueReader {
             // If it's not null and it's not in our history, then
             // there's no hope
             //
-            Header nest = (Header) headerTable_.get(posObj);
+            final Header nest = headerTable_.get(posObj);
 
-            if (nest == null)
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
+            if (nest == null) {
+                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
                         + ": cannot instantiate value for indirection",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorNoValueFactory,
+                        CompletionStatus.COMPLETED_NO);
+            }
 
             /* Maybe we have an indirection to an object
              * that is being deserialized. We throw an
@@ -773,11 +770,11 @@ final public class ValueReader {
             // Create the value
             //
             buf_.pos_ = nest.dataPos;
-            ChunkState saveState = new ChunkState(chunkState_);
+            final ChunkState saveState = new ChunkState(chunkState_);
             chunkState_.copyFrom(nest.state);
-            if (chunkState_.chunked)
-//              logger.finest("Reading chunk in readIndirection()"); 
+            if (chunkState_.chunked) {
                 readChunk(chunkState_);
+            }
 
             try {
                 v = strategy.create(nest);
@@ -793,8 +790,8 @@ final public class ValueReader {
         }
     }
 
-    private java.io.Serializable read(CreationStrategy strategy) {
-        Header h = new Header();
+    private Serializable read(CreationStrategy strategy) {
+        final Header h = new Header();
         h.tag = in_.read_long();
 
 //      logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
@@ -803,11 +800,10 @@ final public class ValueReader {
         } else if (h.tag == -1) {
             return readIndirection(strategy);
         } else if (h.tag < 0x7fffff00) {
-            throw new org.omg.CORBA.MARSHAL("Illegal valuetype tag 0x"
-                    + Integer.toHexString(h.tag));
+            throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
         } else {
             initHeader(h);
-            java.io.Serializable vb = strategy.create(h);
+            final Serializable vb = strategy.create(h);
             skipChunk();
             return vb;
         }
@@ -816,13 +812,13 @@ final public class ValueReader {
     //
     // Remarshal each valuetype member
     //
-    private void copyValueState(org.omg.CORBA.TypeCode tc, org.apache.yoko.orb.CORBA.OutputStream out) {
+    private void copyValueState(TypeCode tc, OutputStream out) {
         try {
-            if (tc.kind() == org.omg.CORBA.TCKind.tk_value) {
+            if (tc.kind() == TCKind.tk_value) {
                 //
                 // First copy the state of the concrete base type, if any
                 //
-                org.omg.CORBA.TypeCode base = tc.concrete_base_type();
+                final TypeCode base = tc.concrete_base_type();
                 if (base != null) {
                     copyValueState(base, out);
                 }
@@ -831,14 +827,12 @@ final public class ValueReader {
 //                  logger.fine("writing member of typecode " + tc.member_type(i).kind().value()); 
                     out.write_InputStream(in_, tc.member_type(i));
                 }
-            } else if (tc.kind() == org.omg.CORBA.TCKind.tk_value_box) {
+            } else if (tc.kind() == TCKind.tk_value_box) {
                 out.write_InputStream(in_, tc.content_type());
-            } else
+            } else {
                 Assert._OB_assert(false);
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            logger.log(Level.FINER, "Invalid type kind", ex); 
-            Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
+            }
+        } catch (BadKind | Bounds ex) {
             logger.log(Level.FINER, "Invalid type kind", ex); 
             Assert._OB_assert(ex);
         }
@@ -861,26 +855,24 @@ final public class ValueReader {
     // Search up the valuetype's inheritance hierarchy for a TypeCode
     // with the given repository ID
     //
-    private org.omg.CORBA.TypeCode findTypeCode(String id,
-            org.omg.CORBA.TypeCode tc) {
-        org.omg.CORBA.TypeCode result = null;
-        org.omg.CORBA.TypeCode t = tc;
+    private TypeCode findTypeCode(String id, TypeCode tc) {
+        TypeCode result = null;
+        TypeCode t = tc;
 //      logger.finer("Locating type code for id " + id); 
         while (result == null) {
             try {
-                org.omg.CORBA.TypeCode t2 = org.apache.yoko.orb.CORBA.TypeCode
-                        ._OB_getOrigType(t);
+                final TypeCode t2 = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(t);
 //              logger.finer("Checking typecode " + id + " against " + t2.id()); 
                 if (id.equals(t2.id())) {
                     result = t;
-                } else if (t2.kind() == org.omg.CORBA.TCKind.tk_value
-                        && t2.type_modifier() == org.omg.CORBA.VM_TRUNCATABLE.value) {
+                } else if ((t2.kind() == TCKind.tk_value)
+                        && (t2.type_modifier() == VM_TRUNCATABLE.value)) {
                     t = t2.concrete_base_type();
 //                  logger.finer("Iterating with concrete type " + t.id()); 
                 } else {
                     break;
                 }
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+            } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
         }
@@ -892,16 +884,15 @@ final public class ValueReader {
     // Public methods
     // ------------------------------------------------------------------
 
-    public ValueReader(org.apache.yoko.orb.CORBA.InputStream in) {
+    public ValueReader(InputStream in) {
         in_ = in;
         buf_ = in._OB_buffer();
         orbInstance_ = in._OB_ORBInstance();
-        instanceTable_ = new java.util.Hashtable(131);
-        headerTable_ = new java.util.Hashtable(131);
+        instanceTable_ = new Hashtable<Integer, Serializable>(131);
+        headerTable_ = new Hashtable<Integer, Header>(131);
     }
 
-    java.io.Serializable readRMIValue(Header h, Class clz, String repid)
-    {
+    private Serializable readRMIValue(Header h, Class<? extends Serializable> clz, String repid) {
         logger.fine("Reading RMI value of type " + repid); 
         if (valueHandler == null) {
             valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
@@ -911,49 +902,45 @@ final public class ValueReader {
             repid = h.ids[0];
 
             if (repid == null) {
-                throw new org.omg.CORBA.MARSHAL("missing repository id");
+                throw new MARSHAL("missing repository id");
             }
         }
 
-        String className = Util.idToClassName (repid, "");
+        final String className = Util.idToClassName (repid, "");
         String codebase  = h.codebase;
-        Class repoClass = null;
 
         if (codebase == null) {
             codebase = in_.__getCodeBase ();
         }
 
-        repoClass = resolveRepoClass(className, codebase);
+        Class repoClass = resolveRepoClass(className, codebase);
 
         // if we have a non-null codebase and can't resolve this, throw an 
         // exception now.  Otherwise, we'll try again after grabbing the remote 
         // codebase. 
-        if (repoClass == null && codebase != null && codebase.length() > 0) {
-            throw new org.omg.CORBA.MARSHAL("class "+className
-                                            +" not found (cannot load from "+codebase+")");
+        if ((repoClass == null) && (codebase != null) && !codebase.isEmpty()) {
+            throw new MARSHAL("class " + className + " not found (cannot load from "+codebase+")");
         }
 
         if (remoteCodeBase == null) {
             remoteCodeBase = in_.__getSendingContextRuntime ();
         }
         if (repoClass == null) {
-            if (codebase == null && remoteCodeBase != null) {
+            if ((codebase == null) && (remoteCodeBase != null)) {
                 try {
                     codebase = remoteCodeBase.implementation (repid);
-                } catch (org.omg.CORBA.SystemException ex) {
-                    // ignore
+                } catch (SystemException ignored) {
                 }
 
             }
 
             if (codebase == null) {
                 // TODO: add minor code
-                throw new org.omg.CORBA.MARSHAL
-                ("class "+className+" not found (no codebase provided)");
+                throw new MARSHAL("class "+className+" not found (no codebase provided)");
             } else {
                 repoClass = resolveRepoClass(className, codebase); 
                 if (repoClass == null) {
-                    throw new org.omg.CORBA.MARSHAL("class "+className+" not found (cannot load from " + codebase+ ")");
+                    throw new MARSHAL("class "+className+" not found (cannot load from " + codebase+ ")");
                 }
             }
         }
@@ -967,13 +954,13 @@ final public class ValueReader {
             remoteCodeBase = ((CodeBaseProxy) remoteCodeBase).getCodeBase();
         }
         
-        java.io.Serializable serobj = null;
+        Serializable serobj = null;
         try {
         	serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
             logger.log(Level.FINE, "RuntimeException happens when reading GIOP stream coming to pos_=" + in_.buf_.pos_);
             logger.log(Level.FINE, "Wrong data section: \n" + in_.dumpData());
-            int currentpos = in_.buf_.pos_;
+            final int currentpos = in_.buf_.pos_;
             in_.buf_.pos_ = 0;
             logger.log(Level.FINE, "Full GIOP stream dump: \n" + in_.dumpData());
             in_.buf_.pos_ = currentpos;
@@ -1029,14 +1016,14 @@ final public class ValueReader {
             }
             
             // ok, we need to recurse and resolve the base array element class
-            Object arrayInstance = null;
+            Object arrayInstance;
             // this is easier with a single level     
             if (levels == 1) {
                 arrayInstance = Array.newInstance(elementClass, 0); 
             }
             else {
                 // all elements will be zero 
-                int[] dimensions = new int[levels]; 
+                final int[] dimensions = new int[levels];
                 arrayInstance = Array.newInstance(elementClass, dimensions); 
             }
             // return the class associated with this array 
@@ -1056,30 +1043,27 @@ final public class ValueReader {
         }
     }
 
-    public java.io.Serializable readValue() {
-        FactoryCreationStrategy strategy = new FactoryCreationStrategy(this,
-                in_, null);
+    public Serializable readValue() {
+        final FactoryCreationStrategy strategy = new FactoryCreationStrategy(this, in_, null);
         return read(strategy);
     }
 
-    public java.io.Serializable readValue(String id) {
+    public Serializable readValue(String id) {
         logger.fine("Reading value of type " + id); 
-        FactoryCreationStrategy strategy = new FactoryCreationStrategy(this,
-                in_, id);
+        final FactoryCreationStrategy strategy = new FactoryCreationStrategy(this, in_, id);
         return read(strategy);
     }
 
-    public java.io.Serializable readValue(Class clz) {
+    public Serializable readValue(Class<? extends Serializable> clz) {
         logger.fine("Reading value of type " + clz.getName()); 
     	if(clz.equals(String.class)) {
     		return WStringValueHelper.read(in_);
     	}
-        ClassCreationStrategy strategy = new ClassCreationStrategy(this, in_,
-                clz);
-        java.io.Serializable result = null;
+        final ClassCreationStrategy strategy = new ClassCreationStrategy(this, in_, clz);
+        Serializable result;
         try {
             result = read(strategy);
-        } catch (org.omg.CORBA.MARSHAL marshalex) {
+        } catch (MARSHAL marshalex) {
             logger.severe(marshalex.getMessage() + " at pos=" + (in_.buf_.pos_- 4));
             if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
                 result = read(strategy);
@@ -1090,14 +1074,12 @@ final public class ValueReader {
         return result;
     }
 
-    public java.io.Serializable readValueBox(
-            org.omg.CORBA.portable.BoxedValueHelper helper) {
-        BoxCreationStrategy strategy = new BoxCreationStrategy(this, in_,
-                helper);
+    public Serializable readValueBox(BoxedValueHelper helper) {
+        final BoxCreationStrategy strategy = new BoxCreationStrategy(this, in_, helper);
         return read(strategy);
     }
 
-    public void initializeValue(java.io.Serializable value) {
+    public void initializeValue(Serializable value) {
         //
         // We should have previously pushed a Header on the stack
         //
@@ -1113,34 +1095,36 @@ final public class ValueReader {
         //
         try {
             unmarshalValueState(value);
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             removeInstance(currentHeader_.headerPos);
             throw ex;
         }
     }
 
-    public java.lang.Object readAbstractInterface() {
+    public Object readAbstractInterface() {
         //
         // Abstract interfaces are marshalled like a union with a
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean())
+        if (in_.read_boolean()) {
             return in_.read_Object();
-        else
+        } else {
             return readValue();
+        }
     }
 
-    public java.lang.Object readAbstractInterface(Class clz) {
+    public Object readAbstractInterface(Class clz) {
         //
         // Abstract interfaces are marshalled like a union with a
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean())
+        if (in_.read_boolean()) {
             return in_.read_Object(clz);
-        else
+        } else {
             return readValue(clz);
+        }
     }
 
     //
@@ -1151,8 +1135,7 @@ final public class ValueReader {
     // may not represent the actual most-derived type, since a more-derived
     // value may have been read.
     //
-    public org.omg.CORBA.TypeCode remarshalValue(org.omg.CORBA.TypeCode tc,
-            org.apache.yoko.orb.CORBA.OutputStream out) {
+    public TypeCode remarshalValue(TypeCode tc, OutputStream out) {
         //
         // TODO: We've removed the reset of the position table at each top
         // level call. We need to perform more testing and analysis to verify
@@ -1164,15 +1147,13 @@ final public class ValueReader {
         // Create a new Hashtable for each top-level call to remarshalValue
         //
         if (positionTable_ == null) {
-            positionTable_ = new java.util.Hashtable(131);
+            positionTable_ = new Hashtable<Integer, Integer>(131);
         }
 
-        org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
+        final TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
                 ._OB_getOrigType(tc);
 
-        org.omg.CORBA.TypeCode result = null;
-
-        Header h = new Header();
+        final Header h = new Header();
         h.tag = in_.read_long();
         
         logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
@@ -1182,11 +1163,12 @@ final public class ValueReader {
         //
         // Remember starting position of this valuetype
         //
-        int pos = h.headerPos;
+        final int pos = h.headerPos;
 
         //
         // Check for special cases (null values and indirections)
         //
+        TypeCode result;
         if (h.tag == 0) {
             out.write_long(0);
             result = tc;
@@ -1196,7 +1178,7 @@ final public class ValueReader {
             // output stream, we use a table to map old positions to new ones
             //
             int offs = in_.read_long();
-            int oldPos = buf_.pos_ - 4 + offs;
+            int oldPos = (buf_.pos_ - 4) + offs;
             oldPos += 3; // adjust alignment to start of value
             oldPos -= (oldPos & 0x3);
 
@@ -1206,22 +1188,22 @@ final public class ValueReader {
             // to a valuetype that we were unable to create and we therefore
             // raise MARSHAL.
             //
-            Integer newPos = (Integer) positionTable_.get(new Integer(oldPos));
+            @SuppressWarnings("UnnecessaryBoxing") final Integer newPos = positionTable_.get(oldPos);
             if (newPos != null) {
                 out.write_long(h.tag);
-                offs = newPos.intValue() - out._OB_pos();
+                offs = newPos - out._OB_pos();
                 out.write_long(offs);
                 //
                 // TODO: The TypeCode may not necessarily reflect the
                 // TypeCode of the indirected value.
                 //
                 result = tc;
-            } else
-                throw new org.omg.CORBA.MARSHAL(
-                        "Cannot find value for indirection");
+            } else {
+                throw new MARSHAL("Cannot find value for indirection");
+            }
         } else {
             if (h.tag < 0x7fffff00) {
-                throw new org.omg.CORBA.MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
+                throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
             }
             
             logger.fine("Remarshalling header with tag value " + h.tag); 
@@ -1232,7 +1214,7 @@ final public class ValueReader {
             int outPos = out._OB_pos();
             outPos += 3; // adjust alignment to start of value
             outPos -= (outPos & 0x3);
-            positionTable_.put(new Integer(pos), new Integer(outPos));
+            positionTable_.put(pos, outPos);
 
             //
             // Read value header info
@@ -1247,13 +1229,13 @@ final public class ValueReader {
             }
 
             String tcId = null;
-            short mod = org.omg.CORBA.VM_NONE.value;
-            int idPos;
+            short mod = VM_NONE.value;
             try {
                 tcId = origTC.id();
-                if (origTC.kind() == org.omg.CORBA.TCKind.tk_value)
+                if (origTC.kind() == TCKind.tk_value) {
                     mod = origTC.type_modifier();
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+                }
+            } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
 
@@ -1280,6 +1262,7 @@ final public class ValueReader {
             // stop at the first match
             //
             String id = null;
+            int idPos;
             for (idPos = 0; idPos < h.ids.length; idPos++) {
                 logger.finer("Comparing type id " + tcId + " against " + h.ids[idPos]); 
                 if (tcId.equals(h.ids[idPos])) {
@@ -1292,11 +1275,11 @@ final public class ValueReader {
             // that is compatible with the base type.  This will require resolving the classes.
             if (id == null) {
                 // see if we can resolve the type for the stored type code 
-                Class baseType = Util.idToClass(tcId, ""); 
+                final Class<?> baseType = Util.idToClass(tcId, "");
                 if (baseType != null) {
                     for (idPos = 0; idPos < h.ids.length; idPos++) {
                         logger.finer("Comparing type id " + tcId + " against " + h.ids[idPos]); 
-                        Class idType = Util.idToClass(h.ids[idPos], "");
+                        final Class idType = Util.idToClass(h.ids[idPos], "");
                         if (idType != null) {
                             // if these classes are assignment compatible, go with that as the type. 
                             logger.finer("Comparing type id " + baseType.getName() + " against " + idType.getName()); 
@@ -1315,10 +1298,9 @@ final public class ValueReader {
             //
             String factoryId = null;
             int factoryPos = 0;
-            org.omg.CORBA.portable.ValueFactory factory = null;
+            ValueFactory factory = null;
             if (orbInstance_ != null) {
-                ValueFactoryManager manager = orbInstance_
-                        .getValueFactoryManager();
+                final ValueFactoryManager manager = orbInstance_.getValueFactoryManager();
 
                 for (factoryPos = 0; factoryPos < h.ids.length; factoryPos++) {
                     factory = manager
@@ -1334,25 +1316,23 @@ final public class ValueReader {
             // If no ID matched the TypeCode, and no factory was found,
             // then we have no way to remarshal the data
             //
-            if (h.ids.length > 0 && id == null && factoryId == null) {
+            if ((h.ids.length > 0) && (id == null) && (factoryId == null)) {
                 logger.fine("Unable to resolve a factory for type " + tcId); 
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
+                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
                         + ": insufficient information to copy valuetype",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorNoValueFactory,
+                        CompletionStatus.COMPLETED_NO);
             }
 
             //
             // If value is custom and there is no factory, then we have
             // no way to remarshal the data
             //
-            if (mod == org.omg.CORBA.VM_CUSTOM.value && factoryId == null) {
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
+            if ((mod == VM_CUSTOM.value) && (factoryId == null)) {
+                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory)
                         + ": unable to copy custom valuetype",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorNoValueFactory,
+                        CompletionStatus.COMPLETED_NO);
             }
 
             //
@@ -1364,18 +1344,16 @@ final public class ValueReader {
             // because we don't have the BoxedHelper and may not be
             // able to locate one via the class loader.
             //
-            if (idPos < factoryPos || h.ids.length == 0
-                    || origTC.kind() == org.omg.CORBA.TCKind.tk_value_box) {
-                int i;
+            if ((idPos < factoryPos) || (h.ids.length == 0)
+                    || (origTC.kind() == TCKind.tk_value_box)) {
 
                 //
                 // We may need to truncate the state of this value, which
                 // means we need to revise the list of repository IDs
                 //
-                int numIds = h.ids.length - idPos;
-                String[] ids = new String[numIds];
-                for (i = idPos; i < h.ids.length; i++)
-                    ids[i - idPos] = h.ids[i];
+                final int numIds = h.ids.length - idPos;
+                final String[] ids = new String[numIds];
+                System.arraycopy(h.ids, idPos, ids, idPos - idPos, h.ids.length - idPos);
 
                 logger.fine("Copying value state of object using truncated type"); 
                 out._OB_beginValue(h.tag, ids, h.state.chunked);
@@ -1389,7 +1367,7 @@ final public class ValueReader {
                 //
                 try {
                     pushHeader(h);
-                    java.io.Serializable vb = factory.read_value(in_);
+                    final Serializable vb = factory.read_value(in_);
                     logger.fine("Creating a temporary copy of the object for marshalling"); 
                     try {
                         out.write_value(vb);
@@ -1406,8 +1384,9 @@ final public class ValueReader {
                 //
                 result = findTypeCode(h.ids[factoryPos], tc);
 
-                if (result == null)
+                if (result == null) {
                     result = tc;
+                }
             }
 
             skipChunk();
@@ -1417,7 +1396,7 @@ final public class ValueReader {
         return result;
     }
 
-    public void readValueAny(org.omg.CORBA.Any any, org.omg.CORBA.TypeCode tc) {
+    public void readValueAny(Any any, TypeCode tc) {
         //
         // In constrast to other complex types, valuetypes and value boxes
         // in Anys cannot simply be "remarshalled". The reason is that
@@ -1441,16 +1420,15 @@ final public class ValueReader {
             //
         }
 
-        org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
-                ._OB_getOrigType(tc);
+        final TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(tc);
 
         logger.fine("Reading an Any value of kind=" + origTC.kind().value() + " from position " + buf_.pos_); 
 
         //
         // Check if the Any contains an abstract interface
         //
-        if (origTC.kind() == org.omg.CORBA.TCKind.tk_abstract_interface) {
-            boolean b = in_.read_boolean();
+        if (origTC.kind() == TCKind.tk_abstract_interface) {
+            final boolean b = in_.read_boolean();
             if (b) {
                 logger.fine("Reading an object reference for an abstract interface"); 
                 //
@@ -1483,13 +1461,13 @@ final public class ValueReader {
         // CORBA::ValueBase doesn't seem very useful anyway.
         //
         try {
-            String id = origTC.id();
+            final String id = origTC.id();
             logger.fine("Reading an Any value of id=" + id); 
-            if (id.equals("IDL:omg.org/CORBA/ValueBase:1.0")) {
+            if ("IDL:omg.org/CORBA/ValueBase:1.0".equals(id)) {
                 any.insert_Value(readValue(), tc);
                 return;
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+        } catch (BadKind ex) {
             Assert._OB_assert(ex);
         }
 
@@ -1502,41 +1480,41 @@ final public class ValueReader {
         // Save some state so that we can restore things prior to
         // remarshalling
         //
-        int startPos = buf_.pos_;
-        ChunkState startState = new ChunkState(chunkState_);
+        final int startPos = buf_.pos_;
+        final ChunkState startState = new ChunkState(chunkState_);
 
         //
         // No need to worry about truncation for boxed valuetypes
         //
-        if (origTC.kind() == org.omg.CORBA.TCKind.tk_value_box) {
+        if (origTC.kind() == TCKind.tk_value_box) {
             try {
                 any.insert_Value(readValue(tc.id()), tc);
                 return;
-            } catch (org.omg.CORBA.MARSHAL ex) {
+            } catch (MARSHAL ex) {
                 //
                 // Creation failed - restore our state and try remarshalling
                 //
                 buf_.pos_ = startPos;
                 chunkState_.copyFrom(startState);
 
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-                org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
+                final Buffer buf = new Buffer();
+                final OutputStream out = new OutputStream(
                         buf);
                 out._OB_ORBInstance(orbInstance_);
                 remarshalValue(origTC, out);
-                org.apache.yoko.orb.CORBA.InputStream in = (org.apache.yoko.orb.CORBA.InputStream) out
+                final InputStream in = (InputStream) out
                         .create_input_stream();
                 Assert._OB_assert(obAny != null);
                 obAny.replace(tc, in);
                 return;  
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+            } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
         } else {
             //
             // Read valuetype header tag
             //
-            Header h = new Header();
+            final Header h = new Header();
             h.tag = in_.read_long();
             logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
 
@@ -1546,15 +1524,15 @@ final public class ValueReader {
             if (h.tag == 0) {
                 any.insert_Value(null, tc);
                 return;
-            } else if (h.tag != -1 && h.tag < 0x7fffff00) {
-                throw new org.omg.CORBA.MARSHAL("Illegal valuetype tag 0x"
-                        + Integer.toHexString(h.tag));
+            }
+            if ((h.tag != -1) && (h.tag < 0x7fffff00)) {
+                throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
             }
 
             //
             // Try to create an instance of the valuetype using a factory
             //
-            FactoryCreationStrategy strategy = new FactoryCreationStrategy(
+            final FactoryCreationStrategy strategy = new FactoryCreationStrategy(
                     this, in_, null);
             try {
                 if (h.tag == -1) {
@@ -1570,8 +1548,8 @@ final public class ValueReader {
                     return;
                 } else {
                     initHeader(h);
-                    org.omg.CORBA.StringHolder idH = new org.omg.CORBA.StringHolder();
-                    java.io.Serializable vb = strategy.create(h, idH);
+                    final StringHolder idH = new StringHolder();
+                    final Serializable vb = strategy.create(h, idH);
                     logger.fine("Obtained a value of type " + vb.getClass().getName()); 
                     skipChunk();
 
@@ -1589,7 +1567,7 @@ final public class ValueReader {
                     // 3) The TypeCode is a base type of tc. In this case,
                     // the valuetype was truncated.
                     //
-                    org.omg.CORBA.TypeCode t = null;
+                    TypeCode t = null;
                     if(idH.value != null) {
                     	t = findTypeCode(idH.value, tc);
                     }
@@ -1601,7 +1579,7 @@ final public class ValueReader {
                     }
                     return;
                 }
-            } catch (org.omg.CORBA.MARSHAL ex) {
+            } catch (MARSHAL ex) {
                 logger.log(Level.FINE, "Marshaling exception occurred, attempting to remarshal", ex); 
                 //
                 // Creation failed - restore our state and try remarshalling
@@ -1609,12 +1587,12 @@ final public class ValueReader {
                 buf_.pos_ = startPos;
                 chunkState_.copyFrom(startState);
 
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-                org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
+                final Buffer buf = new Buffer();
+                final OutputStream out = new OutputStream(
                         buf);
                 out._OB_ORBInstance(orbInstance_);
-                org.omg.CORBA.TypeCode t = remarshalValue(origTC, out);
-                org.apache.yoko.orb.CORBA.InputStream in = (org.apache.yoko.orb.CORBA.InputStream) out
+                final TypeCode t = remarshalValue(origTC, out);
+                final InputStream in = (InputStream) out
                         .create_input_stream();
                 Assert._OB_assert(obAny != null);
                 obAny.replace(t, in);
@@ -1626,10 +1604,10 @@ final public class ValueReader {
     }
 
     public void beginValue() {
-        Header h = new Header();
+        final Header h = new Header();
         h.tag = in_.read_long();
         logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
-        Assert._OB_assert(h.tag != 0 && h.tag != -1);
+        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
         initHeader(h);
     }
@@ -1639,15 +1617,16 @@ final public class ValueReader {
     }
 
     public void checkChunk() {
-        if (!chunkState_.chunked)
+        if (!chunkState_.chunked) {
             return;
+        }
         
 //      logger.finest("Checking chunk position.  end=" + (chunkState_.chunkStart + chunkState_.chunkSize) + " buffer position=" + buf_.pos_); 
         //
         // If we've reached the end of the current chunk, then check
         // for the start of a new chunk
         //
-        if (chunkState_.chunkStart > 0 && chunkState_.chunkStart + chunkState_.chunkSize == buf_.pos_)
+        if ((chunkState_.chunkStart > 0) && ((chunkState_.chunkStart + chunkState_.chunkSize) == buf_.pos_))
         {
 //          logger.finest("Reading chunk from check chunk"); 
             readChunk(chunkState_);
