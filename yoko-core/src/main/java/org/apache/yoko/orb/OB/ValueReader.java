@@ -784,10 +784,39 @@ public final class ValueReader {
             throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
         } else {
             initHeader(h);
-            final Serializable vb = strategy.create(h);
+            // read_value() may be called to skip over a secondary custom valuetype.
+            // If so, return an internal marker object so it shows up if misused.
+            final Serializable result = isSecondaryCustomValuetype(h) ? 
+                    SecondaryValuetypeMarker.ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE 
+                    : strategy.create(h);
             skipChunk();
-            return vb;
+            return result;
         }
+    }
+    
+    private enum SecondaryValuetypeMarker {
+        ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE
+    }
+
+    private boolean isSecondaryCustomValuetype(Header h) {
+        // there must be exactly one repository ID
+        if (h.ids.length != 1)
+            return false;
+        
+        // the repository ID must start with one of the Java-to-IDL spec prefixes
+        final String repId = h.ids[0];
+        if (!(repId.startsWith("RMI:org.omg.custom.") || repId.startsWith("RMI:org.omg.customRMI.")))
+            return false;
+        
+        // it matched enough of the rules, so treat it as a secondary custom valuetype
+
+        // there should not be a codebase (tolerate but log this)
+        if (h.codebase != null) {
+            final String fmt = "Secondary custom marshal valuetype found with non-null codebase: \"%s\", repId: \"%s\"";
+            logger.fine(String.format(fmt, h.codebase, repId));
+        }
+
+        return true;
     }
 
     //

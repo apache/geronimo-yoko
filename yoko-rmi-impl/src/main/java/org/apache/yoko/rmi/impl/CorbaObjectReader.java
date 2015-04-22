@@ -21,15 +21,17 @@ package org.apache.yoko.rmi.impl;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.ValueInputStream;
 
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.util.Map;
 
-public class CorbaObjectReader extends ObjectReader {
+public class CorbaObjectReader extends ObjectReaderBase {
     final org.omg.CORBA_2_3.portable.InputStream in;
 
     private final Map<Integer, Object> offsetMap;
@@ -92,7 +94,7 @@ public class CorbaObjectReader extends ObjectReader {
         return in.read_double();
     }
 
-    @SuppressWarnings("deprecation")
+    @Deprecated
     public String readLine() throws IOException {
         final StringBuilder buf = new StringBuilder();
 
@@ -164,7 +166,7 @@ public class CorbaObjectReader extends ObjectReader {
         }
     }
 
-    public Object readValueObject(Class clz)
+    public Object readValueObject(Class<?> clz)
             throws IndirectionException {
         try {
             return in.read_value(clz);
@@ -173,11 +175,11 @@ public class CorbaObjectReader extends ObjectReader {
         }
     }
 
-    public org.omg.CORBA.Object readCorbaObject(Class type) {
+    public org.omg.CORBA.Object readCorbaObject(Class<?> type) {
         return in.read_Object();
     }
 
-    public Remote readRemoteObject(Class type) {
+    public Remote readRemoteObject(Class<?> type) {
         final org.omg.CORBA.Object objref = in.read_Object();
         return (Remote) PortableRemoteObject.narrow(objref, type);
     }
@@ -202,5 +204,15 @@ public class CorbaObjectReader extends ObjectReader {
 
     public int available() throws IOException {
         return in.available();
+    }
+
+    @Override
+    protected void _startValue() throws IOException {
+        ((ValueInputStream)in).start_value();
+    }
+
+    @Override
+    protected void _endValue() throws IOException {
+        ((ValueInputStream)in).end_value();
     }
 }
