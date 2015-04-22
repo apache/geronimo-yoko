@@ -67,11 +67,7 @@ public final class Buffer {
     public String dumpData() 
     {
         StringBuilder dump = new StringBuilder(); 
-        dump.append("Buffer pos="); 
-        dump.append(pos_); 
-        dump.append(" Buffer len="); 
-        dump.append(len_); 
-        dump.append(" Remaining buffer data=\n\n"); 
+        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_)); 
         
         org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length(), dump); 
         return dump.toString(); 
