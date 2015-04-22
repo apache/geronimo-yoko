@@ -32,9 +32,9 @@ import java.util.Map;
 public class CorbaObjectReader extends ObjectReader {
     final org.omg.CORBA_2_3.portable.InputStream in;
 
-    private final Map<Integer, Serializable> offsetMap;
+    private final Map<Integer, Object> offsetMap;
 
-    CorbaObjectReader(InputStream in, Map<Integer, Serializable> offsetMap, Serializable obj) throws IOException {
+    CorbaObjectReader(InputStream in, Map<Integer, Object> offsetMap, Serializable obj) throws IOException {
         super(obj);
         this.in = (org.omg.CORBA_2_3.portable.InputStream) in;
         this.offsetMap = offsetMap;
