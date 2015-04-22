@@ -293,43 +293,61 @@ public final class IORUtil {
          dump_octets(oct, 0, oct.length, sb); 
     }
 
+    private static final char[] HEX_DIGIT = "0123456789abcdef".toCharArray();
     //
     // Convert an octet buffer into human-friendly data dump
     //
-    public static void dump_octets(byte[] oct, int offset, int count, StringBuilder sb) {
-        final int inc = 16;
-        
+    public static void dump_octets(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
         if (count <= 0) {
             return; 
         }
 
-        for (int i = offset; i < offset + count; i += inc) {
-            for (int j = i; j - i < inc; j++) {
-                if (j < offset + count) {
-                    int n = ((int) oct[j]) & 0xff;
-                    String hex = Integer.toHexString(n); 
-                    if (hex.length() == 1) {
-                        sb.append('0'); 
+        final StringBuilder ascii = new StringBuilder(16);
+        for (int i = 0; i < count; i++) {
+            final int b = oct[i + offset] & 0xff;
+            
+            // build up the ascii string for the end of the line
+            ascii.append((31 < b && b < 127)? (char)b : '.');
+            
+            // print the high hex nybble
+            sb.append(HEX_DIGIT[b>>4]);
+            // and the low hex nybble
+            sb.append(HEX_DIGIT[b&0xf]);
+            
+            if (i%4 == (4-1)) {
+                // space the columns on every 4-byte boundary
+                sb.append(' ');
+                if (i%0x10 == (0x10-1)) {
+                    // write the ascii interpretation on the end of every line
+                    sb.append(" \"").append(ascii).append("\"\n");
+                    ascii.setLength(0);
+                    if (i%0x100 == (0x100-1)) {
+                        // separating line every 0x100 bytes
+                        //         00000000 00000000 00000000 00000000  "................"
+                        sb.append("-----------------------------------\n");
                     }
-                    sb.append(hex); 
-                    sb.append(' ');
-                } else {
-                    sb.append("   ");
                 }
             }
-
-            sb.append('"');
-
-            for (int j = i; j < offset + count && j - i < inc; j++) {
-                if (oct[j] >= (byte) 32 && oct[j] < (byte) 127) {
-                    sb.append((char) oct[j]);
-                }
-                else {
-                    sb.append('.');
-                }
-            }
-            sb.append('"');
-            sb.append('\n');
+        }
+        
+        switch (count%16) {
+            case 0:
+                break;
+            case 0x1: sb.append("  ");
+            case 0x2: sb.append("  ");
+            case 0x3: sb.append("   ");
+            case 0x4: sb.append("  ");
+            case 0x5: sb.append("  ");
+            case 0x6: sb.append("  ");
+            case 0x7: sb.append("   ");
+            case 0x8: sb.append("  ");
+            case 0x9: sb.append("  ");
+            case 0xa: sb.append("  ");
+            case 0xb: sb.append("   ");
+            case 0xc: sb.append("  ");
+            case 0xd: sb.append("  ");
+            case 0xe: sb.append("  ");
+            case 0xf: sb.append("    \"").append(ascii).append("\"\n");
         }
     }
 
