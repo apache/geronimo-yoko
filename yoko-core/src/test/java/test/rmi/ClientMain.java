@@ -18,24 +18,19 @@
 package test.rmi;
 
 import java.io.BufferedReader;
-import java.io.FileInputStream;
 import java.io.FileReader;
-import java.io.ObjectInputStream;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 
-import javax.rmi.CORBA.Stub;
-import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
 
+import org.junit.Assert;
 import org.omg.PortableServer.POA;
-import org.omg.PortableServer.Servant;
-
-import junit.framework.Assert;
 
 public class ClientMain extends Assert {
 
@@ -311,18 +306,18 @@ public class ClientMain extends Assert {
         }
 
         public void testHashMap() throws RemoteException {
-            HashMap map = new HashMap();
-            String str = "hello";
-            map.put(new Integer(0), str);
-            map.put(new Integer(1), str);
-            Integer i = new Integer(2);
-            map.put(new Integer(3), i);
-            map.put(new Integer(4), i);
+            HashMap<Integer, Serializable> map = new HashMap<>();
+            String str = new String("hello");
+            map.put(0, str);
+            map.put(1, str);
+            Integer two = new Integer(2);
+            map.put(3, two);
+            map.put(4, two);
             sample.setSerializable(map);
-            HashMap map2 = (HashMap) sample.getSerializable();
+            Map<?,?> map2 = (Map<?,?>) sample.getSerializable();
             assertEquals(map, map2);
-            assertTrue(map2.get(new Integer(3)) == map2.get(new Integer(4)));
-            assertTrue(map2.get(new Integer(0)) == map2.get(new Integer(1)));
+            assertSame(map2.get(3), map2.get(4));
+            assertSame(map2.get(0), map2.get(1));
         }
     }
 

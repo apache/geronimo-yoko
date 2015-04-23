@@ -18,8 +18,6 @@
 
 package org.apache.yoko.rmi.impl;
 
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
-
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.NotActiveException;
@@ -30,6 +28,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
 
 abstract class ObjectWriter extends ObjectOutputStream {
     protected final Serializable object;
@@ -144,7 +144,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
 
     ObjectWriter(Serializable obj) throws IOException {
         object = obj;
-        streamFormatVersion = CmsfThreadLocalStack.peek();
+        streamFormatVersion = CmsfThreadLocal.get();
     }
 
     private byte getStreamFormatVersion() {

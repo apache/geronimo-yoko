@@ -7,9 +7,11 @@ import java.io.IOException;
 import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.MinorCodes;
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
+import org.apache.yoko.orb.OB.IORUtil;
+import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
@@ -20,7 +22,8 @@ import org.omg.PortableInterceptor.InvalidSlot;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
 
-public class CmsfServerInterceptor extends LocalObject implements ServerRequestInterceptor {
+public final class CmsfServerInterceptor extends LocalObject implements ServerRequestInterceptor {
+    private static final Logger LOGGER = Logger.getLogger(CmsfServerInterceptor.class.getName());
     private static final String NAME = CmsfServerInterceptor.class.getName();
 
     private final int slotId;
@@ -35,6 +38,9 @@ public class CmsfServerInterceptor extends LocalObject implements ServerRequestI
         try {
             ServiceContext sc = ri.get_request_service_context(RMICustomMaxStreamFormat.value);
             cmsf = CmsfVersion.readData(sc.context_data);
+            if (LOGGER.isLoggable(Level.FINEST))
+                LOGGER.finest(String.format("Using custom marshal stream format version: %s, retrieved from bytes: %s",
+                    cmsf, IORUtil.dump_octets(sc.context_data)));
         } catch (BAD_PARAM e) {
             if (e.minor != MinorInvalidServiceContextId) {
                 throw e;
@@ -49,28 +55,31 @@ public class CmsfServerInterceptor extends LocalObject implements ServerRequestI
 
     @Override
     public void receive_request(ServerRequestInfo ri) throws ForwardRequest {
+    }
+    
+    private void setupCmsfThreadLocalValue(ServerRequestInfo ri) {
         CmsfVersion cmsf = CMSFv1;
         try {
             cmsf = CmsfVersion.readAny(ri.get_slot(slotId));
         } catch (InvalidSlot e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
-        CmsfThreadLocalStack.push(cmsf.getValue());
+        CmsfThreadLocal.set(cmsf.getValue());
     }
 
     @Override
     public void send_reply(ServerRequestInfo ri) {
-        CmsfThreadLocalStack.pop();
+        setupCmsfThreadLocalValue(ri);
     }
 
     @Override
     public void send_exception(ServerRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocalStack.pop();
+        setupCmsfThreadLocalValue(ri);
     }
 
     @Override
     public void send_other(ServerRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocalStack.pop();
+        setupCmsfThreadLocalValue(ri);
     }
 
     @Override
@@ -89,5 +98,4 @@ public class CmsfServerInterceptor extends LocalObject implements ServerRequestI
     private void writeObject(ObjectOutputStream oos) throws IOException {
         throw new NotSerializableException(NAME);
     }
-
 }

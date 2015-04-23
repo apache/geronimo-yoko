@@ -18,6 +18,15 @@ abstract class DelegatingObjectReader extends ObjectReader {
         this.delegate = delegate;
     }
 
+    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
+        try {
+            delegate.enterRecursion();
+            return delegate.readAbstractObject();
+        } finally {
+            delegate.exitRecursion();
+        }
+    }
+
     //////////////////////////////////////
     // ONLY DELEGATE METHODS BELOW HERE //
     //////////////////////////////////////
@@ -100,6 +109,7 @@ abstract class DelegatingObjectReader extends ObjectReader {
     public int skipBytes(int len) throws IOException {
         return delegate.skipBytes(len);
     }
+    @Deprecated
     public String readLine() throws IOException {
         return delegate.readLine();
     }

@@ -448,13 +448,13 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     processException(State.Closed, ex, false);
                     break;
                 }
-                if (logger.isLoggable(Level.FINE)) {
-                    logger.fine("Message body received ");
-                    int currentpos = buf.pos_;
-                    buf.pos_ = 0;
-                    logger.fine("Received message are: \n" + buf.dumpData());
-                    buf.pos_ = currentpos;
-                }
+            }
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine("Message body received ");
+                int currentpos = buf.pos_;
+                buf.pos_ = 0;
+                logger.fine("Received message are: \n" + buf.dumpData());
+                buf.pos_ = currentpos;
             }
 
             //

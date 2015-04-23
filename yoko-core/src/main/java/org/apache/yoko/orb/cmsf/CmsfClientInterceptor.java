@@ -9,7 +9,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocalStack;
+import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.LocalObject;
 import org.omg.IOP.TAG_RMI_CUSTOM_MAX_STREAM_FORMAT;
@@ -32,7 +32,7 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
                 throw e;
             }
         }
-        CmsfThreadLocalStack.push(cmsf.getValue());
+        CmsfThreadLocal.set(cmsf.getValue());
         
         if (CmsfVersion.ENABLED) ri.add_request_service_context(CMSFv2.getSc(), false);
     }
@@ -43,17 +43,17 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
 
     @Override
     public void receive_reply(ClientRequestInfo ri) {
-        CmsfThreadLocalStack.pop();
+        CmsfThreadLocal.reset();
     }
 
     @Override
     public void receive_exception(ClientRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocalStack.pop();
+        CmsfThreadLocal.reset();
     }
 
     @Override
     public void receive_other(ClientRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocalStack.pop();
+        CmsfThreadLocal.reset();
     }
 
     @Override
