@@ -76,10 +76,6 @@ public class CustomMarshaledObjectReader extends DelegatingObjectReader {
         setState(State.BEFORE_CUSTOM_DATA);
     }
 
-    public void defaultReadObject() throws IOException, ClassNotFoundException {
-        throw new IllegalStateException("defaultReadObject() only supported as first read operation within readObject()");
-    }
-
     public void close() throws IOException {
         switch (setState(State.CLOSED)) {
             case UNINITIALISED:
