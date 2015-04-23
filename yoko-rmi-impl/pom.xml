@@ -75,7 +75,8 @@
                             org.apache.yoko.rmi.api,
                             org.apache.yoko.rmi.util,
                             org.apache.yoko.rmi.util.corba,
-                            org.apache.yoko.rmi.util.stub
+                            org.apache.yoko.rmi.util.stub,
+                            org.apache.yoko.rmi.cmsf
                         </Export-Package>
                         <Import-Package>
                             !sun.*,*

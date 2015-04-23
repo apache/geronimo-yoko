@@ -106,9 +106,11 @@ public class SampleImpl extends PortableRemoteObject implements
 	
 	public Serializable getSerializable() {return serializable; }
 	public void setSerializable(Serializable s) {
+	    System.out.println("received: " + s);
 		if(serializable instanceof SampleSerializable) {
 			SampleSerializable ser = (SampleSerializable) serializable;
-			ser.getRemoteObject();
+			Object o = ser.getRemoteObject();
+		     System.out.println("retrieved remote object: " + o);
 		}
 		this.serializable = s; 
 	}

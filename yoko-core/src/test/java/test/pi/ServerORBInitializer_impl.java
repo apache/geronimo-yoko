@@ -42,7 +42,7 @@ final public class ServerORBInitializer_impl extends org.omg.CORBA.LocalObject
         // Test: PICurrent::allocate_slot_id
         //
         int id = info.allocate_slot_id();
-        TEST(id == 0);
+        TEST(id >= 0);
 
         //
         // Test: register an IORInterceptor

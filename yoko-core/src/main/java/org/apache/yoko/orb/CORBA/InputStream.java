@@ -22,9 +22,10 @@ import java.util.logging.Logger;
 
 import javax.rmi.CORBA.Util;
 
+import org.omg.CORBA.portable.ValueInputStream;
 import org.omg.SendingContext.CodeBase;
 
-final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
+final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream implements ValueInputStream {
     static final Logger logger = Logger.getLogger(InputStream.class.getName());
     
     org.apache.yoko.orb.OB.ORBInstance orbInstance_;
@@ -2149,6 +2150,16 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream {
         if (valueReader_ != null) {
             valueReader_.checkChunk();
         }
+    }
+
+    @Override
+    public void end_value() {
+        valueReader().endValue();
+    }
+
+    @Override
+    public void start_value() {
+        valueReader().beginValue();
     }
 }
 

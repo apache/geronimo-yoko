@@ -100,8 +100,8 @@ public final class ValueReader {
             ids = new String[0];
             state = new ChunkState();
         }
-        
-        boolean isRMIValue () {
+
+        boolean isRMIValue() {
             return (ids != null) && (ids.length > 0) && ids[0].startsWith("RMI:");
         }
 
@@ -122,7 +122,7 @@ public final class ValueReader {
     private final ChunkState chunkState_ = new ChunkState();
 
     private Header currentHeader_;
-	private ValueHandler valueHandler;
+    private ValueHandler valueHandler;
     private CodeBase remoteCodeBase;
 
     // ------------------------------------------------------------------
@@ -185,7 +185,7 @@ public final class ValueReader {
             Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
-            	return reader_.readRMIValue(h, clz_, h.ids[0]);
+                return reader_.readRMIValue(h, clz_, h.ids[0]);
             }
 
             try {
@@ -292,9 +292,9 @@ public final class ValueReader {
         Serializable create(Header h, StringHolder id) {
             Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
-            if (h.isRMIValue ()) {
+            if (h.isRMIValue()) {
                 final Serializable result = readRMIValue(h, null, h.ids[0]);
-                addInstance (h.headerPos, result);
+                addInstance(h.headerPos, result);
                 return result;
             }
             //
@@ -352,7 +352,7 @@ public final class ValueReader {
 
     // Java only
     private void addInstance(int pos, Serializable instance) {
-        // only add this if we have a real value 
+        // only add this if we have a real value
         if (instance != null) {
             instanceTable_.put(pos, instance);
         }
@@ -378,7 +378,7 @@ public final class ValueReader {
         if ((h.tag & 0x00000008) == 8) {
             h.state.chunked = true;
         } else {
-        	h.state.chunked = false;
+            h.state.chunked = false;
         }
 
         //
@@ -416,12 +416,12 @@ public final class ValueReader {
         // Extract repository ID information
         //
         if ((h.tag & 0x00000006) == 0) {
-            logger.finer("No type information was included"); 
+            logger.finer("No type information was included");
             //
             // No type information was marshalled
             //
         } else if ((h.tag & 0x00000006) == 6) {
-            logger.finer("Multiple types included in header"); 
+            logger.finer("Multiple types included in header");
             //
             // Extract a list of repository IDs, representing the
             // truncatable types for this value
@@ -581,10 +581,10 @@ public final class ValueReader {
         // Increment our nesting level if we are chunked
         //
         if (chunkState_.chunked) {
-//          logger.finest("Reading chunk for chunked value.  Header tag=" + Integer.toHexString(h.tag) + " current position=" + buf_.pos_); 
+//          logger.finest("Reading chunk for chunked value.  Header tag=" + Integer.toHexString(h.tag) + " current position=" + buf_.pos_);
             readChunk(chunkState_);
             chunkState_.nestingLevel++;
-//          logger.fine("Chunk nesting level is " + chunkState_.nestingLevel + " current position=" + buf_.pos_ + " chunk size=" + chunkState_.chunkSize); 
+//          logger.fine("Chunk nesting level is " + chunkState_.nestingLevel + " current position=" + buf_.pos_ + " chunk size=" + chunkState_.chunkSize);
         }
     }
 
@@ -627,7 +627,7 @@ public final class ValueReader {
                 logger.finest(String.format("Skipping chunk:  read tag value =0x%08x", tag));
             while ((tag >= 0) || ((tag < 0) && (tag < -chunkState_.nestingLevel))) {
                 if (tag >= 0x7fffff00) {
-                    logger.finest("Skipping chunk:  reading a nested chunk value"); 
+                    logger.finest("Skipping chunk:  reading a nested chunk value");
                     //
                     // This indicates a nested value. We read the header
                     // information and store it away, in case a subsequent
@@ -654,8 +654,8 @@ public final class ValueReader {
                     // tag is less than 0, so this is an end tag for a nested
                     // value
                     //
-                    // this can terminate more than a single level. 
-                    level = (-tag) - 1; 
+                    // this can terminate more than a single level.
+                    level = (-tag) - 1;
                 }
 
                 //
@@ -686,10 +686,10 @@ public final class ValueReader {
                 // We're chunked and still processing nested values, so
                 // another chunk may follow
                 //
-                logger.finest("Reading chunk for skipping to end of a chunk"); 
+                logger.finest("Reading chunk for skipping to end of a chunk");
                 readChunk(chunkState_);
             }
-            
+
             if (logger.isLoggable(Level.FINEST))
                 logger.finest(String.format(
                         "Final chunk state is nesting level=%d current position is 0x%x chunk end is 0x%x",
@@ -762,9 +762,9 @@ public final class ValueReader {
              * deserialized. We throw an IndirectionException which signals the
              * RMI implementation to handle the indirection.
              */
-            if(nest.isRMIValue()) {
-            	buf_.pos_ = save;
-            	throw new IndirectionException(pos);
+            if (nest.isRMIValue()) {
+                buf_.pos_ = save;
+                throw new IndirectionException(pos);
             }
             //
             // Create the value
@@ -794,20 +794,52 @@ public final class ValueReader {
         Header h = new Header();
         h.tag = in_.read_long();
 
-//      logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
+//      logger.fine("Read tag value " + Integer.toHexString(h.tag));
         if (h.tag == 0) {
             return null;
         } else if (h.tag == -1) {
             return readIndirection(strategy);
         } else if (h.tag < 0x7fffff00) {
-            throw new org.omg.CORBA.MARSHAL("Illegal valuetype tag 0x"
-                    + Integer.toHexString(h.tag));
+            throw new org.omg.CORBA.MARSHAL(String.format(
+                    "Illegal valuetype tag 0x%08x",
+                    h.tag));
         } else {
             initHeader(h);
-            java.io.Serializable vb = strategy.create(h);
+            // read_value() may be called to skip over a secondary custom valuetype.
+            // If so, return an internal marker object so it shows up if misused.
+            final Serializable result = isSecondaryCustomValuetype(h) ?
+                    SecondaryValuetypeMarker.ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE
+                    : strategy.create(h);
             skipChunk();
-            return vb;
+            return result;
         }
+    }
+
+    private enum SecondaryValuetypeMarker {
+        ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE
+    }
+
+    private boolean isSecondaryCustomValuetype(Header h) {
+        // there must be exactly one repository ID
+        if (h.ids.length != 1)
+            return false;
+
+        // the repository ID must start with one of the Java-to-IDL spec prefixes
+        final String repId = h.ids[0];
+        if (!(repId.startsWith("RMI:org.omg.custom.") || repId.startsWith("RMI:org.omg.customRMI.")))
+            return false;
+
+        // it matched enough of the rules, so treat it as a secondary custom valuetype
+
+        // there should not be a codebase (tolerate but log this)
+        if (h.codebase != null) {
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format(
+                        "Secondary custom marshal valuetype found with non-null codebase: \"%s\", repId: \"%s\"",
+                        h.codebase, repId));
+        }
+
+        return true;
     }
 
     //
@@ -825,7 +857,7 @@ public final class ValueReader {
                 }
 
                 for (int i = 0; i < tc.member_count(); i++) {
-//                  logger.fine("writing member of typecode " + tc.member_type(i).kind().value()); 
+//                  logger.fine("writing member of typecode " + tc.member_type(i).kind().value());
                     out.write_InputStream(in_, tc.member_type(i));
                 }
             } else if (tc.kind() == TCKind.tk_value_box) {
@@ -834,7 +866,7 @@ public final class ValueReader {
                 Assert._OB_assert(false);
             }
         } catch (BadKind | Bounds ex) {
-            logger.log(Level.FINER, "Invalid type kind", ex); 
+            logger.log(Level.FINER, "Invalid type kind", ex);
             Assert._OB_assert(ex);
         }
     }
@@ -859,16 +891,16 @@ public final class ValueReader {
     private TypeCode findTypeCode(String id, TypeCode tc) {
         TypeCode result = null;
         TypeCode t = tc;
-//      logger.finer("Locating type code for id " + id); 
+//      logger.finer("Locating type code for id " + id);
         while (result == null) {
             try {
                 final TypeCode t2 = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(t);
-//              logger.finer("Checking typecode " + id + " against " + t2.id()); 
+//              logger.finer("Checking typecode " + id + " against " + t2.id());
                 if (id.equals(t2.id())) {
                     result = t;
                 } else if ((t2.kind() == TCKind.tk_value) && (t2.type_modifier() == VM_TRUNCATABLE.value)) {
                     t = t2.concrete_base_type();
-//                  logger.finer("Iterating with concrete type " + t.id()); 
+//                  logger.finer("Iterating with concrete type " + t.id());
                 } else {
                     break;
                 }
@@ -896,7 +928,7 @@ public final class ValueReader {
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Reading RMI value of type \"%s\"", repid));
         if (valueHandler == null) {
-            valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
+            valueHandler = javax.rmi.CORBA.Util.createValueHandler();
         }
 
         if (repid == null) {
@@ -911,25 +943,25 @@ public final class ValueReader {
         String codebase  = h.codebase;
 
         if (codebase == null) {
-            codebase = in_.__getCodeBase ();
+            codebase = in_.__getCodeBase();
         }
 
         Class repoClass = resolveRepoClass(className, codebase);
 
-        // if we have a non-null codebase and can't resolve this, throw an 
-        // exception now.  Otherwise, we'll try again after grabbing the remote 
-        // codebase. 
+        // if we have a non-null codebase and can't resolve this, throw an
+        // exception now.  Otherwise, we'll try again after grabbing the remote
+        // codebase.
         if ((repoClass == null) && (codebase != null) && !codebase.isEmpty()) {
             throw new MARSHAL("class " + className + " not found (cannot load from " + codebase + ")");
         }
 
         if (remoteCodeBase == null) {
-            remoteCodeBase = in_.__getSendingContextRuntime ();
+            remoteCodeBase = in_.__getSendingContextRuntime();
         }
         if (repoClass == null) {
             if ((codebase == null) && (remoteCodeBase != null)) {
                 try {
-                    codebase = remoteCodeBase.implementation (repid);
+                    codebase = remoteCodeBase.implementation(repid);
                 } catch (SystemException ignored) {
                 }
 
@@ -939,7 +971,7 @@ public final class ValueReader {
                 // TODO: add minor code
                 throw new MARSHAL("class " + className + " not found (no codebase provided)");
             } else {
-                repoClass = resolveRepoClass(className, codebase); 
+                repoClass = resolveRepoClass(className, codebase);
                 if (repoClass == null) {
                     throw new MARSHAL("class " + className + " not found (cannot load from " + codebase + ")");
                 }
@@ -954,14 +986,14 @@ public final class ValueReader {
         if (remoteCodeBase instanceof CodeBaseProxy) {
             remoteCodeBase = ((CodeBaseProxy) remoteCodeBase).getCodeBase();
         }
-        
+
         Serializable serobj = null;
         try {
-        	serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
+            serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
-                        "RuntimeException happens when reading GIOP stream coming to pos_=0x%x", 
+                        "RuntimeException happens when reading GIOP stream coming to pos_=0x%x",
                         in_.buf_.pos_));
                 logger.fine(String.format("Wrong data section:%n%s", in_.dumpData()));
                 final int currentpos = in_.buf_.pos_;
@@ -981,65 +1013,65 @@ public final class ValueReader {
                     "Attempting to resolve class \"%s\" from codebase \"%s\"",
                     name, codebase));
         if (name.startsWith("[")) {
-            int levels = 0; 
+            int levels = 0;
             for (int i = 0; name.charAt(i) == '['; i++) {
-                levels++; 
+                levels++;
             }
-            Class elementClass = null; 
-            
-            // now resolve the element descriptor to a class 
+            Class elementClass = null;
+
+            // now resolve the element descriptor to a class
             switch (name.charAt(levels)) {
                 case 'Z':
                     elementClass = Boolean.TYPE;
-                    break; 
+                    break;
                 case 'B':
                     elementClass = Byte.TYPE;
-                    break; 
+                    break;
                 case 'S':
                     elementClass = Short.TYPE;
-                    break; 
+                    break;
                 case 'C':
                     elementClass = Character.TYPE;
-                    break; 
+                    break;
                 case 'I':
                     elementClass = Integer.TYPE;
-                    break; 
+                    break;
                 case 'J':
                     elementClass = Long.TYPE;
-                    break; 
+                    break;
                 case 'F':
                     elementClass = Float.TYPE;
-                    break; 
+                    break;
                 case 'D':
                     elementClass = Double.TYPE;
-                    break; 
+                    break;
                 case 'L':
                     // extract the class from the name and resolve that.
                     elementClass = resolveRepoClass(name.substring(levels + 1, name.indexOf(';')), codebase);
                     if (elementClass == null) {
-                        return null; 
+                        return null;
                     }
-                    break; 
+                    break;
             }
-            
+
             // ok, we need to recurse and resolve the base array element class
             Object arrayInstance;
-            // this is easier with a single level     
+            // this is easier with a single level
             if (levels == 1) {
-                arrayInstance = Array.newInstance(elementClass, 0); 
+                arrayInstance = Array.newInstance(elementClass, 0);
             } else {
-                // all elements will be zero 
+                // all elements will be zero
                 final int[] dimensions = new int[levels];
-                arrayInstance = Array.newInstance(elementClass, dimensions); 
+                arrayInstance = Array.newInstance(elementClass, dimensions);
             }
-            // return the class associated with this array 
+            // return the class associated with this array
             return arrayInstance.getClass();
         } else {
             try {
                 return javax.rmi.CORBA.Util.loadClass(name, codebase, Util.getContextClassLoader());
             } catch (ClassNotFoundException ex) {
-                // this will be sorted out later 
-                return null; 
+                // this will be sorted out later
+                return null;
             }
         }
     }
@@ -1157,7 +1189,7 @@ public final class ValueReader {
 
         final Header h = new Header();
         h.tag = in_.read_long();
-        
+
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Read tag value 0x%08x", h.tag));
         h.headerPos = buf_.pos_ - 4; // adjust for alignment
@@ -1228,7 +1260,7 @@ public final class ValueReader {
             chunkState_.copyFrom(h.state);
 
             if (chunkState_.chunked) {
-                logger.finest("Reading chunk in remarshal value()"); 
+                logger.finest("Reading chunk in remarshal value()");
                 readChunk(chunkState_);
                 chunkState_.nestingLevel++;
             }
@@ -1279,11 +1311,11 @@ public final class ValueReader {
                     break;
                 }
             }
-            
+
             // if this is null, then try again to see if we can find a class in the ids list
             // that is compatible with the base type.  This will require resolving the classes.
             if (id == null) {
-                // see if we can resolve the type for the stored type code 
+                // see if we can resolve the type for the stored type code
                 final Class<?> baseType = Util.idToClass(tcId, "");
                 if (baseType != null) {
                     for (idPos = 0; idPos < h.ids.length; idPos++) {
@@ -1365,7 +1397,7 @@ public final class ValueReader {
                 final String[] ids = new String[numIds];
                 System.arraycopy(h.ids, idPos, ids, idPos - idPos, h.ids.length - idPos);
 
-                logger.fine("Copying value state of object using truncated type"); 
+                logger.fine("Copying value state of object using truncated type");
                 out._OB_beginValue(h.tag, ids, h.state.chunked);
                 copyValueState(origTC, out);
                 out._OB_endValue();
@@ -1378,7 +1410,7 @@ public final class ValueReader {
                 try {
                     pushHeader(h);
                     final Serializable vb = factory.read_value(in_);
-                    logger.fine("Creating a temporary copy of the object for marshalling"); 
+                    logger.fine("Creating a temporary copy of the object for marshalling");
                     try {
                         out.write_value(vb);
                     } finally {
@@ -1443,14 +1475,14 @@ public final class ValueReader {
         if (origTC.kind() == TCKind.tk_abstract_interface) {
             final boolean b = in_.read_boolean();
             if (b) {
-                logger.fine("Reading an object reference for an abstract interface"); 
+                logger.fine("Reading an object reference for an abstract interface");
                 //
                 // The abstract interface represents an object reference
                 //
                 any.insert_Object(in_.read_Object(), tc);
                 return;
             } else {
-                logger.fine("Reading an object value for an abstract interface"); 
+                logger.fine("Reading an object value for an abstract interface");
                 //
                 // The abstract interface represents a valuetype. The
                 // readValue() method will raise an exception if an
@@ -1518,7 +1550,7 @@ public final class ValueReader {
                 final InputStream in = (InputStream) out.create_input_stream();
                 Assert._OB_assert(obAny != null);
                 obAny.replace(tc, in);
-                return;  
+                return;
             } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
@@ -1555,7 +1587,7 @@ public final class ValueReader {
                     // Fixing this probably requires maintaining a
                     // map of stream position to TypeCode.
                     //
-                    logger.fine("Handling a value type indirection value"); 
+                    logger.fine("Handling a value type indirection value");
                     any.insert_Value(readIndirection(strategy), tc);
                     return;
                 } else {
@@ -1581,8 +1613,8 @@ public final class ValueReader {
                     // the valuetype was truncated.
                     //
                     TypeCode t = null;
-                    if(idH.value != null) {
-                    	t = findTypeCode(idH.value, tc);
+                    if (idH.value != null) {
+                        t = findTypeCode(idH.value, tc);
                     }
                     if (t != null) {
                         any.insert_Value(vb, t);
@@ -1592,7 +1624,7 @@ public final class ValueReader {
                     return;
                 }
             } catch (MARSHAL ex) {
-                logger.log(Level.FINE, "Marshaling exception occurred, attempting to remarshal", ex); 
+                logger.log(Level.FINE, "Marshaling exception occurred, attempting to remarshal", ex);
                 //
                 // Creation failed - restore our state and try remarshalling
                 //
@@ -1631,14 +1663,14 @@ public final class ValueReader {
         if (!chunkState_.chunked) {
             return;
         }
-        
-//      logger.finest("Checking chunk position.  end=" + (chunkState_.chunkStart + chunkState_.chunkSize) + " buffer position=" + buf_.pos_); 
+
+//      logger.finest("Checking chunk position.  end=" + (chunkState_.chunkStart + chunkState_.chunkSize) + " buffer position=" + buf_.pos_);
         //
         // If we've reached the end of the current chunk, then check
         // for the start of a new chunk
         //
         if ((chunkState_.chunkStart > 0) && ((chunkState_.chunkStart + chunkState_.chunkSize) == buf_.pos_)) {
-//          logger.finest("Reading chunk from check chunk"); 
+//          logger.finest("Reading chunk from check chunk");
             readChunk(chunkState_);
         }
     }
