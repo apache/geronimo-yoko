@@ -85,7 +85,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
             java.util.Hashtable history, boolean isTopLevel) {
         int kind = read_ulong();
         int oldPos = buf_.pos_ - 4;
-        logger.finest("Reading a TypeCode of kind " + kind + " from position " + oldPos); 
+        if (logger.isLoggable(Level.FINEST))
+            logger.finest(String.format(
+                    "Reading a TypeCode of kind %d from position 0x%x",
+                    kind, oldPos)); 
 
         TypeCode tc = null;
         if (kind == -1) {
@@ -491,7 +494,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
 
                 String id = read_string();
                 
-                logger.fine("Abstract interface typecode encapsulaton length=" + length + " id=" + id); 
+                if (logger.isLoggable(Level.FINE))
+                    logger.fine(String.format(
+                            "Abstract interface typecode encapsulaton length=0x%x id=%s",
+                            length, id)); 
 
                 if (isTopLevel && cache_ != null)
                     tc = checkCache(id, typePos, length); // may advance pos
@@ -942,7 +948,8 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
         // GIOP 1.0/1.1 and in octets for GIOP 1.2+)
         // 
         int len = read_ulong();
-        logger.fine("Reading wstring of length " + len); 
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading wstring of length 0x%x", len)); 
 
         switch (GIOPVersion_) {
 
@@ -1135,7 +1142,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
-        logger.finest("Boolean value is " + buf_.data_[buf_.pos_] + " from position " + buf_.pos_); 
+        if (logger.isLoggable(Level.FINEST))
+            logger.finest(String.format(
+                    "Boolean value is %b from position 0x%x",
+                    buf_.data_[buf_.pos_], buf_.pos_)); 
         return buf_.data_[buf_.pos_++] != (byte) 0;
     }
 
@@ -1283,7 +1293,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
 
         int newPos = buf_.pos_ + length;
         if (newPos < buf_.pos_ || newPos > buf_.len_) {
-            logger.fine("String length=" + length + " newPos=" + newPos + " buf_.pos=" + buf_.pos_ + " buf_.len=" + buf_.len_); 
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format(
+                        "String length=0x%x newPos=0x%x buf_.pos=0x%x buf_.len=0x%x",
+                        length, newPos, buf_.pos_, buf_.len_)); 
             throw new org.omg.CORBA.MARSHAL(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadStringOverflow),

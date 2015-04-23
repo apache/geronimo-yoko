@@ -180,7 +180,8 @@ public final class ValueReader {
         }
 
         Serializable create(Header h) {
-            logger.fine("Creating a value object with tag value " + Integer.toHexString(h.tag));
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Creating a value object with tag value 0x%08x", h.tag));
             Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
@@ -239,7 +240,7 @@ public final class ValueReader {
                         //
                         if ((id_ != null) && h.ids[i].equals(id_)) {
                             break;
-                        }
+                    }
                     }
                 } else if (id_ != null) {
                     f = manager.lookupValueFactoryWithClass(id_);
@@ -318,14 +319,14 @@ public final class ValueReader {
                 helper = getBoxedHelper(h.ids[0]);
                 if (helper != null) {
                     id.value = h.ids[0];
-                }
+            }
             }
 
             if ((helper == null) && (id_ != null)) {
                 helper = getBoxedHelper(id_);
                 if (helper != null) {
                     id.value = id_;
-                }
+            }
             }
 
             if (helper != null) {
@@ -339,7 +340,7 @@ public final class ValueReader {
                 type = h.ids[0];
             } else if (id_ != null) {
                 type = id_;
-            }
+        }
             throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + type, MinorCodes.MinorNoValueFactory,
                     CompletionStatus.COMPLETED_NO);
         }
@@ -351,7 +352,7 @@ public final class ValueReader {
 
     // Java only
     private void addInstance(int pos, Serializable instance) {
-        // only add this if we have a real value 
+        // only add this if we have a real value
         if (instance != null) {
             instanceTable_.put(pos, instance);
         }
@@ -363,7 +364,8 @@ public final class ValueReader {
     }
 
     private void readHeader(Header h) {
-        logger.fine("Reading header with tag value " + Integer.toHexString(h.tag) + " at pos=" + in_.buf_.pos_);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading header with tag value 0x%08x at pos=0x%x", h.tag, in_.buf_.pos_));
 
         //
         // Special cases are handled elsewhere
@@ -406,7 +408,8 @@ public final class ValueReader {
                 buf_.pos_ = save;
                 h.codebase = in_.read_string();
             }
-            logger.finer("Value header codebase value is " + h.codebase);
+            if (logger.isLoggable(Level.FINER))
+                logger.finer(String.format("Value header codebase value is \"%s\"", h.codebase));
         }
 
         //
@@ -474,7 +477,8 @@ public final class ValueReader {
                     buf_.pos_ = saveRep;
                     h.ids[i] = in_.read_string();
                 }
-                logger.finer("Value header respoitory id added " + h.ids[i]);
+                if (logger.isLoggable(Level.FINER))
+                    logger.finer(String.format("Value header respoitory id added \"%s\"", h.ids[i]));
             }
 
             //
@@ -515,7 +519,8 @@ public final class ValueReader {
 
             h.ids = new String[1];
             h.ids[0] = id;
-            logger.finer("Single header repository id read " + id);
+            if (logger.isLoggable(Level.FINER))
+                logger.finer(String.format("Single header repository id read \"%s\"", id));
         }
 
         //
@@ -534,8 +539,10 @@ public final class ValueReader {
         // Check for a chunk size
         //
         final int size = in_._OB_readLongUnchecked();
-        logger.finest("Reading new chunk.  Size value is " + Integer.toHexString(size) + " current nest is " + state.nestingLevel
-                + " current position=" + buf_.pos_);
+        if (logger.isLoggable(Level.FINEST))
+            logger.finest(String.format(
+                    "Reading new chunk.  Size value is 0x%x current nest is %d current position=0x%x",
+                    size, state.nestingLevel, buf_.pos_));
         if ((size >= 0) && (size < 0x7fffff00)) // chunk size
         {
             state.chunkStart = buf_.pos_;
@@ -550,7 +557,9 @@ public final class ValueReader {
             state.chunkStart = 0;
             state.chunkSize = 0;
         }
-        logger.finest("Chunk read.  start=" + state.chunkStart + ", size=" + state.chunkSize + " buffer position=" + buf_.pos_);
+        if (logger.isLoggable(Level.FINEST))
+            logger.finest(String.format("Chunk read.  start=0x%x, size=0x%x buffer position=0x%x",
+                    state.chunkStart, state.chunkSize, buf_.pos_));
     }
 
     private void initHeader(Header h) {
@@ -572,17 +581,18 @@ public final class ValueReader {
         // Increment our nesting level if we are chunked
         //
         if (chunkState_.chunked) {
-//          logger.finest("Reading chunk for chunked value.  Header tag=" + Integer.toHexString(h.tag) + " current position=" + buf_.pos_); 
+//          logger.finest("Reading chunk for chunked value.  Header tag=" + Integer.toHexString(h.tag) + " current position=" + buf_.pos_);
             readChunk(chunkState_);
             chunkState_.nestingLevel++;
-//          logger.fine("Chunk nesting level is " + chunkState_.nestingLevel + " current position=" + buf_.pos_ + " chunk size=" + chunkState_.chunkSize); 
+//          logger.fine("Chunk nesting level is " + chunkState_.nestingLevel + " current position=" + buf_.pos_ + " chunk size=" + chunkState_.chunkSize);
         }
     }
 
     private void skipChunk() {
         if (chunkState_.chunked) {
-            logger.fine("Skipping a chunked value.  nesting level=" + chunkState_.nestingLevel + " current position is " + buf_.pos_
-                    + " chunk end is " + (chunkState_.chunkStart + chunkState_.chunkSize));
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Skipping a chunked value.  nesting level=%d current position is 0x%x chunk end is 0x%x",
+                        chunkState_.nestingLevel, buf_.pos_, (chunkState_.chunkStart + chunkState_.chunkSize)));
             //
             // At this point, the unmarshalling code has finished. However,
             // we may have a truncated value, or we may have unmarshalled a
@@ -600,7 +610,8 @@ public final class ValueReader {
             if (chunkState_.chunkStart > 0) {
                 buf_.pos_ = chunkState_.chunkStart;
                 in_._OB_skip(chunkState_.chunkSize);
-                logger.finest("Skipping to end of current chunk.  New position is " + buf_.pos_);
+                if (logger.isLoggable(Level.FINEST))
+                    logger.finest(String.format("Skipping to end of current chunk.  New position is 0x%x", buf_.pos_));
             }
 
             chunkState_.chunkStart = 0;
@@ -612,7 +623,8 @@ public final class ValueReader {
             //
             int level = chunkState_.nestingLevel;
             int tag = in_._OB_readLongUnchecked();
-            logger.finest("Skipping chunk:  read tag value =" + tag);
+            if (logger.isLoggable(Level.FINEST))
+                logger.finest(String.format("Skipping chunk:  read tag value =0x%08x", tag));
             while ((tag >= 0) || ((tag < 0) && (tag < -chunkState_.nestingLevel))) {
                 if (tag >= 0x7fffff00) {
                     logger.finest("Skipping chunk:  reading a nested chunk value");
@@ -628,18 +640,21 @@ public final class ValueReader {
                     nest.state.nestingLevel = level;
                     readHeader(nest);
                 } else if (tag >= 0) {
-                    logger.finest("Skipping chunk:  skipping over a chunk for length " + tag);
+                    if (logger.isLoggable(Level.FINEST))
+                        logger.finest(String.format("Skipping chunk:  skipping over a chunk for length 0x%x", tag));
                     //
                     // Chunk size - advance the stream past the chunk
                     //
                     in_._OB_skip(tag);
                 } else {
-                    logger.finest("Skipping chunk:  chunk end tag=" + Integer.toHexString(tag) + " current level=" + level);
+                    if (logger.isLoggable(Level.FINEST))
+                        logger.finest(String.format("Skipping chunk:  chunk end tag=0x%08x current level=%d",
+                                tag, level));
                     //
                     // tag is less than 0, so this is an end tag for a nested
                     // value
                     //
-                    // this can terminate more than a single level. 
+                    // this can terminate more than a single level.
                     level = (-tag) - 1;
                 }
 
@@ -647,7 +662,8 @@ public final class ValueReader {
                 // Read the next tag
                 //
                 tag = in_._OB_readLongUnchecked();
-                logger.finest("Skipping chunk:  read tag value =" + tag);
+                if (logger.isLoggable(Level.FINEST))
+                    logger.finest(String.format("Skipping chunk:  read tag value=0x%08x", tag));
             }
 
             //
@@ -661,7 +677,8 @@ public final class ValueReader {
 
             chunkState_.nestingLevel--;
 
-            logger.finest("New chunk nesting level is " + chunkState_.nestingLevel);
+            if (logger.isLoggable(Level.FINEST))
+                logger.finest(String.format("New chunk nesting level is %d", chunkState_.nestingLevel));
             if (chunkState_.nestingLevel == 0) {
                 chunkState_.chunked = false;
             } else {
@@ -673,8 +690,10 @@ public final class ValueReader {
                 readChunk(chunkState_);
             }
 
-            logger.finest("Final chunk state is nesting level=" + chunkState_.nestingLevel + " current position is " + buf_.pos_ + " chunk end is "
-                    + (chunkState_.chunkStart + chunkState_.chunkSize));
+            if (logger.isLoggable(Level.FINEST))
+                logger.finest(String.format(
+                        "Final chunk state is nesting level=%d current position is 0x%x chunk end is 0x%x",
+                        chunkState_.nestingLevel, buf_.pos_, (chunkState_.chunkStart + chunkState_.chunkSize)));
         }
     }
 
@@ -771,29 +790,31 @@ public final class ValueReader {
         }
     }
 
-    private Serializable read(CreationStrategy strategy) {
-        final Header h = new Header();
+    private java.io.Serializable read(CreationStrategy strategy) {
+        Header h = new Header();
         h.tag = in_.read_long();
 
-//      logger.fine("Read tag value " + Integer.toHexString(h.tag)); 
+//      logger.fine("Read tag value " + Integer.toHexString(h.tag));
         if (h.tag == 0) {
             return null;
         } else if (h.tag == -1) {
             return readIndirection(strategy);
         } else if (h.tag < 0x7fffff00) {
-            throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
+            throw new org.omg.CORBA.MARSHAL(String.format(
+                    "Illegal valuetype tag 0x%08x",
+                    h.tag));
         } else {
             initHeader(h);
             // read_value() may be called to skip over a secondary custom valuetype.
             // If so, return an internal marker object so it shows up if misused.
-            final Serializable result = isSecondaryCustomValuetype(h) ? 
-                    SecondaryValuetypeMarker.ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE 
+            final Serializable result = isSecondaryCustomValuetype(h) ?
+                    SecondaryValuetypeMarker.ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE
                     : strategy.create(h);
             skipChunk();
             return result;
         }
     }
-    
+
     private enum SecondaryValuetypeMarker {
         ATTEMPT_TO_READ_CUSTOM_DATA_AS_VALUE
     }
@@ -802,18 +823,20 @@ public final class ValueReader {
         // there must be exactly one repository ID
         if (h.ids.length != 1)
             return false;
-        
+
         // the repository ID must start with one of the Java-to-IDL spec prefixes
         final String repId = h.ids[0];
         if (!(repId.startsWith("RMI:org.omg.custom.") || repId.startsWith("RMI:org.omg.customRMI.")))
             return false;
-        
+
         // it matched enough of the rules, so treat it as a secondary custom valuetype
 
         // there should not be a codebase (tolerate but log this)
         if (h.codebase != null) {
-            final String fmt = "Secondary custom marshal valuetype found with non-null codebase: \"%s\", repId: \"%s\"";
-            logger.fine(String.format(fmt, h.codebase, repId));
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format(
+                        "Secondary custom marshal valuetype found with non-null codebase: \"%s\", repId: \"%s\"",
+                        h.codebase, repId));
         }
 
         return true;
@@ -834,7 +857,7 @@ public final class ValueReader {
                 }
 
                 for (int i = 0; i < tc.member_count(); i++) {
-//                  logger.fine("writing member of typecode " + tc.member_type(i).kind().value()); 
+//                  logger.fine("writing member of typecode " + tc.member_type(i).kind().value());
                     out.write_InputStream(in_, tc.member_type(i));
                 }
             } else if (tc.kind() == TCKind.tk_value_box) {
@@ -868,16 +891,16 @@ public final class ValueReader {
     private TypeCode findTypeCode(String id, TypeCode tc) {
         TypeCode result = null;
         TypeCode t = tc;
-//      logger.finer("Locating type code for id " + id); 
+//      logger.finer("Locating type code for id " + id);
         while (result == null) {
             try {
                 final TypeCode t2 = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(t);
-//              logger.finer("Checking typecode " + id + " against " + t2.id()); 
+//              logger.finer("Checking typecode " + id + " against " + t2.id());
                 if (id.equals(t2.id())) {
                     result = t;
                 } else if ((t2.kind() == TCKind.tk_value) && (t2.type_modifier() == VM_TRUNCATABLE.value)) {
                     t = t2.concrete_base_type();
-//                  logger.finer("Iterating with concrete type " + t.id()); 
+//                  logger.finer("Iterating with concrete type " + t.id());
                 } else {
                     break;
                 }
@@ -902,7 +925,8 @@ public final class ValueReader {
     }
 
     private Serializable readRMIValue(Header h, Class<? extends Serializable> clz, String repid) {
-        logger.fine("Reading RMI value of type " + repid);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading RMI value of type \"%s\"", repid));
         if (valueHandler == null) {
             valueHandler = javax.rmi.CORBA.Util.createValueHandler();
         }
@@ -916,7 +940,7 @@ public final class ValueReader {
         }
 
         final String className = Util.idToClassName(repid, "");
-        String codebase = h.codebase;
+        String codebase  = h.codebase;
 
         if (codebase == null) {
             codebase = in_.__getCodeBase();
@@ -924,9 +948,9 @@ public final class ValueReader {
 
         Class repoClass = resolveRepoClass(className, codebase);
 
-        // if we have a non-null codebase and can't resolve this, throw an 
-        // exception now.  Otherwise, we'll try again after grabbing the remote 
-        // codebase. 
+        // if we have a non-null codebase and can't resolve this, throw an
+        // exception now.  Otherwise, we'll try again after grabbing the remote
+        // codebase.
         if ((repoClass == null) && (codebase != null) && !codebase.isEmpty()) {
             throw new MARSHAL("class " + className + " not found (cannot load from " + codebase + ")");
         }
@@ -967,12 +991,16 @@ public final class ValueReader {
         try {
             serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
-            logger.log(Level.FINE, "RuntimeException happens when reading GIOP stream coming to pos_=" + in_.buf_.pos_);
-            logger.log(Level.FINE, "Wrong data section: \n" + in_.dumpData());
-            final int currentpos = in_.buf_.pos_;
-            in_.buf_.pos_ = 0;
-            logger.log(Level.FINE, "Full GIOP stream dump: \n" + in_.dumpData());
-            in_.buf_.pos_ = currentpos;
+            if (logger.isLoggable(Level.FINE)) {
+                logger.fine(String.format(
+                        "RuntimeException happens when reading GIOP stream coming to pos_=0x%x",
+                        in_.buf_.pos_));
+                logger.fine(String.format("Wrong data section:%n%s", in_.dumpData()));
+                final int currentpos = in_.buf_.pos_;
+                in_.buf_.pos_ = 0;
+                logger.fine(String.format("Full GIOP stream dump:%n%s", in_.dumpData()));
+                in_.buf_.pos_ = currentpos;
+            }
             throw ex;
         }
 
@@ -980,7 +1008,10 @@ public final class ValueReader {
     }
 
     private Class resolveRepoClass(String name, String codebase) {
-        logger.fine("Attempting to resolve class " + name + " from codebase " + codebase);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format(
+                    "Attempting to resolve class \"%s\" from codebase \"%s\"",
+                    name, codebase));
         if (name.startsWith("[")) {
             int levels = 0;
             for (int i = 0; name.charAt(i) == '['; i++) {
@@ -988,33 +1019,33 @@ public final class ValueReader {
             }
             Class elementClass = null;
 
-            // now resolve the element descriptor to a class 
+            // now resolve the element descriptor to a class
             switch (name.charAt(levels)) {
-                case 'Z' :
+                case 'Z':
                     elementClass = Boolean.TYPE;
                     break;
-                case 'B' :
+                case 'B':
                     elementClass = Byte.TYPE;
                     break;
-                case 'S' :
+                case 'S':
                     elementClass = Short.TYPE;
                     break;
-                case 'C' :
+                case 'C':
                     elementClass = Character.TYPE;
                     break;
-                case 'I' :
+                case 'I':
                     elementClass = Integer.TYPE;
                     break;
-                case 'J' :
+                case 'J':
                     elementClass = Long.TYPE;
                     break;
-                case 'F' :
+                case 'F':
                     elementClass = Float.TYPE;
                     break;
-                case 'D' :
+                case 'D':
                     elementClass = Double.TYPE;
                     break;
-                case 'L' :
+                case 'L':
                     // extract the class from the name and resolve that.
                     elementClass = resolveRepoClass(name.substring(levels + 1, name.indexOf(';')), codebase);
                     if (elementClass == null) {
@@ -1025,21 +1056,21 @@ public final class ValueReader {
 
             // ok, we need to recurse and resolve the base array element class
             Object arrayInstance;
-            // this is easier with a single level     
+            // this is easier with a single level
             if (levels == 1) {
                 arrayInstance = Array.newInstance(elementClass, 0);
             } else {
-                // all elements will be zero 
+                // all elements will be zero
                 final int[] dimensions = new int[levels];
                 arrayInstance = Array.newInstance(elementClass, dimensions);
             }
-            // return the class associated with this array 
+            // return the class associated with this array
             return arrayInstance.getClass();
         } else {
             try {
                 return javax.rmi.CORBA.Util.loadClass(name, codebase, Util.getContextClassLoader());
             } catch (ClassNotFoundException ex) {
-                // this will be sorted out later 
+                // this will be sorted out later
                 return null;
             }
         }
@@ -1051,13 +1082,15 @@ public final class ValueReader {
     }
 
     public Serializable readValue(String id) {
-        logger.fine("Reading value of type " + id);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading value of type \"%s\"", id));
         final FactoryCreationStrategy strategy = new FactoryCreationStrategy(this, in_, id);
         return read(strategy);
     }
 
     public Serializable readValue(Class<? extends Serializable> clz) {
-        logger.fine("Reading value of type " + clz.getName());
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading value of type \"%s\"", clz.getName()));
         if (clz.equals(String.class)) {
             return WStringValueHelper.read(in_);
         }
@@ -1066,7 +1099,7 @@ public final class ValueReader {
         try {
             result = read(strategy);
         } catch (MARSHAL marshalex) {
-            logger.severe(marshalex.getMessage() + " at pos=" + (in_.buf_.pos_ - 4));
+            logger.severe(String.format("MARSHAL \"%s\", at pos=0x%x", marshalex.getMessage(), (in_.buf_.pos_ - 4)));
             if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
                 result = read(strategy);
             } else {
@@ -1113,7 +1146,7 @@ public final class ValueReader {
             return in_.read_Object();
         } else {
             return readValue();
-        }
+    }
     }
 
     public Object readAbstractInterface(Class clz) {
@@ -1126,7 +1159,7 @@ public final class ValueReader {
             return in_.read_Object(clz);
         } else {
             return readValue(clz);
-        }
+    }
     }
 
     //
@@ -1157,7 +1190,8 @@ public final class ValueReader {
         final Header h = new Header();
         h.tag = in_.read_long();
 
-        logger.fine("Read tag value " + Integer.toHexString(h.tag));
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Read tag value 0x%08x", h.tag));
         h.headerPos = buf_.pos_ - 4; // adjust for alignment
         h.state.copyFrom(chunkState_);
 
@@ -1200,7 +1234,7 @@ public final class ValueReader {
                 // TypeCode of the indirected value.
                 //
                 result = tc;
-            } else {
+        } else {
                 throw new MARSHAL("Cannot find value for indirection");
             }
         } else {
@@ -1208,7 +1242,8 @@ public final class ValueReader {
                 throw new MARSHAL("Illegal valuetype tag 0x" + Integer.toHexString(h.tag));
             }
 
-            logger.fine("Remarshalling header with tag value " + h.tag);
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Remarshalling header with tag value 0x%08x", h.tag));
 
             //
             // Add valuetype to position map
@@ -1258,7 +1293,8 @@ public final class ValueReader {
             // OutputStream.
             //
 
-            logger.fine("Attempting to resolve typeId " + tcId);
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Attempting to resolve typeId \"%s\"", tcId));
             //
             // See if the TypeCode ID matches any of the valuetype's IDs -
             // stop at the first match
@@ -1266,7 +1302,10 @@ public final class ValueReader {
             String id = null;
             int idPos;
             for (idPos = 0; idPos < h.ids.length; idPos++) {
-                logger.finer("Comparing type id " + tcId + " against " + h.ids[idPos]);
+                if (logger.isLoggable(Level.FINER))
+                    logger.finer(String.format(
+                            "Comparing type id \"%s\" against \"%s\"",
+                            tcId, h.ids[idPos]));
                 if (tcId.equals(h.ids[idPos])) {
                     id = h.ids[idPos];
                     break;
@@ -1276,15 +1315,21 @@ public final class ValueReader {
             // if this is null, then try again to see if we can find a class in the ids list
             // that is compatible with the base type.  This will require resolving the classes.
             if (id == null) {
-                // see if we can resolve the type for the stored type code 
+                // see if we can resolve the type for the stored type code
                 final Class<?> baseType = Util.idToClass(tcId, "");
                 if (baseType != null) {
                     for (idPos = 0; idPos < h.ids.length; idPos++) {
-                        logger.finer("Comparing type id " + tcId + " against " + h.ids[idPos]);
+                        if (logger.isLoggable(Level.FINER))
+                            logger.finer(String.format(
+                                    "Considering base types of id \"%s\" against \"%s\"",
+                                    tcId, h.ids[idPos]));
                         final Class idType = Util.idToClass(h.ids[idPos], "");
                         if (idType != null) {
-                            // if these classes are assignment compatible, go with that as the type. 
-                            logger.finer("Comparing type id " + baseType.getName() + " against " + idType.getName());
+                            // if these classes are assignment compatible, go with that as the type.
+                            if (logger.isLoggable(Level.FINER))
+                                logger.finer(String.format(
+                                        "Comparing type id \"%s\" against \"%s\"",
+                                        baseType.getName(), idType.getName()));
                             if (baseType.isAssignableFrom(idType)) {
                                 id = h.ids[idPos];
                                 break;
@@ -1318,7 +1363,8 @@ public final class ValueReader {
             // then we have no way to remarshal the data
             //
             if ((h.ids.length > 0) && (id == null) && (factoryId == null)) {
-                logger.fine("Unable to resolve a factory for type " + tcId);
+                if (logger.isLoggable(Level.FINE))
+                    logger.fine(String.format("Unable to resolve a factory for type \"%s\"", tcId));
                 throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": insufficient information to copy valuetype",
                         MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
             }
@@ -1382,7 +1428,7 @@ public final class ValueReader {
 
                 if (result == null) {
                     result = tc;
-                }
+            }
             }
 
             skipChunk();
@@ -1418,7 +1464,10 @@ public final class ValueReader {
 
         final TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(tc);
 
-        logger.fine("Reading an Any value of kind=" + origTC.kind().value() + " from position " + buf_.pos_);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format(
+                    "Reading an Any value of kind=%d from position 0x%x",
+                    origTC.kind().value(), buf_.pos_));
 
         //
         // Check if the Any contains an abstract interface
@@ -1458,7 +1507,8 @@ public final class ValueReader {
         //
         try {
             final String id = origTC.id();
-            logger.fine("Reading an Any value of id=" + id);
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Reading an Any value of id=\"%s\"", id));
             if ("IDL:omg.org/CORBA/ValueBase:1.0".equals(id)) {
                 any.insert_Value(readValue(), tc);
                 return;
@@ -1510,7 +1560,8 @@ public final class ValueReader {
             //
             final Header h = new Header();
             h.tag = in_.read_long();
-            logger.fine("Read tag value " + Integer.toHexString(h.tag));
+            if (logger.isLoggable(Level.FINE))
+                logger.fine(String.format("Read tag value 0x%08x", h.tag));
 
             //
             // Check tag for special cases
@@ -1543,7 +1594,8 @@ public final class ValueReader {
                     initHeader(h);
                     final StringHolder idH = new StringHolder();
                     final Serializable vb = strategy.create(h, idH);
-                    logger.fine("Obtained a value of type " + vb.getClass().getName());
+                    if (logger.isLoggable(Level.FINE))
+                        logger.fine(String.format("Obtained a value of type \"%s\"", vb.getClass().getName()));
                     skipChunk();
 
                     //
@@ -1596,7 +1648,8 @@ public final class ValueReader {
     public void beginValue() {
         final Header h = new Header();
         h.tag = in_.read_long();
-        logger.fine("Read tag value " + Integer.toHexString(h.tag));
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Read tag value 0x%08x", h.tag));
         Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
         initHeader(h);
@@ -1611,13 +1664,13 @@ public final class ValueReader {
             return;
         }
 
-//      logger.finest("Checking chunk position.  end=" + (chunkState_.chunkStart + chunkState_.chunkSize) + " buffer position=" + buf_.pos_); 
+//      logger.finest("Checking chunk position.  end=" + (chunkState_.chunkStart + chunkState_.chunkSize) + " buffer position=" + buf_.pos_);
         //
         // If we've reached the end of the current chunk, then check
         // for the start of a new chunk
         //
         if ((chunkState_.chunkStart > 0) && ((chunkState_.chunkStart + chunkState_.chunkSize) == buf_.pos_)) {
-//          logger.finest("Reading chunk from check chunk"); 
+//          logger.finest("Reading chunk from check chunk");
             readChunk(chunkState_);
         }
     }
