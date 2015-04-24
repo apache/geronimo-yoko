@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.osgi.locator;
+package org.apache.yoko.util.osgi.locator;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,13 +24,13 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 /**
  * The implementation of the provider registry used to store
  * the bundle registrations.
  */
-public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegistry, Register {
+public class ProviderRegistryImpl implements org.apache.yoko.util.osgi.ProviderRegistry, Register {
 
     private static final Logger log = Logger.getLogger(ProviderRegistryImpl.class.getName());
     // our mapping between a provider id and the implementation information.  There

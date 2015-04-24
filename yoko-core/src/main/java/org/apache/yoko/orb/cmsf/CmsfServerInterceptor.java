@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.IORUtil;
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;

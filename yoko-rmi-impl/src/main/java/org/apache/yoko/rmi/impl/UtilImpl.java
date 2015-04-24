@@ -46,8 +46,8 @@ import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.UtilDelegate;
 import javax.rmi.CORBA.ValueHandler;
 
-import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
+import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;

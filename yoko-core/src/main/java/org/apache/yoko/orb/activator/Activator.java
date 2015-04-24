@@ -1,6 +1,6 @@
 package org.apache.yoko.orb.activator;
 
-import org.apache.yoko.osgi.locator.activator.AbstractBundleActivator;
+import org.apache.yoko.util.osgi.locator.activator.AbstractBundleActivator;
 
 public class Activator extends AbstractBundleActivator {
 

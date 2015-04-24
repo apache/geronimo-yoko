@@ -1,4 +1,4 @@
-package org.apache.yoko.rmi.cmsf;
+package org.apache.yoko.util.cmsf;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
