@@ -23,8 +23,8 @@ import java.util.logging.Logger;
 import org.omg.CORBA.portable.ValueOutputStream;
 
 final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
-    static final Logger logger = Logger.getLogger(OutputStream.class.getName());
-    
+    static final Logger LOGGER = Logger.getLogger(OutputStream.class.getName());
+
     private org.apache.yoko.orb.OB.ORBInstance orbInstance_; // Java only
 
     public org.apache.yoko.orb.OCI.Buffer buf_;
@@ -62,7 +62,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     // Write a gap of four bytes (ulong aligned), avoids byte shifts
     private int writeGap() {
-        logger.finest("Writing a gap value"); 
+        LOGGER.finest("Writing a gap value");
         addCapacity(4, 4);
         int result = buf_.pos_;
         buf_.pos_ += 4;
@@ -71,7 +71,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private void writeLength(int start) {
         int length = buf_.pos_ - (start + 4);
-        logger.finest("Writing a length value of " + length + " at offset " + start); 
+        LOGGER.finest("Writing a length value of " + length + " at offset " + start);
 
         buf_.data_[start++] = (byte) (length >>> 24);
         buf_.data_[start++] = (byte) (length >>> 16);
@@ -104,8 +104,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 return;
             }
         }
-        
-        logger.finest("Writing a type code of type " + tc.kind().value()); 
+
+        LOGGER.finest("Writing a type code of type " + tc.kind().value());
 
         //
         // For performance reasons, handle the primitive TypeCodes first
@@ -140,7 +140,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (indirectionPos != null) {
             write_long(-1);
             int offs = indirectionPos.intValue() - buf_.pos_;
-            logger.finest("Writing an indirect type code for offset " + offs); 
+            LOGGER.finest("Writing an indirect type code for offset " + offs);
             write_long(offs);
         } else {
             write_ulong(tc.kind().value());
@@ -436,6 +436,24 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
+    private int roundUp(final int i, final int align) {
+        switch (align) {
+            case 0x00: return i;
+            case 0x01: return i;
+            case 0x02: return ((i + 0b0001) & ~(0b0001));
+            case 0x04: return ((i + 0b0011) & ~(0b0011));
+            case 0x08: return ((i + 0b0111) & ~(0b0111));
+            case 0x10: return ((i + 0b1111) & ~(0b1111));
+            default:
+                if (LOGGER.isLoggable(Level.WARNING))
+                    LOGGER.warning(String.format("Aligning on a strange number 0x%x", align));
+                final int j = (i + align - 1);
+                return (j - (j % align));
+        }
+    }
+
+    private static final byte PAD_BYTE = (byte)0xbd;
+
     private void addCapacity(int size, int align) {
         // use addCapacity(int) if align == 0
         org.apache.yoko.orb.OB.Assert._OB_assert(align > 0);
@@ -457,12 +475,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             alignNext_ = 0;
         }
 
-        //
-        // Align to the requested boundary
-        //
-        int newPos = buf_.pos_ + align - 1;
-        newPos -= newPos % align;
-        buf_.pos_ = newPos;
+        final int newPos = roundUp(buf_.pos_, align);
 
         //
         // If there isn't enough room, then reallocate the buffer
@@ -470,6 +483,13 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         final int len = newPos + size;
         if (len > buf_.len_) {
             buf_.realloc(len);
+        }
+
+        //
+        // Pad to the requested boundary
+        //
+        for (; buf_.pos_ < newPos; buf_.pos_++) {
+            buf_.data_[buf_.pos_] = PAD_BYTE;
         }
     }
 
@@ -535,7 +555,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
         //
         // pre-convert the character if necessary
-        // 
+        //
         if (wCharConversionRequired_)
             value = converter.convert(value);
 
@@ -620,7 +640,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
                 //
                 // write 2-byte character in big endian
-                // 
+                //
                 buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
                 buf_.data_[buf_.pos_++] = (byte) (value & 0xff);
             }
@@ -639,12 +659,12 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
                 //
                 // write the octet length at the start
-                // 
+                //
                 buf_.data_[buf_.pos_++] = 2;
 
                 //
                 // write the character in big endian format
-                // 
+                //
                 buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
                 buf_.data_[buf_.pos_++] = (byte) (value & 0xff);
             }
@@ -731,7 +751,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         final char[] arr = value.toCharArray();
         final int len = arr.length;
 
-        logger.finest("Writing wstring value " + value); 
+        LOGGER.finest("Writing wstring value " + value);
         //
         // get converter/writer instance
         //
@@ -763,7 +783,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = 0; i < len; i++)
                 write_wchar(arr[i], true);
 
-            // 
+            //
             // and the null terminator
             //
             write_wchar((char) 0, true);
@@ -779,7 +799,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
         //
         // we've handled GIOP 1.0/1.1 above so this must be GIOP 1.2+
-        // 
+        //
         if (wCharWriterRequired_) {
             for (int i = 0; i < len; i++) {
                 char v = arr[i];
@@ -817,7 +837,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = 0; i < len; i++) {
                 char v = arr[i];
 
-                // 
+                //
                 // check for conversion
                 //
                 if (wCharConversionRequired_)
@@ -845,7 +865,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         //
         // this matches the behaviour of this function in the Java ORB
         // and not what is outlined in the java.io.OutputStream
-        // 
+        //
         write_long(b);
     }
 
@@ -860,11 +880,11 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 buf_.len_);
         if (buf_.len_ > 0)
             System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.len_);
-        
-// this is a useful tracepoint, but produces a lot of data, so turn on only 
-// if really needed. 
+
+// this is a useful tracepoint, but produces a lot of data, so turn on only
+// if really needed.
 //      if (logger.isLoggable(Level.FINEST)) {
-//          logger.fine("new input stream created:\n" + buf.dumpData()); 
+//          logger.fine("new input stream created:\n" + buf.dumpData());
 //      }
 
         InputStream in = new InputStream(buf, 0, false, codeConverters_,
@@ -960,7 +980,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_string(String value) {
-        logger.finest("Writing string value " + value); 
+        LOGGER.finest("Writing string value " + value);
         final char[] arr = value.toCharArray();
         int len = arr.length;
         int capacity = len + 1;
@@ -1189,7 +1209,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_Object(org.omg.CORBA.Object value) {
         if (value == null) {
-            logger.finest("Writing a null CORBA object value"); 
+            LOGGER.finest("Writing a null CORBA object value");
             org.omg.IOP.IOR ior = new org.omg.IOP.IOR();
             ior.type_id = "";
             ior.profiles = new org.omg.IOP.TaggedProfile[0];
@@ -1226,7 +1246,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_any(org.omg.CORBA.Any value) {
-        logger.finest("Writing an ANY value of type " + value.type().kind()); 
+        LOGGER.finest("Writing an ANY value of type " + value.type().kind());
         write_TypeCode(value.type());
         value.write_value(this);
     }
@@ -1323,8 +1343,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
 
         try {
-            logger.fine("writing a value of type " + tc.kind().value()); 
-            
+            LOGGER.fine("writing a value of type " + tc.kind().value());
+
             switch (tc.kind().value()) {
             case org.omg.CORBA.TCKind._tk_null:
             case org.omg.CORBA.TCKind._tk_void:
@@ -1827,9 +1847,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 org.apache.yoko.orb.OB.Assert._OB_assert("unsupported types");
             }
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);    
+            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);    
+            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
         }
     }
 
