@@ -34,6 +34,11 @@ public final class CmsfThreadLocal {
         final Version version = value.get();
         if (LOGGER.isLoggable(Level.FINER))
             LOGGER.finer(String.format("CMSF thread local version retrieved: %s", version));
+        if (version == null) {
+            if (LOGGER.isLoggable(Level.FINE))
+                LOGGER.fine("CMSF thread local was not set - returning CMSFv1");
+            return Version.CMSFv1.value;
+        }
         return version.value;
     }
 
