@@ -75,7 +75,7 @@
         <module>yoko-spec-corba</module>
         <module>yoko-rmi-spec</module>
         <module>yoko-rmi-impl</module>
-        <module>yoko-osgi</module>
+        <module>yoko-util</module>
     </modules>
 
     <dependencyManagement>
@@ -93,7 +93,7 @@
             </dependency>
             <dependency>
                 <groupId>org.apache.yoko</groupId>
-                <artifactId>yoko-osgi</artifactId>
+                <artifactId>yoko-util</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

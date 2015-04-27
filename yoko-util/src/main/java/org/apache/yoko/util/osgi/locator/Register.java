@@ -18,7 +18,7 @@
  */
 
 
-package org.apache.yoko.osgi.locator;
+package org.apache.yoko.util.osgi.locator;
 
 /**
  * @version $Rev$ $Date$

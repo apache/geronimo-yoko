@@ -9,7 +9,7 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.LocalObject;
 import org.omg.IOP.TAG_RMI_CUSTOM_MAX_STREAM_FORMAT;

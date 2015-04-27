@@ -29,7 +29,7 @@ import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.yoko.rmi.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 
 abstract class ObjectWriter extends ObjectOutputStream {
     protected final Serializable object;

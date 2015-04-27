@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 public final class PluginManager {
     //

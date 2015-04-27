@@ -26,7 +26,7 @@ import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 
 // This class must be public and not final

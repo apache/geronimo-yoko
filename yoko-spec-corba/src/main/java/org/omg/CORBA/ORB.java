@@ -16,7 +16,7 @@
  */
 package org.omg.CORBA;
 
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 import java.security.PrivilegedAction;
 import java.security.AccessController;
