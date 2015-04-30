@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.MARSHAL;
 
 public class CustomMarshaledObjectReader extends DelegatingObjectReader {
     private enum State {
@@ -97,7 +98,7 @@ public class CustomMarshaledObjectReader extends DelegatingObjectReader {
      * and prepares its outer instance when the custom data is
      * first read.
      */
-    private class DefaultWriteObjectReader extends DelegatingObjectReaderWithObjectInputStreamBeforeReadHook {
+    private class DefaultWriteObjectReader extends DelegatingObjectReaderWithBeforeReadHook {
 
         private boolean allowDefaultRead = true;
 
@@ -116,8 +117,12 @@ public class CustomMarshaledObjectReader extends DelegatingObjectReader {
         }
 
         @Override
-        void beforeRead() throws IOException {
-            CustomMarshaledObjectReader.this.readCustomRMIValue();
+        void beforeRead() {
+            try {
+                CustomMarshaledObjectReader.this.readCustomRMIValue();
+            } catch (IOException e) {
+                throw (MARSHAL)new MARSHAL(e.toString()).initCause(e);
+            }
         }
     }
 }

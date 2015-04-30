@@ -13,23 +13,18 @@ abstract class DelegatingObjectReader extends ObjectReader {
     private ObjectReader delegate;
 
     public DelegatingObjectReader() throws IOException {}
-    
+
     void delegateTo(ObjectReader delegate) {
         this.delegate = delegate;
-    }
-
-    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
-        try {
-            delegate.enterRecursion();
-            return delegate.readAbstractObject();
-        } finally {
-            delegate.exitRecursion();
-        }
     }
 
     //////////////////////////////////////
     // ONLY DELEGATE METHODS BELOW HERE //
     //////////////////////////////////////
+
+    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
+        return delegate.readObjectOverride();
+    }
 
     public int read(byte[] b) throws IOException {
         return delegate.read(b);
@@ -116,25 +111,19 @@ abstract class DelegatingObjectReader extends ObjectReader {
     public String readUTF() throws IOException {
         return delegate.readUTF();
     }
-    
+
     ///////////////////////////////////////
     // delegate methods for ObjectReader //
     ///////////////////////////////////////
 
-    void _startValue() throws IOException {
+    void _startValue() {
         delegate._startValue();
     }
-    void _endValue() throws IOException {
+    void _endValue() {
         delegate._endValue();
     }
     void setCurrentValueDescriptor(ValueDescriptor desc) {
         delegate.setCurrentValueDescriptor(desc);
-    }
-    void enterRecursion() {
-        delegate.enterRecursion();
-    }
-    void exitRecursion() throws InvalidObjectException {
-        delegate.exitRecursion();
     }
     Object readAbstractObject() throws IndirectionException {
         return delegate.readAbstractObject();
@@ -157,5 +146,4 @@ abstract class DelegatingObjectReader extends ObjectReader {
     void readExternal(Externalizable ext) throws IOException, ClassNotFoundException {
         delegate.readExternal(ext);
     }
-
 }

@@ -1,26 +1,30 @@
 package org.apache.yoko.rmi.impl;
 
+import java.io.Externalizable;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.NotActiveException;
 import java.io.ObjectInputStream;
 import java.io.ObjectInputValidation;
+import java.rmi.Remote;
 
-abstract class DelegatingObjectReaderWithObjectInputStreamBeforeReadHook extends DelegatingObjectReader {
-    private final ObjectInputStream delegate;
+import org.omg.CORBA.portable.IndirectionException;
 
-    DelegatingObjectReaderWithObjectInputStreamBeforeReadHook(ObjectReader delegate) throws IOException {
+abstract class DelegatingObjectReaderWithBeforeReadHook extends DelegatingObjectReader {
+    private final ObjectReader delegate;
+
+    DelegatingObjectReaderWithBeforeReadHook(ObjectReader delegate) throws IOException {
         super.delegateTo(delegate);
         this.delegate = delegate;
     }
 
-    abstract void beforeRead() throws IOException;
+    abstract void beforeRead();
 
     @Override
     final void delegateTo(ObjectReader delegate) {
         throw new UnsupportedOperationException();
     }
-    
+
     //////////////////////////////////////
     // ONLY DELEGATE METHODS BELOW HERE //
     //////////////////////////////////////
@@ -131,5 +135,37 @@ abstract class DelegatingObjectReaderWithObjectInputStreamBeforeReadHook extends
     public String readUTF() throws IOException {
         beforeRead();
         return delegate.readUTF();
+    }
+
+    ///////////////////////////////////////
+    // delegate methods for ObjectReader //
+    ///////////////////////////////////////
+    Object readAbstractObject() throws IndirectionException {
+        beforeRead();
+        return delegate.readAbstractObject();
+    }
+    Object readAny() throws IndirectionException {
+        beforeRead();
+        return delegate.readAny();
+    }
+    Object readValueObject() throws IndirectionException {
+        beforeRead();
+        return delegate.readValueObject();
+    }
+    Object readValueObject(Class<?> clz) throws IndirectionException {
+        beforeRead();
+        return delegate.readValueObject(clz);
+    }
+    org.omg.CORBA.Object readCorbaObject(Class<?> type) {
+        beforeRead();
+        return delegate.readCorbaObject(type);
+    }
+    Remote readRemoteObject(Class<?> type) {
+        beforeRead();
+        return delegate.readRemoteObject(type);
+    }
+    void readExternal(Externalizable ext) throws IOException, ClassNotFoundException {
+        beforeRead();
+        delegate.readExternal(ext);
     }
 }
