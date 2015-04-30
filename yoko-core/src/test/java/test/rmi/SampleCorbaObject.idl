@@ -20,6 +20,7 @@ module test {
   module rmi {
     interface SampleCorba {
       attribute long i;
+      attribute string s;
     };
   };
 };
