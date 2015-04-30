@@ -207,12 +207,12 @@ public class CorbaObjectReader extends ObjectReaderBase {
     }
 
     @Override
-    protected void _startValue() throws IOException {
+    protected void _startValue() {
         ((ValueInputStream)in).start_value();
     }
 
     @Override
-    protected void _endValue() throws IOException {
+    protected void _endValue() {
         ((ValueInputStream)in).end_value();
     }
 }

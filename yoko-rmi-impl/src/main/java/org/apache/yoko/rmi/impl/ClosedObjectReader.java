@@ -123,31 +123,25 @@ class ClosedObjectReader extends ObjectReader {
 
     // ObjectReader methods
 
-    void _startValue() throws IOException {
+    void _startValue() {
         throw newException();
     }
-    void _endValue() throws IOException {
+    void _endValue() {
         throw newException();
     }
     void setCurrentValueDescriptor(ValueDescriptor desc) {
         throw newException();
     }
-    void enterRecursion() {
+    Object readAbstractObject() {
         throw newException();
     }
-    void exitRecursion() throws InvalidObjectException {
+    Object readAny() {
         throw newException();
     }
-    Object readAbstractObject() throws IndirectionException {
+    Object readValueObject() {
         throw newException();
     }
-    Object readAny() throws IndirectionException {
-        throw newException();
-    }
-    Object readValueObject() throws IndirectionException {
-        throw newException();
-    }
-    Object readValueObject(Class<?> clz) throws IndirectionException {
+    Object readValueObject(Class<?> clz) {
         throw newException();
     }
     org.omg.CORBA.Object readCorbaObject(Class<?> type) {
@@ -156,7 +150,12 @@ class ClosedObjectReader extends ObjectReader {
     Remote readRemoteObject(Class<?> type) {
         throw newException();
     }
-    void readExternal(Externalizable ext) throws IOException, ClassNotFoundException {
+    void readExternal(Externalizable ext) {
+        throw newException();
+    }
+
+    @Override
+    protected Object readObjectOverride() {
         throw newException();
     }
 }

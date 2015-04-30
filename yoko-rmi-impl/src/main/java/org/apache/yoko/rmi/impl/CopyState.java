@@ -474,11 +474,11 @@ public final class CopyState {
         }
 
         @Override
-        protected void _startValue() throws IOException {
+        protected void _startValue() {
         }
 
         @Override
-        protected void _endValue() throws IOException {
+        protected void _endValue() {
         }
 
     }

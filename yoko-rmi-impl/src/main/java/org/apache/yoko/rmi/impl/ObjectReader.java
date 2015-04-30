@@ -35,11 +35,9 @@ import org.omg.CORBA.portable.IndirectionException;
 abstract class ObjectReader extends ObjectInputStream {
     ObjectReader() throws IOException {}
 
-    abstract void _startValue() throws IOException;
-    abstract void _endValue() throws IOException;
+    abstract void _startValue();
+    abstract void _endValue();
     abstract void setCurrentValueDescriptor(ValueDescriptor desc);
-    abstract void enterRecursion();
-    abstract void exitRecursion() throws InvalidObjectException;
     abstract Object readAbstractObject() throws IndirectionException;
     abstract Object readAny() throws IndirectionException;
     abstract Object readValueObject() throws IndirectionException;
@@ -47,7 +45,9 @@ abstract class ObjectReader extends ObjectInputStream {
     abstract org.omg.CORBA.Object readCorbaObject(Class<?> type);
     abstract Remote readRemoteObject(Class<?> type);
     abstract void readExternal(Externalizable ext) throws IOException, ClassNotFoundException;
-
+    
+    @Override
+    protected abstract Object readObjectOverride() throws IOException, ClassNotFoundException;
 }
 
 abstract class ObjectReaderBase extends ObjectReader {
@@ -86,11 +86,11 @@ abstract class ObjectReaderBase extends ObjectReader {
         }
     }
 
-    void enterRecursion() {
+    private void enterRecursion() {
         recursionDepth += 1;
     }
 
-    void exitRecursion() throws InvalidObjectException {
+    private void exitRecursion() throws InvalidObjectException {
         recursionDepth -= 1;
 
         if (recursionDepth == 0) {
