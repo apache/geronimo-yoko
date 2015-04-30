@@ -32,7 +32,7 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
                 throw e;
             }
         }
-        CmsfThreadLocal.set(cmsf.getValue());
+        CmsfThreadLocal.push(cmsf.getValue());
         
         if (CmsfVersion.ENABLED) ri.add_request_service_context(CMSFv2.getSc(), false);
     }
@@ -43,17 +43,17 @@ public final class CmsfClientInterceptor extends LocalObject implements ClientRe
 
     @Override
     public void receive_reply(ClientRequestInfo ri) {
-        CmsfThreadLocal.reset();
+        CmsfThreadLocal.pop();
     }
 
     @Override
     public void receive_exception(ClientRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocal.reset();
+        CmsfThreadLocal.pop();
     }
 
     @Override
     public void receive_other(ClientRequestInfo ri) throws ForwardRequest {
-        CmsfThreadLocal.reset();
+        CmsfThreadLocal.pop();
     }
 
     @Override

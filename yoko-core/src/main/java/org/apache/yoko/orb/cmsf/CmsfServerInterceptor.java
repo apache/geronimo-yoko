@@ -34,6 +34,7 @@ public final class CmsfServerInterceptor extends LocalObject implements ServerRe
 
     @Override
     public void receive_request_service_contexts(ServerRequestInfo ri) throws ForwardRequest {
+        CmsfThreadLocal.reset();
         CmsfVersion cmsf = CMSFv1;
         try {
             ServiceContext sc = ri.get_request_service_context(RMICustomMaxStreamFormat.value);
@@ -64,7 +65,7 @@ public final class CmsfServerInterceptor extends LocalObject implements ServerRe
         } catch (InvalidSlot e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
-        CmsfThreadLocal.set(cmsf.getValue());
+        CmsfThreadLocal.push(cmsf.getValue());
     }
 
     @Override
