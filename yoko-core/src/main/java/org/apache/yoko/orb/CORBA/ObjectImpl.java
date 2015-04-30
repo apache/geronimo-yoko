@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 //
 // ObjectImpl is the base class for proprietary stubs with full

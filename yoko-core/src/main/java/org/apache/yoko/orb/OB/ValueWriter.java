@@ -22,7 +22,7 @@ import java.io.Serializable;
 import javax.rmi.CORBA.ValueHandler;
 
 import org.apache.yoko.orb.CORBA.ORB;
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IDLEntity;
@@ -651,7 +651,6 @@ final public class ValueWriter {
 
     public void endValue() {
         if (chunked_) {
-            boolean nc = needChunk_;
             needChunk_ = false;
 
             //
@@ -667,15 +666,7 @@ final public class ValueWriter {
                 buf_.pos_ = lastEndTagPos_; // same as "buf_.pos_ -= 4;"
                 out_.write_long(lastTag_);
             } else {
-                //
-                // This value does not coterminate with a nested value.
-                // If we still need a chunk, then add an empty chunk,
-                // otherwise end the current chunk.
-                //
-                if (nc)
-                    out_.write_long(0);
-                else
-                    endChunk();
+                endChunk();
 
                 //
                 // Write the end tag and remember its position

@@ -42,7 +42,8 @@
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-osgi</artifactId>
+            <artifactId>yoko-util</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.servicemix.bundles</groupId>
@@ -70,20 +71,17 @@
                     <instructions>
                         <Bundle-Activator>org.apache.yoko.rmi.osgi.activator.Activator</Bundle-Activator>
                         <Export-Package>
-                            org.apache.yoko.osgi.locator,
                             org.apache.yoko.rmi.impl,
                             org.apache.yoko.rmi.api,
                             org.apache.yoko.rmi.util,
                             org.apache.yoko.rmi.util.corba,
-                            org.apache.yoko.rmi.util.stub
+                            org.apache.yoko.rmi.util.stub,
+                            org.apache.yoko.rmi.cmsf
                         </Export-Package>
                         <Import-Package>
-                            !sun.*,*
+                            !sun.*,
+                            *
                         </Import-Package>
-                        <Private-Package>
-                            org.apache.yoko.rmi.osgi.activator,
-                            org.apache.yoko.osgi.locator.activator
-                        </Private-Package>
                     </instructions>
                 </configuration>
             </plugin>

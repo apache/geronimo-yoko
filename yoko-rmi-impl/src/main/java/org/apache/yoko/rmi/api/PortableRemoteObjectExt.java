@@ -20,8 +20,8 @@ package org.apache.yoko.rmi.api;
 
 import java.security.AccessController;
 
-import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 public class PortableRemoteObjectExt {
 

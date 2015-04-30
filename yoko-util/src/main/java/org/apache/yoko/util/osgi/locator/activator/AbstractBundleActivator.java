@@ -1,10 +1,10 @@
-package org.apache.yoko.osgi.locator.activator;
+package org.apache.yoko.util.osgi.locator.activator;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.yoko.osgi.locator.BundleProviderLoader;
-import org.apache.yoko.osgi.locator.Register;
+import org.apache.yoko.util.osgi.locator.BundleProviderLoader;
+import org.apache.yoko.util.osgi.locator.Register;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
 import org.osgi.framework.BundleContext;

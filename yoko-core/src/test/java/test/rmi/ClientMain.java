@@ -190,6 +190,19 @@ public class ClientMain extends Assert {
             SampleSerializable ser2 = (SampleSerializable) sample.getSerializable();
         }
 
+        public void testCmsfv2Data() throws RemoteException {
+            SampleCmsfv2ChildData d = new SampleCmsfv2ChildData();
+            for (int i = 0; i < 10; i++) {
+                System.out.println("Discarding " + d);
+                d = new SampleCmsfv2ChildData();
+            }
+
+            sample.setSerializable(d);
+            Serializable s = sample.getSerializable();
+            assertNotSame(d, s);
+            assertEquals(d, s);
+        }
+
         public void testEnum() throws RemoteException {
             SampleEnum se = SampleEnum.SAMPLE2;
             sample.setSerializable(se);
@@ -361,6 +374,7 @@ public class ClientMain extends Assert {
         test.testHashMap();
         test.testEnum();
         test.testEnumArray();
+        test.testCmsfv2Data();
         //myORB.destroy();
         System.out.println("Testing complete");
     }

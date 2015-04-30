@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 
