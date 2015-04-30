@@ -287,7 +287,7 @@ public class ClientMain extends Assert {
             assertEquals(42, sampleRemote2.getInt());
         }
 
-        public void testCorbaAttribute(SampleCorba corbaRef) throws RemoteException {
+        public void testCorbaAttributeWithHelper(SampleCorba corbaRef) throws RemoteException {
             SampleSerializable ser = new SampleSerializable();
             ser.setCorbaObj(corbaRef);
             sample.setSerializable(ser);
@@ -295,6 +295,20 @@ public class ClientMain extends Assert {
             SampleCorba corbaRef2 = SampleCorbaHelper.narrow(ser2.getCorbaObj());
             corbaRef.i(42);
             assertEquals(42, corbaRef2.i());
+            corbaRef.s("Don't panic!");
+            assertEquals("Don't panic!", corbaRef2.s());
+        }
+
+        public void testCorbaAttributeWithPRO(SampleCorba corbaRef) throws RemoteException {
+            SampleSerializable ser = new SampleSerializable();
+            ser.setCorbaObj(corbaRef);
+            sample.setSerializable(ser);
+            SampleSerializable ser2 = (SampleSerializable) sample.getSerializable();
+            SampleCorba corbaRef2 = (SampleCorba) PortableRemoteObject.narrow(ser2.getCorbaObj(), SampleCorba.class);
+            corbaRef.i(42);
+            assertEquals(42, corbaRef2.i());
+            corbaRef.s("Don't panic!");
+            assertEquals("Don't panic!", corbaRef2.s());
         }
 
         public void testComplexCorbaAttribute(SampleCorba corbaRef) throws RemoteException {
@@ -354,7 +368,8 @@ public class ClientMain extends Assert {
         test.testComplexRemoteArgument();
         test.testSerializableAttribute();
         test.testSerializableSelfReference();
-        test.testCorbaAttribute(SampleCorbaHelper.narrow(sampleCorbaRef));
+        test.testCorbaAttributeWithHelper(SampleCorbaHelper.narrow(sampleCorbaRef));
+        test.testCorbaAttributeWithPRO((SampleCorba) PortableRemoteObject.narrow(sampleCorbaRef, SampleCorba.class));
         test.testComplexCorbaAttribute(SampleCorbaHelper.narrow(sampleCorbaRef));
         test.testHashMap();
         test.testEnum();

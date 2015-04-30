@@ -1,11 +1,11 @@
 /**
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,12 +18,22 @@
 package test.rmi;
 
 public class SampleCorba_impl extends SampleCorbaPOA {
-	private int i;
-	public int i() {
-		return i;
-	}
+    private int i;
+    private String s;
 
-	public void i(int newI) {
-		this.i = newI;
-	}
+    public int i() {
+        return i;
+    }
+
+    public void i(int newI) {
+        this.i = newI;
+    }
+
+    public String s() {
+        return s;
+    }
+
+    public void s(String newS) {
+        s = newS;
+    }
 }
