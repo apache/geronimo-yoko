@@ -4,7 +4,6 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.NotActiveException;
-import java.io.ObjectInputStream;
 import java.io.ObjectInputValidation;
 import java.rmi.Remote;
 
@@ -50,14 +49,10 @@ abstract class DelegatingObjectReaderWithBeforeReadHook extends DelegatingObject
         beforeRead();
         return delegate.readUnshared();
     }
-    public void defaultReadObject() throws IOException, ClassNotFoundException {
-        beforeRead();
-        delegate.defaultReadObject();
-    }
-    public GetField readFields() throws IOException, ClassNotFoundException {
-        beforeRead();
-        return delegate.readFields();
-    }
+
+    public abstract void defaultReadObject() throws IOException, ClassNotFoundException;
+    public abstract GetField readFields() throws IOException, ClassNotFoundException;
+
     public void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException {
         delegate.registerValidation(obj, prio);
     }
@@ -136,6 +131,11 @@ abstract class DelegatingObjectReaderWithBeforeReadHook extends DelegatingObject
         beforeRead();
         return delegate.readUTF();
     }
+    @Override
+    protected final Object readObjectOverride() throws ClassNotFoundException ,IOException {
+        beforeRead();
+        return delegate.readObjectOverride();
+    };
 
     ///////////////////////////////////////
     // delegate methods for ObjectReader //
