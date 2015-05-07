@@ -1,7 +1,6 @@
 package org.apache.yoko.rmi.impl;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -11,7 +10,7 @@ import java.util.Set;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
 
-public class CustomMarshaledObjectReader extends DelegatingObjectReader {
+public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
     private enum State {
         UNINITIALISED, BEFORE_CUSTOM_DATA, IN_CUSTOM_DATA, CLOSED;
         private static final Map<State, Set<State>> TRANSITIONS;
@@ -93,12 +92,17 @@ public class CustomMarshaledObjectReader extends DelegatingObjectReader {
         }
     }
 
+    @Override
+    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
+        return super.readObjectOverride0();
+    }
+
     /**
      * This class handles reading the defaultWriteObject() data,
      * and prepares its outer instance when the custom data is
      * first read.
      */
-    private class DefaultWriteObjectReader extends DelegatingObjectReaderWithBeforeReadHook {
+    private final class DefaultWriteObjectReader extends DelegatingObjectReaderWithBeforeReadHook {
 
         private boolean allowDefaultRead = true;
 
@@ -112,9 +116,19 @@ public class CustomMarshaledObjectReader extends DelegatingObjectReader {
                 allowDefaultRead = false;
                 CustomMarshaledObjectReader.this.objectReader.defaultReadObject();
             } else {
-                throw new IllegalStateException("defaultReadObject() must not be called more than once");
+                throw new IllegalStateException("defaultReadObject() or readFields() must not be called more than once");
             }
         }
+
+        @Override
+        public GetField readFields() throws IOException ,ClassNotFoundException {
+            if (allowDefaultRead) {
+                allowDefaultRead = false;
+                return CustomMarshaledObjectReader.this.objectReader.readFields();
+            } else {
+                throw new IllegalStateException("readFields() or defaultReadObject() must not be called more than once");
+            }
+        };
 
         @Override
         void beforeRead() {

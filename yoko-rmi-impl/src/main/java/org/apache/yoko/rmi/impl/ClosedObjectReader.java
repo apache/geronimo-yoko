@@ -155,7 +155,7 @@ class ClosedObjectReader extends ObjectReader {
     }
 
     @Override
-    protected Object readObjectOverride() {
+    protected final Object readObjectOverride() {
         throw newException();
     }
 }

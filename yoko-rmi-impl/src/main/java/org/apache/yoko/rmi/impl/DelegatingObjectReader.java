@@ -22,7 +22,7 @@ abstract class DelegatingObjectReader extends ObjectReader {
     // ONLY DELEGATE METHODS BELOW HERE //
     //////////////////////////////////////
 
-    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
+    final Object readObjectOverride0() throws ClassNotFoundException, IOException {
         return delegate.readObjectOverride();
     }
 
