@@ -19,6 +19,16 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.omg.CORBA.Any;
+import org.omg.CSIIOP.CompoundSecMechList;
+import org.omg.CSIIOP.CompoundSecMechListHelper;
+import org.omg.CSIIOP.TAG_TLS_SEC_TRANS;
+import org.omg.CSIIOP.TLS_SEC_TRANS;
+import org.omg.CSIIOP.TLS_SEC_TRANSHelper;
+import org.omg.CSIIOP.TransportAddress;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.omg.IOP.CodecPackage.TypeMismatch;
 
 final public class Util {
     static public org.omg.IOP.IOR createIOR(String host, int port, String id,
@@ -101,7 +111,7 @@ final public class Util {
             org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo) {
         org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq = new org.apache.yoko.orb.OCI.ProfileInfoSeqHolder();
         profileInfoSeq.value = new org.apache.yoko.orb.OCI.ProfileInfo[0];
-        extractAllProfileInfos(ior, profileInfoSeq, false, null, 0, false);
+        extractAllProfileInfos(ior, profileInfoSeq, false, null, 0, false, null);
         if (profileInfoSeq.value.length > 0) {
             profileInfo.value = profileInfoSeq.value[0];
             return true;
@@ -156,7 +166,7 @@ final public class Util {
 
     static public void extractAllProfileInfos(org.omg.IOP.IOR ior,
             org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq,
-            boolean performMatch, String host, int port, boolean loopbackMatches) {
+            boolean performMatch, String host, int port, boolean loopbackMatches, Codec codec) {
         short portNo;
         if (port >= 0x8000) {
             portNo = (short) (port - 0xffff - 1);
@@ -221,6 +231,31 @@ final public class Util {
                                         && hostMatch(host, altHost,
                                                 loopbackMatches)) {
                                     match = true;
+                                }
+                            } else if (components[j].tag == org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST.value) {
+                                Any any;
+                                try {
+                                    any = codec.decode_value(components[j].component_data, CompoundSecMechListHelper.type());
+                                    CompoundSecMechList csml = CompoundSecMechListHelper.extract(any);
+
+                                    for (int k = 0; i < csml.mechanism_list.length && !match; i++) {
+                                        org.omg.IOP.TaggedComponent tc = csml.mechanism_list[k].transport_mech;
+                                        if (tc.tag == TAG_TLS_SEC_TRANS.value) {
+                                            Any tstAny = codec.decode_value(tc.component_data, TLS_SEC_TRANSHelper.type());
+                                            TLS_SEC_TRANS tst = TLS_SEC_TRANSHelper.extract(tstAny);
+                                            TransportAddress[] transportAddresses = tst.addresses;
+                                            for (TransportAddress addr: transportAddresses) {
+                                                if (portNo == addr.port && hostMatch(host, addr.host_name, loopbackMatches)) {
+                                                    match = true;
+                                                    break;
+                                                }
+                                            }
+
+                                        }
+                                    }
+
+                                } catch (FormatMismatch e) {
+                                } catch (TypeMismatch e) {
                                 }
                             }
                         }

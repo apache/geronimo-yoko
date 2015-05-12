@@ -540,8 +540,8 @@ final public class ValueWriter {
                 out_.write_boolean(false); // discriminator for valuetype
                 writeValue((java.io.Serializable) obj, null);
             } else
-                throw new org.omg.CORBA.MARSHAL("Object is not an object "
-                        + "reference or valuetype");
+                throw new org.omg.CORBA.MARSHAL("Object of class " + obj.getClass().getName() 
+                        + " is not an object reference or valuetype");
         } else {
             //
             // A nil abstract interface is marshalled as a null valuetype
