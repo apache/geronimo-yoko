@@ -23,6 +23,7 @@ import java.util.logging.Logger;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.IOP.Codec;
 
 final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Acceptor {
@@ -43,13 +44,15 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
     private java.net.InetAddress localAddress_; // The local address
 
-    private AcceptorInfo_impl info_; // Acceptor information
+    private final AcceptorInfo_impl info_; // Acceptor information
 
     private ListenerMap listenMap_;
 
-    private ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
+    private final ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
 
-    private ExtendedConnectionHelper extendedConnectionHelper_;
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
+    
+    private final Codec codec_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -421,7 +424,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
         for (int i = 0; i < hosts_.length; i++) {
             Util.extractAllProfileInfos(ior, profileInfoSeq, true, hosts_[i],
-                    port_, true);
+                    port_, true, codec_);
         }
 
         return profileInfoSeq.value;
@@ -437,7 +440,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     // ------------------------------------------------------------------
 
     public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
-            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params) {
+            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
         // System.out.println("Acceptor_impl");
         Assert._OB_assert((helper == null) ^ (extendedConnectionHelper == null));
         hosts_ = hosts;
@@ -445,6 +448,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         keepAlive_ = keepAlive;
         connectionHelper_ = helper;
         extendedConnectionHelper_ = extendedConnectionHelper;
+        codec_ = codec;
         info_ = new AcceptorInfo_impl(this);
         listenMap_ = lm;
 

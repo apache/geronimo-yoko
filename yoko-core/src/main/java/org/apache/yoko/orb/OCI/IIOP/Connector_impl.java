@@ -25,6 +25,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST;
+import org.omg.IOP.Codec;
 import org.omg.IOP.IOR;
 import org.omg.IOP.TaggedComponent;
 
@@ -52,11 +53,13 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
 
     private ListenerMap listenMap_;
 
-    private ConnectionHelper connectionHelper_;
+    private final ConnectionHelper connectionHelper_;
 
     private byte[] transportInfo;
 
-    private ExtendedConnectionHelper extendedConnectionHelper_;
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
+
+    private final Codec codec_;
 
 
     // ------------------------------------------------------------------
@@ -130,7 +133,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
             throw new org.omg.CORBA.TRANSIENT(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed)
-                            + ": " + ex.getMessage(),
+                            + "Error connecting to host=" + address + ", port=" + port_+ ": " + ex.getMessage(),
                     org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         } catch (java.io.IOException ex) {
@@ -138,7 +141,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
+                            + "Error connecting to host=" + address + ", port=" + port_ + ": " + ex.getMessage(),
                     org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
         }
@@ -394,7 +397,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq = new org.apache.yoko.orb.OCI.ProfileInfoSeqHolder();
         profileInfoSeq.value = new org.apache.yoko.orb.OCI.ProfileInfo[0];
         Util.extractAllProfileInfos(ior, profileInfoSeq, true, host_, port_,
-                false);
+                false, codec_);
 
         //check that the transport info matches ours.
         //we could return just the profiles that match rather than bailing if one doesn't match.
@@ -488,7 +491,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
     // ------------------------------------------------------------------
 
     public Connector_impl(org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies, String host, int port, boolean keepAlive,
-            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper) {
+            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, Codec codec) {
         // System.out.println("Connector_impl");
         ior_ = ior;
         policies_ = policies;
@@ -498,11 +501,13 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         info_ = new ConnectorInfo_impl(this, cb);
         listenMap_ = lm;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = null;
+        codec_ = codec;
         transportInfo = extractTransportInfo(ior);
     }
 
     public Connector_impl(org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies, String host, int port, boolean keepAlive,
-            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper helper) {
+            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper helper, Codec codec) {
         // System.out.println("Connector_impl");
         ior_ = ior;
         policies_ = policies;
@@ -511,7 +516,9 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         keepAlive_ = keepAlive;
         info_ = new ConnectorInfo_impl(this, cb);
         listenMap_ = lm;
+        connectionHelper_ = null;
         extendedConnectionHelper_ = helper;
+        codec_ = codec;
         transportInfo = extractTransportInfo(ior);
     }
 

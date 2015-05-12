@@ -21,11 +21,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
 
 final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.ConFactory {
     // the real logger backing instance.  We use the interface class as the locator
     static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.ConFactory.class.getName());
+    private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
 
     private boolean keepAlive_; // The keepalive flag
     
@@ -150,14 +157,22 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                 org.apache.yoko.orb.OCI.ConnectCB[] cbs = info_
                         ._OB_getConnectCBSeq();
                 logger.fine("Creating connector to host=" + body.host +", port=" + port);
+                Codec codec = null;
+                try {
+                        codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+                } catch (InvalidName e) {
+                    logger.fine("Could not obtain codec factory using name 'CodecFactory'");
+                } catch (UnknownEncoding e) {
+                    logger.fine("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
+                }
                 if (connectionHelper_ != null) {
                     seq.addElement(new Connector_impl(ior, policies, body.host,
                             port, keepAlive_, cbs, listenMap_,
-                            connectionHelper_));
+                            connectionHelper_, codec));
                 } else {
                     seq.addElement(new Connector_impl(ior, policies, body.host,
                             port, keepAlive_, cbs, listenMap_,
-                            extendedConnectionHelper_));
+                            extendedConnectionHelper_, codec));
                 }
                 //
                 // If this is a 1.1 profile, check for
@@ -200,7 +215,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                                     ._OB_getConnectCBSeq();
                             logger.fine("Creating alternate connector to host=" + host +", port=" + cport);
                             seq.addElement(new Connector_impl(ior, policies, host, cport,
-                                    keepAlive_, ccbs, listenMap_, connectionHelper_));
+                                    keepAlive_, ccbs, listenMap_, connectionHelper_, codec));
                         }
                 }
             }

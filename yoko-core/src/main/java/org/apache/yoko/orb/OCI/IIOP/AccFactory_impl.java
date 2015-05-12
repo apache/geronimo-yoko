@@ -22,12 +22,19 @@ import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
 
 final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.AccFactory {
 
     // the real logger backing instance.  We use the interface class as the locator
     static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.AccFactory.class.getName());
+    private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
     //
     // AccFactory information
     //
@@ -158,8 +165,16 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         }
 
         logger.fine("Creating acceptor for port=" + port);
+        Codec codec;
+        try {
+                codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+        } catch (InvalidName e) {
+            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
+        } catch (UnknownEncoding e) {
+            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
+        }
 
-        return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params);
+        return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 
     public void change_key(org.omg.IOP.IORHolder ior, byte[] key) {
