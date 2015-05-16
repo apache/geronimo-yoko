@@ -17,6 +17,10 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import org.apache.yoko.orb.OB.BootManager;
 import org.apache.yoko.orb.OB.DispatchStrategyFactory;
 import org.apache.yoko.orb.OB.Logger;
@@ -88,9 +92,9 @@ public final class ORBInstance {
 
     private RecursiveMutex orbSyncMutex_ = new RecursiveMutex();
 
-    private ThreadGroup serverWorkerGroup_;
+    private ExecutorService serverExecutor_;
 
-    private ThreadGroup clientWorkerGroup_;
+    private ExecutorService clientExecutor_;
 
     private org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry_;
 
@@ -171,10 +175,11 @@ public final class ORBInstance {
         defaultWcs_ = defaultWcs;
 
         //
-        // Create the server and client worker groups
+        // Create the server and client executors
+        // TODO why are these separate?
         //
-        clientWorkerGroup_ = new ThreadGroup("ClientWorkers");
-        serverWorkerGroup_ = new ThreadGroup("ServerWorkers");
+        clientExecutor_ = Executors.newCachedThreadPool();
+        serverExecutor_ = Executors.newCachedThreadPool();
 
         //
         // Use the TypeCode cache?
@@ -303,23 +308,8 @@ public final class ORBInstance {
         // coreTraceLevels_.destroy();
         // coreTraceLevels_ = null;
 
-        try {
-            //
-            // Destroy the client and server worker groups
-            //
-            serverWorkerGroup_.destroy();
-        } catch (IllegalThreadStateException ex) {
-            // we ignore this...occasionally, it is necessary 
-            // to kick the threads to force them to shutdown. 
-        }
-
-        try {
-            clientWorkerGroup_.destroy();
-        } catch (IllegalThreadStateException ex) {
-            // we ignore this...occasionally, it is necessary 
-            // to kick the threads to force them to shutdown. 
-        }
-
+        // Client and server executors shut down in the ORBControl
+        
         //
         // Destroy the ConFactoryRegistry
         //
@@ -424,12 +414,12 @@ public final class ORBInstance {
         return orbSyncMutex_;
     }
 
-    public ThreadGroup getServerWorkerGroup() {
-        return serverWorkerGroup_;
+    public ExecutorService getServerExecutor() {
+        return serverExecutor_;
     }
 
-    public ThreadGroup getClientWorkerGroup() {
-        return clientWorkerGroup_;
+    public ExecutorService getClientExecutor() {
+        return clientExecutor_;
     }
 
     public org.apache.yoko.orb.OCI.ConFactoryRegistry getConFactoryRegistry() {
