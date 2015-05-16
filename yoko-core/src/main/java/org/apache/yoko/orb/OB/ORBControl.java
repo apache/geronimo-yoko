@@ -25,6 +25,8 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
@@ -62,6 +64,9 @@ public final class ORBControl {
     // calls run, perform_work or work_pending)
     //
     private volatile Thread mainThread_;
+
+    private long shutdownTimeout_ = 2;//seconds
+
 
     // ----------------------------------------------------------------------
     // ORBControl private and protected member implementations
@@ -105,65 +110,34 @@ public final class ORBControl {
     }
 
     private void waitForServerThreads() {
-        ThreadGroup group = orbInstance_.getServerWorkerGroup();
-        synchronized (group) {
-            int timeOuts = 0;
+        shutdownExecutor(orbInstance_.getServerExecutor());
 
-            // it's possible that a thread will get stalled in a read(), which seems 
-            // to happen most often with SSLSockets.  We'll do some retry loops here 
-            // and interrupt any threads that seem to be taking an excessively long time 
-            // to clean up. 
-            int count = group.activeCount();
-            while (count > 0) {
-                try {
-                    group.wait(200);
-                } catch (InterruptedException ex) {
-                }
-                int newCount = group.activeCount();
-                // we woke up because of a timeout.  
-                if (newCount == count) {
-                    timeOuts++;
-                    // after 2 timeouts, interrupt any remaining threads in the 
-                    // group. 
-                    if (timeOuts == 2) {
-                        group.interrupt();
-                    }
-                    // we've waited a full second, and we still have active threads. 
-                    // time to give up waiting. 
-                    if (timeOuts >= 5) {
-                        break;
-                    }
-                }
-                count = newCount;
-            }
+        //
+        // Get the DispatchStrategyFactory implementation and
+        // destroy it. It must be destroyed here so that the
+        // thread pools get destroyed before OCI::Current_impl
+        // gets destroyed by the destruction of the Root
+        // POA. Otherwise, thread specific data for the thread
+        // pool threads will not get released.
+        //
+        DispatchStrategyFactory dsFactory = orbInstance_.getDispatchStrategyFactory();
 
-            //
-            // Get the DispatchStrategyFactory implementation and
-            // destroy it. It must be destroyed here so that the
-            // thread pools get destroyed before OCI::Current_impl
-            // gets destroyed by the destruction of the Root
-            // POA. Otherwise, thread specific data for the thread
-            // pool threads will not get released.
-            //
-            DispatchStrategyFactory dsFactory = orbInstance_.getDispatchStrategyFactory();
+        DispatchStrategyFactory_impl dsFactoryImpl = (DispatchStrategyFactory_impl) dsFactory;
 
-            DispatchStrategyFactory_impl dsFactoryImpl = (DispatchStrategyFactory_impl) dsFactory;
+        dsFactoryImpl._OB_destroy();
 
-            dsFactoryImpl._OB_destroy();
+        //
+        // Mark the server side state as shutdown and notify any
+        // waiting threads
+        //
+        state = State.SERVER_SHUTDOWN;
 
-            //
-            // Mark the server side state as shutdown and notify any
-            // waiting threads
-            //
-            state = State.SERVER_SHUTDOWN;
-
-            //
-            // Destroy the root POA
-            //
-            if (rootPOA_ != null) {
-                rootPOA_.destroy(true, true);
-                rootPOA_ = null;
-            }
+        //
+        // Destroy the root POA
+        //
+        if (rootPOA_ != null) {
+            rootPOA_.destroy(true, true);
+            rootPOA_ = null;
         }
     }
 
@@ -443,15 +417,7 @@ public final class ORBControl {
             // Wait for all the threads in the client worker group to
             // terminate
             //
-            ThreadGroup group = orbInstance_.getClientWorkerGroup();
-            synchronized (group) {
-                while (group.activeCount() > 0) {
-                    try {
-                        group.wait();
-                    } catch (InterruptedException ex) {
-                    }
-                }
-            }
+            shutdownExecutor(orbInstance_.getClientExecutor());
         }
 
         //
@@ -460,6 +426,16 @@ public final class ORBControl {
         //
         state = State.CLIENT_SHUTDOWN;
         notifyAll();
+    }
+
+    private void shutdownExecutor(ExecutorService executor) {
+        executor.shutdown();
+        try {
+            executor.awaitTermination(shutdownTimeout_, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        executor.shutdownNow();
     }
 
     //

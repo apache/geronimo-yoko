@@ -17,79 +17,52 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class GIOPConnectionThreaded extends GIOPConnection {
     static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
+    
     // ----------------------------------------------------------------
     // Inner helper classes
     // ----------------------------------------------------------------
 
-    //
-    // thread to handle connection shutdown
-    // 
-    public final class ShutdownThread extends Thread {
-        private GIOPConnectionThreaded parent_;
 
-        ShutdownThread(ThreadGroup group, GIOPConnectionThreaded parent) {
-            super(group, "Yoko:GIOPConnectionThreaded:ShutdownThread");
-            parent_ = parent;
-        }
+    public final class Shutdown implements Runnable {
 
         public void run() {
             try {
-                parent_.execShutdown();
+                execShutdown();
             } catch (RuntimeException ex) {
                 Assert._OB_assert(ex);
             }
-
-            //
-            // break cyclic dependency with parent
-            //
-            parent_ = null;
         }
     }
 
-    //
-    // thread to handle reception of messages
-    // 
-    public final class ReceiverThread extends Thread {
-        private GIOPConnectionThreaded parent_;
-
-        ReceiverThread(ThreadGroup group, GIOPConnectionThreaded parent) {
-            super(group, "Yoko:GIOPConnectionThreaded:ReceiverThread");
-            parent_ = parent;
-        }
-
+    public final class Receiver implements Runnable {
+        
         public void run() {
             try {
-                parent_.execReceive();
+                execReceive();
             } catch (RuntimeException ex) {
                 Assert._OB_assert(ex);
+            } finally {
+                if (receiverCount.decrementAndGet() ==0) {
+                    synchronized(receiverCount) {
+                        receiverCount.notifyAll();
+                    }
+                }
             }
-
-            //
-            // break cyclic dependency with parent
-            //
-            parent_ = null;
         }
     }
-
     // ----------------------------------------------------------------
     // Member data
     // ----------------------------------------------------------------
     // 
-
-    //
-    // the shutdown thread handle
-    //
-    protected Thread shutdownThread_ = null;
-
-    //
-    // the list of receiver threads
-    //
-    protected java.util.LinkedList receiverThreads_ = new java.util.LinkedList();
 
     //
     // the holding monitor to pause the receiver threads
@@ -105,6 +78,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // sending mutex to prevent multiple threads from sending at once
     //
     protected java.lang.Object sendMutex_ = new java.lang.Object();
+    
+    private boolean shuttingDown;
+    private AtomicInteger receiverCount = new AtomicInteger();
 
     // ----------------------------------------------------------------
     // Protected Methods
@@ -115,45 +91,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // Assumes 'this' is synchronized on entry
     //
     protected void addReceiverThread() {
-        //
-        // Retrieve the thread group
-        //
-        ThreadGroup group;
-        if ((properties_ & Property.CreatedByClient) != 0) {
-            group = orbInstance_.getClientWorkerGroup();
-        }
-        else {
-            group = orbInstance_.getServerWorkerGroup();
-        }
-
-        //
-        // Start receiver thread
-        //
-        Thread thr = new ReceiverThread(group, this);
-        thr.setDaemon(true); 
-        thr.start();
-
-        //
-        // add the thread to our list of threads
-        //
-        receiverThreads_.addLast(thr);
+        getExecutor().submit(new Receiver());
     }
 
-    //
-    // clean up any dead receiver threads
-    // assumes 'this' is synchronized on entry
-    //
-    protected void cleanupDeadReceiverThreads() {
-        java.util.ListIterator i = receiverThreads_.listIterator(0);
-
-        while (i.hasNext()) {
-            Thread thr = (Thread) i.next();
-
-            if (!thr.isAlive()) {
-                i.remove();
-            }
-        }
-    }
 
     //
     // pause a thread on a holding monitor if turned on
@@ -272,24 +212,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // now create the startup thread
         //
         try {
-            if (shutdownThread_ != null)
+            if (shuttingDown)
                 return;
 
-            //
-            // Retrieve the thread group
-            //
-            ThreadGroup group;
-            if ((properties_ & Property.CreatedByClient) != 0)
-                group = orbInstance_.getClientWorkerGroup();
-            else
-                group = orbInstance_.getServerWorkerGroup();
-
+            shuttingDown = true;
             //
             // start the shutdown thread
             //
-            shutdownThread_ = new ShutdownThread(group, this);
-            shutdownThread_.setDaemon(true);
-            shutdownThread_.start();
+            getExecutor().submit(new Shutdown());
         } catch (OutOfMemoryError ex) {
             processException(State.Closed, new org.omg.CORBA.IMP_LIMIT(
                     org.apache.yoko.orb.OB.MinorCodes.describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
@@ -317,6 +247,13 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     public GIOPConnectionThreaded(ORBInstance orbInstance,
             org.apache.yoko.orb.OCI.Transport transport, OAInterface oa) {
         super(orbInstance, transport, oa);
+    }
+    
+    private ExecutorService getExecutor() {
+        if ((properties_ & Property.CreatedByClient) != 0)
+                return orbInstance_.getClientExecutor();
+            else
+                return orbInstance_.getServerExecutor();
     }
 
     //
@@ -358,35 +295,20 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // Shutdown the receiver threads. There may not be a receiver
         // thread if the transport is SendOnly.
         //
-        if (transport_.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive
-                || transport_.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly) {
-            int timeout = shutdownTimeout_ * 1000;
-
-            synchronized (this) {
-                java.util.ListIterator i = receiverThreads_.listIterator();
-
-                while (i.hasNext()) {
-                    Thread t = (Thread) i.next();
-
-                    try {
-                        if (timeout > 0) {
-                            t.join(timeout);
-                        }
-                        else {
-                            t.join();
-                        }
-                    } catch (InterruptedException ex) {
-                        continue;
-                    }
-
-                    i.remove();
+        synchronized (receiverCount) {
+            while (receiverCount.get() > 0) {
+                try {
+                    receiverCount.wait(shutdownTimeout_);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
                 }
             }
         }
 
         //
         // We now close the connection actively, since it may still be
-        // open under certain circumstances. For example, the reciver
+        // open under certain circumstances. For example, the receiver
         // thread may not have terminated yet or the receive thread might
         // set the state to GIOPState::Error before termination.
         //
@@ -514,9 +436,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // case)
                 // 
                 if (haveBidirSCL) {
-                    synchronized (this) {
-                        addReceiverThread();
-                    }
+                    receiverCount.incrementAndGet();
+                    addReceiverThread();
                 }
 
                 upcall.invoke();
@@ -814,11 +735,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         if (transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly) {
             try {
-                synchronized (this) {
-                    if (receiverThreads_.size() > 0) {
-                        return;
-                    }
-
+                if (receiverCount.compareAndSet(0, 1)) {
                     addReceiverThread();
                 }
             } catch (OutOfMemoryError ex) {
@@ -851,10 +768,6 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         }
 
         synchronized (this) {
-            //
-            // cleanup any defunct receiver threads now
-            // 
-            cleanupDeadReceiverThreads();
 
             //
             // if we can't write messages then don't bother to proceed
