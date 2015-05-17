@@ -288,8 +288,12 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
 
         // 
         // shutdown the transport
+        // synchronization on sendMutex_ is needed to avoid a deadlock in some oracle and ibm jdks between send and shutdown
+        // https://bugs.openjdk.java.net/browse/JDK-8013809 deadlock in SSLSocketImpl between between write and close 
         // 
-        transport_.shutdown();
+        synchronized (sendMutex_) {
+            transport_.shutdown();
+        }
 
         //
         // Shutdown the receiver threads. There may not be a receiver
