@@ -1,6 +1,7 @@
 package org.apache.yoko.orb.cmsf;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.Any;
@@ -69,12 +70,12 @@ public enum CmsfVersion {
     }
     
     private static byte[] genData(byte value) {
-        Buffer buf = new Buffer();
+        Buffer buf = new Buffer(2);
         try (org.apache.yoko.orb.CORBA.OutputStream out = 
                 new org.apache.yoko.orb.CORBA.OutputStream(buf)) {
             out._OB_writeEndian();
             out.write_octet(value);
-            return buf.data();
+            return Arrays.copyOf(buf.data(), buf.length());
         } catch (IOException e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
