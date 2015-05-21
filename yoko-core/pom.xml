@@ -53,7 +53,8 @@
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-osgi</artifactId>
+            <artifactId>yoko-util</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -71,10 +72,6 @@
                 <configuration>
                     <instructions>
                         <Bundle-Activator>org.apache.yoko.orb.activator.Activator</Bundle-Activator>
-                        <Private-Package>
-                            org.apache.yoko.orb.activator,
-                            org.apache.yoko.osgi.locator.activator
-                        </Private-Package>
                     </instructions>
                 </configuration>
             </plugin>
@@ -99,6 +96,13 @@
                                 <artifactItem>
                                     <groupId>org.apache.yoko</groupId>
                                     <artifactId>yoko-rmi-spec</artifactId>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/endorsed</outputDirectory>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.yoko</groupId>
+                                    <artifactId>yoko-util</artifactId>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/endorsed</outputDirectory>

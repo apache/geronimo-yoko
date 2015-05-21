@@ -292,7 +292,7 @@ public final class CopyState {
 
     }
 
-    public class Reader extends ObjectReader {
+    public class Reader extends ObjectReaderBase {
 
         int cpos;
 
@@ -330,15 +330,15 @@ public final class CopyState {
             return dequeue();
         }
 
-        public Object readValueObject(Class clz) {
+        public Object readValueObject(Class<?> clz) {
             return dequeue();
         }
         
-        public org.omg.CORBA.Object readCorbaObject(Class type) {
+        public org.omg.CORBA.Object readCorbaObject(Class<?> type) {
             return (org.omg.CORBA.Object) dequeue();
         }
 
-        public java.rmi.Remote readRemoteObject(Class type) {
+        public java.rmi.Remote readRemoteObject(Class<?> type) {
             return (java.rmi.Remote) dequeue();
         }
 
@@ -471,6 +471,14 @@ public final class CopyState {
 
         public java.lang.String readUTF() throws java.io.IOException {
             return (String) dequeue();
+        }
+
+        @Override
+        protected void _startValue() {
+        }
+
+        @Override
+        protected void _endValue() {
         }
 
     }

@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+
 final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         ServerRequestInfoExt {
     //
@@ -377,7 +380,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         argStrategy_.setArgsAvail(false);
         argStrategy_.setExceptAvail(false);
 
-        try {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
             java.util.Enumeration e = interceptors.elements();
             while (e.hasMoreElements()) {
                 org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) e
@@ -405,7 +408,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
         status_ = NO_REPLY;
 
-        try {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
             java.util.Enumeration e = interceptors_.elements();
             while (e.hasMoreElements()) {
                 ((org.omg.PortableInterceptor.ServerRequestInterceptor) (e
@@ -431,14 +434,16 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         //
         servant_ = null;
 
-        int curr = interceptors_.size() - 1;
-        while (!interceptors_.isEmpty()) {
-            org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) interceptors_
-                    .elementAt(curr);
-            interceptors_.removeElementAt(curr);
-            --curr;
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
+            int curr = interceptors_.size() - 1;
+            while (!interceptors_.isEmpty()) {
+                org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) interceptors_
+                        .elementAt(curr);
+                interceptors_.removeElementAt(curr);
+                --curr;
 
-            i.send_reply(this);
+                i.send_reply(this);
+            }
         }
 
         //
@@ -464,7 +469,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         //
         servant_ = null;
 
-        try {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
             org.apache.yoko.orb.OB.Assert
                     ._OB_assert(status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
                             || status_ == org.omg.PortableInterceptor.USER_EXCEPTION.value);
@@ -506,7 +511,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         //
         servant_ = null;
 
-        try {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
             org.apache.yoko.orb.OB.Assert
                     ._OB_assert(status_ == org.omg.PortableInterceptor.LOCATION_FORWARD.value
                             || status_ == org.omg.PortableInterceptor.TRANSPORT_RETRY.value);

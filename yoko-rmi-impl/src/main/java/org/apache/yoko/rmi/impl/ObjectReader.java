@@ -1,20 +1,20 @@
 /**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 package org.apache.yoko.rmi.impl;
 
@@ -22,21 +22,42 @@ import java.io.Externalizable;
 import java.io.IOException;
 import java.io.InvalidObjectException;
 import java.io.NotActiveException;
+import java.io.ObjectInputStream;
 import java.io.ObjectInputValidation;
 import java.io.ObjectStreamClass;
+import java.io.Serializable;
+import java.rmi.Remote;
 import java.util.Map;
 
 import org.apache.yoko.rmi.util.PriorityQueue;
+import org.omg.CORBA.portable.IndirectionException;
 
+abstract class ObjectReader extends ObjectInputStream {
+    ObjectReader() throws IOException {}
 
-public abstract class ObjectReader extends java.io.ObjectInputStream {
+    abstract void _startValue();
+    abstract void _endValue();
+    abstract void setCurrentValueDescriptor(ValueDescriptor desc);
+    abstract Object readAbstractObject() throws IndirectionException;
+    abstract Object readAny() throws IndirectionException;
+    abstract Object readValueObject() throws IndirectionException;
+    abstract Object readValueObject(Class<?> clz) throws IndirectionException;
+    abstract org.omg.CORBA.Object readCorbaObject(Class<?> type);
+    abstract Remote readRemoteObject(Class<?> type);
+    abstract void readExternal(Externalizable ext) throws IOException, ClassNotFoundException;
+    
+    @Override
+    protected abstract Object readObjectOverride() throws IOException, ClassNotFoundException;
+}
+
+abstract class ObjectReaderBase extends ObjectReader {
     int recursionDepth = 0;
 
     final java.io.Serializable object;
 
     PriorityQueue callbacks;
 
-    ObjectReader(java.io.Serializable obj) throws java.io.IOException {
+    ObjectReaderBase(Serializable obj) throws IOException {
         super();
         this.object = obj;
     }
@@ -49,16 +70,14 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         this.desc = desc;
     }
 
-    public final void defaultReadObject() throws java.io.IOException,
-            ClassNotFoundException, java.io.NotActiveException {
+    public final void defaultReadObject() throws IOException, ClassNotFoundException, NotActiveException {
         if (desc == null) {
             throw new java.io.NotActiveException();
         }
         desc.defaultReadValue(this, object);
     }
 
-    protected final java.lang.Object readObjectOverride()
-            throws java.lang.ClassNotFoundException, java.io.IOException {
+    protected final Object readObjectOverride() throws ClassNotFoundException, IOException {
         try {
             enterRecursion();
             return readAbstractObject();
@@ -67,11 +86,11 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         }
     }
 
-    protected void enterRecursion() {
+    private void enterRecursion() {
         recursionDepth += 1;
     }
 
-    protected void exitRecursion() throws InvalidObjectException {
+    private void exitRecursion() throws InvalidObjectException {
         recursionDepth -= 1;
 
         if (recursionDepth == 0) {
@@ -84,7 +103,7 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         }
     }
 
-    private class Validation implements Comparable {
+    private class Validation implements Comparable<Validation> {
         ObjectInputValidation validator;
 
         int pri;
@@ -94,10 +113,8 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
             this.pri = pri;
         }
 
-        public int compareTo(Object other) {
-            Validation o = (Validation) other;
-
-            return pri - o.pri;
+        public int compareTo(Validation other) {
+            return pri - other.pri;
         }
 
         void validate() throws InvalidObjectException {
@@ -105,15 +122,13 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         }
     }
 
-    public synchronized void registerValidation(ObjectInputValidation obj,
-            int prio) throws NotActiveException, InvalidObjectException {
+    public synchronized void registerValidation(ObjectInputValidation obj, int prio) throws NotActiveException, InvalidObjectException {
         if (recursionDepth == 0) {
             throw new NotActiveException("readObject not Active");
         }
 
         if (obj == null) {
-            throw new InvalidObjectException(
-                    "Null is not a valid callback object");
+            throw new InvalidObjectException("Null is not a valid callback object");
         }
 
         Validation val = new Validation(obj, prio);
@@ -125,30 +140,11 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         callbacks.enqueue(val);
     }
 
-    public abstract Object readAbstractObject()
-            throws org.omg.CORBA.portable.IndirectionException;
+    public void close() throws java.io.IOException {}
 
-    public abstract Object readAny()
-            throws org.omg.CORBA.portable.IndirectionException;
-
-    public abstract Object readValueObject()
-            throws org.omg.CORBA.portable.IndirectionException;
-
-    public abstract Object readValueObject(Class clz)
-            throws org.omg.CORBA.portable.IndirectionException;
-
-    public abstract org.omg.CORBA.Object readCorbaObject(Class type);
-    
-    public abstract java.rmi.Remote readRemoteObject(Class type);
-    
-    public void close() throws java.io.IOException {
-        // skip //
-    }
-
-    public java.io.ObjectInputStream.GetField readFields()
-            throws java.io.IOException {
+    public java.io.ObjectInputStream.GetField readFields() throws IOException {
         if (desc == null) {
-            throw new java.io.NotActiveException();
+            throw new NotActiveException();
         }
 
         Map fieldMap = desc.readFields(this);
@@ -156,15 +152,15 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
         return new GetFieldImpl(fieldMap);
     }
 
-    public void readFully(byte[] arr) throws java.io.IOException {
+    public void readFully(byte[] arr) throws IOException {
         readFully(arr, 0, arr.length);
     }
 
-    public int readUnsignedByte() throws java.io.IOException {
+    public int readUnsignedByte() throws IOException {
         return ((int) readByte()) & 0xff;
     }
 
-    public int readUnsignedShort() throws java.io.IOException {
+    public int readUnsignedShort() throws IOException {
         int val = readShort();
         return val & 0xffff;
     }
@@ -173,7 +169,7 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
 
         Map fieldMap;
 
-        GetFieldImpl(java.util.Map map) {
+        GetFieldImpl(Map map) {
             fieldMap = map;
         }
 
@@ -301,11 +297,7 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
 
     }
 
-    /**
-     * @param ext
-     */
-    void readExternal(Externalizable ext) throws IOException,
-            ClassNotFoundException {
+    void readExternal(Externalizable ext) throws IOException, ClassNotFoundException {
         byte old = streamFormatVersion;
         try {
             streamFormatVersion = readByte();
@@ -314,5 +306,4 @@ public abstract class ObjectReader extends java.io.ObjectInputStream {
             streamFormatVersion = old;
         }
     }
-
 }

@@ -24,7 +24,7 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.AssertionFailed;
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
 import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 
 public class iiop implements PluginInit {
     static final Logger logger = Logger.getLogger(iiop.class.getName());

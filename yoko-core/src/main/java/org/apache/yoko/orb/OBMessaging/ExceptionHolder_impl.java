@@ -16,7 +16,7 @@
  */
 
 package org.apache.yoko.orb.OBMessaging;
-import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 
 public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {

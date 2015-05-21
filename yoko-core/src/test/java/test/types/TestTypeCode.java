@@ -22,6 +22,7 @@ import static org.junit.Assert.assertTrue;
 import org.omg.CORBA.*;
 
 public class TestTypeCode extends test.common.TestBase {
+    private static final boolean CHECK_IDL_NAMES = false;
     public TestTypeCode(ORB orb) {
         //
         // Test CompletionStatus
@@ -587,7 +588,7 @@ public class TestTypeCode extends test.common.TestBase {
         //
         // Check IDL name
         //
-        {
+        if (CHECK_IDL_NAMES) {
             String[] bogusNames = { "_foo", "1foo", "f.oo" };
             for (int i = 0; i < bogusNames.length; i++) {
                 try {

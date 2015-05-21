@@ -1,100 +1,108 @@
 /**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ * <p/>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p/>
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package org.apache.yoko.rmi.impl;
 
 
-public class CorbaObjectReader extends ObjectReader {
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.ValueInputStream;
+
+import javax.rmi.CORBA.Util;
+import javax.rmi.PortableRemoteObject;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.rmi.Remote;
+import java.util.Map;
+
+public class CorbaObjectReader extends ObjectReaderBase {
     final org.omg.CORBA_2_3.portable.InputStream in;
 
-    final java.util.Map offsetMap;
+    private final Map<Integer, Object> offsetMap;
 
-    CorbaObjectReader(org.omg.CORBA.portable.InputStream in,
-            java.util.Map offsetMap, java.io.Serializable obj)
-            throws java.io.IOException {
+    CorbaObjectReader(InputStream in, Map<Integer, Object> offsetMap, Serializable obj) throws IOException {
         super(obj);
-
         this.in = (org.omg.CORBA_2_3.portable.InputStream) in;
         this.offsetMap = offsetMap;
     }
 
-    public void readFully(byte[] arr, int off, int val)
-            throws java.io.IOException {
+    public void readFully(byte[] arr, int off, int val) throws IOException {
         in.read_octet_array(arr, off, val);
     }
 
-    public int skipBytes(int len) throws java.io.IOException {
-        byte[] data = new byte[len];
+    public int skipBytes(int len) throws IOException {
+        final byte[] data = new byte[len];
         readFully(data, 0, len);
         return len;
     }
 
-    public boolean readBoolean() throws java.io.IOException {
+    public boolean readBoolean() throws IOException {
         return in.read_boolean();
     }
 
-    public byte readByte() throws java.io.IOException {
+    public byte readByte() throws IOException {
         return in.read_octet();
     }
 
-    public int readUnsignedByte() throws java.io.IOException {
-        int val = in.read_octet();
+    public int readUnsignedByte() throws IOException {
+        final int val = in.read_octet();
         return val & 0xff;
     }
 
-    public short readShort() throws java.io.IOException {
+    public short readShort() throws IOException {
         return in.read_short();
     }
 
-    public int readUnsignedShort() throws java.io.IOException {
-        int val = in.read_short();
+    public int readUnsignedShort() throws IOException {
+        final int val = in.read_short();
         return val & 0xffff;
     }
 
-    public char readChar() throws java.io.IOException {
+    public char readChar() throws IOException {
         return in.read_wchar();
     }
 
-    public int readInt() throws java.io.IOException {
+    public int readInt() throws IOException {
         return in.read_long();
     }
 
-    public long readLong() throws java.io.IOException {
+    public long readLong() throws IOException {
         return in.read_longlong();
     }
 
-    public float readFloat() throws java.io.IOException {
+    public float readFloat() throws IOException {
         return in.read_float();
     }
 
-    public double readDouble() throws java.io.IOException {
+    public double readDouble() throws IOException {
         return in.read_double();
     }
 
-    /** @deprecated */
-    public java.lang.String readLine() throws java.io.IOException {
-        StringBuffer buf = new StringBuffer();
+    @Deprecated
+    public String readLine() throws IOException {
+        final StringBuilder buf = new StringBuilder();
 
         char ch;
 
         try {
             ch = (char) readUnsignedByte();
-        } catch (org.omg.CORBA.MARSHAL ex) {
+        } catch (MARSHAL ex) {
             return null;
         }
 
@@ -103,19 +111,20 @@ public class CorbaObjectReader extends ObjectReader {
 
             try {
                 ch = (char) readUnsignedByte();
-            } catch (org.omg.CORBA.MARSHAL ex) {
+            } catch (MARSHAL ex) {
                 // reached EOF
                 return buf.toString();
             }
 
-            if (ch == '\n')
+            if (ch == '\n') {
                 return buf.toString();
+            }
 
             if (ch == '\r') {
-                char ch2;
+                final char ch2;
                 try {
                     ch2 = (char) readUnsignedByte();
-                } catch (org.omg.CORBA.MARSHAL ex) {
+                } catch (MARSHAL ex) {
                     // reached EOF
                     return buf.toString();
                 }
@@ -129,77 +138,81 @@ public class CorbaObjectReader extends ObjectReader {
         } while (true);
     }
 
-    public java.lang.String readUTF() throws java.io.IOException {
+    public String readUTF() throws IOException {
         return in.read_wstring();
     }
 
-    public Object readAbstractObject()
-            throws org.omg.CORBA.portable.IndirectionException {
+    public Object readAbstractObject() throws IndirectionException {
         try {
             return in.read_abstract_interface();
-        } catch (org.omg.CORBA.portable.IndirectionException ex) {
-            return offsetMap.get(new Integer(ex.offset));
+        } catch (IndirectionException ex) {
+            return offsetMap.get(ex.offset);
         }
     }
 
-    public Object readAny() throws org.omg.CORBA.portable.IndirectionException {
+    public Object readAny() throws IndirectionException {
         try {
-            return javax.rmi.CORBA.Util.readAny(in);
-        } catch (org.omg.CORBA.portable.IndirectionException ex) {
-            return offsetMap.get(new Integer(ex.offset));
+            return Util.readAny(in);
+        } catch (IndirectionException ex) {
+            return offsetMap.get(ex.offset);
         }
     }
 
-    public Object readValueObject()
-            throws org.omg.CORBA.portable.IndirectionException {
+    public Object readValueObject() throws IndirectionException {
         try {
             return in.read_value();
-        } catch (org.omg.CORBA.portable.IndirectionException ex) {
-            return offsetMap.get(new Integer(ex.offset));
+        } catch (IndirectionException ex) {
+            return offsetMap.get(ex.offset);
         }
     }
 
-    public Object readValueObject(Class clz)
-            throws org.omg.CORBA.portable.IndirectionException {
+    public Object readValueObject(Class<?> clz)
+            throws IndirectionException {
         try {
             return in.read_value(clz);
-        } catch (org.omg.CORBA.portable.IndirectionException ex) {
-            return offsetMap.get(new Integer(ex.offset));
+        } catch (IndirectionException ex) {
+            return offsetMap.get(ex.offset);
         }
     }
-    
-    public org.omg.CORBA.Object readCorbaObject(Class type) {
-	org.omg.CORBA.Object objref = in.read_Object();
-	//objref = (org.omg.CORBA.Object) PortableRemoteObject.narrow(objref, type);
-	return objref;
+
+    public org.omg.CORBA.Object readCorbaObject(Class<?> type) {
+        return in.read_Object();
     }
 
-    public java.rmi.Remote readRemoteObject(Class type) {
-        org.omg.CORBA.Object objref = in.read_Object();
-        return (java.rmi.Remote) javax.rmi.PortableRemoteObject.narrow(objref,
-                type);
+    public Remote readRemoteObject(Class<?> type) {
+        final org.omg.CORBA.Object objref = in.read_Object();
+        return (Remote) PortableRemoteObject.narrow(objref, type);
     }
 
-    public int read() throws java.io.IOException {
+    public int read() throws IOException {
         return readUnsignedByte();
     }
 
-    public int read(byte[] arr) throws java.io.IOException {
+    public int read(byte[] arr) throws IOException {
         return read(arr, 0, arr.length);
     }
 
-    public int read(byte[] arr, int off, int len) throws java.io.IOException {
+    public int read(byte[] arr, int off, int len) throws IOException {
         readFully(arr, off, len);
         return len;
     }
 
-    public long skip(long len) throws java.io.IOException {
+    public long skip(long len) throws IOException {
         skipBytes((int) len);
         return len;
     }
 
-    public int available() throws java.io.IOException {
+    public int available() throws IOException {
         return in.available();
     }
 
+    @Override
+    protected void _startValue() {
+        ((ValueInputStream)in).start_value();
+    }
+
+    @Override
+    protected void _endValue() {
+        ((ValueInputStream)in).end_value();
+    }
 }

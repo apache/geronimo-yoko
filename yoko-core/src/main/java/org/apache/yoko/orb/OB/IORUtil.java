@@ -20,6 +20,22 @@ import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 
 public final class IORUtil {
+    public static void main(String...args) {
+        final byte[] ba = { 
+                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f
+                };
+        
+        System.out.println("----");
+        StringBuilder sb = new StringBuilder(200);
+        for (int i = 0; i < 0x10; i++) {
+            IORUtil.dump_octets(ba, i, 0x20, sb);
+            System.out.println(sb.toString());
+            System.out.println("----");
+            sb.setLength(0);
+        }
+    }
     
     private static void describeCSISecMechList(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
         byte[] coct = component.component_data;
@@ -293,43 +309,86 @@ public final class IORUtil {
          dump_octets(oct, 0, oct.length, sb); 
     }
 
+    private static final char[] HEX_DIGIT = "0123456789abcdef".toCharArray();
+    private static final int PRINTABLE_CHAR_LOW = 31;
+    private static final int PRINTABLE_CHAR_HIGH = 127;
     //
     // Convert an octet buffer into human-friendly data dump
     //
-    public static void dump_octets(byte[] oct, int offset, int count, StringBuilder sb) {
-        final int inc = 16;
-        
+    public static void dump_octets(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
         if (count <= 0) {
             return; 
         }
 
-        for (int i = offset; i < offset + count; i += inc) {
-            for (int j = i; j - i < inc; j++) {
-                if (j < offset + count) {
-                    int n = ((int) oct[j]) & 0xff;
-                    String hex = Integer.toHexString(n); 
-                    if (hex.length() == 1) {
-                        sb.append('0'); 
+        final StringBuilder ascii = new StringBuilder(18);
+        switch (offset%0x10) {
+            case 0:
+                break;
+            case 0xf: sb.append("  ");  ascii.append(" ");
+            case 0xe: sb.append("  ");  ascii.append(" ");
+            case 0xd: sb.append("  ");  ascii.append(" ");
+            case 0xc: sb.append("   "); ascii.append(" ");
+            case 0xb: sb.append("  ");  ascii.append(" ");
+            case 0xa: sb.append("  ");  ascii.append(" ");
+            case 0x9: sb.append("  ");  ascii.append(" ");
+            case 0x8: sb.append("   "); ascii.append(" ");
+            case 0x7: sb.append("  ");  ascii.append(" ");
+            case 0x6: sb.append("  ");  ascii.append(" ");
+            case 0x5: sb.append("  ");  ascii.append(" ");
+            case 0x4: sb.append("   "); ascii.append(" ");
+            case 0x3: sb.append("  ");  ascii.append(" ");
+            case 0x2: sb.append("  ");  ascii.append(" ");
+            case 0x1: sb.append("  ");  ascii.append(" ");
+        }
+        
+        ascii.append(" \"");
+        
+        for (int i = offset; i < (offset + count); i++) {
+            final int b = oct[i] & 0xff;
+            
+            // build up the ascii string for the end of the line
+            ascii.append((PRINTABLE_CHAR_LOW < b && b < PRINTABLE_CHAR_HIGH)? (char)b : '.');
+            
+            // print the high hex nybble
+            sb.append(HEX_DIGIT[b>>4]);
+            // and the low hex nybble
+            sb.append(HEX_DIGIT[b&0xf]);
+            
+            if (i%0x4 == (0x4-1)) {
+                // space the columns on every 4-byte boundary
+                sb.append(' ');
+                if (i%0x10 == (0x10-1)) {
+                    // write the ascii interpretation on the end of every line
+                    sb.append(ascii).append("\"\n");
+                    ascii.setLength(0);
+                    ascii.append(" \"");
+                    if (i%0x100 == (0x100-1)) {
+                        // separating line every 0x100 bytes
+                        //         00000000 00000000 00000000 00000000  "................"
+                        sb.append("-----------------------------------\n");
                     }
-                    sb.append(hex); 
-                    sb.append(' ');
-                } else {
-                    sb.append("   ");
                 }
             }
-
-            sb.append('"');
-
-            for (int j = i; j < offset + count && j - i < inc; j++) {
-                if (oct[j] >= (byte) 32 && oct[j] < (byte) 127) {
-                    sb.append((char) oct[j]);
-                }
-                else {
-                    sb.append('.');
-                }
-            }
-            sb.append('"');
-            sb.append('\n');
+        }
+        
+        switch ((offset+count)%0x10) {
+            case 0:
+                break;
+            case 0x1: sb.append("  ");
+            case 0x2: sb.append("  ");
+            case 0x3: sb.append("   ");
+            case 0x4: sb.append("  ");
+            case 0x5: sb.append("  ");
+            case 0x6: sb.append("  ");
+            case 0x7: sb.append("   ");
+            case 0x8: sb.append("  ");
+            case 0x9: sb.append("  ");
+            case 0xa: sb.append("  ");
+            case 0xb: sb.append("   ");
+            case 0xc: sb.append("  ");
+            case 0xd: sb.append("  ");
+            case 0xe: sb.append("  ");
+            case 0xf: sb.append("   ").append(ascii).append("\"\n");
         }
     }
 
