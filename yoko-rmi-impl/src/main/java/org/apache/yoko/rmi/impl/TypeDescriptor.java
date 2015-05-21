@@ -39,6 +39,13 @@ public abstract class TypeDescriptor extends ModelElement {
         return _java_class;
     }
 
+    @Override
+    public String toString() {
+        return String.format("%s{class=\"%s\",repId=\"%s\",arrRepId=\"%s\"}",
+                this.getClass().getName(), getJavaClass(),
+                getRepositoryID(), getRepositoryIDForArray());
+    }
+
     protected TypeDescriptor(Class type, TypeRepository repository) {
         _java_class = type;
         String typeName = type.getName(); 

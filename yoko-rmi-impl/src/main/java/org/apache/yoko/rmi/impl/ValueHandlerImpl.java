@@ -50,6 +50,10 @@ public class ValueHandlerImpl implements ValueHandler {
         return (ValueDescriptor) getRepository().getDescriptor(clz);
     }
 
+    private ValueDescriptor desc(String repId) {
+        return (ValueDescriptor)getRepository().getDescriptor(repId);
+    }
+
     private ValueDescriptor desc(Class clz, String repid, RunTime runtime) {
         try {
             return (ValueDescriptor) getRepository().getDescriptor(clz, repid,
@@ -263,24 +267,22 @@ public class ValueHandlerImpl implements ValueHandler {
         return result;
     }
 
-    FullValueDescription meta(String id) {
+    FullValueDescription meta(String repId) {
+        if (logger.isLoggable(Level.FINER))
+            logger.finer(String.format("meta \"%s\"", repId));
         try {
-            // System.out.println ("ValueHandlerImpl::meta "+id);
+            ValueDescriptor desc = desc(repId);
+            if (null == desc) {
+                Class clz = getClassFromRepositoryID(repId);
 
-            Class clz = getClassFromRepositoryID(id);
+                if (clz == null) {
+                    logger.warning("class not found: " + repId);
+                    throw new org.omg.CORBA.MARSHAL(0x4f4d0001,
+                            CompletionStatus.COMPLETED_MAYBE);
+                }
 
-            if (clz == null) {
-                logger.warning("class not found: " + id);
-                throw new org.omg.CORBA.MARSHAL(0x4f4d0001,
-                        CompletionStatus.COMPLETED_MAYBE);
+                desc = desc(clz);
             }
-
-            if (logger.isLoggable(Level.FINER)) {
-                logger.finer("meta " + id);
-            }
-
-            ValueDescriptor desc = (ValueDescriptor) getRepository()
-                    .getDescriptor(clz);
 
             return desc.getFullValueDescription();
         } catch (Throwable ex) {

@@ -20,6 +20,8 @@ package org.apache.yoko.rmi.impl;
 
 import java.io.Externalizable;
 import java.io.Serializable;
+import java.lang.ref.Reference;
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
@@ -27,9 +29,9 @@ import java.rmi.RemoteException;
 import java.sql.Date;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.WeakHashMap;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
@@ -45,31 +47,41 @@ import org.omg.CORBA.portable.IDLEntity;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 import org.omg.SendingContext.RunTime;
-
+import org.apache.yoko.rmi.util.SearchKey;
+import org.apache.yoko.rmi.util.WeakKey;
 
 public class TypeRepository {
-    static final Logger logger = Logger.getLogger(TypeRepository.class
-            .getName());
+    static final Logger logger = Logger.getLogger(TypeRepository.class.getName());
 
     org.omg.CORBA.ORB orb;
 
-    private static final class RepIdWeakMap {
-        private final Map<String, WeakReference<TypeDescriptor>> map = 
-                Collections.synchronizedMap(new WeakHashMap<String,WeakReference<TypeDescriptor>>());
+    private static final class TypeDescriptorCache {
+        private final ConcurrentMap<WeakKey<String>, WeakReference<TypeDescriptor>> map = new ConcurrentHashMap<>();
+        private final ReferenceQueue<String> staleKeys = new ReferenceQueue<>();
 
-        void put(String repId, TypeDescriptor desc) {
-            map.put(repId, new WeakReference<TypeDescriptor>(desc));
+        public TypeDescriptor get(String repId) {
+            cleanStaleKeys();
+            WeakReference<TypeDescriptor> ref = map.get(new SearchKey<String>(repId));
+            return (null == ref) ? null : ref.get();
         }
 
-        TypeDescriptor get(String repId) {
-            WeakReference<TypeDescriptor> value = map.get(repId);
-            return (value == null) ? null : value.get();
+        public void put(TypeDescriptor typeDesc) {
+            cleanStaleKeys();
+            final WeakReference<TypeDescriptor> value = new WeakReference<>(typeDesc);
+            map.putIfAbsent(new WeakKey<String>(typeDesc.getRepositoryID(), staleKeys), value);
+            map.putIfAbsent(new WeakKey<String>(typeDesc.getRepositoryIDForArray(), staleKeys), value);
+        }
+
+        private void cleanStaleKeys() {
+            for (Reference<? extends String> staleKey = staleKeys.poll(); staleKey != null; staleKey = staleKeys.poll()) {
+                map.remove(staleKey);
+            }
         }
     }
 
     private static final class LocalDescriptors extends ClassValue<TypeDescriptor> {
         private static final class Raw extends ClassValue<TypeDescriptor> {
-            private static final List<Class<?>> staticAnyTypes = 
+            private static final List<Class<?>> staticAnyTypes =
                     Collections.unmodifiableList(
                             Arrays.asList(Object.class, Externalizable.class, Serializable.class, Remote.class));
 
@@ -178,9 +190,9 @@ public class TypeRepository {
         }
 
         private final Raw rawValues;
-        private final RepIdWeakMap repIdDescriptors;
+        private final TypeDescriptorCache repIdDescriptors;
 
-        LocalDescriptors(TypeRepository repo, RepIdWeakMap repIdDescriptors) {
+        LocalDescriptors(TypeRepository repo, TypeDescriptorCache repIdDescriptors) {
             rawValues = new Raw(repo);
             this.repIdDescriptors = repIdDescriptors;
         }
@@ -188,7 +200,7 @@ public class TypeRepository {
         protected TypeDescriptor computeValue(Class<?> type) {
             final TypeDescriptor desc = rawValues.get(type);
             desc.init();
-            repIdDescriptors.put(desc.getRepositoryID(), desc);
+            repIdDescriptors.put(desc);
             return desc;
         }
 
@@ -199,23 +211,30 @@ public class TypeRepository {
         @Override
         protected ConcurrentMap<String,ValueDescriptor> computeValue(
                 Class<?> type) {
-            return new ConcurrentHashMap<String,ValueDescriptor>();
+            return new ConcurrentHashMap<String,ValueDescriptor>(1);
         }
     }
 
-    private final RepIdWeakMap repIdDescriptors;
+    private final TypeDescriptorCache repIdDescriptors;
     private final LocalDescriptors localDescriptors;
     private final FvdRepIdDescriptorMaps fvdDescMaps = new FvdRepIdDescriptorMaps();
     private final ConcurrentMap<String,ValueDescriptor> noTypeDescMap = new ConcurrentHashMap<String,ValueDescriptor>();
 
+    private static final Set<Class<?>> initTypes;
+
+    static {
+        initTypes = createClassSet(Object.class, String.class, ClassDesc.class, Date.class,
+                Externalizable.class, Serializable.class, Remote.class);
+    }
+
+    private static Set<Class<?>> createClassSet(Class<?>...types) {
+        return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(types)));
+    }
+
     public TypeRepository(org.omg.CORBA.ORB orb) {
         this.orb = orb;
-        repIdDescriptors = new RepIdWeakMap();
+        repIdDescriptors = new TypeDescriptorCache();
         localDescriptors = new LocalDescriptors(this, repIdDescriptors);
-
-        Class<?>[] initTypes = {
-                Object.class, String.class, ClassDesc.class, Date.class, 
-                Externalizable.class, Serializable.class, Remote.class };
 
         for (Class<?> type: initTypes) {
             localDescriptors.get(type);
@@ -260,9 +279,20 @@ public class TypeRepository {
     }
 
     public TypeDescriptor getDescriptor(Class<?> type) {
-        logger.fine("Requesting type descriptor for class " + type.getName());
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Requesting type descriptor for class \"%s\"", type.getName()));
         final TypeDescriptor desc = localDescriptors.get(type);
-        logger.fine("Class " + type.getName() + " resolves to " + desc.getClass().getName());
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Class \"%s\" resolves to %s", type.getName(), desc));
+        return desc;
+    }
+
+    public TypeDescriptor getDescriptor(String repId) {
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Requesting type descriptor for repId \"%s\"", repId));
+        final TypeDescriptor desc = repIdDescriptors.get(repId);
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("RepId \"%s\" resolves to %s", repId, desc));
         return desc;
     }
 
@@ -320,10 +350,10 @@ public class TypeRepository {
 
         ValueDescriptor newDesc = new FVDValueDescriptor(fvd, clz, this, repid, super_desc);
         ConcurrentMap<String, ValueDescriptor> remoteDescMap = (clz == null) ? noTypeDescMap : fvdDescMaps.get(clz);
-        clzdesc = remoteDescMap.putIfAbsent(repid, newDesc);
+        clzdesc = remoteDescMap.putIfAbsent(newDesc.getRepositoryID(), newDesc);
         if (clzdesc == null) {
             clzdesc = newDesc;
-            repIdDescriptors.put(repid, clzdesc);
+            repIdDescriptors.put(clzdesc);
         }
 
         return clzdesc;
@@ -409,14 +439,14 @@ public class TypeRepository {
             int len = current.length();
             match = false;
 
-            for (ByteString reservedPostfixe : reservedPostfixes) {
-                if (current.endsWith(reservedPostfixe)) {
+            for (ByteString reservedPostfix : reservedPostfixes) {
+                if (current.endsWith(reservedPostfix)) {
                     ByteBuffer buf = new ByteBuffer();
                     buf.append('_');
                     buf.append(result);
                     result = buf.toByteString();
 
-                    int resultLen = reservedPostfixe.length();
+                    int resultLen = reservedPostfix.length();
                     if (len > resultLen)
                         current = current.substring(0, len - resultLen);
                     else
@@ -432,16 +462,12 @@ public class TypeRepository {
         return name;
     }
 
-    static final java.util.Set<ByteString> keyWords = new java.util.HashSet<ByteString>();
-
-    static final ByteString[] reservedPostfixes = new ByteString[] {
-        new ByteString("Helper"), new ByteString("Holder"),
-        new ByteString("Operations"), new ByteString("POA"),
-        new ByteString("POATie"), new ByteString("Package"),
-        new ByteString("ValueFactory") };
+    private static final Set<ByteString> keyWords;
+    private static final Set<ByteString> reservedPostfixes;
 
     static {
-        String[] words = { "abstract", "boolean", "break", "byte", "case",
+        keyWords = createByteStringSet(
+                "abstract", "boolean", "break", "byte", "case",
                 "catch", "char", "class", "clone", "const", "continue",
                 "default", "do", "double", "else", "equals", "extends",
                 "false", "final", "finalize", "finally", "float", "for",
@@ -451,11 +477,17 @@ public class TypeRepository {
                 "protected", "public", "return", "short", "static", "super",
                 "switch", "synchronized", "this", "throw", "throws",
                 "toString", "transient", "true", "try", "void", "volatile",
-                "wait", "while" };
+                "wait", "while");
+        reservedPostfixes = createByteStringSet(
+                "Helper", "Holder", "Operations", "POA", "POATie", "Package", "ValueFactory");
+    }
 
+    private static Set<ByteString> createByteStringSet(String...words) {
+        final Set<ByteString> set = new HashSet<>(words.length);
         for (String word : words) {
-            keyWords.add(new ByteString(word));
+            set.add(new ByteString(word));
         }
+        return Collections.unmodifiableSet(set);
     }
 
 }
