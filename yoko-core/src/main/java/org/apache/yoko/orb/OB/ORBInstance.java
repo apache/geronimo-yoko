@@ -17,9 +17,15 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yoko.orb.OB.BootManager;
 import org.apache.yoko.orb.OB.DispatchStrategyFactory;
@@ -93,8 +99,10 @@ public final class ORBInstance {
     private RecursiveMutex orbSyncMutex_ = new RecursiveMutex();
 
     private ExecutorService serverExecutor_;
+    private Phaser serverPhaser = new Phaser(1);
 
     private ExecutorService clientExecutor_;
+    private Phaser clientPhaser = new Phaser(1);
 
     private org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry_;
 
@@ -418,8 +426,16 @@ public final class ORBInstance {
         return serverExecutor_;
     }
 
+    public Phaser getServerPhaser() {
+        return serverPhaser;
+    }
+    
     public ExecutorService getClientExecutor() {
         return clientExecutor_;
+    }
+    
+    public Phaser getClientPhaser() {
+        return clientPhaser;
     }
 
     public org.apache.yoko.orb.OCI.ConFactoryRegistry getConFactoryRegistry() {
@@ -468,4 +484,5 @@ public final class ORBInstance {
     public OrbAsyncHandler getAsyncHandler() {
         return asyncHandler_;
     }
+
 }

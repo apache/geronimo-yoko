@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OB;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -168,6 +170,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown),
                 org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown,
                 org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE), false);
+        arrive();
 
     }
 
@@ -183,8 +186,11 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         // don't shutdown if there are pending upcalls
         // 
-        if (upcallsInProgress_ > 0 || state_ != State.Closing)
+        if (upcallsInProgress_ > 0 || state_ != State.Closing) {
+            logger.fine("pending upcalls: " + upcallsInProgress_ + " state: " + state_);
+         
             return;
+        }
 
         //
         // send a CloseConnection if we can
@@ -205,10 +211,12 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     org.omg.GIOP.MsgType_1_1.CloseConnection, false, 0);
 
             messageQueue_.add(orbInstance_, out._OB_buffer());
+        } else {
+            logger.fine("could not send close connection message");
         }
 
         //
-        // now create the startup thread
+        // now create the shutdown thread
         //
         try {
             if (shuttingDown)
@@ -218,13 +226,27 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             //
             // start the shutdown thread
             //
-            getExecutor().submit(new Shutdown());
+            try {
+                getExecutor().submit(new Shutdown());
+            } catch (RejectedExecutionException ree) {
+                logger.log(Level.WARNING, "Could not submit shutdown task", ree);
+            }
         } catch (OutOfMemoryError ex) {
             processException(State.Closed, new org.omg.CORBA.IMP_LIMIT(
                     org.apache.yoko.orb.OB.MinorCodes.describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
                     org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO), false);
+        } finally {
+            arrive();
         }
+    }
+
+
+    private void arrive() {
+        if ((properties_ & Property.CreatedByClient) != 0)
+            orbInstance_.getClientPhaser().arrive();
+        else
+            orbInstance_.getServerPhaser().arrive();
     }
 
     // ----------------------------------------------------------------
@@ -237,6 +259,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     public GIOPConnectionThreaded(ORBInstance orbInstance,
             org.apache.yoko.orb.OCI.Transport transport, GIOPClient client) {
         super(orbInstance, transport, client);
+        orbInstance.getClientPhaser().register();
         start();
     }
 
@@ -246,13 +269,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     public GIOPConnectionThreaded(ORBInstance orbInstance,
             org.apache.yoko.orb.OCI.Transport transport, OAInterface oa) {
         super(orbInstance, transport, oa);
+        orbInstance.getServerPhaser().register();
     }
     
     private ExecutorService getExecutor() {
         if ((properties_ & Property.CreatedByClient) != 0)
-                return orbInstance_.getClientExecutor();
-            else
-                return orbInstance_.getServerExecutor();
+            return orbInstance_.getClientExecutor();
+        else
+            return orbInstance_.getServerExecutor();
     }
 
     //

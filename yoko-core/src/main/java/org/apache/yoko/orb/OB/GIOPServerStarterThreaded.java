@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
 
 final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
@@ -237,11 +238,13 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             // StateClosing for proper connection shutdown
                             //
                             Assert._OB_assert(state_ == StateClosed);
-
+                            logger.fine("Processing an inbound connection because state is closed"); 
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
+                            logger.fine("Created connection " + connection); 
 
                             connection.setState(GIOPConnection.State.Closing);
+                            logger.fine("set connection state to closing"); 
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
                         String msg = "can't accept connection\n" + ex.getMessage();

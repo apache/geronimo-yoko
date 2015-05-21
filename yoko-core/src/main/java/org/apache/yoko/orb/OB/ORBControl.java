@@ -26,7 +26,10 @@ import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
@@ -110,7 +113,7 @@ public final class ORBControl {
     }
 
     private void waitForServerThreads() {
-        shutdownExecutor(orbInstance_.getServerExecutor());
+        shutdownExecutor(orbInstance_.getServerPhaser(), orbInstance_.getServerExecutor());
 
         //
         // Get the DispatchStrategyFactory implementation and
@@ -417,7 +420,7 @@ public final class ORBControl {
             // Wait for all the threads in the client worker group to
             // terminate
             //
-            shutdownExecutor(orbInstance_.getClientExecutor());
+            shutdownExecutor(orbInstance_.getClientPhaser(), orbInstance_.getClientExecutor());
         }
 
         //
@@ -428,12 +431,16 @@ public final class ORBControl {
         notifyAll();
     }
 
-    private void shutdownExecutor(ExecutorService executor) {
-        executor.shutdown();
+    private void shutdownExecutor(Phaser phaser, ExecutorService executor) {
+        int phase = phaser.arrive();//release the system's "lock"
+        //phaser advances after all GIOPConnectionThreaded have shut down (gracefully or abort)
         try {
-            executor.awaitTermination(shutdownTimeout_, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+            phaser.awaitAdvanceInterruptibly(phase, shutdownTimeout_, TimeUnit.SECONDS);
+        } catch (InterruptedException e1) {
             Thread.currentThread().interrupt();
+        } catch (TimeoutException e) {
+        } finally {
+            phaser.forceTermination();
         }
         executor.shutdownNow();
     }

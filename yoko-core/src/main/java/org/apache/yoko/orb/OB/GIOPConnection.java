@@ -23,6 +23,7 @@ import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 
 abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
+    static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(GIOPConnection.class.getName());
     // ----------------------------------------------------------------
     // Inner classes
     // ----------------------------------------------------------------
@@ -1440,8 +1441,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     public void setState(int newState) {
         synchronized (this) {
             if (state_ == newState
-                    || (state_ != State.Holding && newState < state_))
+                    || (state_ != State.Holding && newState < state_)) {
+                logger.fine("No state change from " +state_  + " to "  + newState);
                 return;
+            }
 
             //
             // make sure to update the state since some of the actions

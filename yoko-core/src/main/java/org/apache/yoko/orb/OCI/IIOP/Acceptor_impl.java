@@ -71,7 +71,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public void close() {
-        logger.fine("Closing connection to host=" + localAddress_ + ", port=" + port_);
+        logger.log(Level.FINE, "Closing server socket with host=" + localAddress_ + ", port=" + port_, new Exception("Stack trace"));
         //
         // Destroy the info object
         //
@@ -83,7 +83,9 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         try {
             socket_.close();
             socket_ = null;
+            logger.log(Level.FINE, "Closed server socket with host=" + localAddress_ + ", port=" + port_);
         } catch (java.io.IOException ex) {
+            logger.log(Level.FINE, "Exception closing server socket with host=" + localAddress_ + ", port=" + port_, ex);
         }
     }
 
