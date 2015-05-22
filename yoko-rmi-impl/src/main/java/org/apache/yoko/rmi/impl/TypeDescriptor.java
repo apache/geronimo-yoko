@@ -29,7 +29,7 @@ import org.omg.CORBA.portable.InputStream;
 public abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    protected Class _java_class;
+    protected final Class _java_class;
 
     protected String _repid;
 
@@ -37,6 +37,13 @@ public abstract class TypeDescriptor extends ModelElement {
 
     public Class getJavaClass() {
         return _java_class;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("%s{class=\"%s\",repId=\"%s\",arrRepId=\"%s\"}",
+                this.getClass().getName(), getJavaClass(),
+                getRepositoryID(), getRepositoryIDForArray());
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
