@@ -105,7 +105,7 @@ public class TypeRepository {
                     return new DateValueDescriptor(repo);
                 } else if (staticAnyTypes.contains(type)) {
                     return new AnyDescriptor(type, repo);
-                } else if (IDLEntity.class.isAssignableFrom(type)) {
+                } else if ((IDLEntity.class.isAssignableFrom(type)) && isIDLEntity(type)) {
                     return new IDLEntityDescriptor(type, repo);
                 } else if (Throwable.class.isAssignableFrom(type)) {
                     return new ExceptionDescriptor(type, repo);
@@ -157,18 +157,24 @@ public class TypeRepository {
                 }
             }
 
+            private static boolean isIDLEntity(Class<?> type) {
+                for (Class<?> intf : type.getInterfaces()) {
+                    if (intf.equals(IDLEntity.class))
+                        return true;
+                }
+                return false;
+            }
+
             private static boolean isAbstractInterface(Class<?> type) {
                 if (!type.isInterface())
                     return false;
 
-                Class<?>[] interfaces = type.getInterfaces();
-                for (Class<?> anInterface : interfaces) {
-                    if (!isAbstractInterface(anInterface))
+                for (Class<?> intf : type.getInterfaces()) {
+                    if (!isAbstractInterface(intf))
                         return false;
                 }
 
-                java.lang.reflect.Method[] methods = type.getDeclaredMethods();
-                for (Method method : methods) {
+                for (Method method : type.getDeclaredMethods()) {
                     if (!isRemoteMethod(method))
                         return false;
                 }
@@ -177,10 +183,8 @@ public class TypeRepository {
             }
 
             private static boolean isRemoteMethod(java.lang.reflect.Method m) {
-                Class<?>[] ex = m.getExceptionTypes();
-
-                for (Class<?> anEx : ex) {
-                    if (anEx.isAssignableFrom(RemoteException.class))
+                for (Class<?> exceptionType : m.getExceptionTypes()) {
+                    if (exceptionType.isAssignableFrom(RemoteException.class))
                         return true;
                 }
 
