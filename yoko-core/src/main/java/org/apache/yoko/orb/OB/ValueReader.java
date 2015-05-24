@@ -269,6 +269,9 @@ public final class ValueReader {
         }
 
         private BoxedValueHelper getBoxedHelper(String id) {
+            if (WStringValueHelper.id().equals(id))
+                return new WStringValueHelper();
+
             final Class helperClass = Util.idToClass(id, "Helper");
 
             if (helperClass != null) {

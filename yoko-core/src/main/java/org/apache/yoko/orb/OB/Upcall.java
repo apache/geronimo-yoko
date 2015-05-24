@@ -17,11 +17,20 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.DispatchRequest;
 import org.apache.yoko.orb.OB.DispatchStrategy;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.portable.UnknownException;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.UnknownExceptionInfo;
 
 public class Upcall {
     static final Logger logger = Logger.getLogger(Upcall.class.getName());
@@ -76,7 +85,7 @@ public class Upcall {
     // The reply service context list
     // (Must be a Vector because it can be modified by interceptors)
     //
-    protected java.util.Vector replySCL_ = new java.util.Vector();
+    protected Vector<ServiceContext> replySCL_ = new Vector<>();
 
     //
     // The dispatch request
@@ -294,8 +303,24 @@ public class Upcall {
         // OutputStream to make the skeleton happy and avoid a crash.
         //
         if (upcallReturn_ != null) {
-            if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
-                initServiceContexts();
+            addUnsentConnectionServiceContexts();
+            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+                    .size()];
+            replySCL_.copyInto(scl);
+            upcallReturn_.upcallBeginReply(this, scl);
+        } else {
+            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
+                    ._OB_codeConverters(), (profileInfo_.major << 8)
+                    | profileInfo_.minor);
+        }
+        out_._OB_ORBInstance(this.orbInstance());
+        return out_;
+    }
+
+    private void addUnsentConnectionServiceContexts() {
+        if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
+            initServiceContexts();
 //                CoreTraceLevels coreTraceLevels = orbInstance_
 //                        .getCoreTraceLevels();
 //                if (coreTraceLevels.traceConnections() >= 2) {
@@ -323,21 +348,9 @@ public class Upcall {
 //                Assert._OB_assert(codeSetSC_ != null);
 //                replySCL_.add(codeSetSC_);
 
-                Assert._OB_assert(codeBaseSC_ != null);
-                replySCL_.add(codeBaseSC_);
-            }
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
-                    .size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallBeginReply(this, scl);
-        } else {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
-                    ._OB_codeConverters(), (profileInfo_.major << 8)
-                    | profileInfo_.minor);
+            Assert._OB_assert(codeBaseSC_ != null);
+            replySCL_.add(codeBaseSC_);
         }
-        out_._OB_ORBInstance(this.orbInstance());
-        return out_;
     }
 
     public void marshalEx(org.omg.CORBA.SystemException ex)
@@ -423,11 +436,27 @@ public class Upcall {
 
     public void setSystemException(org.omg.CORBA.SystemException ex) {
         if (upcallReturn_ != null) {
-            userEx_ = false; // Java only
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
-                    .size()];
+            addUnsentConnectionServiceContexts();
+            userEx_ = false;
+            if (ex instanceof UnknownException) {
+                // need to create an exception info service context
+                replySCL_.add(createUnknownExceptionInfoServiceContext((UnknownException)ex));
+            }
+            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallSystemException(this, ex, scl);
+        }
+    }
+
+    private static ServiceContext createUnknownExceptionInfoServiceContext(UnknownException ex) {
+        Throwable t = ex.originalEx;
+        Buffer buf = new Buffer();
+        try (OutputStream os = new OutputStream(buf)) {
+            os.write_value(t, Throwable.class);
+            ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
+            return sc;
+        } catch (IOException e) {
+            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 
