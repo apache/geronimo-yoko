@@ -74,7 +74,6 @@ import sun.reflect.ReflectionFactory;
 public class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
 
-    private boolean _is_enum;
     private boolean _is_externalizable;
 
     private boolean _is_serializable;
@@ -144,9 +143,7 @@ public class ValueDescriptor extends TypeDescriptor {
         return _custom_repid;
     }
 
-    private long getSerialVersionUID() {
-        if (_is_enum)
-            return 0L;
+    long getSerialVersionUID() {
         if (_serial_version_uid_field != null) {
 
             try {
@@ -177,7 +174,6 @@ public class ValueDescriptor extends TypeDescriptor {
         final Class<?> type = getJavaClass();
         final Class<?> superClass = type.getSuperclass();
 
-        _is_enum = Enum.class.isAssignableFrom(type);
         _is_rmi_stub = RMIStub.class.isAssignableFrom(type);
         _is_externalizable = Externalizable.class.isAssignableFrom(type);
         _is_serializable = Serializable.class.isAssignableFrom(type);
@@ -582,18 +578,6 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     public Serializable readValue(final InputStream in, final Map<Integer, Object> offsetMap, final Integer offset) {
-        if (_is_enum) {
-            try {
-                in.read_long(); // read in and ignore Enum ordinal
-                final String name = (String) ((org.omg.CORBA_2_3.portable.InputStream) in).read_value(String.class);
-                final Enum value = Enum.valueOf(getJavaClass(), name);
-                offsetMap.put(offset, value);
-                return value;
-            } catch (IndirectionException ex) {
-                return (Serializable) offsetMap.get(ex.offset);
-            }
-        }
-
         final Serializable value = createBlankInstance();
 
         offsetMap.put(offset, value);

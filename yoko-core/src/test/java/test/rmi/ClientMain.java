@@ -26,6 +26,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
 
 import javax.rmi.PortableRemoteObject;
 
@@ -217,6 +218,20 @@ public class ClientMain extends Assert {
             assertTrue(Arrays.deepEquals(sa, oa));
         }
 
+        public void testTimeUnit() throws RemoteException {
+            TimeUnit tu = TimeUnit.NANOSECONDS;
+            sample.setSerializable(tu);
+            Serializable s = sample.getSerializable();
+            assertSame(tu, s);
+        }
+
+        public void testTimeUnitArray() throws RemoteException {
+            TimeUnit[] tua = { TimeUnit.NANOSECONDS, TimeUnit.HOURS, TimeUnit.NANOSECONDS };
+            sample.setSerializable(tua);
+            Object[] oa = (Object[])sample.getSerializable();
+            assertTrue(Arrays.deepEquals(tua, oa));
+        }
+
         public void testRemoteAttributeOnServer() throws RemoteException {
             SampleSerializable ser = new SampleSerializable();
             ser.setRemote(sample);
@@ -374,6 +389,8 @@ public class ClientMain extends Assert {
         test.testHashMap();
         test.testEnum();
         test.testEnumArray();
+        test.testTimeUnit();
+        test.testTimeUnitArray();
         test.testCmsfv2Data();
         //myORB.destroy();
         System.out.println("Testing complete");

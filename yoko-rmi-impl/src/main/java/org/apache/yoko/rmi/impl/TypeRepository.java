@@ -109,6 +109,8 @@ public class TypeRepository {
                     return new IDLEntityDescriptor(type, repo);
                 } else if (Throwable.class.isAssignableFrom(type)) {
                     return new ExceptionDescriptor(type, repo);
+                } else if (Enum.class.isAssignableFrom(type) && (Enum.class != type)) {
+                    return new EnumDescriptor(type, repo);
                 } else if (type.isArray()) {
                     return ArrayDescriptor.get(type, repo);
                 } else if (!type.isInterface()
