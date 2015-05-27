@@ -1,5 +1,6 @@
 package org.apache.yoko.util.cmsf;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -8,6 +9,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import javax.rmi.CORBA.Util;
 
@@ -90,69 +92,70 @@ public enum RepIds {
         return result;
     }
 
+    private static final Pattern dotPattern = Pattern.compile("\\.");
+    private static final Pattern slashPattern = Pattern.compile("/");
+
     private static String toClassName(QueryImpl query) {
         final String repid = query.repid;
         final String suffix = query.suffix;
 
         String result = null;
-
         if (repid.startsWith("IDL:")) {
-            try {
-                StringBuffer buf = new StringBuffer();
-
-                int end = repid.lastIndexOf(':');
-                String s;
-                if (end < 0)
-                    s = repid.substring(4);
-                else
-                    s = repid.substring(4, end);
-
-                //
-                // If the ID contains a prefix, then fix each of the
-                // dotted components of the prefix
-                //
-                int slash = s.indexOf('/');
-                if (slash > 0) {
-                    String prefix = s.substring(0, slash);
-                    String rest = s.substring(slash + 1);
-                    java.util.StringTokenizer tokenizer = new java.util.StringTokenizer(
-                            prefix, ".");
-                    while (tokenizer.hasMoreTokens()) {
-                        String tok = tokenizer.nextToken();
-                        buf.append(fixName(tok));
-                        buf.append('.');
-                    }
-                    s = rest;
-                }
-
-                //
-                // "Fix" the remainder of the ID
-                //
-                java.util.StringTokenizer tokenizer = new java.util.StringTokenizer(
-                        s, "/");
-                while (tokenizer.hasMoreTokens()) {
-                    String tok = tokenizer.nextToken();
-                    buf.append(fixName(tok));
-                    if (tokenizer.hasMoreTokens())
-                        buf.append('.');
-                }
-
-                result = buf.toString() + suffix;
-            } catch (IndexOutOfBoundsException ex) // if id has bad format
-            {
-                result = null;
-            }
-        }
-        else if (repid.startsWith ("RMI:")) {
-            int end = repid.indexOf (':', 4);
-            result = end < 0
-                ? repid.substring (4)
-                : repid.substring (4, end);
+            result = idlToClassName(repid);
+        } else if (repid.startsWith("RMI:")) {
+            result = rmiToClassName(repid);
         }
         if (result != null) {
+            result += suffix;
             result = removeUnicodeEscapes(result);
         }
         return result;
+    }
+
+    private static String rmiToClassName(final String repid) {
+        String result;
+        final int end = repid.indexOf (':', 4);
+        result = end < 0 ? repid.substring (4) : repid.substring (4, end);
+        return result;
+    }
+
+    private static String idlToClassName(final String repid) {
+        try {
+            final StringBuilder sb = new StringBuilder(repid.length());
+
+            final int end = repid.lastIndexOf(':');
+            String s = end < 0 ? repid.substring(4) : repid.substring(4, end);
+
+            //
+            // reverse order of dot-separated name components up
+            // till the first slash.
+            //
+            final int firstSlash = s.indexOf('/');
+            if (firstSlash > 0) {
+                String prefix = s.substring(0, firstSlash);
+                String[] elems = dotPattern.split(prefix);
+                Collections.reverse(Arrays.asList(elems)); //reverses the order in the underlying array - i.e. 'elems'
+                for (String elem: elems) {
+                    sb.append(fixName(elem));
+                    sb.append('.');
+                }
+
+                s = s.substring(firstSlash + 1);
+            }
+
+            //
+            // Append slash-separated name components ...
+            //
+            for (String elem: slashPattern.split(s)) {
+                sb.append(fixName(elem)).append('.');
+            }
+            sb.deleteCharAt(sb.length() - 1); // eliminate final '.'
+
+            return sb.toString();
+        } catch (IndexOutOfBoundsException ex) {
+            // id has bad format
+            return null;
+        }
     }
 
     private static String removeUnicodeEscapes(String in) {
@@ -162,12 +165,10 @@ public enum RepIds {
             return in;
         }
 
-        // get a string buffer at least as long as the input string
-        StringBuffer out = new StringBuffer(in.length());
+        StringBuilder out = new StringBuilder(in.length());
         int start = 0;
 
         while (escape >= 0) {
-            // add the next real segment to the buffer
             out.append(in.substring(start, escape));
             // step over the escape sequence
             escape += 2;
