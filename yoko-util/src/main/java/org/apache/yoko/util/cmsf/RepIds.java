@@ -1,6 +1,11 @@
 package org.apache.yoko.util.cmsf;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -217,6 +222,31 @@ public enum RepIds {
         return out.toString();
     }
 
+    private static final Set<String> keywords = createStringSet(
+            "abstract", "assert", "boolean", "break", "byte", "case",
+            "catch", "char", "class", "clone", "const", "continue",
+            "default", "do", "double", "else", "equals", "extends",
+            "false", "final", "finalize", "finally", "float", "for",
+            "getClass", "goto", "hashCode", "if", "implements", "import",
+            "instanceof", "int", "interface", "long", "native", "new",
+            "notify", "notifyAll", "null", "package", "private",
+            "protected", "public", "return", "short", "static", "super",
+            "switch", "synchronized", "this", "throw", "throws",
+            "toString", "transient", "true", "try", "void", "volatile",
+            "wait", "while");
+
+    private static Set<String> createStringSet(String...strings) {
+        return Collections.unmodifiableSet(new HashSet<String>(Arrays.asList(strings)));
+    }
+
+    private static final List<String> reservedSuffixes = createStringList(
+            "Helper", "Holder", "Operations", "POA",
+            "POATie", "Package", "ValueFactory");
+
+    private static List<String> createStringList(String...strings) {
+        return Collections.unmodifiableList(Arrays.asList(strings));
+    }
+
     private static String fixName(String name) {
         assert(name.indexOf('.') == -1); // Not for absolute names
 
@@ -224,72 +254,28 @@ public enum RepIds {
         if (nameLen == 0)
             return name;
 
-        final String[] kwds = {
-        //
-                // Note: This list must be sorted alphabetically
-                //
-                "abstract", "assert", "boolean", "break", "byte", "case",
-                "catch", "char", "class", "clone", "const", "continue",
-                "default", "do", "double", "else", "equals", "extends",
-                "false", "final", "finalize", "finally", "float", "for",
-                "getClass", "goto", "hashCode", "if", "implements", "import",
-                "instanceof", "int", "interface", "long", "native", "new",
-                "notify", "notifyAll", "null", "package", "private",
-                "protected", "public", "return", "short", "static", "super",
-                "switch", "synchronized", "this", "throw", "throws",
-                "toString", "transient", "true", "try", "void", "volatile",
-                "wait", "while" };
-
-        int l = 0;
-        int r = kwds.length;
-
-        while (l < r) {
-            int m = (l + r) / 2;
-            int res = kwds[m].compareTo(name);
-            if (res == 0)
-                return "_" + name;
-            else if (res > 0)
-                r = m;
-            else
-                l = m + 1;
-        }
+        if (keywords.contains(name)) return "_" + name;
 
         //
-        // Prepend an underscore for each of the reserved suffixes below
+        // Prepend an underscore for each of the reserved suffixes
         //
-        final String[] reserved = { "Helper", "Holder", "Operations", "POA",
-                "POATie", "Package", "ValueFactory" };
-
         String result = name;
         String curr = name;
 
-        boolean match;
-        do {
-            int currLen = curr.length();
-
-            match = false;
-            for (int i = 0; i < reserved.length; i++) {
-                if (curr.endsWith(reserved[i])) {
-                    //
-                    // Prepend an underscore to result
-                    //
+        OUTER_LOOP: while (true) {
+            for (String reservedSuffix: reservedSuffixes) {
+                if (curr.endsWith(reservedSuffix)) {
                     result = "_" + result;
 
-                    //
-                    // Remove suffix from curr
-                    //
-                    int resLen = reserved[i].length();
-                    if (currLen > resLen)
-                        curr = curr.substring(0, currLen - resLen);
-                    else
-                        curr = "";
-
-                    match = true;
-                    break;
+                    int currLength = curr.length();
+                    int resLength = reservedSuffix.length();
+                    if (currLength == resLength)
+                        return result;
+                    curr = curr.substring(0, currLength - resLength);
+                    continue OUTER_LOOP;
                 }
             }
-        } while (match);
-
-        return result;
+            return result;
+        }
     }
 }
