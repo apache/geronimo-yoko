@@ -17,21 +17,18 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+
 final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
     // The starter thread
     //
-    protected final class StarterThread extends Thread {
-        private GIOPServerStarterThreaded starter_;
-
-        StarterThread(ThreadGroup group, GIOPServerStarterThreaded starter) {
-            super(group, "Yoko:Server:StarterThread");
-            starter_ = starter;
-        }
+    protected final class Starter implements Runnable {
 
         public void run() {
             try {
-                starter_.starterRun();
+                starterRun();
             } catch (RuntimeException ex) {
                 Assert._OB_assert(ex);
             }
@@ -41,8 +38,8 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             // Shutdown the acceptor so that no further connections are
             // accepted
             //
-            starter_.logCloseAcceptor();
-            starter_.acceptor_.shutdown();
+            logCloseAcceptor();
+            acceptor_.shutdown();
 
             //
             // Accept all connections which might have queued up in the
@@ -51,7 +48,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                 org.apache.yoko.orb.OCI.Transport transport = null;
 
                 try {
-                    transport = starter_.acceptor_.accept(false);
+                    transport = acceptor_.accept(false);
                 } catch (org.omg.CORBA.SystemException ex) {
                 }
 
@@ -62,8 +59,8 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
 
                 try {
                     GIOPConnection connection = new GIOPConnectionThreaded(
-                            starter_.orbInstance_, transport,
-                            starter_.oaInterface_);
+                            orbInstance_, transport,
+                            oaInterface_);
 
                     connection.setState(GIOPConnection.State.Closing);
                 } catch (org.omg.CORBA.SystemException ex) {
@@ -74,16 +71,10 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             //
             // Close the acceptor
             //
-            starter_.acceptor_.close();
+            acceptor_.close();
 
-            //
-            // Break cyclic object dependency
-            //
-            starter_ = null;
         }
     }
-
-    protected Thread starterThread_;
 
     // ----------------------------------------------------------------------
     // GIOPServerStarterThreaded package member implementation
@@ -98,14 +89,12 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             //
             // Retrieve the thread group for the servers
             //
-            ThreadGroup group = orbInstance_.getServerWorkerGroup();
+            ExecutorService executor = orbInstance_.getServerExecutor();
 
             //
             // Start starter thread
             //
-            starterThread_ = new StarterThread(group, this);
-            starterThread_.setDaemon(true); 
-            starterThread_.start();
+            executor.submit(new Starter());
         } catch (OutOfMemoryError ex) {
             acceptor_.close();
             state_ = StateClosed;
@@ -249,11 +238,13 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             // StateClosing for proper connection shutdown
                             //
                             Assert._OB_assert(state_ == StateClosed);
-
+                            logger.fine("Processing an inbound connection because state is closed"); 
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
+                            logger.fine("Created connection " + connection); 
 
                             connection.setState(GIOPConnection.State.Closing);
+                            logger.fine("set connection state to closing"); 
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
                         String msg = "can't accept connection\n" + ex.getMessage();
