@@ -599,7 +599,11 @@ public class ValueDescriptor extends TypeDescriptor {
 
             readValue(reader, value);
 
-            return readResolve(value);
+            final Serializable resolved = readResolve(value);
+            if (value != resolved) {
+                offsetMap.put(offset, resolved);
+            }
+            return resolved;
 
         } catch (IOException ex) {
             throw (MARSHAL) new MARSHAL(ex.getMessage()).initCause(ex);

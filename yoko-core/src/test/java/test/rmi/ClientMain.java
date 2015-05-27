@@ -348,6 +348,20 @@ public class ClientMain extends Assert {
             assertSame(map2.get(3), map2.get(4));
             assertSame(map2.get(0), map2.get(1));
         }
+
+        public void testClass() throws RemoteException {
+            final Class<?> type = Object.class;
+            sample.setSerializable(type);
+            Serializable s = sample.getSerializable();
+            assertSame(s, type);
+        }
+
+        public void testClassArray() throws RemoteException {
+            final Class<?>[] types = { Object.class, Map.class, String.class, Map.class };
+            sample.setSerializable(types);
+            Object[] oa = (Object[])sample.getSerializable();
+            assertArrayEquals(types, oa);
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -392,6 +406,8 @@ public class ClientMain extends Assert {
         test.testTimeUnit();
         test.testTimeUnitArray();
         test.testCmsfv2Data();
+        test.testClass();
+        test.testClassArray();
         //myORB.destroy();
         System.out.println("Testing complete");
     }

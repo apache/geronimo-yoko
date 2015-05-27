@@ -18,7 +18,9 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Logger;
 
@@ -28,6 +30,7 @@ import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.portable.InputStream;
 
 public abstract class ArrayDescriptor extends ValueDescriptor {
     protected int order;
@@ -424,27 +427,21 @@ class ValueArrayDescriptor extends ArrayDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
-            Integer key) {
-        try {
-            ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
+    public Serializable readValue(InputStream in, Map offsetMap, Integer key) {
+        final int length = in.read_long();
+        Object[] arr = (Object[]) Array.newInstance(elementType, length);
+        offsetMap.put(key, arr);
 
-            int length = reader.readInt();
-            Object[] arr = (Object[]) Array.newInstance(elementType, length);
-            offsetMap.put(key, arr);
-            // System.out.println ("ValueArrayDescriptor::readValue
-            // len="+length+"; type="+elementType);
-
-            for (int i = 0; i < length; i++) {
-                arr[i] = reader.readValueObject(elementType);
+        final org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
+        for (int i = 0; i < length; i++) {
+            try {
+                arr[i] = _in.read_value(elementType);
+            } catch (org.omg.CORBA.portable.IndirectionException ex) {
+                arr[i] = offsetMap.get(new Integer(ex.offset));
             }
-
-            return (java.io.Serializable) arr;
-        } catch (java.io.IOException ex) {
-            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
 
+        return arr;
     }
 
     Object copyObject(Object value, CopyState state) {
