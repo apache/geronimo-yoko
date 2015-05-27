@@ -72,6 +72,10 @@ public enum RepIds {
         if (LOGGER.isLoggable(Level.FINE))
             LOGGER.fine(String.format("Searching for class from repid \"%s\" using suffix \"%s\"", repid, suffix));
         Class<?> result = null;
+
+        //Special case IDL:omg.org/CORBA/WStringValue:1.0
+        if ("IDL:omg.org/CORBA/WStringValue:1.0".equals(repid) && "".equals(suffix)) return String.class;
+
         final String className = toClassName(query);
 
         if (LOGGER.isLoggable(Level.FINE))
@@ -98,6 +102,9 @@ public enum RepIds {
     private static String toClassName(QueryImpl query) {
         final String repid = query.repid;
         final String suffix = query.suffix;
+
+        //Special case IDL:omg.org/CORBA/WStringValue:1.0
+        if ("IDL:omg.org/CORBA/WStringValue:1.0".equals(repid) && "".equals(suffix)) return String.class.getName();
 
         String result = null;
         if (repid.startsWith("IDL:")) {
