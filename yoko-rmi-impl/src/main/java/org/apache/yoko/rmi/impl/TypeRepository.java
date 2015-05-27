@@ -100,7 +100,7 @@ public class TypeRepository {
                 } else if (type == Class.class) {
                     return new ClassDescriptor(repo);
                 } else if (type == ClassDesc.class) {
-                    return this.get(Class.class);
+                    return new ClassDescDescriptor(repo);
                 } else if (type == java.util.Date.class) {
                     return new DateValueDescriptor(repo);
                 } else if (staticAnyTypes.contains(type)) {
