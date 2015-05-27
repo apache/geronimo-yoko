@@ -69,7 +69,6 @@ public class TypeRepository {
             cleanStaleKeys();
             final WeakReference<TypeDescriptor> value = new WeakReference<>(typeDesc);
             map.putIfAbsent(new WeakKey<String>(typeDesc.getRepositoryID(), staleKeys), value);
-            map.putIfAbsent(new WeakKey<String>(typeDesc.getRepositoryIDForArray(), staleKeys), value);
         }
 
         private void cleanStaleKeys() {

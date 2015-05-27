@@ -41,9 +41,9 @@ public abstract class TypeDescriptor extends ModelElement {
 
     @Override
     public String toString() {
-        return String.format("%s{class=\"%s\",repId=\"%s\",arrRepId=\"%s\"}",
+        return String.format("%s{class=\"%s\",repId=\"%s\"}",
                 this.getClass().getName(), getJavaClass(),
-                getRepositoryID(), getRepositoryIDForArray());
+                getRepositoryID());
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
@@ -63,10 +63,6 @@ public abstract class TypeDescriptor extends ModelElement {
             setPackageName(""); 
             setTypeName(typeName); 
         }
-    }
-
-    public String getRepositoryIDForArray() {
-        return getRepositoryID();
     }
 
     public String getRepositoryID() {

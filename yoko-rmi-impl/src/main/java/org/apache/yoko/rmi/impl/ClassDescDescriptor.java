@@ -33,34 +33,33 @@ public class ClassDescDescriptor extends ClassBaseDescriptor {
     public Serializable readResolve(final Serializable value) {
         final ClassDesc desc = (ClassDesc) value;
 
-        Class<?> result = AccessController
-                .doPrivileged(new PrivilegedAction<Class<?>>() {
-                    public Class<?> run() {
-                        String className = "<unknown>";
-                        try {
-                            String repid = (String) repid_field.get(desc);
-                            String codebase = (String) codebase_field.get(desc);
+        Class<?> result = AccessController.doPrivileged(new PrivilegedAction<Class<?>>() {
+            public Class<?> run() {
+                String className = "<unknown>";
+                try {
+                    String repid = (String) repid_field.get(desc);
+                    String codebase = (String) codebase_field.get(desc);
 
-                            TypeDescriptor typeDesc = repository.getDescriptor(repid);
-                            if (null != typeDesc) {
-                                Class<?> type = typeDesc.getJavaClass();
-                                if (null != type) return type;
-                            }
-
-                            int beg = repid.indexOf(':');
-                            int end = repid.indexOf(':', beg + 1);
-
-                            className = repid.substring(beg + 1, end);
-                            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-                            return Util.loadClass(className, codebase, loader);
-                        } catch (ClassNotFoundException ex) {
-                            throw (MARSHAL)new MARSHAL("cannot load class " + className).initCause(ex);
-                        } catch (IllegalAccessException ex) {
-                            throw (MARSHAL)new MARSHAL("no such field: " + ex).initCause(ex);
-                        }
+                    TypeDescriptor typeDesc = repository.getDescriptor(repid);
+                    if (null != typeDesc) {
+                        Class<?> type = typeDesc.getJavaClass();
+                        if (null != type) return type;
                     }
-                });
+
+                    int beg = repid.indexOf(':');
+                    int end = repid.indexOf(':', beg + 1);
+
+                    className = repid.substring(beg + 1, end);
+                    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+
+                    return Util.loadClass(className, codebase, loader);
+                } catch (ClassNotFoundException ex) {
+                    throw (MARSHAL)new MARSHAL("cannot load class " + className).initCause(ex);
+                } catch (IllegalAccessException ex) {
+                    throw (MARSHAL)new MARSHAL("no such field: " + ex).initCause(ex);
+                }
+            }
+        });
 
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("readResolve %s => %s", value, result));

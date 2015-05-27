@@ -52,7 +52,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
         } else {
             TypeDescriptor desc = getTypeRepository()
                     .getDescriptor(elementType);
-            String elemRep = desc.getRepositoryIDForArray();
+            String elemRep = desc.getRepositoryID();
             String hash = elemRep.substring(elemRep.indexOf(':', 4));
             _repid = "RMI:" + getJavaClass().getName() + hash;
         }
@@ -74,7 +74,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
         } else {
             TypeDescriptor desc = getTypeRepository()
                     .getDescriptor(elementType);
-            _elementRepid = desc.getRepositoryIDForArray();
+            _elementRepid = desc.getRepositoryID();
         }
 
         // System.out.println ("Element REPID "+getJavaClass()+" >> "+_elementRepid);
