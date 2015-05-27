@@ -40,12 +40,6 @@ public class ClassDescDescriptor extends ClassBaseDescriptor {
                     String repid = (String) repid_field.get(desc);
                     String codebase = (String) codebase_field.get(desc);
 
-                    TypeDescriptor typeDesc = repository.getDescriptor(repid);
-                    if (null != typeDesc) {
-                        Class<?> type = typeDesc.getJavaClass();
-                        if (null != type) return type;
-                    }
-
                     int beg = repid.indexOf(':');
                     int end = repid.indexOf(':', beg + 1);
 
