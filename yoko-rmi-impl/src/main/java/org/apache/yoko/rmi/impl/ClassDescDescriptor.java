@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 import javax.rmi.CORBA.ClassDesc;
 import javax.rmi.CORBA.Util;
 
+import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.MARSHAL;
 
 public class ClassDescDescriptor extends ClassBaseDescriptor {
@@ -40,15 +41,10 @@ public class ClassDescDescriptor extends ClassBaseDescriptor {
                     String repid = (String) repid_field.get(desc);
                     String codebase = (String) codebase_field.get(desc);
 
-                    int beg = repid.indexOf(':');
-                    int end = repid.indexOf(':', beg + 1);
+                    Class<?> result = RepIds.query(repid).codebase(codebase).toClass();
+                    if (null != result) return result;
 
-                    className = repid.substring(beg + 1, end);
-                    ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-                    return Util.loadClass(className, codebase, loader);
-                } catch (ClassNotFoundException ex) {
-                    throw (MARSHAL)new MARSHAL("cannot load class " + className).initCause(ex);
+                    throw new MARSHAL(String.format("Cannot load class \"%s\"", className));
                 } catch (IllegalAccessException ex) {
                     throw (MARSHAL)new MARSHAL("no such field: " + ex).initCause(ex);
                 }

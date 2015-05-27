@@ -29,6 +29,7 @@ import javax.rmi.CORBA.ValueHandler;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.CustomMarshal;
@@ -272,7 +273,7 @@ public final class ValueReader {
             if (WStringValueHelper.id().equals(id))
                 return new WStringValueHelper();
 
-            final Class helperClass = Util.idToClass(id, "Helper");
+            final Class helperClass = RepIds.query(id).suffix("Helper").toClass();
 
             if (helperClass != null) {
                 try {
@@ -942,7 +943,7 @@ public final class ValueReader {
             }
         }
 
-        final String className = Util.idToClassName(repid, "");
+        final String className = RepIds.query(repid).toClassName();
         String codebase  = h.codebase;
 
         if (codebase == null) {
@@ -1319,14 +1320,14 @@ public final class ValueReader {
             // that is compatible with the base type.  This will require resolving the classes.
             if (id == null) {
                 // see if we can resolve the type for the stored type code
-                final Class<?> baseType = Util.idToClass(tcId, "");
+                final Class<?> baseType = RepIds.query(tcId).toClass();
                 if (baseType != null) {
                     for (idPos = 0; idPos < h.ids.length; idPos++) {
                         if (logger.isLoggable(Level.FINER))
                             logger.finer(String.format(
                                     "Considering base types of id \"%s\" against \"%s\"",
                                     tcId, h.ids[idPos]));
-                        final Class idType = Util.idToClass(h.ids[idPos], "");
+                        final Class idType = RepIds.query(h.ids[idPos]).toClass();
                         if (idType != null) {
                             // if these classes are assignment compatible, go with that as the type.
                             if (logger.isLoggable(Level.FINER))
