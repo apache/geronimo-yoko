@@ -22,6 +22,7 @@ import java.io.Serializable;
 import javax.rmi.CORBA.ValueHandler;
 
 import org.apache.yoko.orb.CORBA.ORB;
+import org.apache.yoko.util.cmsf.RepIds;
 import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
@@ -218,7 +219,7 @@ final public class ValueWriter {
                 org.omg.CORBA.TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode
                         ._OB_getOrigType(type);
                 String id = origType.id();
-                helperClass = Util.idToClass(id, "Helper");
+                helperClass = RepIds.query(id).suffix("Helper").toClass();
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
                 Assert._OB_assert(ex);
             }
