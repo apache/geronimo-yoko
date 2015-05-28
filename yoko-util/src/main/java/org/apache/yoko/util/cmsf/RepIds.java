@@ -96,8 +96,8 @@ public enum RepIds {
         return result;
     }
 
-    private static final Pattern dotPattern = Pattern.compile("\\.");
-    private static final Pattern slashPattern = Pattern.compile("/");
+    private static final Pattern dotPattern = Pattern.compile(Pattern.quote("."));
+    private static final Pattern slashPattern = Pattern.compile(Pattern.quote("/"));
 
     private static String toClassName(QueryImpl query) {
         final String repid = query.repid;
@@ -143,8 +143,7 @@ public enum RepIds {
                 String[] elems = dotPattern.split(prefix);
                 Collections.reverse(Arrays.asList(elems)); //reverses the order in the underlying array - i.e. 'elems'
                 for (String elem: elems) {
-                    sb.append(fixName(elem));
-                    sb.append('.');
+                    sb.append(fixName(elem)).append('.');
                 }
 
                 s = s.substring(firstSlash + 1);
