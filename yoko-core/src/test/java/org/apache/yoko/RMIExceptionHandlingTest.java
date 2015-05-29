@@ -7,7 +7,6 @@ import javax.rmi.PortableRemoteObject;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.omg.CORBA.ORB;
 import org.omg.PortableServer.POA;
@@ -26,13 +25,23 @@ public class RMIExceptionHandlingTest {
     private static ORB serverOrb;
     private static ORB clientOrb;
     private static String ior;
+    private static MyAppException mae = null;
+    private static MyRuntimeException mre = null;
 
     private static ORB initOrb(Properties props, String... args) {
         return ORB.init(args, props);
     }
 
+    private static void initExceptions() {
+        if (mae == null) mae = new MyAppException();
+        if (mre == null) mre = new MyRuntimeException();
+    }
+
     @BeforeClass
     public static void createServerORB() throws Exception {
+        initExceptions();
+        ThrowerImpl.myAppException = mae;
+        ThrowerImpl.myRuntimeException = mre;
         serverOrb = initOrb(new Properties() {{
             put("org.omg.PortableInterceptor.ORBInitializerClass." + MyClientRequestInterceptor.class.getName(),"");
             put("org.omg.PortableInterceptor.ORBInitializerClass." + MyServerRequestInterceptor.class.getName(),"");
@@ -41,7 +50,7 @@ public class RMIExceptionHandlingTest {
         poa.the_POAManager().activate();
 
         _ThrowerImpl_Tie tie = new _ThrowerImpl_Tie();
-        tie.setTarget(new ThrowerImpl());
+        tie.setTarget(new ThrowerImpl(serverOrb));
 
         poa.activate_object(tie);
         ior = serverOrb.object_to_string(tie.thisObject());
@@ -82,5 +91,28 @@ public class RMIExceptionHandlingTest {
         Object o = orb.string_to_object(ior);
         Thrower thrower = (Thrower) PortableRemoteObject.narrow(o, Thrower.class);
         return thrower;
+    }
+
+    public static void main(String...args) throws Exception {
+        if (0 == args.length) {
+            System.out.println("Starting server");
+            mae = new MyAppException();
+            mre = new MyRuntimeException();
+            createServerORB();
+            System.out.println(serverOrb.getClass().getName());
+            serverOrb.run();
+        } else {
+            System.out.println("Starting client");
+            ior = args[0];
+            createClientORB();
+            System.out.println(clientOrb.getClass().getName());
+
+            RMIExceptionHandlingTest test = new RMIExceptionHandlingTest();
+            try {
+                test.testRuntimeException();
+                throw new Exception("no exception seen");
+            } catch (MyRuntimeException e) {
+            }
+        }
     }
 }

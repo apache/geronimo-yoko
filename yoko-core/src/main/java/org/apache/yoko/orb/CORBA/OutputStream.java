@@ -20,6 +20,7 @@ package org.apache.yoko.orb.CORBA;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.omg.CORBA.portable.ValueOutputStream;
 
 final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
@@ -29,7 +30,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public org.apache.yoko.orb.OCI.Buffer buf_;
 
-    private int GIOPVersion_ = org.apache.yoko.orb.OB.OB_Extras.DEFAULT_GIOP_VERSION;
+    private GiopVersion giopVersion_ = org.apache.yoko.orb.OB.OB_Extras.DEFAULT_GIOP_VERSION;
 
     private org.apache.yoko.orb.OB.CodeConverters codeConverters_;
 
@@ -507,8 +508,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // as ushort or ulong, depending on their maximum length
             // listed in the code set registry.
             //
-            switch (GIOPVersion_) {
-            case 0x0101: {
+            switch (giopVersion_) {
+            case GIOP1_1: {
                 if (converter.getTo().max_bytes <= 2)
                     write_ushort((short) value);
                 else
@@ -529,19 +530,17 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // UTF-16
         //
         else {
-            switch (GIOPVersion_) {
-            case 0x0100:
-            case 0x0101: {
+            switch (giopVersion_) {
+            case GIOP1_0:
+            case GIOP1_1:
                 write_ushort((short) value);
-            }
                 break;
 
-            default: {
+            default:
                 addCapacity(3);
                 buf_.data_[buf_.pos_++] = 2;
                 buf_.data_[buf_.pos_++] = (byte) (value >> 8);
                 buf_.data_[buf_.pos_++] = (byte) value;
-            }
                 break;
             }
         }
@@ -569,8 +568,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // as ushort or ulong, depending on their maximum length
             // listed in the code set registry.
             //
-            switch (GIOPVersion_) {
-            case 0x0100: {
+            switch (giopVersion_) {
+            case GIOP1_0: {
                 //
                 // we don't support special writers for GIOP 1.0 if
                 // conversion is required or if a writer is required
@@ -579,7 +578,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             }
                 break;
 
-            case 0x0101: {
+            case GIOP1_1: {
                 //
                 // get the length of the character
                 //
@@ -627,8 +626,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
         } else {
-            switch (GIOPVersion_) {
-            case 0x0100: {
+            switch (giopVersion_) {
+            case GIOP1_0: {
                 //
                 // Orbix2000/Orbacus/E compatible 1.0 marshal
                 //
@@ -646,7 +645,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             }
                 break;
 
-            case 0x0101: {
+            case GIOP1_1: {
                 write_ushort((short) value);
             }
                 break;
@@ -688,9 +687,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // and contents include a terminating null. The terminating null
         // character for a wstring is also a wide character.
         //
-        switch (GIOPVersion_) {
-        case 0x0100:
-        case 0x0101: {
+        switch (giopVersion_) {
+        case GIOP1_0:
+        case GIOP1_1: {
             write_ulong(len + 1);
             write_wchar_array(arr, 0, len);
             write_wchar((char) 0);
@@ -771,24 +770,26 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // strings requiring a writer/converter (or not) since they can
         // be handled by the write_wchar() method
         //
-        if (GIOPVersion_ == 0x0100 || GIOPVersion_ == 0x0101) {
-            //
-            // write the length of the string
-            //
-            write_ulong(len + 1);
+        switch (giopVersion_) {
+            case GIOP1_0:
+            case GIOP1_1:
+                //
+                // write the length of the string
+                //
+                write_ulong(len + 1);
 
-            //
-            // now write all the characters
-            //
-            for (int i = 0; i < len; i++)
-                write_wchar(arr[i], true);
+                //
+                // now write all the characters
+                //
+                for (int i = 0; i < len; i++)
+                    write_wchar(arr[i], true);
 
-            //
-            // and the null terminator
-            //
-            write_wchar((char) 0, true);
-
-            return;
+                //
+                // and the null terminator
+                //
+                write_wchar((char) 0, true);
+                return;
+            default:
         }
 
         //
@@ -888,7 +889,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 //      }
 
         InputStream in = new InputStream(buf, 0, false, codeConverters_,
-                GIOPVersion_);
+                giopVersion_);
         in._OB_ORBInstance(orbInstance_);
         return in;
     }
@@ -1859,15 +1860,15 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // ------------------------------------------------------------------
 
     public OutputStream(org.apache.yoko.orb.OCI.Buffer buf) {
-        this(buf, null, 0);
+        this(buf, null, null);
     }
 
     public OutputStream(org.apache.yoko.orb.OCI.Buffer buf,
-            org.apache.yoko.orb.OB.CodeConverters converters, int GIOPVersion) {
+            org.apache.yoko.orb.OB.CodeConverters converters, GiopVersion giopVersion) {
         buf_ = buf;
 
-        if (GIOPVersion != 0)
-            GIOPVersion_ = GIOPVersion;
+        if (giopVersion != null)
+            giopVersion_ = giopVersion;
 
         charWriterRequired_ = false;
         charConversionRequired_ = false;

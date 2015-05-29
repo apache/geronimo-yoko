@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.GiopVersion;
+
 final class GIOPClient extends Client {
     protected ORBInstance orbInstance_; // The ORB instance
 
@@ -538,8 +540,7 @@ final class GIOPClient extends Client {
                     12);
             buf.pos(12);
             out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf,
-                    codeConverters(), (profileInfo.major << 8)
-                            | profileInfo.minor);
+                    codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
 
             //
             // Create GIOP outgoing message

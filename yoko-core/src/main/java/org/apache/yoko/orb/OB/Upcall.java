@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Vector;
@@ -24,11 +27,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OB.DispatchRequest;
-import org.apache.yoko.orb.OB.DispatchStrategy;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.portable.UnknownException;
+import org.omg.IOP.ExceptionDetailMessage;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.UnknownExceptionInfo;
 
@@ -197,8 +202,7 @@ public class Upcall {
                 offset);
         buf.pos(offset);
         out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
-                ._OB_codeConverters(), (profileInfo_.major << 8)
-                | profileInfo_.minor);
+                ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
     }
 
     public org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
@@ -311,8 +315,7 @@ public class Upcall {
         } else {
             org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
             out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
-                    ._OB_codeConverters(), (profileInfo_.major << 8)
-                    | profileInfo_.minor);
+                    ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
         out_._OB_ORBInstance(this.orbInstance());
         return out_;
@@ -439,8 +442,8 @@ public class Upcall {
             addUnsentConnectionServiceContexts();
             userEx_ = false;
             if (ex instanceof UnknownException) {
-                // need to create an exception info service context
-                replySCL_.add(createUnknownExceptionInfoServiceContext((UnknownException)ex));
+                // need to create service contexts for underlying exception
+                createUnknownExceptionServiceContexts((UnknownException)ex, replySCL_);
             }
             ServiceContext[] scl = new ServiceContext[replySCL_.size()];
             replySCL_.copyInto(scl);
@@ -448,13 +451,18 @@ public class Upcall {
         }
     }
 
-    private static ServiceContext createUnknownExceptionInfoServiceContext(UnknownException ex) {
-        Throwable t = ex.originalEx;
-        Buffer buf = new Buffer();
-        try (OutputStream os = new OutputStream(buf)) {
-            os.write_value(t, Throwable.class);
-            ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
-            return sc;
+    private static void createUnknownExceptionServiceContexts(UnknownException ex, Vector<ServiceContext> scl) {
+        final Throwable t = ex.originalEx;
+        try (CmsfOverride o = CmsfThreadLocal.override()) {
+            CodeConverters codeConverters = new CodeConverters();
+            codeConverters.outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
+            Buffer buf = new Buffer();
+            try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
+                os._OB_writeEndian();
+                os.write_value(t, Throwable.class);
+                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
+                scl.add(sc);
+            }
         } catch (IOException e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }

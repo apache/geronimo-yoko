@@ -17,10 +17,13 @@
 
 package org.apache.yoko.orb.OB;
  
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.OB.RETRY_ALWAYS;
+import org.apache.yoko.orb.OCI.GiopVersion;
 
 //
 // DowncallStub is equivalent to the C++ class OB::MarshalStubImpl
@@ -514,7 +517,7 @@ public final class DowncallStub {
         Client client = getClientProfilePair(info);
 
         out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client
-                .codeConverters(), 258);
+                .codeConverters(), GIOP1_2);
 
         sclHolder.value = client.getAMIRouterSCL();
 
@@ -555,7 +558,7 @@ public final class DowncallStub {
         Client client = getClientProfilePair(info);
 
         out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client
-                .codeConverters(), 258);
+                .codeConverters(), GIOP1_2);
         org.omg.IOP.ServiceContext[] scl = client.getAMIRouterSCL();
 
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_,

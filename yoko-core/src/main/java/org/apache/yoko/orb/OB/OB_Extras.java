@@ -17,6 +17,10 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
+
+import org.apache.yoko.orb.OCI.GiopVersion;
+
 public interface OB_Extras {
     //
     // Whether or not we are building a server capable of the
@@ -27,5 +31,5 @@ public interface OB_Extras {
     //
     // the default GIOP Version to set for the streams
     //
-    public final int DEFAULT_GIOP_VERSION = 0x0100;
+    public final GiopVersion DEFAULT_GIOP_VERSION = GIOP1_0;
 }

@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.util.osgi.ProviderLocator;
 
 //
@@ -173,7 +176,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
         org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                 32);
         org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                buf, null, 258);
+                buf, null, GIOP1_2);
 
         //
         // Put the exception into the output stream
