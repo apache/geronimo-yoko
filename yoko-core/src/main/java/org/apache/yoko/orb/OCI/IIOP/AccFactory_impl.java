@@ -190,7 +190,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                        buf, 0, false, null, 0);
+                        buf, 0, false, null, null);
                 in._OB_readEndian();
                 org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                         .read(in);

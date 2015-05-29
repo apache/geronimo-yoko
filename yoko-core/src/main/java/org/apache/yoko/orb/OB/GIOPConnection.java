@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 
@@ -478,8 +479,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         //
         readCodeConverters(scl.value);
         if (codeConverters_ != null)
-            in._OB_codeConverters(codeConverters_, (version.major << 8)
-                    | version.minor);
+            in._OB_codeConverters(codeConverters_, GiopVersion.get(version.major, version.minor));
 
         //
         // read in the peer's sending context runtime object

@@ -16,6 +16,9 @@
  */
 
 package org.apache.yoko.orb.OBMessaging;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 
@@ -305,7 +308,7 @@ public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
         org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                 marshaled_exception, marshaled_exception.length);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                buf, 0, false, null, 258);
+                buf, 0, false, null, GIOP1_2);
 
         return in;
     }

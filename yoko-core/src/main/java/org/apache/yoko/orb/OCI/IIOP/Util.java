@@ -94,7 +94,7 @@ final public class Util {
         org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                 ior.profiles[profile].profile_data,
                 ior.profiles[profile].profile_data.length);
-        InputStream in = new InputStream(buf, 0, false, null, 0);
+        InputStream in = new InputStream(buf, 0, false, null, null);
         in._OB_readEndian();
         org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                 .read(in);
@@ -184,7 +184,7 @@ final public class Util {
                 byte[] data = ior.profiles[i].profile_data;
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, 0);
+                InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                         .read(in);
@@ -223,7 +223,7 @@ final public class Util {
                                 org.apache.yoko.orb.OCI.Buffer b = new org.apache.yoko.orb.OCI.Buffer(
                                         d, d.length);
                                 InputStream s = new InputStream(b, 0, false,
-                                        null, 0);
+                                        null, null);
                                 s._OB_readEndian();
                                 String altHost = s.read_string();
                                 short altPort = s.read_ushort();
@@ -334,7 +334,7 @@ final public class Util {
                 byte[] data = ior1.profiles[p1].profile_data;
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, 0);
+                InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 bodies1[b1++] = org.omg.IIOP.ProfileBody_1_0Helper.read(in);
             }
@@ -351,7 +351,7 @@ final public class Util {
                 byte[] data = ior2.profiles[p2].profile_data;
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, 0);
+                InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 bodies2[b2++] = org.omg.IIOP.ProfileBody_1_0Helper.read(in);
             }
@@ -466,7 +466,7 @@ final public class Util {
                 byte[] data = ior.profiles[i].profile_data;
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, 0);
+                InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                         .read(in);

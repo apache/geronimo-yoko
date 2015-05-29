@@ -31,6 +31,7 @@ import javax.rmi.CORBA.Util;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.OB_Extras;
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.portable.IDLEntity;
@@ -47,7 +48,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
 
     boolean swap_;
 
-    private int GIOPVersion_ = org.apache.yoko.orb.OB.OB_Extras.DEFAULT_GIOP_VERSION;
+    private GiopVersion giopVersion_ = org.apache.yoko.orb.OB.OB_Extras.DEFAULT_GIOP_VERSION;
 
     private int origPos_;
 
@@ -584,9 +585,9 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
             // as ushort or ulong, depending on their maximum length
             // listed in the code set registry.
             //
-            switch (GIOPVersion_) {
+            switch (giopVersion_) {
 
-                case 0x0101 : {
+                case GIOP1_1: {
                     if (converter.getFrom().max_bytes <= 2)
                         value = (char) read_ushort();
                     else
@@ -614,12 +615,12 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
         // UTF-16
         //
         else {
-            switch (GIOPVersion_) {
+            switch (giopVersion_) {
 
             //
             // Orbix2000/ORBacus/E compatible GIOP 1.0 marshaling
             //
-                case 0x0100 : {
+                case GIOP1_0: {
                     buf_.pos_ += (buf_.pos_ & 0x1);
 
                     if (buf_.pos_ + 2 > buf_.len_)
@@ -632,7 +633,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
                     return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
                 }
 
-                case 0x0101 : {
+                case GIOP1_1: {
                     return (char) read_ushort();
                 }
 
@@ -664,8 +665,8 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
 
             int wcLen = 2;
 
-            switch (GIOPVersion_) {
-                case 0x0100 :
+            switch (giopVersion_) {
+                case GIOP1_0:
                     //
                     // we should not require a reader for GIOP 1.0
                     // wchars since this would mean we are using UTF-16.
@@ -675,7 +676,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
                     org.apache.yoko.orb.OB.Assert._OB_assert(false);
                     break;
 
-                case 0x0101 :
+                case GIOP1_1:
                     //
                     // align on two-byte boundary
                     // 
@@ -708,8 +709,8 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
             //
             // no reader is required then
             //
-            switch (GIOPVersion_) {
-                case 0x0100 :
+            switch (giopVersion_) {
+                case GIOP1_0:
                     //
                     // UCS-2 is the native wchar codeset for both Orbacus
                     // and Orbix/E so conversion should not be necessary
@@ -734,7 +735,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
                     //
                     return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
 
-                case 0x0101 :
+                case GIOP1_1:
                     //
                     // read according to the endian of the message
                     //
@@ -806,10 +807,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
         //
         // For GIOP 1.1 the length must not be 0.
         //
-        switch (GIOPVersion_) {
+        switch (giopVersion_) {
 
-            case 0x0100 :
-            case 0x0101 : {
+            case GIOP1_0:
+            case GIOP1_1: {
                 if (len == 0)
                     throw new org.omg.CORBA.MARSHAL(
                             org.apache.yoko.orb.OB.MinorCodes.describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringZeroLength),
@@ -912,10 +913,10 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Reading wstring of length 0x%x", len));
 
-        switch (GIOPVersion_) {
+        switch (giopVersion_) {
 
-            case 0x0100 :
-            case 0x0101 : {
+            case GIOP1_0:
+            case GIOP1_1: {
                 //
                 // it is not legal in GIOP 1.0/1.1 for a string to be 0 in
                 // length... it MUST have a null terminator
@@ -1820,27 +1821,27 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
     // ------------------------------------------------------------------
 
     public InputStream(org.apache.yoko.orb.OCI.Buffer buf, int offs, boolean swap, org.apache.yoko.orb.OB.CodeConverters codeConverters,
-            int GIOPVersion) {
+            GiopVersion giopVersion) {
         buf_ = buf;
         buf_.pos(offs);
         swap_ = swap;
         origPos_ = offs;
         origSwap_ = swap;
 
-        _OB_codeConverters(codeConverters, GIOPVersion);
+        _OB_codeConverters(codeConverters, giopVersion);
     }
 
     public InputStream(org.apache.yoko.orb.OCI.Buffer buf, int offs, boolean swap) {
-        this(buf, offs, swap, null, 0);
+        this(buf, offs, swap, null, null);
     }
 
     public InputStream(org.apache.yoko.orb.OCI.Buffer buf) {
-        this(buf, 0, false, null, 0);
+        this(buf, 0, false, null, null);
     }
 
-    public void _OB_codeConverters(org.apache.yoko.orb.OB.CodeConverters converters, int GIOPVersion) {
-        if (GIOPVersion != 0)
-            GIOPVersion_ = GIOPVersion;
+    public void _OB_codeConverters(org.apache.yoko.orb.OB.CodeConverters converters, GiopVersion giopVersion) {
+        if (giopVersion != null)
+            giopVersion_ = giopVersion;
 
         charReaderRequired_ = false;
         charConversionRequired_ = false;
@@ -1892,7 +1893,7 @@ final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream im
         byte[] data = new byte[buf_.len_];
         System.arraycopy(buf_.data_, 0, data, 0, buf_.len_);
         org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(data, data.length);
-        result = new InputStream(buf, origPos_, origSwap_, codeConverters_, GIOPVersion_);
+        result = new InputStream(buf, origPos_, origSwap_, codeConverters_, giopVersion_);
         result.orbInstance_ = orbInstance_;
 
         return result;
