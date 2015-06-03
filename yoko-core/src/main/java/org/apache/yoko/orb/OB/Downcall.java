@@ -17,19 +17,10 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-
 import java.util.Vector;
 
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.SystemException;
-import org.omg.CORBA.UNKNOWN;
-import org.omg.CORBA.portable.UnknownException;
 import org.omg.IOP.ServiceContext;
-import org.omg.IOP.UnknownExceptionInfo;
 
 public class Downcall {
     //
@@ -557,33 +548,8 @@ public class Downcall {
         Assert._OB_assert(responseExpected_);
         Assert._OB_assert(ex_ == null);
         state_ = DowncallStateSystemException;
-        ex_ = convertToUnknownExceptionIfAppropriate(ex);
+        ex_ = ex;
         logger_.debug("Received system exception", ex);
-    }
-
-    private SystemException convertToUnknownExceptionIfAppropriate(org.omg.CORBA.SystemException ex) {
-        if (ex instanceof UNKNOWN) {
-            for (ServiceContext sc : replySCL_) {
-                if (sc.context_id == UnknownExceptionInfo.value) {
-                    final byte[] data = sc.context_data;
-                    CodeConverters codeConverters = new CodeConverters();
-                    codeConverters.outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
-                    Buffer buf = new Buffer(data, data.length);
-                    try (org.apache.yoko.orb.CORBA.InputStream in =
-                            new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false, codeConverters, GIOP1_2)) {
-                        in._OB_readEndian();
-                        Throwable t = (Throwable) in.read_value();
-                        UnknownException x = new UnknownException(t);
-                        x.completed = ex.completed;
-                        x.minor = ex.minor;
-                        return x;
-                    } catch (Exception e) {
-                        throw (MARSHAL)(new MARSHAL(e.getMessage())).initCause(e);
-                    }
-                }
-            }
-        }
-        return ex;
     }
 
     public void setSystemException(org.omg.CORBA.SystemException ex) {

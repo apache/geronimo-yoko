@@ -17,10 +17,21 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.portable.UnknownException;
 import org.omg.IOP.ServiceContext;
+import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.SendingContext.CodeBase;
 
 abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
@@ -557,8 +568,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         case org.omg.GIOP.ReplyStatusType_1_2._SYSTEM_EXCEPTION: {
             try {
-                org.omg.CORBA.SystemException ex = Util
-                        .unmarshalSystemException(in);
+                org.omg.CORBA.SystemException ex = Util.unmarshalSystemException(in);
+                ex = convertToUnknownExceptionIfAppropriate(ex, in, scl.value);
                 down.setSystemException(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 processException(State.Error, ex, false);
@@ -612,6 +623,49 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     false);
             break;
         }
+    }
+
+    private SystemException convertToUnknownExceptionIfAppropriate(org.omg.CORBA.SystemException ex, InputStream is,
+            ServiceContext[] scl) {
+        if (ex instanceof UNKNOWN) {
+            for (ServiceContext sc : scl) {
+                if (sc.context_id == UnknownExceptionInfo.value) {
+                    final byte[] data = sc.context_data;
+                    Buffer buf = new Buffer(data, data.length);
+                    try (org.apache.yoko.orb.CORBA.InputStream in =
+                            new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false, is._OB_codeConverters(), GIOP1_2)) {
+                        try {
+                            in.__setSendingContextRuntime(is.__getSendingContextRuntime());
+                            in.__setCodeBase(is.__getCodeBase());
+                            in._OB_readEndian();
+                            Throwable t = (Throwable) in.read_value();
+                            UnknownException x = new UnknownException(t);
+                            x.completed = ex.completed;
+                            x.minor = ex.minor;
+                            return x;
+                        } catch (Exception e) {
+                            final String dump = in.dumpData();
+                            final int curPos = in.buf_.pos();
+                            in.buf_.pos(0);
+                            final String fullDump = in.dumpData();
+                            in.buf_.pos(curPos);
+                            try (StringWriter sw = new StringWriter();
+                                    PrintWriter pw = new PrintWriter(sw)) {
+                                e.printStackTrace(pw);
+                                logger.severe(String.format("%s:%n%s:%n%s%n%s:%n%s%n%s:%n%s",
+                                        "Exception reading UnknownExceptionInfo service context",
+                                        "Remaining data", dump, "Full data", fullDump,
+                                        "Exception thrown", sw.toString()));
+                            }
+                        }
+                    } catch (IOException e) {
+                        //ignore IOException from AutoCloseable.close()
+                    }
+                    break;
+                }
+            }
+        }
+        return ex;
     }
 
     private void assignSendingContextRuntime(InputStream in, ServiceContext[] scl) {
