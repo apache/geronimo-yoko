@@ -25,6 +25,8 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
+import org.apache.yoko.orb.util.AutoLock;
+import org.apache.yoko.orb.util.AutoReadWriteLock;
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
 import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.OBJECT_NOT_EXIST;

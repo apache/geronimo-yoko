@@ -146,7 +146,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         // dispatch thread is used, we could avoid initializing the
         // state monitor when it is not needed.
         //
-        down.initStateMonitor();
+        down.allowWaiting();
 
         Upcall up;
 

@@ -18,8 +18,14 @@
 package org.apache.yoko.orb.OB;
 
 import java.util.Vector;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
 
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.orb.util.AutoLock;
+import org.apache.yoko.orb.util.AutoReadWriteLock;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.NO_RESPONSE;
 import org.omg.IOP.ServiceContext;
 
 public class Downcall {
@@ -78,25 +84,13 @@ public class Downcall {
     //
     // The state of this invocation
     //
-    protected static final int DowncallStateUnsent = 0;
-
-    protected static final int DowncallStatePending = 1;
-
-    protected static final int DowncallStateNoException = 2;
-
-    protected static final int DowncallStateUserException = 3;
-
-    protected static final int DowncallStateSystemException = 4;
-
-    protected static final int DowncallStateFailureException = 5;
-
-    protected static final int DowncallStateForward = 6;
-
-    protected static final int DowncallStateForwardPerm = 7;
-
-    protected int state_;
-
-    protected java.lang.Object stateMonitor_;
+    protected enum State { UNSENT, PENDING, NO_EXCEPTION, USER_EXCEPTION, SYSTEM_EXCEPTION, FAILURE_EXCEPTION, FORWARD, FORWARD_PERM }
+    
+    protected final AutoReadWriteLock stateLock = new AutoReadWriteLock();
+    
+    protected State state = State.UNSENT;
+    
+    protected Condition stateWaitCondition;
 
     //
     // Holds the exception if state_ is DowncallStateUserException,
@@ -133,36 +127,38 @@ public class Downcall {
     // Raise an exception if necessary
     //
     void checkForException() throws LocationForward, FailureException {
-        switch (state_) {
-        case DowncallStateUserException:
-            //
-            // Do not raise UserException in Java
-            //
-            // if(ex_ != null) // Only raise if a user exception has been set
-            // throw ex_;
-            break;
+        try (AutoLock readLock = stateLock.getReadLock()) {
+            switch (state) {
+                case USER_EXCEPTION:
+                    //
+                    // Do not raise UserException in Java
+                    //
+                    // if(ex_ != null) // Only raise if a user exception has been set
+                    // throw ex_;
+                    break;
 
-        case DowncallStateSystemException:
-            Assert._OB_assert(ex_ != null);
-            // update the stack trace to have the caller's stack rather than the 
-            // receiver thread. 
-            ex_.fillInStackTrace();    
-            throw (org.omg.CORBA.SystemException) ex_;
+                case SYSTEM_EXCEPTION:
+                    Assert._OB_assert(ex_ != null);
+                    // update the stack trace to have the caller's stack rather than the 
+                    // receiver thread. 
+                    ex_.fillInStackTrace();    
+                    throw (org.omg.CORBA.SystemException) ex_;
 
-        case DowncallStateFailureException:
-            Assert._OB_assert(ex_ != null);
-            throw new FailureException((org.omg.CORBA.SystemException) ex_);
+                case FAILURE_EXCEPTION:
+                    Assert._OB_assert(ex_ != null);
+                    throw new FailureException((org.omg.CORBA.SystemException) ex_);
 
-        case DowncallStateForward:
-            Assert._OB_assert(forwardIOR_ != null);
-            throw new LocationForward(forwardIOR_, false);
+                case FORWARD:
+                    Assert._OB_assert(forwardIOR_ != null);
+                    throw new LocationForward(forwardIOR_, false);
 
-        case DowncallStateForwardPerm:
-            Assert._OB_assert(forwardIOR_ != null);
-            throw new LocationForward(forwardIOR_, true);
+                case FORWARD_PERM:
+                    Assert._OB_assert(forwardIOR_ != null);
+                    throw new LocationForward(forwardIOR_, true);
 
-        default:
-            break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -194,8 +190,10 @@ public class Downcall {
         policies_ = policies;
         op_ = op;
         responseExpected_ = resp;
-        state_ = DowncallStateUnsent;
-        stateMonitor_ = null;
+        // since this.state is not volatile we must use a lock to guarantee consistency
+        try (AutoLock writeLock = stateLock.getWriteLock()) {
+            state = State.UNSENT;
+        }
         ex_ = null;
 
         //
@@ -206,58 +204,58 @@ public class Downcall {
         logger_.debug("Downcall created for operation " + op + " with id " + reqId_); 
     }
 
-    public ORBInstance orbInstance() {
+    public final ORBInstance orbInstance() {
         return orbInstance_;
     }
 
-    public Client client() {
+    public final Client client() {
         return client_;
     }
 
-    public org.apache.yoko.orb.OCI.ProfileInfo profileInfo() {
+    public final org.apache.yoko.orb.OCI.ProfileInfo profileInfo() {
         return profileInfo_;
     }
 
-    public RefCountPolicyList policies() {
+    public final RefCountPolicyList policies() {
         return policies_;
     }
 
-    public Exception excep() {
+    public final Exception excep() {
         return ex_;
     }
 
-    public int requestId() {
+    public final int requestId() {
         return reqId_;
     }
 
-    public String operation() {
+    public final String operation() {
         return op_;
     }
 
-    public boolean responseExpected() {
+    public final boolean responseExpected() {
         return responseExpected_;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream output() {
+    public final org.apache.yoko.orb.CORBA.OutputStream output() {
         return out_;
     }
 
-    public org.apache.yoko.orb.CORBA.InputStream input() {
+    public final org.apache.yoko.orb.CORBA.InputStream input() {
         return in_;
     }
 
-    public org.omg.IOP.ServiceContext[] getRequestSCL() {
+    public final org.omg.IOP.ServiceContext[] getRequestSCL() {
         org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[requestSCL_
                 .size()];
         requestSCL_.copyInto(scl);
         return scl;
     }
 
-    public void addToRequestSCL(org.omg.IOP.ServiceContext sc) {
+    public final void addToRequestSCL(org.omg.IOP.ServiceContext sc) {
         requestSCL_.addElement(sc);
     }
 
-    public void setReplySCL(org.omg.IOP.ServiceContext[] scl) {
+    public final void setReplySCL(org.omg.IOP.ServiceContext[] scl) {
         // Don't create a new Vector
         Assert._OB_assert(replySCL_.size() == 0);
         replySCL_.setSize(scl.length);
@@ -270,17 +268,17 @@ public class Downcall {
         return preMarshalBase();
     }
 
-    public void marshalEx(org.omg.CORBA.SystemException ex)
+    public final void marshalEx(org.omg.CORBA.SystemException ex)
             throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
         Assert._OB_assert(false);
     }
 
-    public void postMarshal() throws LocationForward, FailureException {
+    public final void postMarshal() throws LocationForward, FailureException {
     }
 
-    public void locate() throws LocationForward, FailureException {
+    public final void locate() throws LocationForward, FailureException {
         Assert._OB_assert(responseExpected_);
         Assert._OB_assert(op_.equals("_locate"));
 
@@ -302,7 +300,7 @@ public class Downcall {
         checkForException();
     }
 
-    public void request() throws LocationForward, FailureException {
+    public final void request() throws LocationForward, FailureException {
         Assert._OB_assert(responseExpected_);
 
         //
@@ -322,7 +320,7 @@ public class Downcall {
         checkForException();
     }
 
-    public void oneway() throws LocationForward, FailureException {
+    public final void oneway() throws LocationForward, FailureException {
         Assert._OB_assert(!responseExpected_);
 
         if (policies_.syncScope == org.omg.Messaging.SYNC_WITH_TRANSPORT.value) {
@@ -336,7 +334,7 @@ public class Downcall {
         }
     }
 
-    public void deferred() throws LocationForward, FailureException {
+    public final void deferred() throws LocationForward, FailureException {
         Assert._OB_assert(responseExpected_);
 
         boolean finished = emitter_.send(this, true);
@@ -344,7 +342,7 @@ public class Downcall {
             checkForException();
     }
 
-    public void response() throws LocationForward, FailureException {
+    public final void response() throws LocationForward, FailureException {
         Assert._OB_assert(responseExpected_);
 
         boolean finished = emitter_.receive(this, true);
@@ -352,23 +350,25 @@ public class Downcall {
         checkForException();
     }
 
-    public boolean poll() throws LocationForward, FailureException {
+    public final boolean poll() throws LocationForward, FailureException {
         Assert._OB_assert(responseExpected_);
 
         boolean finished = emitter_.receive(this, false);
         if (finished) {
-            checkForException();
-            return state_ != DowncallStatePending;
+            try (AutoLock lock = stateLock.getReadLock()) {
+                checkForException();
+                return state != State.PENDING;
+            }
         } else
             return false;
     }
 
-    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
+    public final org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
             throws LocationForward, FailureException {
         return in_;
     }
 
-    public void unmarshalEx(org.omg.CORBA.SystemException ex)
+    public final void unmarshalEx(org.omg.CORBA.SystemException ex)
             throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
@@ -385,289 +385,212 @@ public class Downcall {
         // the user exception, so we only want to raise UNKNOWN if we
         // don't have the ID
         //
-        if (state_ == DowncallStateUserException && ex_ == null
-                && exId_ == null)
-            setSystemException(new org.omg.CORBA.UNKNOWN(org.apache.yoko.orb.OB.MinorCodes
-                    .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_YES));
-
-        checkForException();
+        try (AutoLock lock = stateLock.getReadLock()) {
+            if (state == State.USER_EXCEPTION && ex_ == null && exId_ == null)
+                setSystemException(new org.omg.CORBA.UNKNOWN(org.apache.yoko.orb.OB.MinorCodes
+                        .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException),
+                        org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
+                        org.omg.CORBA.CompletionStatus.COMPLETED_YES));
+            checkForException();
+        }
     }
 
-    public String unmarshalExceptionId() {
-        Assert._OB_assert(state_ == DowncallStateUserException);
-        int pos = in_._OB_pos();
-        String id = in_.read_string();
-        in_._OB_pos(pos);
-        return id;
+    public final String unmarshalExceptionId() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            Assert._OB_assert(state == State.USER_EXCEPTION);
+            int pos = in_._OB_pos();
+            String id = in_.read_string();
+            in_._OB_pos(pos);
+            return id;
+        }
     }
 
-    public boolean unsent() {
-        return state_ == DowncallStateUnsent;
+    public final boolean unsent() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.UNSENT;
+        }
     }
 
-    public boolean pending() {
-        return state_ == DowncallStatePending;
+    public final boolean pending() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.PENDING;
+        }
     }
 
-    public boolean noException() {
-        return state_ == DowncallStateNoException;
+    public final boolean noException() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.NO_EXCEPTION;
+        }
     }
 
-    public boolean userException() {
-        return state_ == DowncallStateUserException;
+    public final boolean userException() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.USER_EXCEPTION;
+        }
     }
 
-    public boolean failureException() {
-        return state_ == DowncallStateFailureException;
+    public final boolean failureException() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.FAILURE_EXCEPTION;
+        }
     }
 
-    public boolean systemException() {
-        return state_ == DowncallStateSystemException;
+    public final boolean systemException() {
+        try (AutoLock lock = stateLock.getReadLock()) {
+            return state == State.SYSTEM_EXCEPTION;
+        }
     }
 
-    private void setPendingImpl() {
-        Assert._OB_assert(responseExpected_);
-        state_ = DowncallStatePending;
-    }
-
-    public void setPending() {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setPendingImpl();
-                stateMonitor_.notify();
-            }
-        } else
-            setPendingImpl();
-    }
-
-    private void setNoExceptionImpl(org.apache.yoko.orb.CORBA.InputStream in) {
-        state_ = DowncallStateNoException;
-        if (in == null) {
-            Assert._OB_assert(!responseExpected_);
-        } else {
+    public final void setPending() {
+        try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(responseExpected_);
+            state = State.PENDING;
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setNoException(org.apache.yoko.orb.CORBA.InputStream in) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            state = State.NO_EXCEPTION;
+            if (in == null) {
+                Assert._OB_assert(!responseExpected_);
+            } else {
+                Assert._OB_assert(responseExpected_);
+                in_ = in;
+                in_._OB_ORBInstance(orbInstance_);
+                CodeConverters codeConverters = client_.codeConverters();
+                in_._OB_codeConverters(codeConverters, GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+            }
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setUserException(org.apache.yoko.orb.CORBA.InputStream in) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(in != null);
+            Assert._OB_assert(responseExpected_);
+            state = State.USER_EXCEPTION;
             in_ = in;
             in_._OB_ORBInstance(orbInstance_);
             CodeConverters codeConverters = client_.codeConverters();
             in_._OB_codeConverters(codeConverters, GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
     }
 
-    public void setNoException(org.apache.yoko.orb.CORBA.InputStream in) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setNoExceptionImpl(in);
-                stateMonitor_.notify();
-            }
-        } else
-            setNoExceptionImpl(in);
-    }
-
-    private void setUserExceptionImpl(org.apache.yoko.orb.CORBA.InputStream in) {
-        Assert._OB_assert(in != null);
-        Assert._OB_assert(responseExpected_);
-        state_ = DowncallStateUserException;
-        in_ = in;
-        in_._OB_ORBInstance(orbInstance_);
-        CodeConverters codeConverters = client_.codeConverters();
-        in_._OB_codeConverters(codeConverters, GiopVersion.get(profileInfo_.major, profileInfo_.minor));
-    }
-
-    public void setUserException(org.apache.yoko.orb.CORBA.InputStream in) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setUserExceptionImpl(in);
-                stateMonitor_.notify();
-            }
-        } else
-            setUserExceptionImpl(in);
-    }
-
-    private void setUserExceptionImpl(org.omg.CORBA.UserException ex,
-            String exId) {
-        Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(ex_ == null);
-        state_ = DowncallStateUserException;
-        ex_ = ex;
-    }
-
     public void setUserException(org.omg.CORBA.UserException ex, String exId) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setUserExceptionImpl(ex, exId);
-                stateMonitor_.notify();
-            }
-        } else
-            setUserExceptionImpl(ex, exId);
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(responseExpected_);
+            Assert._OB_assert(ex_ == null);
+            state = State.USER_EXCEPTION;
+            ex_ = ex;
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
     }
 
-    private void setUserExceptionImpl(org.omg.CORBA.UserException ex) {
+    public final void setUserException(org.omg.CORBA.UserException ex) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(responseExpected_);
+            Assert._OB_assert(ex_ == null);
+            state = State.USER_EXCEPTION;
+            ex_ = ex;
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setUserException(String exId) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(responseExpected_);
+            Assert._OB_assert(ex_ == null);
+            state = State.USER_EXCEPTION;
+            exId_ = exId;
+            logger_.debug("Received user exception " + exId);
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setSystemException(org.omg.CORBA.SystemException ex) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(responseExpected_);
+            Assert._OB_assert(ex_ == null);
+            state = State.SYSTEM_EXCEPTION;
+            ex_ = ex;
+            logger_.debug("Received system exception", ex);
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setFailureException(org.omg.CORBA.SystemException ex) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(ex_ == null);
+            state = State.FAILURE_EXCEPTION;
+            ex_ = ex;
+            logger_.debug("Received failure exception", ex);
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
+    }
+
+    public final void setLocationForward(org.omg.IOP.IOR ior, boolean perm) {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(responseExpected_);
+            Assert._OB_assert(forwardIOR_ == null);
+            state = perm ? State.FORWARD_PERM : State.FORWARD;
+            forwardIOR_ = ior;
+            if (null != stateWaitCondition) stateWaitCondition.signalAll();
+        }
         Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(ex_ == null);
-        state_ = DowncallStateUserException;
-        ex_ = ex;
-    }
-
-    public void setUserException(org.omg.CORBA.UserException ex) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setUserExceptionImpl(ex);
-                stateMonitor_.notify();
-            }
-        } else
-            setUserExceptionImpl(ex);
     }
 
     //
-    // Java only
-    //
-    // Required for portable stubs, which do not make the UserException
-    // instance available to the ORB
-    //
-    private void setUserExceptionImpl(String exId) {
-        Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(ex_ == null);
-        state_ = DowncallStateUserException;
-        exId_ = exId;
-        logger_.debug("Received user exception " + exId);
-    }
-
-    public void setUserException(String exId) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setUserExceptionImpl(exId);
-                stateMonitor_.notify();
-            }
-        } else
-            setUserExceptionImpl(exId);
-    }
-
-    private void setSystemExceptionImpl(org.omg.CORBA.SystemException ex) {
-        Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(ex_ == null);
-        state_ = DowncallStateSystemException;
-        ex_ = ex;
-        logger_.debug("Received system exception", ex);
-    }
-
-    public void setSystemException(org.omg.CORBA.SystemException ex) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setSystemExceptionImpl(ex);
-                stateMonitor_.notify();
-            }
-        } else
-            setSystemExceptionImpl(ex);
-    }
-
-    private void setFailureExceptionImpl(org.omg.CORBA.SystemException ex) {
-        Assert._OB_assert(ex_ == null);
-        state_ = DowncallStateFailureException;
-        ex_ = ex;
-        logger_.debug("Received failure exception", ex);
-    }
-
-    public void setFailureException(org.omg.CORBA.SystemException ex) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setFailureExceptionImpl(ex);
-                stateMonitor_.notify();
-            }
-        } else
-            setFailureExceptionImpl(ex);
-    }
-
-    private void setLocationForwardImpl(org.omg.IOP.IOR ior, boolean perm) {
-        Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(forwardIOR_ == null);
-        if (perm)
-            state_ = DowncallStateForwardPerm;
-        else
-            state_ = DowncallStateForward;
-        forwardIOR_ = ior;
-    }
-
-    public void setLocationForward(org.omg.IOP.IOR ior, boolean perm) {
-        if (stateMonitor_ != null) {
-            synchronized (stateMonitor_) {
-                setLocationForwardImpl(ior, perm);
-                stateMonitor_.notify();
-            }
-        } else
-            setLocationForwardImpl(ior, perm);
-    }
-
-    //
-    // Initialize the state monitor. This operation must be called in
+    // Initialize the wait condition. This operation must be called in
     // order to be able to use one of the waitUntil...() operations
     // below
     //
-    public void initStateMonitor() {
-        Assert._OB_assert(stateMonitor_ == null);
-        stateMonitor_ = new java.lang.Object();
+    public final void allowWaiting() {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(stateWaitCondition == null);
+            stateWaitCondition = lock.newCondition();
+        }
     }
 
-    //
-    // This operation try waits for a specific state, using the
-    // timeout from this downcall's policies. If the timeout expires,
-    // a NO_RESPONSE exception is raised.
-    //
-    // - If the first parameter is set to false, the operation returns
-    // immediately with false if the desired state cannot be
-    // reached.
-    //
-    // - If the return value is true, it's safe to access or modify
-    // the downcall object. If the return value if false, accessing
-    // or modifying the downcall object is not allowed, for thread
-    // safety reasons. (Because the downcall object is not thread
-    // safe.)
-    //
-    public boolean waitUntilCompleted(boolean block) {
+    /**
+     * This operation try waits for a completed state, using the
+     * timeout from this downcall's policies.
+     *
+     * @param block whether to wait for the call to complete
+     * @return true if the call has completed
+     * @throws NO_RESPONSE if a timeout was set and has elapsed
+     */
+    public final boolean waitUntilCompleted(boolean block) {
         //
         // Get the timeout
         //
         int t = policies_.requestTimeout;
 
         //
-        // Yield if non-blocking or blocking with zero timeout
-        //
-        if (!block || (block && t == 0)) {
-            Thread.yield();
-        }
-
-        //
         // Wait for the desired state, taking the timeout and blocking
         // flag into account
         //
-        Assert._OB_assert(stateMonitor_ != null);
-        synchronized (stateMonitor_) {
-            while (state_ == DowncallStateUnsent
-                    || state_ == DowncallStatePending) {
-                if (!block) {
-                    return false;
-                }
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            Assert._OB_assert(stateWaitCondition != null);
+            while (state == State.UNSENT || state == State.PENDING) {
+                if (!block) return false;
 
                 try {
-                    if (t < 0) {
-                        stateMonitor_.wait();
+                    if (t <= 0) {
+                        stateWaitCondition.await();
                     } else {
-                        int oldState = state_;
+                        State oldState = state;
 
-                        stateMonitor_.wait(t);
+                        stateWaitCondition.await(t, TimeUnit.MILLISECONDS);
 
-                        if (state_ == oldState) {
-                            throw new org.omg.CORBA.NO_RESPONSE(
-                                    "Timeout during receive",
-                                    0,
-                                    org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+                        if (state == oldState) {
+                            throw new NO_RESPONSE("Timeout during receive", 0, CompletionStatus.COMPLETED_MAYBE);
                         }
                     }
                 } catch (InterruptedException ex) {
                 }
             }
-
             //
             // The downcall has completed
             //

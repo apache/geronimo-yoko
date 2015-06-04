@@ -539,7 +539,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // make the downcall thread-safe
             //
             if (down.responseExpected()) {
-                down.initStateMonitor();
+                down.allowWaiting();
             }
 
             // 
