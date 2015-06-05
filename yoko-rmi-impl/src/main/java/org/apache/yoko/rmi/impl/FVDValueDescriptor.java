@@ -17,10 +17,9 @@
 */ 
 package org.apache.yoko.rmi.impl;
 
-import org.omg.CORBA.AttributeDescription;
 import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 
 /**
  * @author krab
