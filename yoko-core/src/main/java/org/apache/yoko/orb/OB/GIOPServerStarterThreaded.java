@@ -86,6 +86,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
 
         logger.fine("GIOPServer thread started " + this + " using acceptor " + acceptor); 
         try {
+            orbInstance_.getServerPhaser().register();
             //
             // Retrieve the thread group for the servers
             //
@@ -254,6 +255,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
 
                 if (state_ == StateClosed) {
                     logger.fine("Shutting down server thread"); 
+                    orbInstance_.getServerPhaser().arrive();
                     break;
                 }
             }
