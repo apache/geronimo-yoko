@@ -630,38 +630,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         if (ex instanceof UNKNOWN) {
             for (ServiceContext sc : scl) {
                 if (sc.context_id == UnknownExceptionInfo.value) {
-                    final byte[] data = sc.context_data;
-                    Buffer buf = new Buffer(data, data.length);
-                    try (org.apache.yoko.orb.CORBA.InputStream in =
-                            new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false, is._OB_codeConverters(), GIOP1_2)) {
-                        try {
-                            in.__setSendingContextRuntime(is.__getSendingContextRuntime());
-                            in.__setCodeBase(is.__getCodeBase());
-                            in._OB_readEndian();
-                            Throwable t = (Throwable) in.read_value();
-                            UnknownException x = new UnknownException(t);
-                            x.completed = ex.completed;
-                            x.minor = ex.minor;
-                            return x;
-                        } catch (Exception e) {
-                            final String dump = in.dumpData();
-                            final int curPos = in.buf_.pos();
-                            in.buf_.pos(0);
-                            final String fullDump = in.dumpData();
-                            in.buf_.pos(curPos);
-                            try (StringWriter sw = new StringWriter();
-                                    PrintWriter pw = new PrintWriter(sw)) {
-                                e.printStackTrace(pw);
-                                logger.severe(String.format("%s:%n%s:%n%s%n%s:%n%s%n%s:%n%s",
-                                        "Exception reading UnknownExceptionInfo service context",
-                                        "Remaining data", dump, "Full data", fullDump,
-                                        "Exception thrown", sw.toString()));
-                            }
-                        }
-                    } catch (IOException e) {
-                        //ignore IOException from AutoCloseable.close()
-                    }
-                    break;
+                    return new UnresolvedException((UNKNOWN) ex, sc.context_data, is);
                 }
             }
         }

@@ -378,7 +378,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             //
             try {
                 inMsg.extractHeader(buf);
-                logger.fine("Header received for message of size " + inMsg.size()); 
+                logger.fine("Header received for message of size " + inMsg.size());
                 buf.realloc(12 + inMsg.size());
             } catch (org.omg.CORBA.SystemException ex) {
                 processException(State.Error, ex, false);
@@ -718,7 +718,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         try {
             boolean result = down.waitUntilCompleted(block);
-            logger.fine("Completed eceiving response with Downcall of type " + down.getClass().getName()); 
+            logger.fine("Completed receiving response with Downcall of type " + down.getClass().getName());
             return result; 
         } catch (org.omg.CORBA.SystemException ex) {
             processException(State.Closed, ex, false);

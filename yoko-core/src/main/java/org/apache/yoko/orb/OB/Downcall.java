@@ -591,6 +591,7 @@ public class Downcall {
                 } catch (InterruptedException ex) {
                 }
             }
+            if (ex_ instanceof UnresolvedException) ex_ = ((UnresolvedException)ex_).resolve();
             //
             // The downcall has completed
             //
