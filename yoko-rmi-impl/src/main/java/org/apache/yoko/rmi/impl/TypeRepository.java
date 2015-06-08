@@ -39,16 +39,17 @@ import java.util.logging.Logger;
 
 import javax.rmi.CORBA.ClassDesc;
 
-import org.apache.yoko.rmi.util.ByteBuffer;
-import org.apache.yoko.rmi.util.ByteString;
+import org.apache.yoko.rmi.util.SearchKey;
+import org.apache.yoko.rmi.util.WeakKey;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.portable.IDLEntity;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 import org.omg.SendingContext.RunTime;
-import org.apache.yoko.rmi.util.SearchKey;
-import org.apache.yoko.rmi.util.WeakKey;
+
+import org.apache.yoko.rmi.impl.TypeDescriptor.FullKey;
+import org.apache.yoko.rmi.impl.TypeDescriptor.SimpleKey;
 
 public class TypeRepository {
     static final Logger logger = Logger.getLogger(TypeRepository.class.getName());
@@ -56,23 +57,32 @@ public class TypeRepository {
     org.omg.CORBA.ORB orb;
 
     private static final class TypeDescriptorCache {
-        private final ConcurrentMap<WeakKey<String>, WeakReference<TypeDescriptor>> map = new ConcurrentHashMap<>();
-        private final ReferenceQueue<String> staleKeys = new ReferenceQueue<>();
+        private final ConcurrentMap<WeakKey<FullKey>, WeakReference<TypeDescriptor>> map =
+                new ConcurrentHashMap<>();
+        private final ReferenceQueue<FullKey> staleKeys = new ReferenceQueue<>();
 
-        public TypeDescriptor get(String repId) {
+        public TypeDescriptor get(String repid) {
             cleanStaleKeys();
-            WeakReference<TypeDescriptor> ref = map.get(new SearchKey<String>(repId));
+            WeakReference<TypeDescriptor> ref =
+                    map.get(new SearchKey<SimpleKey>(new SimpleKey(repid)));
+            return (null == ref) ? null : ref.get();
+        }
+
+        public TypeDescriptor get(String repid, Class<?> localType) {
+            cleanStaleKeys();
+            WeakReference<TypeDescriptor> ref =
+                    map.get(new SearchKey<FullKey>(new FullKey(repid, localType)));
             return (null == ref) ? null : ref.get();
         }
 
         public void put(TypeDescriptor typeDesc) {
             cleanStaleKeys();
             final WeakReference<TypeDescriptor> value = new WeakReference<>(typeDesc);
-            map.putIfAbsent(new WeakKey<String>(typeDesc.getRepositoryID(), staleKeys), value);
+            map.putIfAbsent(new WeakKey<FullKey>(typeDesc.getKey(), staleKeys), value);
         }
 
         private void cleanStaleKeys() {
-            for (Reference<? extends String> staleKey = staleKeys.poll(); staleKey != null; staleKey = staleKeys.poll()) {
+            for (Reference<? extends Object> staleKey = staleKeys.poll(); staleKey != null; staleKey = staleKeys.poll()) {
                 map.remove(staleKey);
             }
         }
@@ -314,13 +324,13 @@ public class TypeRepository {
             return (ValueDescriptor) getDescriptor(clz);
         }
 
-        ValueDescriptor clzdesc = (ValueDescriptor) repIdDescriptors.get(repid);
+        ValueDescriptor clzdesc = (ValueDescriptor) repIdDescriptors.get(repid, clz);
         if (clzdesc != null) {
             return clzdesc;
         }
 
         if (clz != null) {
-            logger.fine("Requesting type descriptor for class " + clz.getName() + " with repid " + repid); 
+            logger.fine("Requesting type descriptor for class " + clz.getName() + " with repid " + repid);
             // special handling for array value types.
             if (clz.isArray()) {
                 //TODO don't we need to look up the FVD for the array element?
@@ -339,7 +349,7 @@ public class TypeRepository {
             // and padding and these can't be reliably identified without this remote info.  cf YOKO-434.
         }
 
-        logger.fine("Requesting type descriptor for repid " + repid); 
+        logger.fine("Requesting type descriptor for repid " + repid);
         CodeBase codebase = CodeBaseHelper.narrow(runtime);
         if (codebase == null) {
             throw new MARSHAL("cannot locate RunTime CodeBase");

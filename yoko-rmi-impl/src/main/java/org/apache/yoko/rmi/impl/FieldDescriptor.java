@@ -1,20 +1,20 @@
 /**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
+ *
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */ 
 
 package org.apache.yoko.rmi.impl;
 
@@ -29,7 +29,7 @@ import java.util.logging.Level;
 import org.omg.CORBA.ValueMember;
 
 public abstract class FieldDescriptor extends ModelElement implements
-        Comparable {
+Comparable {
     static Logger logger = Logger.getLogger(FieldDescriptor.class.getName());
 
     org.apache.yoko.rmi.util.corba.Field field;
@@ -160,7 +160,7 @@ public abstract class FieldDescriptor extends ModelElement implements
 
         } else {
             if(org.omg.CORBA.Object.class.isAssignableFrom(type)) {
-        	return new CorbaObjectFieldDescriptor(owner, type, name, f);
+                return new CorbaObjectFieldDescriptor(owner, type, name, f);
             }
             if (java.lang.Object.class.equals(type)
                     || java.io.Externalizable.class.equals(type)
@@ -168,7 +168,7 @@ public abstract class FieldDescriptor extends ModelElement implements
                 return new AnyFieldDescriptor(owner, type, name, f);
 
             } else if (java.rmi.Remote.class.isAssignableFrom(type) 
-        	    || java.rmi.Remote.class.equals(type))
+                    || java.rmi.Remote.class.equals(type))
             {
                 return new RemoteFieldDescriptor(owner, type, name, f);
 
@@ -1143,7 +1143,7 @@ class DoubleFieldDescriptor extends FieldDescriptor {
 class CorbaObjectFieldDescriptor extends FieldDescriptor {
 
     protected CorbaObjectFieldDescriptor(Class owner, Class type, String name, Field f) {
-	super(owner, type, name, f);
+        super(owner, type, name, f);
     }
 
     void copyState(final Object orig, final Object copy, CopyState state) {
@@ -1167,31 +1167,31 @@ class CorbaObjectFieldDescriptor extends FieldDescriptor {
     void read(ObjectReader reader, Object obj) throws IOException {
         Object value = reader.readCorbaObject(null);
         try {
-	    field.set(obj, value);
-	} catch (IllegalAccessException e) {
-	    throw (IOException)new IOException(e.getMessage()).initCause(e);
-	}
+            field.set(obj, value);
+        } catch (IllegalAccessException e) {
+            throw (IOException)new IOException(e.getMessage()).initCause(e);
+        }
     }
 
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-	Object value = reader.readCorbaObject(null);
-	map.put(getJavaName(), value);
-	
+        Object value = reader.readCorbaObject(null);
+        map.put(getJavaName(), value);
+
     }
 
     void write(ObjectWriter writer, Object obj) throws IOException {
-	try {
-	    writer.writeCorbaObject(field.get(obj));
-	}
-	catch(IllegalAccessException e) {
-	    throw (IOException)new IOException(e.getMessage()).initCause(e);
-	}
+        try {
+            writer.writeCorbaObject(field.get(obj));
+        }
+        catch(IllegalAccessException e) {
+            throw (IOException)new IOException(e.getMessage()).initCause(e);
+        }
     }
 
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         org.omg.CORBA.Object value = (org.omg.CORBA.Object) map.get(getJavaName());
         writer.writeCorbaObject(value);
-	
+
     }
-    
+
 }

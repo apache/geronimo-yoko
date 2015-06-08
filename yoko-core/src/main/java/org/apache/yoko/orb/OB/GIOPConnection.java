@@ -17,10 +17,21 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.portable.UnknownException;
 import org.omg.IOP.ServiceContext;
+import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.SendingContext.CodeBase;
 
 abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
@@ -557,8 +568,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         case org.omg.GIOP.ReplyStatusType_1_2._SYSTEM_EXCEPTION: {
             try {
-                org.omg.CORBA.SystemException ex = Util
-                        .unmarshalSystemException(in);
+                org.omg.CORBA.SystemException ex = Util.unmarshalSystemException(in);
+                ex = convertToUnknownExceptionIfAppropriate(ex, in, scl.value);
                 down.setSystemException(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 processException(State.Error, ex, false);
@@ -612,6 +623,18 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     false);
             break;
         }
+    }
+
+    private SystemException convertToUnknownExceptionIfAppropriate(org.omg.CORBA.SystemException ex, InputStream is,
+            ServiceContext[] scl) {
+        if (ex instanceof UNKNOWN) {
+            for (ServiceContext sc : scl) {
+                if (sc.context_id == UnknownExceptionInfo.value) {
+                    return new UnresolvedException((UNKNOWN) ex, sc.context_data, is);
+                }
+            }
+        }
+        return ex;
     }
 
     private void assignSendingContextRuntime(InputStream in, ServiceContext[] scl) {

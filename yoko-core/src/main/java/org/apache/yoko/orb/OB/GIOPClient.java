@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.omg.SendingContext.CodeBaseHelper;
 
 final class GIOPClient extends Client {
     protected ORBInstance orbInstance_; // The ORB instance
@@ -285,7 +286,7 @@ final class GIOPClient extends Client {
         if (codeBaseSC_ == null) {
 
             javax.rmi.CORBA.ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
-            org.omg.SendingContext.CodeBase codeBase = (org.omg.SendingContext.CodeBase) valueHandler.getRunTimeCodeBase();
+            org.omg.SendingContext.CodeBase codeBase = CodeBaseHelper.narrow(valueHandler.getRunTimeCodeBase());
 
 
             org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();

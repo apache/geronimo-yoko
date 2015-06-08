@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import org.omg.CORBA.portable.InputStream;
@@ -35,8 +36,66 @@ public abstract class TypeDescriptor extends ModelElement {
 
     protected RemoteInterfaceDescriptor remoteDescriptor;
 
+    private FullKey _key;
+
     public Class getJavaClass() {
         return _java_class;
+    }
+
+    public final FullKey getKey() {
+        if (null == _key) {
+            _key = new FullKey(getRepositoryID(), getJavaClass());
+        }
+        return _key;
+    }
+
+    public static class SimpleKey {
+        private final String repid;
+
+        public SimpleKey(String repid) {
+            this.repid = repid;
+        }
+
+        @Override
+        public int hashCode() {
+            final int prime = 31;
+            int result = 1;
+            result = prime * result + ((repid == null) ? 0 : repid.hashCode());
+            return result;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null) return false;
+            if (!(obj instanceof SimpleKey)) return false;
+            return Objects.equals(repid, ((SimpleKey)obj).repid);
+        }
+    }
+
+    public static final class FullKey extends SimpleKey {
+        private final Class<?> localType;
+
+        public FullKey(String repid, Class<?> localType) {
+            super(repid);
+            this.localType = localType;
+        }
+
+        @Override
+        public int hashCode() {
+            // must just be the same as SimpleKey's hashCode
+            return super.hashCode();
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null) return false;
+            if (!(obj instanceof SimpleKey)) return false;
+            if (obj instanceof FullKey &&
+                    !!!Objects.equals(localType, ((FullKey)obj).localType)) return false;
+            return super.equals(obj);
+        }
     }
 
     @Override

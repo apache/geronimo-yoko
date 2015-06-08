@@ -445,11 +445,12 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     public boolean isCustomMarshalled() {
-        if ((_is_externalizable || (_write_object_method != null)))
-            return true;
+        return (_is_externalizable || (_write_object_method != null));
+    }
 
-        return (_super_descriptor != null) && _super_descriptor.isCustomMarshalled();
-
+    public boolean isChunked() {
+        if (isCustomMarshalled()) return true;
+        return (_super_descriptor != null) && _super_descriptor.isChunked();
     }
 
     public Serializable writeReplace(Serializable val) {

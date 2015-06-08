@@ -480,7 +480,7 @@ final public class ValueWriter {
         //
         // Determine if chunked encoding is needed.
         //
-        boolean isChunked = valueHandler.isCustomMarshaled (clz);
+        boolean isChunked = valueHandler.isCustomMarshaled(clz);
 
         int pos = beginValue (tag, ids, codebase, isChunked);
         instanceTable_.put (value, new Integer (pos));
