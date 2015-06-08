@@ -131,8 +131,9 @@ public class ValueHandlerImpl implements ValueHandler {
         return getRepository().getDescriptor(clz).getRepositoryID();
     }
 
+    @Override
     public boolean isCustomMarshaled(java.lang.Class clz) {
-        return desc(clz).isCustomMarshalled();
+        return desc(clz).isChunked();
     }
 
     public synchronized org.omg.SendingContext.RunTime getRunTimeCodeBase() {
