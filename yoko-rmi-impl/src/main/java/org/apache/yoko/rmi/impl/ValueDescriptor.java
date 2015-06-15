@@ -61,7 +61,6 @@ import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.VM_NONE;
 import org.omg.CORBA.ValueMember;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
-import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.InputStream;
 import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA.portable.UnknownException;
@@ -846,7 +845,9 @@ public class ValueDescriptor extends TypeDescriptor {
 
     protected ValueMember[] _value_members = null;
 
-    ValueMember[] getValueMembers() {
+    private ValueMember[] getValueMembers() {
+        getTypeCode(); // ensure recursion through typecode for non-array types
+
         if (_value_members == null) {
             _value_members = new ValueMember[_fields.length];
             for (int i = 0; i < _fields.length; i++) {
@@ -879,12 +880,29 @@ public class ValueDescriptor extends TypeDescriptor {
         return _type_code;
     }
 
+    private static final OperationDescription[] ZERO_OPERATIONS = {};
+    private static final AttributeDescription[] ZERO_ATTRIBUTES = {};
+    private static final Initializer[] ZERO_INITIALIZERS = {};
+    private static final String[] ZERO_STRINGS = {};
+    
     FullValueDescription getFullValueDescription() {
-        return new FullValueDescription(getJavaClass().getName(), getRepositoryID(),
-                false, // is_abstract
-                isCustomMarshalled(), "", "1.0", new OperationDescription[0], new AttributeDescription[0], getValueMembers(), new Initializer[0],
-                new String[0], new String[0], false, // is_truncatable
-                ((_super_descriptor == null) ? "" : _super_descriptor.getRepositoryID()), getTypeCode());
+        FullValueDescription fvd = new FullValueDescription();
+        fvd.name = getJavaClass().getName();
+        fvd.id = getRepositoryID();
+        fvd.is_abstract = false;
+        fvd.is_custom = isCustomMarshalled();
+        fvd.defined_in = "";
+        fvd.version = "1.0";
+        fvd.operations = ZERO_OPERATIONS;
+        fvd.attributes = ZERO_ATTRIBUTES;
+        fvd.members = getValueMembers();
+        fvd.initializers = ZERO_INITIALIZERS;
+        fvd.supported_interfaces = ZERO_STRINGS;
+        fvd.abstract_base_values = ZERO_STRINGS;
+        fvd.is_truncatable = false;
+        fvd.base_value = ((_super_descriptor == null) ? "" : _super_descriptor.getRepositoryID());
+        fvd.type = getTypeCode();
+        return fvd;
     }
 
     class ObjectDeserializer {
