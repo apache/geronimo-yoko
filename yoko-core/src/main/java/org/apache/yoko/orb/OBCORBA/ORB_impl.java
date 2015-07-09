@@ -28,6 +28,9 @@ import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
 import org.apache.yoko.orb.util.AutoLock;
 import org.apache.yoko.orb.util.AutoReadWriteLock;
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
+import org.apache.yoko.orb.yasf.YasfClientInterceptor;
+import org.apache.yoko.orb.yasf.YasfIORInterceptor;
+import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.util.osgi.ProviderLocator;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 
@@ -289,6 +292,16 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 org.apache.yoko.orb.OB.Assert._OB_assert(ex);
             }
             
+            //
+            // Install interceptors for Yoko Auxilliary Stream Format
+            //
+            try {
+                piManager.addIORInterceptor(new YasfIORInterceptor(), true);
+                piManager.addClientRequestInterceptor(new YasfClientInterceptor());
+                piManager.addServerRequestInterceptor(new YasfServerInterceptor());
+            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
+                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            }
             //
             // Install interceptors for Custom Marshal Stream Format negotiation
             //
