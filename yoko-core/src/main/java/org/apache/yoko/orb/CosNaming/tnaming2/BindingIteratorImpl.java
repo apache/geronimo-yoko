@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.yoko.orb.CosNaming.tnaming2.NamingContextImpl.BoundObject;
 import org.apache.yoko.orb.spi.naming.RemoteAccess;
@@ -22,6 +23,8 @@ public final class BindingIteratorImpl extends LocalObject implements BindingIte
     private static final long serialVersionUID = 1L;
 
     private static final class Core extends BindingIteratorPOA {
+        private static final AtomicLong NEXT_ID = new AtomicLong();
+        private final long instanceId = NEXT_ID.getAndIncrement();
         // the iterator use to access the bindings
         private final Iterator<BoundObject> iterator;
 
@@ -33,6 +36,11 @@ public final class BindingIteratorImpl extends LocalObject implements BindingIte
         public Core(Collection<BoundObject> boundObjects) {
             this.iterator = (new ArrayList<BoundObject>(boundObjects)).iterator();
         }
+
+        private byte[] getServantId() {
+            return ("BindingIterator#" + instanceId).getBytes();
+        }
+
         /**
          * Return the next object in the iteration sequence.
          * @param b The BindingHolder used to return the next item. If we've
@@ -91,7 +99,7 @@ public final class BindingIteratorImpl extends LocalObject implements BindingIte
         public POAServant(POA poa, Core core) throws Exception {
             this.poa = poa;
             this.core = core;
-            poa.activate_object(this);
+            poa.activate_object_with_id(core.getServantId(), this);
         }
 
         /**

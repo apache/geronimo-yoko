@@ -37,7 +37,7 @@ import org.apache.yoko.processmanager.ProcessManager;
  * It also sets the java.endorsed.dirs property and launches the client process.
  *
  * Currently, the client waits for the server to create a file containing an IOR. This
- * is used to delay the client until the server has started. the setWaitFile(File) method 
+ * is used to delay the client until the server has started. the setWaitFile(File) method
  * can be used to set the name of this file, which varies in the ORB tests.
  */
 public class AbstractOrbTestBase extends TestCase {
@@ -45,15 +45,15 @@ public class AbstractOrbTestBase extends TestCase {
     protected JavaProcess server, client;
     protected File waitForFile;
     int waitForFileTimeout = 10000;
-        
+
     public AbstractOrbTestBase() {
         super();
     }
-        
+
     public AbstractOrbTestBase(String name) {
         super(name);
     }
-        
+
     protected void setUp() throws Exception {
         super.setUp();
         processManager = new ProcessManager(Registry.REGISTRY_PORT);
@@ -84,15 +84,15 @@ public class AbstractOrbTestBase extends TestCase {
             getWaitForFile().delete();
         }
     }
-    
+
     protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass, String...commonArgs) throws Exception {
         runServerClientTest(serverClass.getName(), commonArgs, clientClass.getName(), commonArgs);
     }
-    
+
     protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
         runServerClientTest(serverClass, new String[0], clientClass, new String[0]);
     }
-    protected void runServerClientTest(String serverClass, String[] serverArgs, 
+    protected void runServerClientTest(String serverClass, String[] serverArgs,
                                        String clientClass, String[] clientArgs) throws Exception {
         server.launch();
         Future<Void> serverFuture = server.invokeMainAsync(serverClass, serverArgs);
@@ -108,15 +108,15 @@ public class AbstractOrbTestBase extends TestCase {
         }
         server.exit(0);
     }
-        
+
     public void setWaitForFile(String file) {
         this.waitForFile = new File(file);
     }
-        
+
     public File getWaitForFile() {
         return waitForFile;
     }
-        
+
     protected void waitForFile() {
         long timeBefore = System.currentTimeMillis();
         if(getWaitForFile() != null) {
@@ -127,7 +127,7 @@ public class AbstractOrbTestBase extends TestCase {
                     }
                     Thread.sleep(50);
                     if(System.currentTimeMillis() > timeBefore + waitForFileTimeout) {
-                        fail("The file " + getWaitForFile() + 
+                        fail("The file " + getWaitForFile() +
                              " was not created within " + waitForFileTimeout + "ms");
                     }
                 }
@@ -137,5 +137,5 @@ public class AbstractOrbTestBase extends TestCase {
                 getWaitForFile().deleteOnExit();
             }
         }
-    }           
+    }
 }

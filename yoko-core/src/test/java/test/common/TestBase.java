@@ -49,7 +49,7 @@ public class TestBase {
         String nameString = context.to_string(name);
         out.println(nameString);
     }
-    
+
     protected static void readRef(BufferedReader reader, String[] refStrings) throws IOException {
         String line = reader.readLine();
         if (line == null) {
@@ -65,7 +65,8 @@ public class TestBase {
                 throw new RuntimeException(sw.toString());
             }
         }
-        refStrings[0] = reader.readLine();
-        refStrings[1] = reader.readLine();
+        refStrings[0] = reader.readLine(); // IOR
+        refStrings[1] = reader.readLine(); // name
+        System.out.println(refStrings[1] +  " = "+ refStrings[0]);
     }
 }

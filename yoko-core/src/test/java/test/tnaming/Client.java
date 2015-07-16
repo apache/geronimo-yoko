@@ -75,6 +75,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
         //
         // Get "test" objects
         //
+        System.out.println("Started ORB, getting test object IORs from file");
         try (BufferedReader file = openFileReader(refFile)) {
             String[] refStrings = new String[2];
             readRef(file, refStrings);
@@ -117,6 +118,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
     }
 
     void run() throws Exception {
+        System.out.println("Running naming client tests");
         switch (accessibility) {
             case READ_ONLY :
                 testReadOnly();
@@ -137,16 +139,23 @@ final class Client extends test.common.TestBase implements AutoCloseable {
     }
 
     private void testBoundReferences() throws UserException {
+        System.out.println("Testing bound reference 1");
         Util.assertTestIsBound(test1, rootNamingContext, name1);
+        System.out.println("Testing bound reference 2");
         Util.assertTestIsBound(test2, rootNamingContext, name2);
+        System.out.println("Testing bound reference 3");
         Util.assertTestIsBound(test3, rootNamingContext, name3);
+        System.out.println("Testing bound reference 1 via corbaname");
         Util.assertCorbanameIsBound(test1, orb, "corbaname:rir:/NameService#"+name1);
+        System.out.println("Testing bound references complete.");
     }
 
     private void testIterators() throws Exception {
+        System.out.println("Testing iterators: narrowing context");
         NamingContextExt nc = NamingContextExtHelper.narrow(rootNamingContext.resolve(Util.ITERATOR_TEST_CONTEXT_PATH));
         // check the behaviour of the binding iterators
         for (int listSize = 0; listSize <= Util.EXPECTED_NAMES.size() + 1; listSize++) {
+            System.out.println("Testing iterators: list size " + listSize);
             final BindingListHolder blh = new BindingListHolder();
             final BindingIteratorHolder bih = new BindingIteratorHolder();
             final BindingHolder bh = new BindingHolder();
@@ -176,6 +185,7 @@ final class Client extends test.common.TestBase implements AutoCloseable {
             assertEquals(0, bh.value.binding_name.length);
             assertEquals(Util.EXPECTED_NAMES, actualNames);
         }
+        System.out.println("Testing iterators complete.");
     }
 
     private enum WriteMethod {
@@ -220,8 +230,11 @@ final class Client extends test.common.TestBase implements AutoCloseable {
     }
 
     public void testObjectFactories() throws CannotProceed, InvalidName {
+        System.out.println("Testing object factories: resolvable");
         Util.assertFactoryIsBound(rootNamingContext, Server.RESOLVABLE_TEST);
+        System.out.println("Testing object factories: resolver");
         Util.assertFactoryIsBound(rootNamingContext, Server.RESOLVER_TEST);
+        System.out.println("Testing object factories complete.");
     }
 
     @Override

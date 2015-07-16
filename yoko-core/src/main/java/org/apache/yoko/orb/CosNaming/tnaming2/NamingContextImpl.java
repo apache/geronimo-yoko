@@ -1,9 +1,12 @@
 package org.apache.yoko.orb.CosNaming.tnaming2;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.yoko.orb.spi.naming.RemoteAccess;
+import org.apache.yoko.orb.util.UnmodifiableEnumMap;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_PERMISSION;
@@ -25,24 +28,44 @@ import org.omg.CosNaming.NamingContextPackage.NotEmpty;
 import org.omg.CosNaming.NamingContextPackage.NotFound;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.Servant;
+import org.omg.PortableServer.POAPackage.ObjectNotActive;
 
 public final class NamingContextImpl extends LocalObject implements NamingContextExt, RemotableObject {
     private static final long serialVersionUID = 1L;
 
+    private static final class ServantCreationLock {
+    }
+
     private static final class Core extends NamingContextBase {
-        // the bindings maintained by this context
+        private static final AtomicLong NEXT_ID = new AtomicLong();
+
+        /** Unique number for this core */
+        private final long instanceId = NEXT_ID.getAndIncrement();
+
+        /** the unique ids for this context's servants (one per remote access level) */
+        @SuppressWarnings("serial")
+        private final Map<RemoteAccess, String> servantIds = new UnmodifiableEnumMap<RemoteAccess, String>(RemoteAccess.class) {
+            public String computeValueFor(RemoteAccess key) {
+                return "NamingContext#" + instanceId + "$" + key;
+            }
+        };
+
+        /** the bindings maintained by this context */
         private final HashMap<BindingKey, BoundObject> bindings = new HashMap<BindingKey, BoundObject>();
-        // the root context object
+
+        /** the root context object */
         private final org.omg.CORBA.Object rootContext;
 
+        private Core(org.omg.CORBA.Object rootContext) throws Exception {
+            this.rootContext = rootContext;
+        }
+
         /**
-         * Construct a TransientNamingContext subcontext.
-         * @param orb The orb this context is associated with.
-         * @param poa The POA the root context is activated under.
-         * @param root The root context.
+         * Get the servant id to use for this context with the specified remote
+         * access level
          */
-        Core(org.omg.CORBA.Object root) throws Exception {
-            rootContext = root;
+        private byte[] getServantId(RemoteAccess access) {
+            return servantIds.get(access).getBytes();
         }
 
         // abstract methods part of the interface contract that the
@@ -204,6 +227,11 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
 
                 return (Objects.equals(name.id, otherKey.name.id) && Objects.equals(name.kind, otherKey.name.kind));
             }
+
+            @Override
+            public String toString() {
+                return "" + name;
+            }
         }
 
     }
@@ -224,11 +252,11 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
         final NamingContextBase core;
         final POA poa;
 
-        protected POAServant(NamingContextImpl localContext, Core core, POA poa) throws Exception {
+        protected POAServant(NamingContextImpl localContext, Core core, POA poa, byte[] servantId) throws Exception {
             this.localContext = localContext;
             this.core = core;
             this.poa = poa;
-            poa.activate_object(this);
+            poa.activate_object_with_id(servantId, this);
         }
 
         abstract Servant convertLocalContextToRemoteContext(NamingContextImpl o) throws Exception;
@@ -268,9 +296,9 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
 
         private static final class ReadOnly extends POAServant {
             ReadOnly(NamingContextImpl localContext, Core core, POA poa) throws Exception {
-                super(localContext, core, poa);
+                super(localContext, core, poa, core.getServantId(RemoteAccess.readOnly));
             }
-            
+
             private SystemException newSystemException() {
                 return new NO_PERMISSION();
             }
@@ -303,7 +331,7 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
 
         private static final class ReadWrite extends POAServant {
             ReadWrite(NamingContextImpl localContext, Core core, POA poa) throws Exception {
-                super(localContext, core, poa);
+                super(localContext, core, poa, core.getServantId(RemoteAccess.readWrite));
             }
 
             @Override
@@ -370,9 +398,17 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
             this.boundObject = boundObject;
             this.type = type;
         }
+
+        @Override
+        public String toString() {
+            return name + "->" + boundObject;
+        }
     }
 
     private final Core core;
+
+    /** lock for servant creation */
+    private final Object servantCreationLock = new ServantCreationLock();
 
     public NamingContextImpl() throws Exception {
         core = new Core(this);
@@ -434,7 +470,18 @@ public final class NamingContextImpl extends LocalObject implements NamingContex
 
     @Override
     public Servant getServant(POA poa, RemoteAccess remoteAccess) throws Exception {
-        return POAServant.create(this, core, poa, remoteAccess);
+        byte[] sid = core.getServantId(remoteAccess);
+
+        // synchronize around creation to avoid a race
+        synchronized (servantCreationLock) {
+            // check whether the servant needs to be created
+            try {
+                return poa.id_to_servant(sid);
+            } catch (ObjectNotActive expected) {
+                // guaranteed to be the unique creator-thread for this servant
+                return POAServant.create(this, core, poa, remoteAccess);
+            }
+        }
     }
 
     @Override
