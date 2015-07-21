@@ -155,7 +155,7 @@ public final class Server extends test.common.TestBase {
         }
     }
 
-    private static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object objImpl) {
+    protected static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object objImpl) {
         out.println("ref:");
         out.println(orb.object_to_string(objImpl));
     }
