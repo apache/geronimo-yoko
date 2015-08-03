@@ -29,11 +29,7 @@ import static org.junit.Assert.assertTrue;
 import static test.tnaming.Client.NameServiceType.READ_ONLY;
 
 import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.rmi.Remote;
 import java.util.Properties;
 import java.util.Set;
 import java.util.TreeSet;
@@ -93,19 +89,6 @@ final class Client extends test.common.TestBase implements AutoCloseable {
             System.err.println("Can't read from '" + ex.getMessage() + "'");
             throw ex;
         }
-    }
-
-    private BufferedReader openFileReader(final String refFile) throws FileNotFoundException {
-        return new BufferedReader(new FileReader(refFile)) {
-            @Override
-            public void close() throws IOException {
-                try {
-                    super.close();
-                } finally {
-                    Files.delete(Paths.get(refFile));
-                }
-            }
-        };
     }
 
     private Test getTestObjectFromReference(String ref) {

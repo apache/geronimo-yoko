@@ -127,15 +127,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>-Djava.endorsed.dirs=${basedir}/target/endorsed</argLine>
                     <includes>
                         <include>**/org/apache/yoko/*Test.java</include>
                     </includes>
-                    <systemProperties>
-                        <property>
-                            <name>java.endorsed.dirs</name>
-                            <value>${basedir}/target/endorsed</value>
-                        </property>
-                    </systemProperties>
                 </configuration>
             </plugin>
 
