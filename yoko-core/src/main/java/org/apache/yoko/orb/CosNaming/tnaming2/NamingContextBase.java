@@ -72,7 +72,7 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
      *            must already be bound in the context tree.
      * @param obj The object to be bound.
      */
-    public void bind(NameComponent[] n, org.omg.CORBA.Object obj) 
+    public void bind(NameComponent[] n, org.omg.CORBA.Object obj)
             throws NotFound, CannotProceed, InvalidName, AlreadyBound {
         // perform various name validations
         validateName(n);
@@ -270,7 +270,7 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
             NamingContext context = resolveContext(n[0]);
             NameComponent[] subName = extractSubName(n);
 
-            // now pass this along to the next context for the real bind operation.
+            // now pass this along to the next context for the real resolve operation.
             return context.resolve(subName);
         } else {
             NameComponent name = n[0];
@@ -280,9 +280,9 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
                 // Object was not found
                 throw new NotFound(NotFoundReason.missing_node, n);
             }
-            if (obj instanceof Resolvable) { 
+            if (obj instanceof Resolvable) {
             	return ((Resolvable)obj).resolve();
-            } else { 
+            } else {
             	return obj;
             }
         }
@@ -578,7 +578,7 @@ public abstract class NamingContextBase extends NamingContextExtPOA {
             throw new NotFound(NotFoundReason.not_context, new NameComponent[]{name});
         }
 
-        // in theory, this is a naming context. Narrow it an return. Any
+        // in theory, this is a naming context. Narrow it and return. Any
         // errors just become a NotFound exception
         try {
             return NamingContextHelper.narrow(resolvedReference);

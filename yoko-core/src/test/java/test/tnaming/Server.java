@@ -22,16 +22,17 @@
 
 package test.tnaming;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Properties;
 
 import org.apache.yoko.orb.spi.naming.Resolvable;
 import org.apache.yoko.orb.spi.naming.Resolver;
-import org.omg.CORBA.*;
+import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextExt;
@@ -50,7 +51,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
     private static final NameComponent TEST1 = new NameComponent("Test1", "");
     private static final NameComponent TEST2 = new NameComponent("Test2", "");
     private static final NameComponent TEST3 = new NameComponent("Test3", "");
-    
+
     public static final NameComponent RESOLVABLE_TEST = new NameComponent("ResolvableTest", "");
     public static final NameComponent RESOLVER_TEST = new NameComponent("ResolverTest", "");
 
@@ -90,7 +91,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
                     return resolvable.resolve();
                 }
             };
-            
+
             System.out.println("created references");
         } catch (Throwable t) {
             System.err.println("Caught throwable: " + t);
@@ -101,7 +102,10 @@ final class Server extends test.common.TestBase implements AutoCloseable {
 
     void run() throws Exception {
         System.out.println("server starting to run");
-        try (PrintWriter out = new PrintWriter(new FileWriter(refFile))) {
+
+        // use a temporary file to avoid the client picking up an empty file when debugging the server
+        Path tmp = Files.createTempFile(refFile, "");
+        try (PrintWriter out = new PrintWriter(new FileWriter(tmp.toFile()))) {
             System.out.println("server opened file for writing");
             try {
                 NamingContext nc1 = rootNamingContext.new_context();
@@ -118,7 +122,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
                 Util.assertNameNotBound(rootNamingContext, TEST1);
 
                 rootNamingContext.bind(new NameComponent[]{TEST1}, test1);
-                
+
                 Util.assertTestIsBound("Test1", rootNamingContext, TEST1);
 
                 nc1.bind(new NameComponent[]{TEST2}, test2);
@@ -141,6 +145,7 @@ final class Server extends test.common.TestBase implements AutoCloseable {
                 Util.assertNameNotBound(rootNamingContext, LEVEL1, LEVEL2, TEST3);
 
                 nc1.rebind_context(new NameComponent[]{LEVEL2}, nc2);
+                System.out.println("All contexts bound");
             } catch (Exception e) {
                 e.printStackTrace(out);
                 throw e;
@@ -151,25 +156,30 @@ final class Server extends test.common.TestBase implements AutoCloseable {
             // condition between the client sending a request and the
             // server not being ready yet.
             //
+            System.out.println("Writing IORs to file");
             writeRef(orb, out, test1, rootNamingContext, new NameComponent[]{TEST1});
             writeRef(orb, out, test2, rootNamingContext, new NameComponent[]{LEVEL1, TEST2});
             writeRef(orb, out, test3, rootNamingContext, new NameComponent[]{LEVEL1, LEVEL2, TEST3});
             out.flush();
+            System.out.println("IORs written to file");
         } catch (java.io.IOException ex) {
             System.err.println("Can't write to `" + ex.getMessage() + "'");
             throw ex;
         }
 
+        // rename the completed file
+        Files.move(tmp, Paths.get(refFile));
+
         orb.run();
     }
 
-    public void bindObjectFactories() throws NotFound, CannotProceed, InvalidName, AlreadyBound { 
+    public void bindObjectFactories() throws NotFound, CannotProceed, InvalidName, AlreadyBound {
         rootNamingContext.bind(new NameComponent[]{RESOLVABLE_TEST}, resolvable);
         Util.assertFactoryIsBound(rootNamingContext, RESOLVABLE_TEST);
         rootNamingContext.bind(new NameComponent[]{RESOLVER_TEST}, resolver);
         Util.assertFactoryIsBound(rootNamingContext, RESOLVER_TEST);
     }
-    
+
     @Override
     public void close() throws Exception {
         try {

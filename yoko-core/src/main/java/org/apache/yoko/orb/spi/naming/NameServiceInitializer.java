@@ -27,8 +27,8 @@ import org.omg.PortableServer.POAPackage.InvalidPolicy;
 public class NameServiceInitializer extends LocalObject implements ORBInitializer {
     /** The property name to use to initialize an ORB with this initializer. */
     public static final String NS_ORB_INIT_PROP = ORBInitializer.class.getName() + "Class." + NameServiceInitializer.class.getName();
-    /** 
-     * The name of this name service, as used with <code>corbaloc:</code> URLs 
+    /**
+     * The name of this name service, as used with <code>corbaloc:</code> URLs
      * and with calls to {@link ORB#resolve_initial_references(String)}.
      */
     public static final String SERVICE_NAME = "NameService";
@@ -36,15 +36,31 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
     /**
      * The POA name this name service will use to activate contexts.
      * The name service will first try <code>rootPoa.find_POA()</code>
-     * to find the POA with this name. If that returns null, it will 
-     * call <code>rootPoa.create_POA()</code> to create the POA with 
+     * to find the POA with this name. If that returns null, it will
+     * call <code>rootPoa.create_POA()</code> to create the POA with
      * this name.
      */
     public static final String POA_NAME = "NameServicePOA";
 
-    /** 
+    /**
+     * The policies required for the NameService POA. Users providing
+     * the NameService POA must include these policies when creating
+     * the POA. If creation is to be left to this initializer, these
+     * policies will be used automatically.
+     * @param rootPOA the root POA for the ORB in use
+     * @return a new Policy array object, owned by the caller
+     */
+    public static final Policy[] createPOAPolicies(POA rootPOA) {
+        return new Policy[] {
+                rootPOA.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
+                rootPOA.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID),
+                rootPOA.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)
+        };
+    }
+
+    /**
      * The ORB argument that specifies remote accessibility of this name service.
-     * The next argument must be one of these literal string values: 
+     * The next argument must be one of these literal string values:
      * <ul>
      *   <li><code>"</code>{@link #readOnly}<code>"</code></li>
      *   <li><code>"</code>{@link #readWrite}<code>"</code></li>
@@ -57,7 +73,7 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
     private static final long serialVersionUID = 1L;
 
     private RemoteAccess remoteAccess = readWrite;
-    
+
     @Override
     public void pre_init(ORBInitInfo info) {
         try {
@@ -81,7 +97,7 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
     @Override
     public void post_init(ORBInitInfo info) {
         try {
-            
+
             final POA rootPOA = (POA) info.resolve_initial_references("RootPOA");
             final NamingContextImpl local = (NamingContextImpl) info.resolve_initial_references("NameService");
             final String serviceName = getServiceName(info);
@@ -97,16 +113,16 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
 
                     try {
                         rootPOA.the_POAManager().activate();
-                        
+
                         final POA nameServicePOA = findOrCreatePOA(rootPOA);
                         nameServicePOA.the_POAManager().activate();
 
                         final Servant nameServant = local.getServant(nameServicePOA, remoteAccess);
-                        
+
                         // return the context stub via the object holder
                         obj.value = nameServant._this_object();
                         // return true via the boolean holder
-                        // to tell the boot manager to re-use 
+                        // to tell the boot manager to re-use
                         // this result so we only get called once
                         add.value = true;
                     } catch (Exception e) {
@@ -118,11 +134,7 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
                     try {
                         return rootPOA.find_POA(POA_NAME, true);
                     } catch (AdapterNonExistent e) {
-                        final Policy[] policies = {
-                                rootPOA.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
-                                rootPOA.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
-                                rootPOA.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)
-                        };
+                        final Policy[] policies = createPOAPolicies(rootPOA);
                         return rootPOA.create_POA(POA_NAME, null, policies);
                     }
                 }
