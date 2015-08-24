@@ -119,7 +119,7 @@ public abstract class Client {
     //
     // Checks whether this client is equal to another client
     //
-    public abstract boolean equal(Client clt);
+    public abstract boolean matches(Client clt);
 
     //
     // Force connection establishment
