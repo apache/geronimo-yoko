@@ -571,21 +571,11 @@ final class GIOPClient extends Client {
     //
     // Checks whether this client is equal to another client
     //
-    public boolean equal(Client cl) {
-        GIOPClient client = null;
-        try {
-            client = (GIOPClient) cl;
-        } catch (ClassCastException ex) {
-            return false;
-        }
+    public boolean matches(Client other) {
+        if (!!!(other instanceof GIOPClient)) return false;
+        GIOPClient that = (GIOPClient) other;
 
-        if (!connector_.equal(client.connector_))
-            return false;
-
-        if (!codeConverters().equals(client.codeConverters()))
-            return false;
-
-        return true;
+        return this.connector_.equal(that.connector_) && this.codeConverters().equals(that.codeConverters());
     }
 
     //
