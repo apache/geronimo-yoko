@@ -17,114 +17,88 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.OCI.IIOP.ConnectorInfo;
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
 
-public final class ConnectorInfo_impl extends org.omg.CORBA.LocalObject
-        implements ConnectorInfo {
-    private Connector_impl connector_; // The associated connector
+import org.apache.yoko.orb.OCI.ConnectCB;
+import org.omg.CORBA.LocalObject;
+import org.omg.IOP.TAG_INTERNET_IOP;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+
+/**
+ * Immutable memo of the endpoint details for a connection. The InetAddress
+ * is looked up when first needed but never changed again. It is used in
+ * hashcode() and equals().
+ */
+public final class ConnectorInfo_impl extends LocalObject implements ConnectorInfo {
+    private final String host;
+    private final short port;
+    private volatile InetAddress addr; // initialised lazily
 
     //
     // All connect callback objects
     //
-    private java.util.Vector connectCBVec_ = new java.util.Vector();
+    private final List<ConnectCB> callbacks;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public String id() {
-        return PLUGIN_ID.value;
-    }
+    public String id() {return PLUGIN_ID.value;}
 
-    public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
-    }
+    public int tag() {return TAG_INTERNET_IOP.value;}
 
-    public synchronized String describe() {
-        short remotePort = remote_port();
+    public String describe() {return String.format("id: %s%nremote address: %s:%d", PLUGIN_ID.value, remote_addr(), port);}
 
-        String desc = "id: " + PLUGIN_ID.value;
-        desc += "\nremote address: ";
-        desc += remote_addr();
-        desc += ":";
-        desc += (remotePort < 0 ? 0xffff + (int) remotePort + 1 : remotePort);
+    public String remote_addr() {return getInetAddress().getHostAddress();}
 
-        return desc;
-    }
-
-    public synchronized void add_connect_cb(org.apache.yoko.orb.OCI.ConnectCB cb) {
-        int length = connectCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (connectCBVec_.elementAt(i) == cb)
-                return; // Already registered
-        connectCBVec_.addElement(cb);
-    }
-
-    public synchronized void remove_connect_cb(
-            org.apache.yoko.orb.OCI.ConnectCB cb) {
-        int length = connectCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (connectCBVec_.elementAt(i) == cb) {
-                connectCBVec_.removeElementAt(i);
-                return;
-            }
-    }
-
-    public synchronized String remote_addr() {
-        if (connector_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES("No connector");
-
-        try {
-            java.net.InetAddress address = java.net.InetAddress
-                    .getByName(connector_.host_);
-            return address.getHostAddress();
-        } catch (java.net.UnknownHostException ex) {
-            throw new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-        }
-    }
-
-    public synchronized short remote_port() {
-        if (connector_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES("No connector");
-
-        int port = connector_.port_;
-
-        if (port >= 0x8000)
-            return (short) (port - 0xffff - 1);
-        else
-            return (short) port;
-    }
+    public short remote_port() {return port;}
 
     // ------------------------------------------------------------------
     // Yoko internal functions
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    ConnectorInfo_impl(Connector_impl connector,
-            org.apache.yoko.orb.OCI.ConnectCB[] cb) {
-        connector_ = connector;
-
-        for (int i = 0; i < cb.length; i++)
-            connectCBVec_.addElement(cb[i]);
+    ConnectorInfo_impl(String host, int port, ConnectCB...cb) {
+        this.host = host;
+        this.port = (short)port;
+        if (cb == null || cb.length == 0)
+            callbacks = Collections.emptyList();
+        else
+            callbacks = Collections.unmodifiableList(new ArrayList<ConnectCB>(Arrays.asList(cb)));
     }
 
-    synchronized void _OB_callConnectCB(
-            org.apache.yoko.orb.OCI.TransportInfo info) {
-        int length = connectCBVec_.size();
-        for (int i = 0; i < length; i++) {
-            org.apache.yoko.orb.OCI.ConnectCB cb = (org.apache.yoko.orb.OCI.ConnectCB) connectCBVec_
-                    .elementAt(i);
-            cb.connect_cb(info);
+    String getHost() { return host; }
+
+    int getPort() { return (char)port; }
+
+    private InetAddress getInetAddress() {
+        if (addr == null) synchronized (this) {
+            if (addr == null) try {
+                addr = InetAddress.getByName(host);
+            } catch (UnknownHostException ex) {
+                throw asCommFailure(ex);
+            }
         }
+        return addr;
     }
 
-    synchronized void _OB_destroy() {
-        connector_ = null;
+    synchronized void _OB_callConnectCB(org.apache.yoko.orb.OCI.TransportInfo info) {
+        for (ConnectCB cb : callbacks) cb.connect_cb(info);
     }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (!!! (other instanceof ConnectorInfo_impl)) return false;
+
+        ConnectorInfo_impl that = (ConnectorInfo_impl) other;
+
+        return (this.port == that.port) && this.getInetAddress().equals(that.getInetAddress());
+    }
+
+    @Override
+    public int hashCode() {return 31*port + getInetAddress().hashCode();}
 }

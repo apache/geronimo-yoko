@@ -53,32 +53,10 @@ public interface TransportInfoOperations
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/connector_info:1.0
     //
-    /**
-     *
-     * The ConnectorInfo object for the Connector that created the
-     * Transport object that this TransportInfo object belongs to.
-     * If the Transport for this TransportInfo was not created by a
-     * Connector, this attribute is set to the nil object reference.
-     *
-     **/
-
-    ConnectorInfo
-    connector_info();
 
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/acceptor_info:1.0
     //
-    /**
-     *
-     * The AcceptorInfo object for the Acceptor that created the
-     * Transport object that this TransportInfo object belongs to.
-     * If the Transport for this TransportInfo was not created by an
-     * Acceptor, this attribute is set to the nil object reference.
-     *
-     **/
-
-    AcceptorInfo
-    acceptor_info();
 
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/origin:1.0
@@ -118,33 +96,10 @@ public interface TransportInfoOperations
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/add_close_cb:1.0
     //
-    /**
-     *
-     * Add a callback that is called before a connection is closed. If
-     * the callback has already been registered, this method has no
-     * effect.
-     *
-     * @param cb The callback to add.
-     *
-     **/
-
-    void
-    add_close_cb(CloseCB cb);
 
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/remove_close_cb:1.0
     //
-    /**
-     *
-     * Remove a close callback. If the callback was not registered,
-     * this method has no effect.
-     *
-     * @param cb The callback to remove.
-     *
-     **/
-
-    void
-    remove_close_cb(CloseCB cb);
 
     //
     // IDL:orb.yoko.apache.org/OCI/TransportInfo/get_service_contexts:1.0

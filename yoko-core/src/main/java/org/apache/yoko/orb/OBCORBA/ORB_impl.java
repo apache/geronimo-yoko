@@ -19,8 +19,6 @@ package org.apache.yoko.orb.OBCORBA;
 
 import java.security.AccessController;
 import java.util.Properties;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
@@ -31,7 +29,7 @@ import org.apache.yoko.orb.util.GetSystemPropertyAction;
 import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 
 // This class must be public and not final

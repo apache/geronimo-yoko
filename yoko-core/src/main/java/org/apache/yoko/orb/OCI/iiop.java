@@ -17,14 +17,12 @@
 
 package org.apache.yoko.orb.OCI;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.AssertionFailed;
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
 import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public class iiop implements PluginInit {
     static final Logger logger = Logger.getLogger(iiop.class.getName());

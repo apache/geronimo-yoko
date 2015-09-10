@@ -66,31 +66,8 @@ public interface AcceptorInfoOperations
     //
     // IDL:orb.yoko.apache.org/OCI/AcceptorInfo/add_accept_cb:1.0
     //
-    /**
-     *
-     * Add a callback that is called whenever a new connection is
-     * accepted. If the callback has already been registered, this
-     * method has no effect.
-     *
-     * @param cb The callback to add.
-     *
-     **/
-
-    void
-    add_accept_cb(AcceptCB cb);
 
     //
     // IDL:orb.yoko.apache.org/OCI/AcceptorInfo/remove_accept_cb:1.0
     //
-    /**
-     *
-     * Remove an accept callback. If the callback was not registered,
-     * this method has no effect.
-     *
-     * @param cb The callback to remove.
-     *
-     **/
-
-    void
-    remove_accept_cb(AcceptCB cb);
 }

@@ -19,15 +19,10 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.CORBA.LocalObject;
 
-public final class AcceptorInfo_impl extends org.omg.CORBA.LocalObject
-        implements AcceptorInfo {
+public final class AcceptorInfo_impl extends LocalObject implements AcceptorInfo {
     private Acceptor_impl acceptor_; // The associated acceptor
-
-    //
-    // All accept callback objects
-    //
-    private java.util.Vector acceptCBVec_ = new java.util.Vector();
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -60,24 +55,6 @@ public final class AcceptorInfo_impl extends org.omg.CORBA.LocalObject
         }
 
         return desc;
-    }
-
-    public synchronized void add_accept_cb(org.apache.yoko.orb.OCI.AcceptCB cb) {
-        int length = acceptCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (acceptCBVec_.elementAt(i) == cb)
-                return; // Already registered
-        acceptCBVec_.addElement(cb);
-    }
-
-    public synchronized void remove_accept_cb(
-            org.apache.yoko.orb.OCI.AcceptCB cb) {
-        int length = acceptCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (acceptCBVec_.elementAt(i) == cb) {
-                acceptCBVec_.removeElementAt(i);
-                return;
-            }
     }
 
     public synchronized String[] hosts() {
@@ -113,16 +90,6 @@ public final class AcceptorInfo_impl extends org.omg.CORBA.LocalObject
 
     AcceptorInfo_impl(Acceptor_impl acceptor) {
         acceptor_ = acceptor;
-    }
-
-    synchronized void _OB_callAcceptCB(
-            org.apache.yoko.orb.OCI.TransportInfo info) {
-        int length = acceptCBVec_.size();
-        for (int i = 0; i < length; i++) {
-            org.apache.yoko.orb.OCI.AcceptCB cb = (org.apache.yoko.orb.OCI.AcceptCB) acceptCBVec_
-                    .elementAt(i);
-            cb.accept_cb(info);
-        }
     }
 
     synchronized void _OB_destroy() {

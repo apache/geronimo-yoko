@@ -27,7 +27,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgent {
     private static final long serialVersionUID = 1L;

@@ -36,7 +36,7 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // Destroy the client
     //
-    public void destroy(boolean terminate) {
+    public void destroy() {
         // Nothing to do here
     }
 

@@ -26,19 +26,11 @@ final public class ListenPoint implements org.omg.CORBA.portable.IDLEntity
 {
     private static final String _ob_id = "IDL:omg.org/IIOP/ListenPoint:1.0";
 
-    public
-    ListenPoint()
-    {
-    }
-
-    public
-    ListenPoint(String host,
-                short port)
-    {
+    public ListenPoint(String host, short port) {
         this.host = host;
         this.port = port;
     }
 
-    public String host;
-    public short port;
+    public final String host;
+    public final short port;
 }

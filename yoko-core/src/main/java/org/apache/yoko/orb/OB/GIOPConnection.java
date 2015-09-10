@@ -17,19 +17,14 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.omg.CORBA.CompletionStatus.*;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OB.Logger;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.UNKNOWN;
-import org.omg.CORBA.portable.UnknownException;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.SendingContext.CodeBase;
@@ -489,8 +484,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // Parse the SCL, examining it for various codeset info
         //
         readCodeConverters(scl.value);
-        if (codeConverters_ != null)
-            in._OB_codeConverters(codeConverters_, GiopVersion.get(version.major, version.minor));
+        in._OB_codeConverters(codeConverters_, GiopVersion.get(version.major, version.minor));
 
         //
         // read in the peer's sending context runtime object
@@ -502,7 +496,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         //
         if (response.value)
             upcallsInProgress_++;
-        
+
         orbInstance_.getLogger().debug("Processing request reqId=" + reqId + " op=" + op.value); 
 
         return oaInterface_.createUpcall(
@@ -1162,6 +1156,16 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             idleTimeout_ = Integer.parseInt(value);
     }
 
+    /** @returns true iff this connection was initiated by the other party */
+    public final boolean isInbound() {
+        return (properties_ & Property.CreatedByClient) == 0;
+    }
+
+    /** @returns true iff this connection was initiated by this party */
+    public final boolean isOutbound() {
+        return !!! isInbound();
+    }
+
     //
     // start populating the reply data
     //
@@ -1450,15 +1454,6 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     //
-    // check if this connection is enabled for BiDir communication
-    //
-    synchronized public boolean bidirConnection() {
-        if (client_ == null)
-            return false;
-        return client_.sharedConnection();
-    }
-
-    //
     // change the state of this connection
     //
     public void setState(int newState) {
@@ -1598,15 +1593,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     //
     // destroy this connection
     //
-    public void destroy(boolean terminateNow) {
-        if (!terminateNow)
-            setState(State.Closing);
-        else
-            processException(State.Closed, new org.omg.CORBA.TRANSIENT(
-                    MinorCodes
-                            .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE), false);
+    public void destroy() {
+        setState(State.Closing);
     }
 
     //

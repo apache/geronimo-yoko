@@ -23,7 +23,7 @@ import javax.security.auth.login.LoginException;
 import java.security.AccessController;
 
 import org.apache.yoko.orb.util.GetSystemPropertyAction;
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public abstract class SecurityContext {
 

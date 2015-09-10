@@ -2,9 +2,9 @@ package org.apache.yoko.rmi.osgi.activator;
 
 import javax.rmi.CORBA.Stub;
 
-import org.apache.yoko.util.osgi.locator.ProviderRegistryImpl;
-import org.apache.yoko.util.osgi.locator.Register;
-import org.apache.yoko.util.osgi.locator.activator.AbstractBundleActivator;
+import org.apache.yoko.osgi.locator.ProviderRegistryImpl;
+import org.apache.yoko.osgi.locator.Register;
+import org.apache.yoko.osgi.locator.activator.AbstractBundleActivator;
 import org.omg.stub.java.rmi._Remote_Stub;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceRegistration;

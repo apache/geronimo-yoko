@@ -17,8 +17,18 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
+import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.Factory;
+import org.apache.yoko.util.Reference;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBaseHelper;
+
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.omg.CORBA.CompletionStatus.*;
 
 final class GIOPClient extends Client {
     protected ORBInstance orbInstance_; // The ORB instance
@@ -44,9 +54,8 @@ final class GIOPClient extends Client {
 
     protected boolean bidirWorker_; // is the worker bidir?
 
-    protected boolean ownsWorker_; // does 'this' own the worker?
-
-    protected boolean destroy_; // True if destroy() was called
+    protected volatile boolean destroy_; // True if destroy() was called
+    private Reference<GIOPConnection> connectionRef;
 
     // ----------------------------------------------------------------------
     // GIOPClient private and protected member implementations
@@ -66,60 +75,14 @@ final class GIOPClient extends Client {
     //
     protected GIOPConnection find_bidir_worker() {
         try {
-            //
-            // Any transport that we want to query should exist when the
-            // server first receives a request from the client-side. This
-            // transport will have the ListenPointList populated inside of
-            // its TransportInfo. So we query the list of
-            // GIOPServerStarters for the correct transport and hopefully
-            // find a match if we want to use bidir
-            //
-            org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactoryImpl = orbInstance_
-                    .getPOAManagerFactory();
-
-            //
-            // Obtain a list of POAs for this POAManager
-            // 
-            org.omg.PortableServer.POAManager[] pmSeq = pmFactoryImpl.list();
-
-            for (int i = 0; i < pmSeq.length; i++) {
-                org.apache.yoko.orb.OBPortableServer.POAManager_impl poaImpl = (org.apache.yoko.orb.OBPortableServer.POAManager_impl) pmSeq[i];
-
-                // 
-                // Get the server manager from the POA
-                // 
-                org.apache.yoko.orb.OB.ServerManager sm = poaImpl
-                        ._OB_getServerManager();
-
-                //
-                // get the list of servers from the server manager
-                //
-                org.apache.yoko.orb.OB.Server[] servSeq = sm.getServers();
-
-                // 
-                // iterate these servers obtaining the GIOPServerStarter
-                //
-                for (int j = 0; j < servSeq.length; j++) {
-                    org.apache.yoko.orb.OB.GIOPServer giopServer = (org.apache.yoko.orb.OB.GIOPServer) servSeq[j];
-
-                    org.apache.yoko.orb.OB.GIOPServerStarter servStarter = giopServer
-                            ._OB_getGIOPServerStarter();
-
-                    //
-                    // get the matching worker from the GIOPServerStarter
-                    //
-                    GIOPConnection gw = servStarter.getWorker(connectorInfo());
-
+            for (POAManager poaManager : orbInstance_.getPOAManagerFactory().list()) {
+                for (Server aServSeq : ((POAManager_impl) poaManager)._OB_getServerManager().getServers()) {
+                    GIOPConnection gw = ((GIOPServer) aServSeq)._OB_getGIOPServerStarter().getMatchingConnection(connectorInfo());
                     if (gw != null)
                         return gw;
                 }
             }
-        } catch (ClassCastException ex) {
-        }
-
-        //
-        // nothing was found to return
-        // 
+        } catch (ClassCastException ignored) {}
         return null;
     }
 
@@ -128,108 +91,20 @@ final class GIOPClient extends Client {
     // a new worker is created, with the timeout specified as second
     // parameter.
     //
-    protected synchronized GIOPConnection getWorker(boolean create, int t) {
+    protected synchronized GIOPConnection getWorker(boolean create, final int timeout) {
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
-        // 
-        // first attempt to locate a reusable bidir connection
+        if (connection_ == null)
+            reuseInboundConnection();
+
+
         //
-        if (connection_ == null) {
-            connection_ = find_bidir_worker();
-
-            if (connection_ != null) {
-                //
-                // adjust the requestID to match the spec (even for
-                // clients, odd for servers)
-                // 
-                if ((nextRequestId_ & 1) == 0)
-                    nextRequestId_++;
-                ownsWorker_ = false;
-                connection_.activateClientSide(this);
-
-                // 
-                // log the reusing of the connection
-                //
-                CoreTraceLevels coreTraceLevels = orbInstance_
-                        .getCoreTraceLevels();
-                if (coreTraceLevels.traceConnections() > 0) {
-                    org.apache.yoko.orb.OCI.TransportInfo info = connection_
-                            .transport().get_info();
-                    String msg = "reusing established bidir connection\n";
-                    msg += info.describe();
-                    orbInstance_.getLogger().trace("outgoing", msg);
-                }
-            }
-        }
-
-        // 
-        // no bidir connection resolved so create one if the request
-        // calls for it
-        // 
-        if (connection_ == null && create) {
-            //
-            // Trace connection attempt
-            //
-            CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-            if (coreTraceLevels.traceConnections() > 0) {
-                org.apache.yoko.orb.OCI.ConnectorInfo info = connector_
-                        .get_info();
-                String msg = "trying to establish connection\n";
-                msg += "timeout: ";
-                if (t >= 0) {
-                    msg += t;
-                    msg += "ms\n";
-                } else
-                    msg += "none\n";
-                msg += info.describe();
-                orbInstance_.getLogger().trace("outgoing", msg);
-            }
-
-            //
-            // Create new transport, using the connector
-            //
-            // For symetry reasons, GIOPClientStarterThreaded should also be
-            // added, even though these classes only have a trivial
-            // functionality. Or perhaps the GIOPClientStarterThreaded tries to
-            // connect() in the backgound? Just an idea...
-            //
-
-            org.apache.yoko.orb.OCI.Transport transport;
-
-            if (t >= 0) {
-                transport = connector_.connect_timeout(t);
-
-                //
-                // Was there a timeout?
-                //
-                if (transport == null)
-                    throw new org.omg.CORBA.NO_RESPONSE("Connection timeout",
-                            0, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-            } else {
-                transport = connector_.connect();
-                Assert._OB_assert(transport != null);
-            }
-
-            //
-            // Create new worker
-            //
-            Assert._OB_assert(concModel_ == Threaded);
-            connection_ = new GIOPConnectionThreaded(orbInstance_, transport,
-                    this);
-            ownsWorker_ = true;
-
-            //
-            // bidirWorker_ means that this connection may be used to
-            // service requests so we need to set ourselves up as a
-            // server (to correct map the OAInterfaces)
-            //
-            if (bidirWorker_)
-                connection_.activateServerSide();
-        }
+        // no inbound bidir connection resolved so lookup an existing outbound connection
+        // or create one if the request calls for it
+        //
+        if (connection_ == null)
+            reuseOrCreateOutboundConnection(create, timeout);
 
         //
         // Lazy initialization of codeSetSC_. We don't want to
@@ -240,6 +115,100 @@ final class GIOPClient extends Client {
         initServiceContexts();
 
         return connection_;
+    }
+
+    private synchronized void reuseOrCreateOutboundConnection(boolean create, final int timeout) {
+        Cache<ConnectorInfo, GIOPConnection> connCache = orbInstance_.getOutboundConnectionCache();
+        if (create) {
+            connectionRef = connCache.getOrCreate(connector_.get_info(), new Factory<GIOPConnection>() {
+                @Override public GIOPConnection create() {return createOutboundConnection(timeout);}
+            });
+        } else {
+            connectionRef = connCache.get(connector_.get_info());
+        }
+        connCache.clean();
+        connection_ = connectionRef.get();
+
+        //
+        // bidirWorker_ means that this connection may be used to
+        // service requests so we need to set ourselves up as a
+        // server (to correct map the OAInterfaces)
+        //
+        if (bidirWorker_)
+            connection_.activateServerSide();
+    }
+
+    private synchronized void reuseInboundConnection() {
+        //
+        // first attempt to locate a reusable bidir connection
+        //
+        connection_ = find_bidir_worker();
+
+        if (connection_ == null) return;
+
+        //
+        // adjust the requestID to match the spec (even for
+        // clients, odd for servers)
+        //
+        nextRequestId_ |= 1;
+        connection_.activateClientSide(this);
+
+        //
+        // log the reusing of the connection
+        //
+        if (orbInstance_.getCoreTraceLevels().traceConnections() > 0) {
+            String msg = "reusing established bidir connection\n" + connection_.transport().get_info().describe();
+            orbInstance_.getLogger().trace("outgoing", msg);
+        }
+    }
+
+    private GIOPConnectionThreaded createOutboundConnection(int t) {
+        //
+        // Trace connection attempt
+        //
+        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
+        if (coreTraceLevels.traceConnections() > 0) {
+            String msg = "trying to establish connection\n";
+            msg += "timeout: ";
+            if (t >= 0) {
+                msg += t;
+                msg += "ms\n";
+            } else
+                msg += "none\n";
+            msg += connector_.get_info().describe();
+            orbInstance_.getLogger().trace("outgoing", msg);
+        }
+
+        //
+        // Create new transport, using the connector
+        //
+        // For symetry reasons, GIOPClientStarterThreaded should also be
+        // added, even though these classes only have a trivial
+        // functionality. Or perhaps the GIOPClientStarterThreaded tries to
+        // connect() in the backgound? Just an idea...
+        //
+
+        org.apache.yoko.orb.OCI.Transport transport;
+
+        if (t >= 0) {
+            transport = connector_.connect_timeout(t);
+
+            //
+            // Was there a timeout?
+            //
+            if (transport == null)
+                throw new org.omg.CORBA.NO_RESPONSE("Connection timeout",
+                        0, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        } else {
+            transport = connector_.connect();
+            Assert._OB_assert(transport != null);
+        }
+
+        //
+        // Create new worker
+        //
+        Assert._OB_assert(concModel_ == Threaded);
+        return new GIOPConnectionThreaded(orbInstance_, transport, this);
     }
 
     //
@@ -325,7 +294,6 @@ final class GIOPClient extends Client {
         connection_ = null;
         destroy_ = false;
         bidirWorker_ = bidirEnable;
-        ownsWorker_ = true;
     }
 
     // ----------------------------------------------------------------------
@@ -335,39 +303,20 @@ final class GIOPClient extends Client {
     //
     // Destroy the client
     //
-    public void destroy(boolean terminate) {
-        GIOPConnection c = null;
-
-        synchronized (this) {
-            //
-            // Don't destroy twice
-            //
-            if (destroy_)
-                return;
-
-            //
-            // Set the destroy flag
-            //
-            destroy_ = true;
-
-            //
-            // Use a copy of the worker, and destroy the worker outside
-            // the synchronization, to avoid deadlocks
-            //
-            c = connection_;
-            connection_ = null;
-        }
-
-        //
-        // If there is a worker (and we exclusively own it) destroy it
-        //
-        if (c != null && ownsWorker_)
-            c.destroy(terminate);
+    public synchronized void destroy() {
+        if (destroy_) return;
+        destroy_ = true;
+        connection_ = null;
+        // release the reference if this is an outbound connection
+        if (connectionRef != null) connectionRef.close();
     }
 
     public synchronized void removeConnection(GIOPConnection connection) {
-        if (connection_ == connection)
-            connection_ = null;
+        if (connection != connection_) return;
+        connection_ = null;
+        // purge the reference from the cache if this is an outbound connection
+        if (connectionRef != null)
+            orbInstance_.getOutboundConnectionCache().remove(connectionRef);
     }
 
     //
@@ -600,13 +549,5 @@ final class GIOPClient extends Client {
         Assert._OB_assert(connection != null);
         org.apache.yoko.orb.OCI.Transport transport = connection.transport();
         return transport.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
-    }
-
-    // 
-    // determines whether this GIOPClient exclusively owns its worker or
-    // if its shared with another Client/Server
-    //
-    public boolean sharedConnection() {
-        return !ownsWorker_;
     }
 }

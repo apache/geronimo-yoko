@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OBMessaging;
 
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 
 public class UserExceptionRaiseProxy {
     public void raise(org.omg.Messaging._ExceptionHolder execptHolder)

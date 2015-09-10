@@ -62,35 +62,4 @@ public interface ConnectorInfoOperations
 
     String
     describe();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/ConnectorInfo/add_connect_cb:1.0
-    //
-    /**
-     *
-     * Add a callback that is called whenever a new connection is
-     * established. If the callback has already been registered, this
-     * method has no effect.
-     *
-     * @param cb The callback to add.
-     *
-     **/
-
-    void
-    add_connect_cb(ConnectCB cb);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/ConnectorInfo/remove_connect_cb:1.0
-    //
-    /**
-     *
-     * Remove a connect callback. If the callback was not registered,
-     * this method has no effect.
-     *
-     * @param cb The callback to remove.
-     *
-     **/
-
-    void
-    remove_connect_cb(ConnectCB cb);
 }

@@ -114,10 +114,8 @@ public final class Server {
         // Create POA
         //
         Policy[] policies = new Policy[2];
-        policies[0] = poa
-                .create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID);
-        policies[1] = poa
-                .create_lifespan_policy(LifespanPolicyValue.PERSISTENT);
+        policies[0] = poa.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID);
+        policies[1] = poa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT);
         POA testPOA = poa.create_POA("testPOA", manager, policies);
 
         //

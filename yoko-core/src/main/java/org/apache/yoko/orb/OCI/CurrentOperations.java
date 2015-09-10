@@ -47,16 +47,4 @@ public interface CurrentOperations extends org.omg.CORBA.CurrentOperations
     //
     // IDL:orb.yoko.apache.org/OCI/Current/get_oci_acceptor_info:1.0
     //
-    /**
-     *
-     * This method returns the Acceptor information object for the
-     * Acceptor which created the Transport used to invoke the current
-     * request.
-     *
-     * @returns The Acceptor information object.
-     *
-     **/
-
-    AcceptorInfo
-    get_oci_acceptor_info();
 }

@@ -17,16 +17,29 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.SendReceiveMode;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.NO_IMPLEMENT;
+
+import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.net.Socket;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.*;
 
 final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Transport {
     // This data member must not be private because the info object
     // must be able to access it
-    public java.net.Socket socket_; // The socket
+    public final java.net.Socket socket_; // The socket
 
     private java.io.InputStream in_; // The socket's input stream
 
@@ -54,7 +67,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             } catch (java.net.SocketException ex) {
                 logger.log(Level.FINE, "Socket setup error", ex); 
                 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
+                throw (COMM_FAILURE)new COMM_FAILURE(
                         org.apache.yoko.orb.OB.MinorCodes
                                 .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout)
                                 + ": socket error during setSoTimeout: "
@@ -63,7 +76,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
             } catch (java.lang.NullPointerException ex) {
                 logger.log(Level.FINE, "Socket setup error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
+                throw (COMM_FAILURE)new COMM_FAILURE(
                         org.apache.yoko.orb.OB.MinorCodes
                                 .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout)
                                 + ": NullPointerException error during setSoTimeout: "
@@ -86,41 +99,27 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     // shutdown the receiving side. If how == 1, shutdown the sending
     // side. If how == 2, shutdown both.
     //
-    private static void shutdownSocket(java.net.Socket socket, int how) {
-        if (socket == null) // Socket already closed
-            return;
-
-        if (how == 2) {
-            shutdownSocket(socket, 0);
-            shutdownSocket(socket, 1);
-            return;
-        }
-
+    private void shutdownSocket() {
         try {
-            if (how == 0) {
                 try {
-                    socket.shutdownInput();
+                    socket_.shutdownInput();
                 } catch (UnsupportedOperationException e) {
                 // if we're using an SSL connection, this is an unsupported operation.
                 // just ignore the error and proceed to the close.
                 }
-            } else if (how == 1) {
                 try {
-                    socket.shutdownOutput();
+                    socket_.shutdownOutput();
                 } catch (UnsupportedOperationException e) {
                 // if we're using an SSL connection, this is an unsupported operation.
                 // just ignore the error and proceed to the close.
                 }
-            } else {
-                throw new InternalError();
-            }
         } catch (java.net.SocketException ex) {
             //
             // Some VMs (namely JRockit) raise a SocketException if
             // the socket has already been closed.
             // This exception can be ignored.
             //
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             logger.log(Level.FINE, "Socket shutdown error", ex); 
             throw (InternalError)new InternalError().initCause(ex);
         }
@@ -138,28 +137,15 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         return org.omg.IOP.TAG_INTERNET_IOP.value;
     }
 
-    public org.apache.yoko.orb.OCI.SendReceiveMode mode() {
-        return org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
+    public SendReceiveMode mode() {
+        return SendReceive;
     }
 
     public int handle() {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+        throw new NO_IMPLEMENT();
     }
 
     public void close() {
-        if (socket_ == null) // shutdown() may call close()
-            return;
-
-        //
-        // Call callbacks
-        //
-        info_._OB_callCloseCB(info_);
-
-        //
-        // Destroy the info object
-        //
-        info_._OB_destroy();
-
         //
         // I must set socket_ to null *before* the close or the code
         // below, to avoid a race condition with send/receive
@@ -168,26 +154,22 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         //
         // Close the socket
         //
-        java.net.Socket saveSocket = socket_;
-        socket_ = null; // Must be set to null before the shutdown/close
-        shutdownSocket(saveSocket, 2); // This helps to unblock threads
+        shutdownSocket(); // This helps to unblock threads
         // blocking in recv()
         try {
-            saveSocket.close();
-        } catch (java.io.IOException ex) {
+            socket_.close();
+        } catch (IOException ex) {
         }
     }
 
     public void shutdown() {
         logger.info("shutdown: " + this); 
         shutdown_ = true;
-        shutdownSocket(socket_, 2); // Shutdown send side only
-        if (socket_ != null) {
-            // blocking in recv()
-            try {
-                socket_.close();
-            } catch (java.io.IOException ex) {
-            }
+        shutdownSocket(); // Shutdown send side only
+        // blocking in recv()
+        try {
+            socket_.close();
+        } catch (IOException ex) {
         }
     }
 
@@ -199,46 +181,27 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             try {
                 int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
                 if (result <= 0) {
-                    throw new org.omg.CORBA.COMM_FAILURE(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
                 }
                 buf.advance(result);
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 logger.log(Level.FINE, "Received interrupted exception", ex); 
                 buf.advance(ex.bytesTransferred);
 
                 if (!block)
                     return;
                 if (shutdown_)
-                    throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
-                                    + ": IOInterrupted exception during shutdown: " + ex.getMessage(), 
-                            org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
-                    
+                    throw asCommFailure(ex, MinorCodes.MinorRecv, "Interrupted I/O exception during shutdown");
             } catch (java.io.IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
-                                + ": I/O error during read: " + ex.getMessage(), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
+                throw asCommFailure(ex, MinorCodes.MinorRecv, "I/O error during read");
             } catch (java.lang.NullPointerException ex) {
-                logger.log(Level.FINE, "Socket read error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
-                                + ": NullPointerException during read",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                logger.log(Level.FINE, "Socket read error", ex);
+                throw asCommFailure(ex, MinorCodes.MinorRecv, "NullPointerException during read");
             }
         }
     }
+
 
     public boolean receive_detect(org.apache.yoko.orb.OCI.Buffer buf,
             boolean block) {
@@ -280,11 +243,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             try {
                 int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
                 if (result <= 0) {
-                    throw new org.omg.CORBA.COMM_FAILURE(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
                 }
                 buf.advance(result);
             } catch (java.io.InterruptedIOException ex) {
@@ -292,20 +251,10 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 return;
             } catch (java.io.IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
-                                + ": I/O error during read: " + ex.getMessage(), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
+                throw asCommFailure(ex, MinorRecv, "I/O error during read");
             } catch (java.lang.NullPointerException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorRecv)
-                                + ": NullPointerException during read",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRecv,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
+                throw asCommFailure(ex, MinorRecv, "NullPointerException during read");
             }
         }
     }
@@ -355,21 +304,11 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 if (!block)
                     return;
             } catch (java.io.IOException ex) {
-                logger.log(Level.FINE, "Socket write error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSend)
-                                + ": I/O error during write: " + ex.getMessage(),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSend,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                logger.log(Level.FINE, "Socket write error", ex);
+                throw asCommFailure(ex, MinorSend, "I/O error during write");
             } catch (java.lang.NullPointerException ex) {
-                logger.log(Level.FINE, "Socket write error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSend)
-                                + ": NullPointerException during write",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSend,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                logger.log(Level.FINE, "Socket write error", ex);
+                throw asCommFailure(ex, MinorSend, "NullPointerException during write");
             }
         }
     }
@@ -417,21 +356,11 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 buf.advance(ex.bytesTransferred);
                 return;
             } catch (java.io.IOException ex) {
-                logger.log(Level.FINE,  "Socket write error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSend)
-                                + ": I/O error during write: " + ex.getMessage(),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSend,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                logger.log(Level.FINE,  "Socket write error", ex);
+                throw asCommFailure(ex, MinorSend, "I/O error during write");
             } catch (java.lang.NullPointerException ex) {
-                logger.log(Level.FINE, "Socket write error", ex); 
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSend)
-                                + ": NullPointerException during write",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSend,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                logger.log(Level.FINE, "Socket write error", ex);
+                throw asCommFailure(ex, MinorSend, "NullPointerException during write");
             }
         }
     }
@@ -472,8 +401,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Transport_impl(org.apache.yoko.orb.OCI.Connector connector,
-            java.net.Socket socket, ListenerMap lm) {
+    public Transport_impl(java.net.Socket socket, ListenerMap lm) {
         socket_ = socket;
         shutdown_ = false;
 
@@ -485,25 +413,18 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             in_ = socket_.getInputStream();
             out_ = socket_.getOutputStream();
         } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Socket setup error", ex); 
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": unable to obtain socket InputStream: "
-                            + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            logger.log(Level.FINE, "Socket setup error", ex);
+            throw asCommFailure(ex, MinorSocket, "unable to obtain socket InputStream");
         }
 
         //
         // Since the Constructor of TransportInfo uses this object create
         // it after all members are initialized
         //
-        info_ = new TransportInfo_impl(this, connector, lm);
+        info_ = new TransportInfo_impl(this, lm);
     }
 
-    public Transport_impl(org.apache.yoko.orb.OCI.Acceptor acceptor,
-            java.net.Socket socket, ListenerMap lm) {
+    public Transport_impl(Acceptor acceptor, Socket socket, ListenerMap lm) {
         socket_ = socket;
         shutdown_ = false;
         
@@ -517,14 +438,8 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
             in_ = socket_.getInputStream();
             out_ = socket_.getOutputStream();
         } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Socket setup error", ex); 
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": unable to obtain socket InputStream: "
-                            + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            logger.log(Level.FINE, "Socket setup error", ex);
+            throw asCommFailure(ex, MinorSocket, "unable to obtain socket InputStream");
         }
 
         //

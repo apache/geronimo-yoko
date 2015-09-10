@@ -53,7 +53,7 @@ public abstract class Client {
     //
     // Destroy the client
     //
-    public abstract void destroy(boolean terminate);
+    public abstract void destroy();
 
     //
     // Increment usage (not mutex protected)
