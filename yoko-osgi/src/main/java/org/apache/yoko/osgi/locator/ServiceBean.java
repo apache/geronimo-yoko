@@ -18,7 +18,7 @@
  */
 
 
-package org.apache.yoko.util.osgi.locator;
+package org.apache.yoko.osgi.locator;
 
 import java.util.logging.Logger;
 
@@ -27,37 +27,37 @@ import org.osgi.framework.Bundle;
 /**
  * @version $Rev$ $Date$
  */
-public class ProviderBean {
-    private static final Logger log = Logger.getLogger(ProviderBean.class.getName());
+public class ServiceBean {
+    private static final Logger log = Logger.getLogger(ServiceBean.class.getName());
 
     private Register providerRegistry;
 
     private BundleProviderLoader bundleProviderLoader;
 
-    public ProviderBean(String key,
+    public ServiceBean(String key,
                        String className,
                        Bundle bundle,
                        Register providerRegistry) {
         this(key, className, bundle, providerRegistry, -1);
     }
-
-    public ProviderBean(String key,
-                        String className,
-                        Bundle bundle,
-                        Register providerRegistry,
-                        Integer priority) {
+    
+    public ServiceBean(String key,
+                       String className,
+                       Bundle bundle,
+                       Register providerRegistry,
+                       Integer priority) {
         bundleProviderLoader = new BundleProviderLoader(key, className, bundle, priority == null? -1: priority);
-        log.finer("ProviderBean: " + bundleProviderLoader);
+        log.finer("ServiceBean: " + bundleProviderLoader);
         this.providerRegistry = providerRegistry;
     }
 
 
 
     public void start() {
-        providerRegistry.registerProvider(bundleProviderLoader);
+        providerRegistry.registerService(bundleProviderLoader);
     }
 
     public void stop() {
-        providerRegistry.unregisterProvider(bundleProviderLoader);
+        providerRegistry.unregisterService(bundleProviderLoader);
     }
 }

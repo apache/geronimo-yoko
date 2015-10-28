@@ -21,9 +21,8 @@ import java.io.Serializable;
 
 import javax.rmi.CORBA.ValueHandler;
 
-import org.apache.yoko.orb.CORBA.ORB;
 import org.apache.yoko.util.cmsf.RepIds;
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IDLEntity;

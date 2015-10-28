@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.orb.OB.IORUtil;
+
 public final class Buffer {
     private int max_; // The maximum size of the buffer
 
@@ -154,5 +156,15 @@ public final class Buffer {
 
     public Buffer(int len) {
         alloc(len);
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        int pos = pos_, len = len_;
+        IORUtil.dump_octets(data_, 0, pos, sb);
+        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos));
+        IORUtil.dump_octets(data_, pos, len_ - pos, sb);
+        return sb.toString();
     }
 }

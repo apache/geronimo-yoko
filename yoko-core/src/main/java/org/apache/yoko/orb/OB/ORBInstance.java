@@ -17,28 +17,27 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-import org.apache.yoko.orb.OB.BootManager;
-import org.apache.yoko.orb.OB.DispatchStrategyFactory;
-import org.apache.yoko.orb.OB.Logger;
-import org.apache.yoko.orb.OB.URLRegistry;
-import org.apache.yoko.orb.OB.UnknownExceptionStrategy;
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.concurrent.ReferenceCountedCache;
+import org.apache.yoko.util.concurrent.WeakCountedCache;
 
 public final class ORBInstance {
     private boolean destroy_; // True if destroy() was called
 
-    //
-    // Reference to ORB is needed in Java
-    //
+    private static final Cache.Cleaner<GIOPConnection> CLEANER = new Cache.Cleaner<GIOPConnection>() {
+        @Override
+        public void clean(GIOPConnection conn) {
+            conn.destroy();
+        }
+    };
+
+    private final Cache<ConnectorInfo, GIOPConnection> outboundConnectionCache = new WeakCountedCache<>(CLEANER, 0, 100);
+
     private org.omg.CORBA.ORB orb_;
 
     //
@@ -485,4 +484,5 @@ public final class ORBInstance {
         return asyncHandler_;
     }
 
+    public Cache<org.apache.yoko.orb.OCI.ConnectorInfo,GIOPConnection> getOutboundConnectionCache() {return outboundConnectionCache;}
 }

@@ -136,7 +136,7 @@ public final class DowncallStub {
         return clientProfilePair.client;
     }
 
-    private void destroy(boolean terminate) {
+    private void destroy() {
         //
         // If the ORB has been destroyed then the clientManager can be nil
         //
@@ -144,7 +144,7 @@ public final class DowncallStub {
 
         if (clientManager != null && clientProfilePairs_ != null) {
             for (ClientProfilePair pair: clientProfilePairs_) {
-                clientManager.releaseClient(pair.client, terminate);
+                clientManager.releaseClient(pair.client);
             }
         }
 
@@ -152,7 +152,7 @@ public final class DowncallStub {
     }
 
     protected void finalize() throws Throwable {
-        destroy(false);
+        destroy();
 
         super.finalize();
     }
@@ -355,7 +355,7 @@ public final class DowncallStub {
 
         for (ClientProfilePair pair : clientProfilePairs_) {
             if (pair.client == client && pair.profile == profile) {
-                clientManager.releaseClient(pair.client, false);
+                clientManager.releaseClient(pair.client);
                 clientProfilePairs_.remove(pair);
                 break;
             }
@@ -1024,10 +1024,6 @@ public final class DowncallStub {
         // return whether we were successful or not
         //
         return delivered;
-    }
-
-    public void _OB_closeConnection(boolean terminate) {
-        destroy(terminate);
     }
 
     //

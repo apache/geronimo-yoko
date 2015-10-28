@@ -18,27 +18,32 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import java.net.Socket;
+import java.util.Objects;
 
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
-import org.apache.yoko.orb.OCI.IIOP.TransportInfo;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.OB.Net;
+import org.apache.yoko.orb.OCI.*;
+import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
+import org.omg.BiDirPolicy.BOTH;
+import org.omg.BiDirPolicy.BidirectionalPolicy;
+import org.omg.BiDirPolicy.BidirectionalPolicyHelper;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.NO_RESOURCES;
+import org.omg.CORBA.Policy;
+import org.omg.IIOP.BiDirIIOPServiceContext;
+import org.omg.IIOP.BiDirIIOPServiceContextHelper;
+import org.omg.IIOP.ListenPoint;
+import org.omg.IOP.BI_DIR_IIOP;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.TAG_INTERNET_IOP;
 
-public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
-        implements TransportInfo {
-    private org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo_; // connector
-                                                                    // info
+public final class TransportInfo_impl extends LocalObject implements TransportInfo {
+    private enum Origin{CLIENT(CLIENT_SIDE.value), SERVER(SERVER_SIDE.value); final short value; Origin(int v) {value = (short)v;}}
+    private final Socket socket;
+    private final Origin origin;
+    private final ListenerMap listenMap_;
+    private volatile ListenPoint[] listenPoints_ = null;
 
-    private org.apache.yoko.orb.OCI.AcceptorInfo acceptorInfo_; // acceptor info
-
-    private Transport_impl transport_; // associated transport
-
-    private org.omg.IIOP.ListenPoint[] listenPoints_ = null;
-
-    private ListenerMap listenMap_;
-
-    //
-    // All close callback objects
-    //
-    private java.util.Vector closeCBVec_ = new java.util.Vector();
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -49,14 +54,11 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
     }
 
     public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
+        return TAG_INTERNET_IOP.value;
     }
 
     public short origin() {
-        if (acceptorInfo_ == null)
-            return org.apache.yoko.orb.OCI.CLIENT_SIDE.value;
-        else
-            return org.apache.yoko.orb.OCI.SERVER_SIDE.value;
+        return origin.value;
     }
 
     public synchronized String describe() {
@@ -79,94 +81,32 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
         return desc;
     }
 
-    public synchronized org.apache.yoko.orb.OCI.ConnectorInfo connector_info() {
-        return connectorInfo_;
-    }
+    public Socket getSocket() {return socket;}
 
-    public synchronized org.apache.yoko.orb.OCI.AcceptorInfo acceptor_info() {
-        return acceptorInfo_;
-    }
+    public String addr() {return socket.getLocalAddress().getHostAddress();}
 
-    public synchronized void add_close_cb(org.apache.yoko.orb.OCI.CloseCB cb) {
-        int length = closeCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (closeCBVec_.elementAt(i) == cb)
-                return; // Already registered
-        closeCBVec_.addElement(cb);
-    }
+    public short port() {return (short)socket.getLocalPort();}
 
-    public synchronized void remove_close_cb(org.apache.yoko.orb.OCI.CloseCB cb) {
-        int length = closeCBVec_.size();
-        for (int i = 0; i < length; i++)
-            if (closeCBVec_.elementAt(i) == cb) {
-                closeCBVec_.removeElementAt(i);
-                return;
-            }
-    }
+    public String remote_addr() {return socket.getInetAddress().getHostAddress();}
 
-    public synchronized java.net.Socket socket() {
-        if (transport_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES();
+    public short remote_port() {return (short)socket.getPort();}
 
-        return transport_.socket_;
-    }
-
-
-    public synchronized String addr() {
-        if (transport_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES();
-
-        return transport_.socket_.getLocalAddress().getHostAddress();
-    }
-
-    public synchronized short port() {
-        if (transport_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES();
-
-        int port = transport_.socket_.getLocalPort();
-
-        if (port >= 0x8000)
-            return (short) (port - 0xffff - 1);
-        else
-            return (short) port;
-    }
-
-    public synchronized String remote_addr() {
-        if (transport_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES();
-
-        return transport_.socket_.getInetAddress().getHostAddress();
-    }
-
-    public synchronized short remote_port() {
-        if (transport_ == null)
-            throw new org.omg.CORBA.NO_RESOURCES();
-
-        int port = transport_.socket_.getPort();
-
-        if (port >= 0x8000)
-            return (short) (port - 0xffff - 1);
-        else
-            return (short) port;
-    }
-
-    public org.omg.IOP.ServiceContext[] get_service_contexts(
-            org.omg.CORBA.Policy[] policies) {
-        org.omg.IOP.ServiceContext[] scl;
+    public ServiceContext[] get_service_contexts(Policy[] policies) {
+        ServiceContext[] scl;
         boolean bHaveBidir = false;
 
-        for (int i = 0; i < policies.length; i++) {
-            if (policies[i].policy_type() == org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value) {
-                org.omg.BiDirPolicy.BidirectionalPolicy p = org.omg.BiDirPolicy.BidirectionalPolicyHelper
-                        .narrow(policies[i]);
-                if (p.value() == org.omg.BiDirPolicy.BOTH.value)
+        for (Policy policy : policies) {
+            if (policy.policy_type() == BIDIRECTIONAL_POLICY_TYPE.value) {
+                BidirectionalPolicy p = BidirectionalPolicyHelper
+                        .narrow(policy);
+                if (p.value() == BOTH.value)
                     bHaveBidir = true;
                 break;
             }
         }
 
         if (bHaveBidir) {
-            org.omg.IIOP.BiDirIIOPServiceContext biDirCtxt = new org.omg.IIOP.BiDirIIOPServiceContext();
+            BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
             biDirCtxt.listen_points = listenMap_.getListenPoints();
 
             org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
@@ -200,22 +140,19 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
     }
 
     public void handle_service_contexts(org.omg.IOP.ServiceContext[] contexts) {
-        for (int i = 0; i < contexts.length; i++) {
-            if (contexts[i].context_id == org.omg.IOP.BI_DIR_IIOP.value) {
-                byte[] pOct = contexts[i].context_data;
-                int len = contexts[i].context_data.length;
+        for (ServiceContext context : contexts) {
+            if (context.context_id == BI_DIR_IIOP.value) {
+                byte[] pOct = context.context_data;
+                int len = context.context_data.length;
 
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                        pOct, len);
-                org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                        buf, 0, false);
+                Buffer buf = new Buffer(pOct, len);
+                InputStream in = new InputStream(buf, 0, false);
                 in._OB_readEndian();
 
                 //
                 // unmarshal the octets back to the bidir format
                 //
-                org.omg.IIOP.BiDirIIOPServiceContext biDirCtxt = org.omg.IIOP.BiDirIIOPServiceContextHelper
-                        .read(in);
+                BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
 
                 //
                 // save the listening points in the transport
@@ -228,14 +165,10 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
     }
 
     public synchronized boolean received_bidir_SCL() {
-        if (listenPoints_ == null)
-            return false;
-
-        return (listenPoints_.length > 0);
+        return listenPoints_ != null && (listenPoints_.length > 0);
     }
 
-    public synchronized boolean endpoint_alias_match(
-            org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
+    public synchronized boolean endpoint_alias_match(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
         //
         // we only deal with Connectors that are of our specific type,
         // namely IIOP connectors (and ConnectorInfos)
@@ -257,10 +190,10 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
         short port = infoImpl.remote_port();
         String host = infoImpl.remote_addr();
 
-        for (int i = 0; i < listenPoints_.length; i++) {
-            if ((listenPoints_[i].port == port)
-                    && org.apache.yoko.orb.OB.Net.CompareHosts(
-                            listenPoints_[i].host, host))
+        for (ListenPoint aListenPoints_ : listenPoints_) {
+            if ((aListenPoints_.port == port)
+                    && Net.CompareHosts(
+                    aListenPoints_.host, host))
                 return true;
         }
 
@@ -279,31 +212,20 @@ public final class TransportInfo_impl extends org.omg.CORBA.LocalObject
     // Yoko internal functions
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
-
-    TransportInfo_impl(Transport_impl transport,
-            org.apache.yoko.orb.OCI.Connector connector, ListenerMap lm) {
-        transport_ = transport;
-        connectorInfo_ = connector.get_info();
+    private TransportInfo_impl(Socket socket, Origin origin, ListenerMap lm) {
+        this.socket = socket;
+        this.origin = origin;
         listenMap_ = lm;
     }
 
-    TransportInfo_impl(Transport_impl transport,
-            org.apache.yoko.orb.OCI.Acceptor acceptor, ListenerMap lm) {
-        transport_ = transport;
-        acceptorInfo_ = acceptor.get_info();
-        listenMap_ = lm;
+
+    // client-side constructor
+    TransportInfo_impl(Transport_impl transport, ListenerMap lm) {
+        this(transport.socket_, Origin.CLIENT, lm);
     }
 
-    synchronized void _OB_callCloseCB(org.apache.yoko.orb.OCI.TransportInfo info) {
-        int length = closeCBVec_.size();
-        for (int i = 0; i < length; i++) {
-            org.apache.yoko.orb.OCI.CloseCB cb = (org.apache.yoko.orb.OCI.CloseCB) closeCBVec_
-                    .elementAt(i);
-            cb.close_cb(info);
-        }
-    }
-
-    synchronized void _OB_destroy() {
-        transport_ = null;
+    //server-side constructor
+    TransportInfo_impl(Transport_impl transport, Acceptor acceptor, ListenerMap lm) {
+        this(transport.socket_, Origin.SERVER, lm);
     }
 }

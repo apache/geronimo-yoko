@@ -18,7 +18,7 @@
  */
 
 
-package org.apache.yoko.util.osgi.locator;
+package org.apache.yoko.osgi.locator;
 
 import org.osgi.framework.Bundle;
 

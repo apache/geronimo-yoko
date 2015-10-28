@@ -35,6 +35,10 @@
             <artifactId>yoko-spec-corba</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.yoko</groupId>
+            <artifactId>yoko-osgi</artifactId>
+        </dependency>
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>

@@ -20,6 +20,9 @@ package org.apache.yoko.orb.OCI.IIOP;
 //
 // IDL:orb.yoko.apache.org/OCI/IIOP/ConnectorInfo:1.0
 //
+
+import org.apache.yoko.orb.OCI.Connector;
+
 /**
  *
  * Information on an IIOP OCI Connector object.

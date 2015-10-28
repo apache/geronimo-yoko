@@ -82,7 +82,7 @@ public final class ClientManager {
         //
         // Destroy all clients
         //
-        for (Client c : allClients_) c.destroy(false);
+        for (Client c : allClients_) c.destroy();
 
         //
         // Reset internal data
@@ -284,7 +284,7 @@ public final class ClientManager {
                         }
 
                         if (matched) {
-                            newClient.destroy(false);
+                            newClient.destroy();
                             continue;
                         }
                     }
@@ -372,7 +372,7 @@ public final class ClientManager {
         return pairs;
     }
 
-    public synchronized void releaseClient(Client client, boolean terminate) {
+    public synchronized void releaseClient(Client client) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
@@ -400,7 +400,7 @@ public final class ClientManager {
             reusableClients_.remove(client);
 
             if (allClients_.remove(client)) {
-                client.destroy(terminate);
+                client.destroy();
             } else {
                 Assert._OB_assert("Release called on unknown client");
             }

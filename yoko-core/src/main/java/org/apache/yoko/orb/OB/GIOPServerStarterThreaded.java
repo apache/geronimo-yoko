@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.Transport;
+
 import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 
@@ -44,29 +47,19 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             //
             // Accept all connections which might have queued up in the
             // listen() backlog
-            while (true) {
-                org.apache.yoko.orb.OCI.Transport transport = null;
+            do {
 
                 try {
-                    transport = acceptor_.accept(false);
-                } catch (org.omg.CORBA.SystemException ex) {
-                }
-
-                if (transport == null) {
-                    logger.fine("Null transport received from a connect"); 
-                    break;
-                }
-
-                try {
-                    GIOPConnection connection = new GIOPConnectionThreaded(
-                            orbInstance_, transport,
-                            oaInterface_);
-
+                    Transport t = acceptor_.accept(false);
+                    if (t == null) {
+                        logger.fine("Null transport received from a connect");
+                        break;
+                    }
+                    GIOPConnection connection = new GIOPConnectionThreaded(orbInstance_, t, oaInterface_);
                     connection.setState(GIOPConnection.State.Closing);
                 } catch (org.omg.CORBA.SystemException ex) {
-                    // Ignore SystemExceptions
                 }
-            }
+            } while (true);
 
             //
             // Close the acceptor
@@ -80,8 +73,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
     // GIOPServerStarterThreaded package member implementation
     // ----------------------------------------------------------------------
 
-    GIOPServerStarterThreaded(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.Acceptor acceptor, OAInterface oaInterface) {
+    GIOPServerStarterThreaded(ORBInstance orbInstance, Acceptor acceptor, OAInterface oaInterface) {
         super(orbInstance, acceptor, oaInterface);
 
         logger.fine("GIOPServer thread started " + this + " using acceptor " + acceptor); 

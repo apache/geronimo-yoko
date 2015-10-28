@@ -46,9 +46,9 @@ final class ServiceContextInterceptor extends LocalObject implements ServerReque
         ServerRequestInfoExt riExt = (ServerRequestInfoExt) ri;
         TransportInfo_impl connection = (TransportInfo_impl)riExt.getTransportInfo();
         if (connection != null) {
-            Socket socket = connection.socket();
-            if (socket != null) {
-                System.out.println("Retrieved socket successfully");
+            String remoteHost = connection.remote_addr();
+            if (remoteHost != null && remoteHost.length() > 0) {
+                System.out.println("Retrieved remote host successfully");
                 return;
             }
         }

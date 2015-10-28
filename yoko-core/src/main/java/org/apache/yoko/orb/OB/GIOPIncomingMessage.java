@@ -232,8 +232,7 @@ final public class GIOPIncomingMessage {
                     org.apache.yoko.orb.OB.MinorCodes.MinorVersion,
                     org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
 
-        org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                buf, 0, false);
+        org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false);
 
         switch (version_.minor) {
         case 0: {

@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmispec.util;
 
-import org.apache.yoko.util.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderLocator;
 
 import java.net.MalformedURLException;
 import java.net.URL;

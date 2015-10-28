@@ -30,7 +30,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
-import org.omg.CORBA.DynAnyPackage.Invalid;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;

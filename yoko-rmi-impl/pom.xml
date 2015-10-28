@@ -32,6 +32,11 @@
     an endorsed standard -->
         <dependency>
             <groupId>org.apache.yoko</groupId>
+            <artifactId>yoko-osgi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.yoko</groupId>
             <artifactId>yoko-spec-corba</artifactId>
             <scope>provided</scope>
         </dependency>

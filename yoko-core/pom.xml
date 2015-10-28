@@ -38,6 +38,11 @@
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
+            <artifactId>yoko-osgi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.yoko</groupId>
             <artifactId>yoko-spec-corba</artifactId>
             <scope>provided</scope>
         </dependency>
@@ -48,20 +53,19 @@
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-rmi-impl</artifactId>
-            <scope>test</scope>
+            <artifactId>yoko-util</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-util</artifactId>
-            <scope>provided</scope>
+            <artifactId>yoko-rmi-impl</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -102,7 +106,7 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.yoko</groupId>
-                                    <artifactId>yoko-util</artifactId>
+                                    <artifactId>yoko-osgi</artifactId>
                                     <type>jar</type>
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/endorsed</outputDirectory>
@@ -127,7 +131,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
-                    <argLine>-Djava.endorsed.dirs=${basedir}/target/endorsed</argLine>
+                    <argLine>-Xmx128m</argLine>
+                    <argLine>-Djava.endorsed.dirs=${project.build.directory}/endorsed</argLine>
                     <includes>
                         <include>**/org/apache/yoko/*Test.java</include>
                     </includes>
