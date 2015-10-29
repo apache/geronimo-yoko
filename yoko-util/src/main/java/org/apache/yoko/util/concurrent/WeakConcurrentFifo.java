@@ -1,20 +1,17 @@
 package org.apache.yoko.util.concurrent;
 
 import org.apache.yoko.util.KeyedFactory;
-import org.apache.yoko.util.Sequential;
 
 import java.lang.ref.ReferenceQueue;
+
+import static java.util.Objects.requireNonNull;
 
 public class WeakConcurrentFifo<T> extends ConcurrentFifo<T> {
     private final ReferenceQueue<T> refQueue = new ReferenceQueue<>();
     private final KeyedFactory<? super T, Runnable> cleanupFactory;
 
-    WeakConcurrentFifo() {
-        this(NoOpRunnableFactory.INSTANCE);
-    }
-
     WeakConcurrentFifo(KeyedFactory<? super T, Runnable> cleanupFactory) {
-        this.cleanupFactory = cleanupFactory;
+        this.cleanupFactory = requireNonNull(cleanupFactory);
     }
 
     @Override

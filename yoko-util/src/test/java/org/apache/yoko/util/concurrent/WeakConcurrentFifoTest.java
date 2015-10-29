@@ -5,28 +5,28 @@ import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
 import java.lang.ref.WeakReference;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
-@RunWith(MockitoJUnitRunner.class)
 public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
-    private KeyedFactory<String, Runnable> factory =  new KeyedFactory<String, Runnable>() {
-        public Runnable create(String key) {
-            return cleanup;
-        }
+    // must not use a mock here because it will hold onto all its arguments strongly
+    private final KeyedFactory<String, Runnable> factory =  new KeyedFactory<String, Runnable>() {
+        public Runnable create(String key) {return cleanup;}
     };
 
-    @Mock
+    // must not use the @Mock annotation and Mockito's injection
+    // because it intermittently fails to count invocations correctly
     private Runnable cleanup;
 
-    @Override
     @Before
+    @Override
     public void setupFifo() {
+        cleanup = mock(Runnable.class);
         fifo = new WeakConcurrentFifo<>(factory);
     }
 
