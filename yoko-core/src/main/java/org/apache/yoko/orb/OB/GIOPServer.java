@@ -17,7 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class GIOPServer extends Server {

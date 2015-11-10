@@ -36,6 +36,12 @@ public interface Cache<K, V> {
     void remove(Reference<V> ref);
 
     /**
+     * Uncache an item. No cleanup will be performed.
+     * @return true iff the item was removed
+     */
+    boolean remove(K key, V value);
+
+    /**
      * Remove some idle entries.
      * @return the number of entries removed
      */

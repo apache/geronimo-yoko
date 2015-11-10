@@ -130,4 +130,6 @@ public abstract class Client {
     // Determines whether this client supports twoway invocations
     //
     public abstract boolean twoway();
+
+    public void prepareForDowncall(RefCountPolicyList policies) {}
 }

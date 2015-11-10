@@ -484,5 +484,5 @@ public final class ORBInstance {
         return asyncHandler_;
     }
 
-    public Cache<org.apache.yoko.orb.OCI.ConnectorInfo,GIOPConnection> getOutboundConnectionCache() {return outboundConnectionCache;}
+    public Cache<ConnectorInfo, GIOPConnection> getOutboundConnectionCache() {return outboundConnectionCache;}
 }
