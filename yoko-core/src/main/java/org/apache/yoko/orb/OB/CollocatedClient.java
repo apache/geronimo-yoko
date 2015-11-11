@@ -43,7 +43,7 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // Get a new request ID
     //
-    public int requestId() {
+    public int getNewRequestID() {
         //
         // This operation *must* delegate to CollocatedServer, because
         // request IDs must be unique per CollocatedServer, not per

@@ -295,8 +295,8 @@ final class GIOPClient extends Client {
     }
 
     /** Get a new request ID */
-    public int requestId() {
-        return connection_.getNextRequestId();
+    public int getNewRequestID() {
+        return connection_.getNewRequestId();
     }
 
     //

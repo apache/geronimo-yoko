@@ -85,7 +85,7 @@ public abstract class Client {
     //
     // Get a new request ID
     //
-    public abstract int requestId();
+    public abstract int getNewRequestID();
 
     //
     // get a list of ServiceContexts that have to be sent on an AMI router

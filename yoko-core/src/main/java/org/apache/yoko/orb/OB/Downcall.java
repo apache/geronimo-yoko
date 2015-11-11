@@ -168,7 +168,7 @@ public class Downcall {
         // Get the next request ID
         //
         client.prepareForDowncall(policies);
-        reqId_ = client_.requestId();
+        reqId_ = client_.getNewRequestID();
         
         logger_.debug("Downcall created for operation " + op + " with id " + reqId_); 
     }
