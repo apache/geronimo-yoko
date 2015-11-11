@@ -23,6 +23,7 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
     // must not use the @Mock annotation and Mockito's injection
     // because it intermittently fails to count invocations correctly
     private Runnable cleanup;
+    private ReferenceQueue<?> referenceQueue = new ReferenceQueue<>();
 
     @Before
     @Override
@@ -88,23 +89,17 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
         WeakReference[] refs = new WeakReference[strings.length];
         for (int i = 0 ; i < strings.length; i++) {
             String s = new String(strings[i]);
-            refs[i] = new WeakReference(s);
+            refs[i] = new WeakReference(s, referenceQueue);
             fifo.put(s);
         }
         return refs;
     }
 
-    public static void gcUntilCleared(WeakReference<?>... refs) throws Exception {
+    public void gcUntilCleared(WeakReference<?>... refs) throws Exception {
         for (WeakReference<?> ref : refs) {
             gcUntilCollected(ref);
-            System.out.println();
+            referenceQueue.remove();
         }
-        // now use a dummy object and a new ref queue to wait for enqueuing to happen
-        // (hopefully once the dummy ref is enqueued on the new ref q, the enqueueing inside the fifo has happened)
-        ReferenceQueue<String> q = new ReferenceQueue<String>();
-        WeakReference<String> r = new WeakReference<String>(new String("Hello"), q);
-        gcUntilCollected(r);
-        q.remove();
     }
 
     private static void gcUntilCollected(WeakReference<?> ref) {
@@ -112,5 +107,6 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
             System.out.print("gc ");
             System.gc();
         }
+        System.out.println();
     }
 }
