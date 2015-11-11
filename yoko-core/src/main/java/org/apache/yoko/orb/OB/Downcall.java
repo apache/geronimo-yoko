@@ -26,71 +26,50 @@ import org.apache.yoko.orb.util.AutoLock;
 import org.apache.yoko.orb.util.AutoReadWriteLock;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.NO_RESPONSE;
+import org.omg.IOP.IOR;
 import org.omg.IOP.ServiceContext;
 
 public class Downcall {
-    //
-    // The ORBInstance object
-    //
-    protected ORBInstance orbInstance_;
-    
-    protected Logger logger_;   // the orbInstance_ logger object 
+    /** The ORBInstance object */
+    protected final ORBInstance orbInstance_;
 
-    //
-    // The client
-    //
-    protected Client client_;
+    private final Logger logger_;   // the orbInstance_ logger object
 
-    //
-    // The downcall emitter
-    //
-    protected DowncallEmitter emitter_;
+    /** The client */
+    private final Client client_;
 
-    //
-    // Information about the IOR profile
-    //
+    /** The downcall emitter */
+    private DowncallEmitter emitter_;
+
+    /** Information about the IOR profile */
     protected org.apache.yoko.orb.OCI.ProfileInfo profileInfo_;
 
-    //
-    // The list of policies
-    //
+    /** The list of policies */
     protected RefCountPolicyList policies_;
 
-    //
-    // The unique request ID
-    //
-    protected int reqId_;
+    /** The unique request ID */
+    private final int reqId_;
 
-    //
-    // The name of the operation
-    //
-    protected String op_;
+    /** The name of the operation */
+    protected final String op_;
 
-    //
-    // Whether a response is expected
-    //
-    protected boolean responseExpected_;
+    /** Whether a response is expected */
+    protected final boolean responseExpected_;
 
-    //
-    // The marshalled headers and parameters
-    //
-    protected org.apache.yoko.orb.CORBA.OutputStream out_;
+    /** The marshalled headers and parameters */
+    private org.apache.yoko.orb.CORBA.OutputStream out_;
 
-    //
-    // Holds the results of the operation
-    //
-    protected org.apache.yoko.orb.CORBA.InputStream in_;
+    /** Holds the results of the operation */
+    private org.apache.yoko.orb.CORBA.InputStream in_;
 
-    //
-    // The state of this invocation
-    //
+    /** The state of this invocation */
     protected enum State { UNSENT, PENDING, NO_EXCEPTION, USER_EXCEPTION, SYSTEM_EXCEPTION, FAILURE_EXCEPTION, FORWARD, FORWARD_PERM }
     
     protected final AutoReadWriteLock stateLock = new AutoReadWriteLock();
     
     protected State state = State.UNSENT;
-    
-    protected Condition stateWaitCondition;
+
+    private Condition stateWaitCondition;
 
     //
     // Holds the exception if state_ is DowncallStateUserException,
@@ -102,19 +81,15 @@ public class Downcall {
     // Holds the exception ID if state_ is DowncallStateUserException,
     // DowncallStateSystemException, or DowncallStateFailureException
     //
-    // In Java, we need this member in Downcall, rather than in PIDowncall
-    //
     protected String exId_;
 
     //
     // Holds the forward IOR if state_ is DowncallStateLocationForward
     // or DowncallLocationForwardPerm
     //
-    protected org.omg.IOP.IOR forwardIOR_;
+    protected IOR forwardIOR_;
 
-    //
-    // The request and reply service contexts
-    //
+    /** The request and reply service contexts */
     protected Vector<ServiceContext> requestSCL_ = new Vector<>();
 
     protected Vector<ServiceContext> replySCL_ = new Vector<>();
@@ -123,9 +98,7 @@ public class Downcall {
     // Downcall private and protected member implementations
     // ----------------------------------------------------------------------
 
-    //
-    // Raise an exception if necessary
-    //
+    /** Raise an exception if necessary */
     void checkForException() throws LocationForward, FailureException {
         try (AutoLock readLock = stateLock.getReadLock()) {
             switch (state) {
@@ -162,13 +135,8 @@ public class Downcall {
         }
     }
 
-    //
-    // Java only
-    //
-    // Required for use by subclasses
-    //
-    protected final org.apache.yoko.orb.CORBA.OutputStream preMarshalBase()
-            throws LocationForward, FailureException {
+    /** Required for use by subclasses */
+    protected final org.apache.yoko.orb.CORBA.OutputStream preMarshalBase() throws LocationForward, FailureException {
         org.apache.yoko.orb.CORBA.OutputStreamHolder out = new org.apache.yoko.orb.CORBA.OutputStreamHolder();
         emitter_ = client_.startDowncall(this, out);
         out_ = out.value;
@@ -199,7 +167,8 @@ public class Downcall {
         //
         // Get the next request ID
         //
-        reqId_ = client_.requestId();
+        client.prepareForDowncall(policies);
+        reqId_ = client_.getNewRequestID();
         
         logger_.debug("Downcall created for operation " + op + " with id " + reqId_); 
     }
@@ -530,7 +499,7 @@ public class Downcall {
         }
     }
 
-    public final void setLocationForward(org.omg.IOP.IOR ior, boolean perm) {
+    public final void setLocationForward(IOR ior, boolean perm) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(responseExpected_);
             Assert._OB_assert(forwardIOR_ == null);

@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 
 import static org.junit.Assert.assertEquals;
@@ -31,7 +32,7 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
     }
 
     @Test
-    public void testWeakRefsGetCollectedOnRemove() {
+    public void testWeakRefsGetCollectedOnRemove() throws Exception {
         WeakReference[] refs;
 
         refs = enqueueStringsCollectably("foo", "foo", "bar", "bar", "bar", "bar");
@@ -49,7 +50,7 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
     }
 
     @Test
-    public void testWeakRefsGetCollectedOnPut() {
+    public void testWeakRefsGetCollectedOnPut() throws Exception {
         WeakReference[] refs;
 
         refs = enqueueStringsCollectably("foo", "foo", "bar", "bar", "bar", "bar");
@@ -67,7 +68,7 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
     }
 
     @Test
-    public void testWeakRefsGetCollectedOnSize() {
+    public void testWeakRefsGetCollectedOnSize() throws Exception {
         WeakReference[] refs;
 
         refs = enqueueStringsCollectably("foo", "foo", "bar", "bar", "bar", "bar");
@@ -93,13 +94,23 @@ public class WeakConcurrentFifoTest extends ConcurrentFifoTest {
         return refs;
     }
 
-    public static void gcUntilCleared(WeakReference<?>... refs) {
+    public static void gcUntilCleared(WeakReference<?>... refs) throws Exception {
         for (WeakReference<?> ref : refs) {
-            while (ref.get() != null) {
-                System.out.print("gc ");
-                System.gc();
-            }
+            gcUntilCollected(ref);
             System.out.println();
+        }
+        // now use a dummy object and a new ref queue to wait for enqueuing to happen
+        // (hopefully once the dummy ref is enqueued on the new ref q, the enqueueing inside the fifo has happened)
+        ReferenceQueue<String> q = new ReferenceQueue<String>();
+        WeakReference<String> r = new WeakReference<String>(new String("Hello"), q);
+        gcUntilCollected(r);
+        q.remove();
+    }
+
+    private static void gcUntilCollected(WeakReference<?> ref) {
+        while (ref.get() != null) {
+            System.out.print("gc ");
+            System.gc();
         }
     }
 }

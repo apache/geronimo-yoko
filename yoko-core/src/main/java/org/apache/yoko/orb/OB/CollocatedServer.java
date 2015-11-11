@@ -344,8 +344,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
 
         if (replySCL.length > 0) {
             synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(new Integer(upcall
-                        .requestId()));
+                Downcall down = (Downcall) callMap_.get(new Integer(upcall.requestId()));
 
                 //
                 // Might be null if the request timed out or destroyed

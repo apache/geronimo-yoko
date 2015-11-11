@@ -92,6 +92,18 @@ public class ReferenceCountedCache<K, V> implements Cache<K,V> {
     @Override
     public void remove(Reference<V> ref) {remove(((CountedEntry<K,V>.ValueReference) ref).invalidateAndGetEntry());}
 
+    @Override
+    public boolean remove(K key, V value) {
+        if (key == null) return false;
+        CountedEntry<K, V> entry = map.get(key);
+        try (Reference ref = entry.obtain();) {
+            if (ref == null) return false;
+            if (ref.get() != value) return false;
+            remove(ref);
+            return true;
+        }
+    }
+
     protected void remove(CountedEntry<K,V> entry) {if (entry != null) map.remove(entry.key, entry);}
 
     @Override

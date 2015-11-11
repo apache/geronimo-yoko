@@ -562,7 +562,7 @@ public final class DowncallStub {
         //
         // Put the request header into the stream
         //
-        outgoing.writeRequestHeader(client.requestId(), operation, responseExpected, scl);
+        outgoing.writeRequestHeader(client.getNewRequestID(), operation, responseExpected, scl);
 
         return outgoing;
     }
