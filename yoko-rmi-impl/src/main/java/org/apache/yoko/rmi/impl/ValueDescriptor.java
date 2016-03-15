@@ -73,8 +73,6 @@ import sun.reflect.ReflectionFactory;
 public class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
 
-    private boolean _is_enum;
-
     private boolean _is_externalizable;
 
     private boolean _is_serializable;
@@ -145,7 +143,6 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     long getSerialVersionUID() {
-        if (_is_enum) return 0L;
         if (_serial_version_uid_field != null) {
 
             try {
@@ -176,7 +173,6 @@ public class ValueDescriptor extends TypeDescriptor {
         final Class<?> type = getJavaClass();
         final Class<?> superClass = type.getSuperclass();
 
-        _is_enum = Enum.class.isAssignableFrom(type);
         _is_rmi_stub = RMIStub.class.isAssignableFrom(type);
         _is_externalizable = Externalizable.class.isAssignableFrom(type);
         _is_serializable = Serializable.class.isAssignableFrom(type);
