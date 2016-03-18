@@ -21,7 +21,7 @@ package org.apache.yoko.rmi.impl;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 
-public class FVDEnumDescriptor extends EnumDescriptor {
+class FVDEnumDescriptor extends EnumDescriptor {
     private final FullValueDescription fvd;
     private final String repid;
 

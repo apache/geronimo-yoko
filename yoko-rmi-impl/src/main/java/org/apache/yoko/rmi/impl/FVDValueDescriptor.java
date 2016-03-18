@@ -24,7 +24,7 @@ import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 /**
  * @author krab
  */
-public class FVDValueDescriptor extends ValueDescriptor {
+class FVDValueDescriptor extends ValueDescriptor {
     FullValueDescription fvd;
 
     String repid;
@@ -65,7 +65,7 @@ public class FVDValueDescriptor extends ValueDescriptor {
         FieldDescriptor result = null;
 
         for (Class c = getJavaClass(); c != null; c = c.getSuperclass()) {
-            TypeDescriptor td = getTypeRepository().getDescriptor(c);
+            TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
                 ValueDescriptor vd = (ValueDescriptor) td;
                 FieldDescriptor[] fds = vd._fields;

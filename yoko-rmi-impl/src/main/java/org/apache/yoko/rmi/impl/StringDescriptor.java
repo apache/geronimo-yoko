@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class StringDescriptor extends ValueDescriptor {
+class StringDescriptor extends ValueDescriptor {
     public String getIDLName() {
         return "CORBA_WStringValue";
     }

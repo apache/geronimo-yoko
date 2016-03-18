@@ -25,7 +25,7 @@ import java.util.Map;
 import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.InputStream;
 
-public class EnumSubclassDescriptor extends ValueDescriptor {
+class EnumSubclassDescriptor extends ValueDescriptor {
     @SuppressWarnings("rawtypes")
     private final Class enumType;
 

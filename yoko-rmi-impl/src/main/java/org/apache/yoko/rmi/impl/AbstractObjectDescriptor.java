@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class AbstractObjectDescriptor extends ValueDescriptor {
+class AbstractObjectDescriptor extends ValueDescriptor {
     protected AbstractObjectDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }

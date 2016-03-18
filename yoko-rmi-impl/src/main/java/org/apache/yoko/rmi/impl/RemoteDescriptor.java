@@ -34,7 +34,7 @@ import java.util.logging.Level;
 
 import javax.rmi.PortableRemoteObject;
 
-public abstract class RemoteDescriptor extends TypeDescriptor {
+abstract class RemoteDescriptor extends TypeDescriptor {
     private java.util.Map method_map;
 
     private java.util.Map refl_method_map;
@@ -61,8 +61,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             }
             Class most_specific_interface = remotes[0];
 
-            result = (RemoteInterfaceDescriptor) repository
-                    .getDescriptor(most_specific_interface);
+            result = (RemoteInterfaceDescriptor)repo.getDescriptor(most_specific_interface);
         }
 
         setRemoteInterface(result);
@@ -84,7 +83,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             int len = ifaces.length;
             String[] ids = new String[len];
             for (int i = 0; i < len; i++) {
-                TypeDescriptor desc = repository.getDescriptor(ifaces[i]);
+                TypeDescriptor desc = repo.getDescriptor(ifaces[i]);
                 ids[i] = desc.getRepositoryID();
             }
 
@@ -180,8 +179,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             if (!REMOTE_CLASS.equals(iface) && !OBJECT_CLASS.equals(iface)
                     && REMOTE_CLASS.isAssignableFrom(iface)
                     && iface.isInterface()) {
-                RemoteDescriptor superHelper = (RemoteDescriptor) repository
-                        .getDescriptor(iface);
+                RemoteDescriptor superHelper = (RemoteDescriptor)repo.getDescriptor(iface);
 
                 super_descriptors.add(superHelper);
 
@@ -217,9 +215,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
 
         for (int i = 0; i < methods.length; i++) {
-            MethodDescriptor op = new MethodDescriptor(methods[i], repository);
+            MethodDescriptor op = new MethodDescriptor(methods[i], repo);
 
-            String mname = op.getJavaName();
+            String mname = op.java_name;
 
             // is there another method that differs only in case?
             Set same_case_names = (Set) lower_case_names.get(mname.toLowerCase());
@@ -242,7 +240,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         method_map = new java.util.HashMap();
         for (int i = 0; i < method_list.size(); i++) {
             MethodDescriptor desc = (MethodDescriptor) method_list.get(i);
-            logger.finer("Adding method " + desc.getJavaName() + " to method map under " + desc.getIDLName()); 
+            logger.finer("Adding method " + desc.java_name + " to method map under " + desc.getIDLName());
             method_map.put(desc.getIDLName(), desc);
         }
 
@@ -545,14 +543,13 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         classes.add(c);
 
         if (c.getSuperclass() != null) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(
-                    c.getSuperclass());
+            TypeDescriptor desc = repo.getDescriptor(c.getSuperclass());
             desc.addDependencies(classes);
         }
 
         Class[] ifaces = c.getInterfaces();
         for (int i = 0; i < ifaces.length; i++) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(ifaces[i]);
+            TypeDescriptor desc = repo.getDescriptor(ifaces[i]);
             desc.addDependencies(classes);
         }
 

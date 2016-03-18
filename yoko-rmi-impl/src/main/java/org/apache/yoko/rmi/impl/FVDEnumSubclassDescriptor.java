@@ -23,7 +23,7 @@ import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 
 import java.util.Objects;
 
-public class FVDEnumSubclassDescriptor extends EnumSubclassDescriptor {
+class FVDEnumSubclassDescriptor extends EnumSubclassDescriptor {
     private final FullValueDescription fvd;
     private final String repid;
 

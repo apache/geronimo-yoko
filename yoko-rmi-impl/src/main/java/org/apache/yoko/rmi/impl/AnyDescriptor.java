@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class AnyDescriptor extends TypeDescriptor {
+class AnyDescriptor extends TypeDescriptor {
     AnyDescriptor(Class type, TypeRepository rep) {
         super(type, rep);
     }

@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class EnumDescriptor extends ValueDescriptor {
+class EnumDescriptor extends ValueDescriptor {
     public EnumDescriptor(Class<?> type, TypeRepository repo) {
         super(type, repo);
     }
@@ -38,7 +38,7 @@ public class EnumDescriptor extends ValueDescriptor {
         super.init();
         FieldDescriptor[] newFields = new FieldDescriptor[1];
         for (FieldDescriptor field: _fields) {
-            if (!!!field.getJavaName().equals("name")) continue;
+            if (!!!field.java_name.equals("name")) continue;
             newFields[0] = field;
             break;
         }

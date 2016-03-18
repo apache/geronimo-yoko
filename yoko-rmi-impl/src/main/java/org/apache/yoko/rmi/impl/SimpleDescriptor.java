@@ -18,11 +18,10 @@
 
 package org.apache.yoko.rmi.impl;
 
-public abstract class SimpleDescriptor extends TypeDescriptor {
+abstract class SimpleDescriptor extends TypeDescriptor {
     SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
             org.omg.CORBA.TCKind tc) {
         super(type, repository);
-        setJavaName(type.getName());
         setIDLName(idl_name);
         // the simple type name is the same as the IDL name.  The 
         // package name is null 

@@ -27,7 +27,7 @@ import java.util.logging.Logger;
 
 import org.omg.CORBA.portable.InputStream;
 
-public abstract class TypeDescriptor extends ModelElement {
+abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
     protected final Class _java_class;
@@ -37,6 +37,22 @@ public abstract class TypeDescriptor extends ModelElement {
     protected RemoteInterfaceDescriptor remoteDescriptor;
 
     private FullKey _key;
+
+    private String package_name = "";    // the package name qualifier (if any)
+    protected void setPackageName(String name) {
+        package_name = name;
+    }
+    public String getPackageName() {
+        return package_name;
+    }
+
+    private String type_name = "";       // the simple type name (minus package, if any)
+    protected void setTypeName(String name) {
+        type_name = name;
+    }
+    public String getTypeName() {
+        return type_name;
+    }
 
     public Class getJavaClass() {
         return _java_class;
@@ -106,9 +122,9 @@ public abstract class TypeDescriptor extends ModelElement {
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
+        super(repository, type.getName());
         _java_class = type;
-        String typeName = type.getName(); 
-        setTypeRepository(repository);
+        String typeName = type.getName();
         setIDLName(typeName.replace('.', '_'));
         // break up the simple type and package
         int idx = typeName.lastIndexOf('.');

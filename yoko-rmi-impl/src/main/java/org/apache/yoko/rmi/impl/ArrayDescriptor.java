@@ -21,10 +21,7 @@ package org.apache.yoko.rmi.impl;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.util.Map;
-import java.util.Vector;
 import java.util.logging.Logger;
-
-import javax.rmi.CORBA.Util;
 
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
@@ -32,7 +29,7 @@ import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueMember;
 import org.omg.CORBA.portable.InputStream;
 
-public abstract class ArrayDescriptor extends ValueDescriptor {
+abstract class ArrayDescriptor extends ValueDescriptor {
     protected int order;
 
     protected Class basicType;
@@ -50,8 +47,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
         if (elementType.isPrimitive() || elementType == Object.class) {
             _repid = "RMI:" + getJavaClass().getName() + ":0000000000000000";
         } else {
-            TypeDescriptor desc = getTypeRepository()
-                    .getDescriptor(elementType);
+            TypeDescriptor desc = repo.getDescriptor(elementType);
             String elemRep = desc.getRepositoryID();
             String hash = elemRep.substring(elemRep.indexOf(':', 4));
             _repid = "RMI:" + getJavaClass().getName() + hash;
@@ -72,8 +68,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
             // use the descriptor type past the array type marker
             _elementRepid = "RMI:" + getJavaClass().getName().substring(1) + ":0000000000000000";
         } else {
-            TypeDescriptor desc = getTypeRepository()
-                    .getDescriptor(elementType);
+            TypeDescriptor desc = repo.getDescriptor(elementType);
             _elementRepid = desc.getRepositoryID();
         }
 
@@ -98,7 +93,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
     public String getIDLName() {
         StringBuffer sb = new StringBuffer("org_omg_boxedRMI_");
 
-        TypeDescriptor desc = getTypeRepository().getDescriptor(basicType);
+        TypeDescriptor desc = repo.getDescriptor(basicType);
         
         // The logic that looks for the last "_" fails when this is a 
         // long_long primitive type.  The primitive types have a "" package 
@@ -209,8 +204,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
 
             _value_members = new org.omg.CORBA.ValueMember[1];
 
-            TypeDescriptor elemDesc = getTypeRepository().getDescriptor(
-                    elementType);
+            TypeDescriptor elemDesc = repo.getDescriptor(elementType);
 
             String elemRepID = elemDesc.getRepositoryID();
 
@@ -228,7 +222,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
     }
 
     void addDependencies(java.util.Set classes) {
-        getTypeRepository().getDescriptor(basicType).addDependencies(classes);
+        repo.getDescriptor(basicType).addDependencies(classes);
     }
 
 }
@@ -316,7 +310,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
 
     void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -397,7 +391,7 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
 
     void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -469,7 +463,7 @@ class ValueArrayDescriptor extends ArrayDescriptor {
 
     void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -550,7 +544,7 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
 
     void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {

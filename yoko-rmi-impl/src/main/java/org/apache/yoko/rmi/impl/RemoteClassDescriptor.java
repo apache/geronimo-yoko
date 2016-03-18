@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class RemoteClassDescriptor extends RemoteDescriptor {
+class RemoteClassDescriptor extends RemoteDescriptor {
 
     public String getRepositoryID() {
         return "IDL:" + getJavaClass().getName().replace('.', '/') + ":1.0";

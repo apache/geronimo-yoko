@@ -23,7 +23,7 @@ import java.lang.reflect.Method;
 
 import org.omg.CORBA.MARSHAL;
 
-public class IDLEntityDescriptor extends ValueDescriptor {
+class IDLEntityDescriptor extends ValueDescriptor {
     Method _read_method;
 
     Method _write_method;

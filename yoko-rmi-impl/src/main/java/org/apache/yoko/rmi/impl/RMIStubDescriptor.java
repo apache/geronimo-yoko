@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class RMIStubDescriptor extends ValueDescriptor {
+class RMIStubDescriptor extends ValueDescriptor {
     RMIStubDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }

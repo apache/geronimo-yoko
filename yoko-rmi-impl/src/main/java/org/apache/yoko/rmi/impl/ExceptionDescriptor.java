@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class ExceptionDescriptor extends ValueDescriptor {
+class ExceptionDescriptor extends ValueDescriptor {
     ExceptionDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
