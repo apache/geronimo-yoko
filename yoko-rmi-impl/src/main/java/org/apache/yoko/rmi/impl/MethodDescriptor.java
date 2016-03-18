@@ -347,10 +347,11 @@ public final class MethodDescriptor extends ModelElement {
         }
 
         parameter_count = param_types.length;
-        generateIDLName();
+        super.init();
     }
 
-    void generateIDLName() {
+    @Override
+    protected String genIDLName() {
         String idl_name = null;
 
         if (isSetterMethod()) {
@@ -368,8 +369,7 @@ public final class MethodDescriptor extends ModelElement {
         if (isOverloaded) {
             idl_name = transformOverloading(idl_name);
         }
-
-        setIDLName(idl_name);
+        return idl_name;
     }
 
     private String attributeName() {

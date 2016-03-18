@@ -19,10 +19,11 @@
 package org.apache.yoko.rmi.impl;
 
 abstract class SimpleDescriptor extends TypeDescriptor {
+    private final String idl_name;
     SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
             org.omg.CORBA.TCKind tc) {
         super(type, repository);
-        setIDLName(idl_name);
+        this.idl_name = idl_name;
         // the simple type name is the same as the IDL name.  The 
         // package name is null 
         setTypeName(idl_name); 
@@ -30,6 +31,11 @@ abstract class SimpleDescriptor extends TypeDescriptor {
 
         org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
         _type_code = orb.get_primitive_tc(tc);
+    }
+
+    @Override
+    protected String genIDLName() {
+        return idl_name;
     }
 
     org.omg.CORBA.TypeCode getTypeCode() {

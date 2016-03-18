@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class LongDescriptor extends SimpleDescriptor {
+final class LongDescriptor extends SimpleDescriptor {
     LongDescriptor(TypeRepository repository) {
         super(Long.TYPE, repository, "long_long",
                 org.omg.CORBA.TCKind.tk_longlong);

@@ -27,8 +27,4 @@ class RemoteClassDescriptor extends RemoteDescriptor {
     RemoteClassDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
-
-    public void init() {
-        super.init();
-    }
 }

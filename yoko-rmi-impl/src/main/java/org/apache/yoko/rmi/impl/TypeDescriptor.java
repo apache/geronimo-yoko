@@ -30,7 +30,7 @@ import org.omg.CORBA.portable.InputStream;
 abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    protected final Class _java_class;
+    private final Class _java_class;
 
     protected String _repid;
 
@@ -125,7 +125,6 @@ abstract class TypeDescriptor extends ModelElement {
         super(repository, type.getName());
         _java_class = type;
         String typeName = type.getName();
-        setIDLName(typeName.replace('.', '_'));
         // break up the simple type and package
         int idx = typeName.lastIndexOf('.');
         // if we have a package, split it into the component parts
@@ -138,6 +137,11 @@ abstract class TypeDescriptor extends ModelElement {
             setPackageName(""); 
             setTypeName(typeName); 
         }
+    }
+
+    @Override
+    protected String genIDLName() {
+        return java_name.replace('.', '_');
     }
 
     public String getRepositoryID() {
@@ -161,9 +165,6 @@ abstract class TypeDescriptor extends ModelElement {
     /** Write an instance of this value to a CDR stream */
     public abstract void write(org.omg.CORBA.portable.OutputStream out,
             Object val);
-
-    public void init() {
-    }
 
     public boolean isCustomMarshalled() {
         return false;

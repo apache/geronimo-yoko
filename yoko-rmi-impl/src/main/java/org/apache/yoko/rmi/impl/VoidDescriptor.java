@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class VoidDescriptor extends SimpleDescriptor {
+final class VoidDescriptor extends SimpleDescriptor {
     VoidDescriptor(TypeRepository repository) {
         super(Void.TYPE, repository, "void", org.omg.CORBA.TCKind.tk_void);
     }

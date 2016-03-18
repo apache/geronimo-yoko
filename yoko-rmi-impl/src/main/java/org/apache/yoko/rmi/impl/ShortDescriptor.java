@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class ShortDescriptor extends SimpleDescriptor {
+final class ShortDescriptor extends SimpleDescriptor {
     ShortDescriptor(TypeRepository repository) {
         super(Short.TYPE, repository, "short", org.omg.CORBA.TCKind.tk_short);
     }

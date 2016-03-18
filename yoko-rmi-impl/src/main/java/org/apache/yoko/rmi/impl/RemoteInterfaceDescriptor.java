@@ -22,9 +22,4 @@ class RemoteInterfaceDescriptor extends RemoteDescriptor {
     RemoteInterfaceDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
-
-    public void init() {
-        super.init();
-    }
-
 }

@@ -30,10 +30,6 @@ class StringDescriptor extends ValueDescriptor {
         setPackageName("CORBA"); 
     }
 
-    public void init() {
-        super.init();
-    }
-
     /** Read an instance of this value from a CDR stream */
     public Object read(org.omg.CORBA.portable.InputStream in) {
         return org.omg.CORBA.WStringValueHelper.read(in);

@@ -47,7 +47,7 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
             java.lang.reflect.Field f, TypeRepository repo) {
         super(repo, name);
         this.type = type;
-        setIDLName(name);
+        init();
         declaringClass = owner;
 
         if (f != null) {
@@ -59,6 +59,11 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
             this.field = null;
             isFinal = false;
         }
+    }
+
+    @Override
+    protected final String genIDLName() {
+        return java_name;
     }
 
     ValueMember getValueMember(TypeRepository rep) {
@@ -134,6 +139,13 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
     }
 
     static FieldDescriptor get(Class owner, Class type, String name,
+                               java.lang.reflect.Field f, TypeRepository repository) {
+        FieldDescriptor desc = get0(owner, type, name, f, repository);
+        desc.init();
+        return desc;
+    }
+
+    private static FieldDescriptor get0(Class owner, Class type, String name,
             java.lang.reflect.Field f, TypeRepository repository) {
 
         if (type.isPrimitive()) {

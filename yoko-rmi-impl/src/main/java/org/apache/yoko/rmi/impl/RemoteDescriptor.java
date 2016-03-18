@@ -140,9 +140,6 @@ abstract class RemoteDescriptor extends TypeDescriptor {
         super(type, repository);
     }
 
-    public void init() {
-    }
-
     public MethodDescriptor[] getMethods() {
         if (operations == null) {
             init_methods();
