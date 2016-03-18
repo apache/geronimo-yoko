@@ -24,10 +24,6 @@ abstract class SimpleDescriptor extends TypeDescriptor {
             org.omg.CORBA.TCKind tc) {
         super(type, repository);
         this.idl_name = idl_name;
-        // the simple type name is the same as the IDL name.  The 
-        // package name is null 
-        setTypeName(idl_name); 
-        setPackageName("");
 
         org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
         _type_code = orb.get_primitive_tc(tc);
@@ -35,6 +31,16 @@ abstract class SimpleDescriptor extends TypeDescriptor {
 
     @Override
     protected String genIDLName() {
+        return idl_name;
+    }
+
+    @Override
+    protected String genPackageName() {
+        return "";
+    }
+
+    @Override
+    protected String genTypeName() {
         return idl_name;
     }
 

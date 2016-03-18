@@ -36,7 +36,7 @@ class FVDEnumDescriptor extends EnumDescriptor {
     }
 
     @Override
-    public String getRepositoryID() {
+    protected String genRepId() {
         return repid;
     }
 

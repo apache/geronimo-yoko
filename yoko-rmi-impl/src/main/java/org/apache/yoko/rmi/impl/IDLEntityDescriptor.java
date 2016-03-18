@@ -51,7 +51,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
         super.init();
 
         try {
-            final Class type = getJavaClass();
+            final Class type = _java_class;
             final String helperName = type.getName() + "Helper";
             final Class helperClass = javax.rmi.CORBA.Util.loadClass(
                     helperName, null, type.getClassLoader());
@@ -98,7 +98,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
 
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException("cannot load IDL Helper class for "
-                    + getJavaClass(), ex);
+                    + _java_class, ex);
         }
     }
     
@@ -119,7 +119,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
         // the CORBA Object interface are actual corba objects, and must be handled that way. 
         // Other IDLEntity classes are just transmitted by value. 
         if (isCorba) {
-            return _in.read_Object(getJavaClass()); 
+            return _in.read_Object(_java_class);
         }
         else {
 
@@ -142,7 +142,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
 
     public Object readValue(org.omg.CORBA.portable.InputStream in) {
         if (isAbstract) {
-            throw new MARSHAL("IDL Entity " + getJavaClass().getName()
+            throw new MARSHAL("IDL Entity " + _java_class.getName()
                     + " is abstract");
         }
 
@@ -177,7 +177,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
 
     public void writeValue(org.omg.CORBA.portable.OutputStream out, java.io.Serializable val) {
         if (isAbstract) {
-            throw new MARSHAL("IDL Entity " + getJavaClass().getName()
+            throw new MARSHAL("IDL Entity " + _java_class.getName()
                     + " is abstract");
         }
 

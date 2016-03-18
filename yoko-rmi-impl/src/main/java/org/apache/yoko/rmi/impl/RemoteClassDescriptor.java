@@ -20,8 +20,9 @@ package org.apache.yoko.rmi.impl;
 
 class RemoteClassDescriptor extends RemoteDescriptor {
 
-    public String getRepositoryID() {
-        return "IDL:" + getJavaClass().getName().replace('.', '/') + ":1.0";
+    @Override
+    protected String genRepId() {
+        return String.format("IDL:%s:1.0", _java_class.getName().replace('.', '/'));
     }
 
     RemoteClassDescriptor(Class type, TypeRepository repository) {

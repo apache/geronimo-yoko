@@ -23,12 +23,9 @@ class AnyDescriptor extends TypeDescriptor {
         super(type, rep);
     }
 
-    public String getRepositoryID() {
-        if (_repid == null)
-            _repid = "IDL:" + getJavaClass().getName().replace('.', '/')
-                    + ":1.0";
-
-        return _repid;
+    @Override
+    protected String genRepId() {
+        return String.format("IDL:%s:1.0", _java_class.getName().replace('.', '/'));
     }
 
     /** Read an instance of this value from a CDR stream */

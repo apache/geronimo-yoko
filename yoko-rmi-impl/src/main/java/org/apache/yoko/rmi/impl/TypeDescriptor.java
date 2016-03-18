@@ -30,37 +30,29 @@ import org.omg.CORBA.portable.InputStream;
 abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    private final Class _java_class;
+    final Class _java_class;
 
-    protected String _repid;
+    private volatile String _repid;
 
     protected RemoteInterfaceDescriptor remoteDescriptor;
 
     private FullKey _key;
 
-    private String package_name = "";    // the package name qualifier (if any)
-    protected void setPackageName(String name) {
-        package_name = name;
-    }
+    private String package_name;    // the package name qualifier (if any)
     public String getPackageName() {
+        checkInit();
         return package_name;
     }
 
-    private String type_name = "";       // the simple type name (minus package, if any)
-    protected void setTypeName(String name) {
-        type_name = name;
-    }
+    private String type_name;       // the simple type name (minus package, if any)
     public String getTypeName() {
+        checkInit();
         return type_name;
-    }
-
-    public Class getJavaClass() {
-        return _java_class;
     }
 
     public final FullKey getKey() {
         if (null == _key) {
-            _key = new FullKey(getRepositoryID(), getJavaClass());
+            _key = new FullKey(getRepositoryID(), _java_class);
         }
         return _key;
     }
@@ -117,26 +109,30 @@ abstract class TypeDescriptor extends ModelElement {
     @Override
     public String toString() {
         return String.format("%s{class=\"%s\",repId=\"%s\"}",
-                this.getClass().getName(), getJavaClass(),
+                this.getClass().getName(), _java_class,
                 getRepositoryID());
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
         super(repository, type.getName());
         _java_class = type;
-        String typeName = type.getName();
-        // break up the simple type and package
-        int idx = typeName.lastIndexOf('.');
-        // if we have a package, split it into the component parts
-        if (idx >= 0) {
-            setPackageName(typeName.substring(0, idx));
-            setTypeName(typeName.substring(idx + 1));
-        }
-        else {
-            // no package...the type is the simple name
-            setPackageName(""); 
-            setTypeName(typeName); 
-        }
+    }
+
+    @Override
+    protected void init() {
+        package_name = genPackageName();
+        type_name = genTypeName();
+        super.init();
+    }
+
+    protected String genPackageName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? "" : java_name.substring(0, idx));
+    }
+
+    protected String genTypeName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? java_name : java_name.substring(idx + 1));
     }
 
     @Override
@@ -144,10 +140,12 @@ abstract class TypeDescriptor extends ModelElement {
         return java_name.replace('.', '_');
     }
 
-    public String getRepositoryID() {
-        if (_repid == null)
-            _repid = "RMI:" + getJavaClass().getName() + ":0000000000000000";
+    protected String genRepId() {
+        return String.format("RMI:%s:%016X", _java_class.getName(), 0);
+    }
 
+    public final String getRepositoryID() {
+        if (_repid == null) _repid = genRepId();
         return _repid;
     }
 
@@ -290,7 +288,7 @@ abstract class TypeDescriptor extends ModelElement {
             pw.print("^" + old);
         } else {
             Integer key = new Integer(System.identityHashCode(val));
-            pw.println(getJavaClass().getName() + "@"
+            pw.println(_java_class.getName() + "@"
                     + Integer.toHexString(key.intValue()));
         }
     }

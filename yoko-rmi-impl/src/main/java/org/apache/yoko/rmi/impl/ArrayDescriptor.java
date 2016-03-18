@@ -35,45 +35,30 @@ abstract class ArrayDescriptor extends ValueDescriptor {
     protected Class basicType;
 
     protected Class elementType;
-    // repository ID for the array class
-    String _repid = null;
     // repository ID for the contained elements
-    String _elementRepid = null;
+    private volatile String _elementRepid = null;
 
-    public String getRepositoryID() {
-        if (_repid != null)
-            return _repid;
+    @Override
+    protected String genRepId() {
+        if (elementType.isPrimitive() || elementType == Object.class)
+            return String.format("RMI:%s:%016X", _java_class.getName(), 0);
 
-        if (elementType.isPrimitive() || elementType == Object.class) {
-            _repid = "RMI:" + getJavaClass().getName() + ":0000000000000000";
-        } else {
-            TypeDescriptor desc = repo.getDescriptor(elementType);
-            String elemRep = desc.getRepositoryID();
-            String hash = elemRep.substring(elemRep.indexOf(':', 4));
-            _repid = "RMI:" + getJavaClass().getName() + hash;
-        }
-
-        // System.out.println ("REPID "+getJavaClass()+" >> "+_repid);
-
-        return _repid;
+        TypeDescriptor desc = repo.getDescriptor(elementType);
+        String elemRep = desc.getRepositoryID();
+        String hash = elemRep.substring(elemRep.indexOf(':', 4));
+        return String.format("RMI:%s:%s", _java_class.getName(), hash);
     }
 
-
-    public String getElementRepositoryID() {
-        if (_elementRepid != null) {
-            return _elementRepid;
-        }
-
+    private final String genElemRepId() {
         if (elementType.isPrimitive() || elementType == Object.class) {
             // use the descriptor type past the array type marker
-            _elementRepid = "RMI:" + getJavaClass().getName().substring(1) + ":0000000000000000";
-        } else {
-            TypeDescriptor desc = repo.getDescriptor(elementType);
-            _elementRepid = desc.getRepositoryID();
+            return String.format("RMI:%s:%016X", _java_class.getName().substring(1), 0);
         }
+        return repo.getDescriptor(elementType).getRepositoryID();
+    }
 
-        // System.out.println ("Element REPID "+getJavaClass()+" >> "+_elementRepid);
-
+    public String getElementRepositoryID() {
+        if (_elementRepid == null) _elementRepid = genElemRepId();
         return _elementRepid;
     }
 
@@ -178,17 +163,11 @@ abstract class ArrayDescriptor extends ValueDescriptor {
      */
     public Object read(org.omg.CORBA.portable.InputStream in) {
         org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
-        logger.fine("Reading an array value with repository id " + getRepositoryID() + " java class is " + getJavaClass()); 
+        logger.fine("Reading an array value with repository id " + getRepositoryID() + " java class is " + _java_class);
         
         // if we have a resolved class, read using that, otherwise fall back on the 
         // repository id. 
-        Class clz = getJavaClass(); 
-        if (clz == null) {
-            return _in.read_value(getRepositoryID());
-        }
-        else { 
-            return _in.read_value(clz);
-        }
+        return ((null == _java_class) ? _in.read_value(getRepositoryID()) : _in.read_value(_java_class));
     }
 
     /** Write an instance of this value to a CDR stream */
@@ -242,7 +221,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
         Object[] arr = (Object[]) value;
         out.write_long(arr.length);
 
-        logger.finer("writing " + getJavaClass().getName() + " size="
+        logger.finer("writing " + _java_class.getName() + " size="
                 + arr.length);
 
         for (int i = 0; i < arr.length; i++) {
@@ -261,7 +240,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
 
             offsetMap.put(key, arr);
 
-            logger.fine("reading " + getJavaClass().getName() + " size="
+            logger.fine("reading " + _java_class.getName() + " size="
                     + arr.length);
 
             for (int i = 0; i < length; i++) {

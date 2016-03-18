@@ -64,7 +64,7 @@ class FVDValueDescriptor extends ValueDescriptor {
     FieldDescriptor findField(ValueMember valueMember) {
         FieldDescriptor result = null;
 
-        for (Class c = getJavaClass(); c != null; c = c.getSuperclass()) {
+        for (Class c = _java_class; c != null; c = c.getSuperclass()) {
             TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
                 ValueDescriptor vd = (ValueDescriptor) td;
@@ -85,12 +85,8 @@ class FVDValueDescriptor extends ValueDescriptor {
         return result;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#getRepositoryID()
-     */
-    public String getRepositoryID() {
+    @Override
+    protected String genRepId() {
         return repid;
     }
 
