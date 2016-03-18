@@ -18,30 +18,40 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class EnumDescriptor extends ValueDescriptor {
-    public EnumDescriptor(Class<?> type, TypeRepository repo) {
-        super(type, repo);
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+
+public class FVDEnumDescriptor extends EnumDescriptor {
+    private final FullValueDescription fvd;
+    private final String repid;
+
+    FVDEnumDescriptor(FullValueDescription fvd, Class clazz, TypeRepository rep, String repid, ValueDescriptor super_desc) {
+        super(clazz, rep);
+        this.fvd = fvd;
+        this.repid = repid;
+
+        init();
+
+        _super_descriptor = super_desc;
     }
 
     @Override
-    final long getSerialVersionUID() {
-        return 0L;
+    public String getRepositoryID() {
+        return repid;
     }
 
     @Override
-    protected final boolean isEnum() {
-        return true;
+    FullValueDescription getFullValueDescription() {
+        return fvd;
     }
 
     @Override
-    public final void init() {
-        super.init();
-        FieldDescriptor[] newFields = new FieldDescriptor[1];
-        for (FieldDescriptor field: _fields) {
-            if (!!!field.getJavaName().equals("name")) continue;
-            newFields[0] = field;
-            break;
-        }
-        _fields = newFields;
+    TypeCode getTypeCode() {
+        return fvd.type;
+    }
+
+    @Override
+    public boolean isCustomMarshalled() {
+        return fvd.is_custom;
     }
 }

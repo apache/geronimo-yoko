@@ -110,6 +110,8 @@ public class ValueDescriptor extends TypeDescriptor {
         super(type, repository);
     }
 
+    protected boolean isEnum() { return false; }
+
     public String getRepositoryID() {
         if (_repid == null) {
             StringBuilder buf = new StringBuilder("RMI:");
