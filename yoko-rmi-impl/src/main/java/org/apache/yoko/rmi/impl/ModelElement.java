@@ -19,9 +19,9 @@
 package org.apache.yoko.rmi.impl;
 
 abstract class ModelElement {
-    protected final TypeRepository repo;
-    protected final String java_name;    // the java name of the type
-    private String idl_name;             // fully resolved package name
+    final TypeRepository repo;
+    final String java_name;    // the java name of the type
+    private String idl_name;   // fully resolved package name
     private volatile boolean notInit = true;
 
     protected ModelElement(TypeRepository repo, String java_name) {
