@@ -37,7 +37,7 @@ abstract class ModelElement {
     protected abstract String genIDLName();
 
     final void checkInit() {
-        if (notInit) throw new IllegalStateException("Not initialized");
+        if (notInit) throw new IllegalStateException("Not initialized: " + java_name);
     }
     public String getIDLName() {
         checkInit();

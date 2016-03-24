@@ -19,6 +19,8 @@ package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
+import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
 
 final public class ClientRequestInfo_impl extends RequestInfo_impl implements
         org.omg.PortableInterceptor.ClientRequestInfo {
@@ -364,7 +366,8 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
         argStrategy_.setArgsAvail(true);
         argStrategy_.setExceptAvail(true);
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
+             YasfOverride yasfo = YasfThreadLocal.override()) {
             java.util.Enumeration e = interceptors.elements();
             while (e.hasMoreElements()) {
                 org.omg.PortableInterceptor.ClientRequestInterceptor interceptor = (org.omg.PortableInterceptor.ClientRequestInterceptor) e
@@ -398,7 +401,8 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
             current_._OB_pushSlotData(currentSlots_);
         }
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override()) {
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
+             YasfOverride yasfo = YasfThreadLocal.override()) {
             int curr = interceptors_.size() - 1;
             while (!interceptors_.isEmpty()) {
                 try {

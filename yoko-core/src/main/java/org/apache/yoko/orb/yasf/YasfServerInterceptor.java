@@ -5,6 +5,8 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.apache.yoko.util.yasf.Yasf;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
 import org.omg.CORBA.LocalObject;
 import org.omg.PortableInterceptor.ForwardRequest;
 import org.omg.PortableInterceptor.ServerRequestInfo;
@@ -13,8 +15,17 @@ import org.omg.PortableInterceptor.ServerRequestInterceptor;
 public class YasfServerInterceptor extends LocalObject implements ServerRequestInterceptor {
     private static final String NAME = YasfServerInterceptor.class.getName();
 
+    private final int slotId;
+
+    public YasfServerInterceptor(int slotId) {
+        this.slotId = slotId;
+    }
+
     @Override
     public void receive_request_service_contexts(ServerRequestInfo ri) throws ForwardRequest {
+        YasfThreadLocal.reset();
+        byte[] yasfData = YasfHelper.readData(ri);
+        YasfHelper.setSlot(slotId, ri, yasfData);
     }
 
     @Override
@@ -23,17 +34,23 @@ public class YasfServerInterceptor extends LocalObject implements ServerRequestI
 
     @Override
     public void send_reply(ServerRequestInfo ri) {
-        ri.add_reply_service_context(Yasf.build().sc(), false);
+        YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
+        // Adding for diagnostic purposes
+        YasfHelper.addSc(ri, Yasf.supported());
     }
 
     @Override
     public void send_exception(ServerRequestInfo ri) throws ForwardRequest {
-        ri.add_reply_service_context(Yasf.build().sc(), false);
+        YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
+        // Adding for diagnostic purposes
+        YasfHelper.addSc(ri, Yasf.supported());
     }
 
     @Override
     public void send_other(ServerRequestInfo ri) throws ForwardRequest {
-        ri.add_reply_service_context(Yasf.build().sc(), false);
+        YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
+        // Adding for diagnostic purposes
+        YasfHelper.addSc(ri, Yasf.supported());
     }
 
     @Override

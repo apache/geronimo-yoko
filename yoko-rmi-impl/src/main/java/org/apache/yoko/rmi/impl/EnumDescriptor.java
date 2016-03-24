@@ -18,13 +18,20 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.util.yasf.Yasf;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
+
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.Set;
+
 class EnumDescriptor extends ValueDescriptor {
     public EnumDescriptor(Class<?> type, TypeRepository repo) {
         super(type, repo);
     }
 
     @Override
-    final long getSerialVersionUID() {
+    protected final long getSerialVersionUID() {
         return 0L;
     }
 
@@ -33,15 +40,29 @@ class EnumDescriptor extends ValueDescriptor {
         return true;
     }
 
+    private FieldDescriptor nameField = null;
+    private FieldDescriptor ordinalField = null;
+
     @Override
     public final void init() {
         super.init();
-        FieldDescriptor[] newFields = new FieldDescriptor[1];
-        for (FieldDescriptor field: _fields) {
-            if (!!!field.java_name.equals("name")) continue;
-            newFields[0] = field;
-            break;
+        // Avoid doing anything that would cause the calculated classHash to change
+        for (FieldDescriptor f: _fields) {
+            if (f.java_name.equals("name")) {
+                nameField = f;
+            } else if (f.java_name.equals("ordinal")) {
+                ordinalField = f;
+            }
         }
-        _fields = newFields;
+    }
+
+    @Override
+    protected void defaultWriteValue(ObjectWriter writer, Serializable val) throws IOException {
+        checkInit();
+        if ((writer.yasfSet != null) && !!!writer.yasfSet.contains(Yasf.ENUM_FIXED)) {
+            // talking to an old yoko that expects an ordinal field to be written;
+            ordinalField.write(writer, val);
+        }
+        nameField.write(writer, val);
     }
 }

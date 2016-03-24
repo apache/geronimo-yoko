@@ -5,6 +5,8 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
+import org.apache.yoko.util.yasf.Yasf;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
 import org.omg.CORBA.LocalObject;
 import org.omg.PortableInterceptor.ClientRequestInfo;
 import org.omg.PortableInterceptor.ClientRequestInterceptor;
@@ -15,7 +17,11 @@ public class YasfClientInterceptor extends LocalObject implements ClientRequestI
 
     @Override
     public void send_request(ClientRequestInfo ri) throws ForwardRequest {
-        ri.add_request_service_context(Yasf.build().sc(), false);
+        byte[] yasfData = YasfHelper.readData(ri);
+
+        YasfThreadLocal.push(Yasf.toSet(yasfData));
+
+        YasfHelper.addSc(ri, Yasf.supported());
     }
 
     @Override
@@ -24,14 +30,17 @@ public class YasfClientInterceptor extends LocalObject implements ClientRequestI
 
     @Override
     public void receive_reply(ClientRequestInfo ri) {
+        YasfThreadLocal.pop();
     }
 
     @Override
     public void receive_exception(ClientRequestInfo ri) throws ForwardRequest {
+        YasfThreadLocal.pop();
     }
 
     @Override
     public void receive_other(ClientRequestInfo ri) throws ForwardRequest {
+        YasfThreadLocal.pop();
     }
 
     @Override

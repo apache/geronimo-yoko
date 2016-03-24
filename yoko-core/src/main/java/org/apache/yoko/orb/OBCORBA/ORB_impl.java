@@ -296,7 +296,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             try {
                 piManager.addIORInterceptor(new YasfIORInterceptor(), true);
                 piManager.addClientRequestInterceptor(new YasfClientInterceptor());
-                piManager.addServerRequestInterceptor(new YasfServerInterceptor());
+                piManager.addServerRequestInterceptor(new YasfServerInterceptor(piManager.allocateSlotId()));
             } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
                 org.apache.yoko.orb.OB.Assert._OB_assert(ex);
             }

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
 
+import org.apache.yoko.rmi.util.StringUtil;
 import org.omg.CORBA.portable.IndirectionException;
 import org.omg.CORBA.portable.InputStream;
 
@@ -43,11 +44,11 @@ class EnumSubclassDescriptor extends ValueDescriptor {
     @Override
     public final void init() {
         super.init();
-        _fields = new FieldDescriptor[0];
+        // Avoid doing anything that would cause the calculated classHash to change
     }
 
     @Override
-    final long getSerialVersionUID() {
+    protected final long getSerialVersionUID() {
         return 0L;
     }
 

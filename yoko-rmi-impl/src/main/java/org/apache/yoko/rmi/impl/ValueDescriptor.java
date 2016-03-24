@@ -127,7 +127,7 @@ class ValueDescriptor extends TypeDescriptor {
         return _custom_repid;
     }
 
-    long getSerialVersionUID() {
+    protected long getSerialVersionUID() {
         if (_serial_version_uid_field != null) {
 
             try {
