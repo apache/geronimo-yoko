@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class CharDescriptor extends SimpleDescriptor {
+final class CharDescriptor extends SimpleDescriptor {
     CharDescriptor(TypeRepository repository) {
         super(Character.TYPE, repository, "wchar",
                 org.omg.CORBA.TCKind.tk_wchar);

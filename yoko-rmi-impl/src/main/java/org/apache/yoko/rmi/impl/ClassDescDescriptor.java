@@ -13,7 +13,7 @@ import javax.rmi.CORBA.Util;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.MARSHAL;
 
-public class ClassDescDescriptor extends ClassBaseDescriptor {
+class ClassDescDescriptor extends ClassBaseDescriptor {
     private static final Logger logger = Logger.getLogger(ClassDescDescriptor.class.getName());
 
     private Field repid_field;

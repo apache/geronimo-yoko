@@ -118,8 +118,11 @@ public class TypeRepository {
                     return new IDLEntityDescriptor(type, repo);
                 } else if (Throwable.class.isAssignableFrom(type)) {
                     return new ExceptionDescriptor(type, repo);
-                } else if (Enum.class.isAssignableFrom(type) && (Enum.class != type)) {
+                } else if (Enum.class == type) {
                     return new EnumDescriptor(type, repo);
+                } else if (Enum.class.isAssignableFrom(type)) {
+                    Class<?> enumType = EnumSubclassDescriptor.getEnumType(type);
+                    return ((enumType == type) ? new EnumSubclassDescriptor(type, repo) : get(enumType));
                 } else if (type.isArray()) {
                     return ArrayDescriptor.get(type, repo);
                 } else if (!type.isInterface()
@@ -363,7 +366,14 @@ public class TypeRepository {
                     codebase);
         }
 
-        ValueDescriptor newDesc = new FVDValueDescriptor(fvd, clz, this, repid, super_desc);
+        final ValueDescriptor newDesc;
+        if ((super_desc != null) && super_desc.isEnum()) {
+            newDesc = new FVDEnumSubclassDescriptor(fvd, clz, this, repid, super_desc);
+        } else if (fvd.id.startsWith("RMI:java.lang.Enum:")) {
+            newDesc = new FVDEnumDescriptor(fvd, clz, this, repid, super_desc);
+        } else {
+            newDesc = new FVDValueDescriptor(fvd, clz, this, repid, super_desc);
+        }
         ConcurrentMap<String, ValueDescriptor> remoteDescMap = (clz == null) ? noTypeDescMap : fvdDescMaps.get(clz);
         clzdesc = remoteDescMap.putIfAbsent(newDesc.getRepositoryID(), newDesc);
         if (clzdesc == null) {

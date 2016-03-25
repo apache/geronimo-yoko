@@ -26,7 +26,6 @@ import javax.rmi.CORBA.ValueHandler;
 
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.SendingContext.RunTime;
 
@@ -173,7 +172,7 @@ public class ValueHandlerImpl implements ValueHandler {
         if (val instanceof RMIStub) {
 
             RMIStub stub = (RMIStub) val;
-            Class type = stub._descriptor.getJavaClass();
+            Class type = stub._descriptor._java_class;
 
             RMIState state = RMIState.current();
             Stub result = state.getStaticStub(stub._get_codebase(), type);

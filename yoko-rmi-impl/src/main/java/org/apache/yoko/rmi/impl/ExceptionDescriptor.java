@@ -18,25 +18,16 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class ExceptionDescriptor extends ValueDescriptor {
+class ExceptionDescriptor extends ValueDescriptor {
     ExceptionDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
 
-    String ex_repid = null;
+    private volatile String ex_repid = null;
 
-    public String getExceptionRepositoryID() {
-        if (ex_repid == null) {
-            init_repid();
-        }
-
-        return ex_repid;
-    }
-
-    void init_repid() {
-        Class type = getJavaClass();
-        String name = type.getName();
-        String encname = null;
+    private String genExceptionRepId() {
+        String name = _java_class.getName();
+        final String encname;
 
         if (name.endsWith("Exception")) {
             encname = name.substring(0, name.length() - 7);
@@ -44,7 +35,11 @@ public class ExceptionDescriptor extends ValueDescriptor {
             encname = name + "Ex";
         }
 
-        ex_repid = "IDL:" + encname.replace('.', '/') + ":1.0";
+        return String.format("IDL:%s:1.0", encname.replace('.', '/'));
     }
 
+    public final String getExceptionRepositoryID() {
+        if (ex_repid == null) ex_repid = genExceptionRepId();
+        return ex_repid;
+    }
 }

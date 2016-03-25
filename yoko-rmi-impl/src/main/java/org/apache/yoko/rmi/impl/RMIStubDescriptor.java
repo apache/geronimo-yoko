@@ -18,42 +18,22 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class RMIStubDescriptor extends ValueDescriptor {
+class RMIStubDescriptor extends ValueDescriptor {
     RMIStubDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
 
-    String stub_repid = null;
-
-    public String getRepositoryID() {
-        if (stub_repid == null) {
-            init_repid();
-        }
-
-        return stub_repid;
-    }
-
-    void init_repid() {
-        Class type = getJavaClass();
-
-        Class[] ifaces = type.getInterfaces();
-
+    @Override
+    protected String genRepId() {
+        final Class[] ifaces = _java_class.getInterfaces();
         if (ifaces.length != 2 || ifaces[1] != org.apache.yoko.rmi.util.stub.Stub.class) {
             throw new RuntimeException("Unexpected RMIStub structure");
         }
 
-        String ifname = ifaces[0].getName();
-        String stubClassName = null;
-
-        int idx = ifname.lastIndexOf('.');
-        if (idx == -1) {
-            stubClassName = "_" + ifname + "_Stub";
-        } else {
-            stubClassName = ifname.substring(0, idx + 1) + "_"
-                    + ifname.substring(idx + 1) + "_Stub";
-        }
-
-        stub_repid = "RMI:" + stubClassName + ":0";
+        final String ifname = ifaces[0].getName();
+        final int idx = ifname.lastIndexOf('.');
+        return ((idx < 0) ? String.format("RMI:_%s_Stub:0", ifname) :
+                String.format("RMI:%s_%s_Stub:0", ifname.substring(0, idx + 1), ifname.substring(idx + 1)));
     }
 
     //

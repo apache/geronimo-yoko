@@ -24,7 +24,7 @@ import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 /**
  * @author krab
  */
-public class FVDValueDescriptor extends ValueDescriptor {
+class FVDValueDescriptor extends ValueDescriptor {
     FullValueDescription fvd;
 
     String repid;
@@ -64,8 +64,8 @@ public class FVDValueDescriptor extends ValueDescriptor {
     FieldDescriptor findField(ValueMember valueMember) {
         FieldDescriptor result = null;
 
-        for (Class c = getJavaClass(); c != null; c = c.getSuperclass()) {
-            TypeDescriptor td = getTypeRepository().getDescriptor(c);
+        for (Class c = _java_class; c != null; c = c.getSuperclass()) {
+            TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
                 ValueDescriptor vd = (ValueDescriptor) td;
                 FieldDescriptor[] fds = vd._fields;
@@ -85,12 +85,8 @@ public class FVDValueDescriptor extends ValueDescriptor {
         return result;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#getRepositoryID()
-     */
-    public String getRepositoryID() {
+    @Override
+    protected String genRepId() {
         return repid;
     }
 

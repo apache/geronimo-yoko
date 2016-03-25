@@ -28,8 +28,7 @@ import java.util.logging.Level;
 
 import org.omg.CORBA.ValueMember;
 
-public abstract class FieldDescriptor extends ModelElement implements
-Comparable {
+abstract class FieldDescriptor extends ModelElement implements Comparable {
     static Logger logger = Logger.getLogger(FieldDescriptor.class.getName());
 
     org.apache.yoko.rmi.util.corba.Field field;
@@ -45,10 +44,10 @@ Comparable {
     boolean isPublic;
 
     protected FieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
+            java.lang.reflect.Field f, TypeRepository repo) {
+        super(repo, name);
         this.type = type;
-        setJavaName(name);
-        setIDLName(name);
+        init();
         declaringClass = owner;
 
         if (f != null) {
@@ -60,6 +59,11 @@ Comparable {
             this.field = null;
             isFinal = false;
         }
+    }
+
+    @Override
+    protected final String genIDLName() {
+        return java_name;
     }
 
     ValueMember getValueMember(TypeRepository rep) {
@@ -97,7 +101,7 @@ Comparable {
         //
         // fields of the same kind are ordered lexicographically
         //	
-        return getJavaName().compareTo(desc.getJavaName());
+        return java_name.compareTo(desc.java_name);
     }
 
     public boolean isPrimitive() {
@@ -118,11 +122,11 @@ Comparable {
 
     abstract void copyState(Object orig, Object copy, CopyState state);
 
-    static FieldDescriptor get(java.lang.reflect.Field f) {
-        return get(f.getDeclaringClass(), f.getType(), f.getName(), f);
+    static FieldDescriptor get(java.lang.reflect.Field f, TypeRepository repository) {
+        return get(f.getDeclaringClass(), f.getType(), f.getName(), f, repository);
     }
 
-    static FieldDescriptor get(Class declaringClass, ObjectStreamField field) {
+    static FieldDescriptor get(Class declaringClass, ObjectStreamField field, TypeRepository repository) {
         Field f = null;
         try {
             f = declaringClass.getDeclaredField(field.getName());
@@ -131,71 +135,77 @@ Comparable {
                     + "\" for class \"" + declaringClass.getName() + "\""
                     + "\n" + ex, ex);
         }
-        return get(declaringClass, field.getType(), field.getName(), f);
+        return get(declaringClass, field.getType(), field.getName(), f, repository);
     }
 
     static FieldDescriptor get(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
+                               java.lang.reflect.Field f, TypeRepository repository) {
+        FieldDescriptor desc = get0(owner, type, name, f, repository);
+        desc.init();
+        return desc;
+    }
+
+    private static FieldDescriptor get0(Class owner, Class type, String name,
+            java.lang.reflect.Field f, TypeRepository repository) {
 
         if (type.isPrimitive()) {
             if (type == Boolean.TYPE) {
-                return new BooleanFieldDescriptor(owner, type, name, f);
+                return new BooleanFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Byte.TYPE) {
-                return new ByteFieldDescriptor(owner, type, name, f);
+                return new ByteFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Short.TYPE) {
-                return new ShortFieldDescriptor(owner, type, name, f);
+                return new ShortFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Character.TYPE) {
-                return new CharFieldDescriptor(owner, type, name, f);
+                return new CharFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Integer.TYPE) {
-                return new IntFieldDescriptor(owner, type, name, f);
+                return new IntFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Long.TYPE) {
-                return new LongFieldDescriptor(owner, type, name, f);
+                return new LongFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Float.TYPE) {
-                return new FloatFieldDescriptor(owner, type, name, f);
+                return new FloatFieldDescriptor(owner, type, name, f, repository);
             } else if (type == Double.TYPE) {
-                return new DoubleFieldDescriptor(owner, type, name, f);
+                return new DoubleFieldDescriptor(owner, type, name, f, repository);
             } else {
                 throw new RuntimeException("unknown field type " + type);
             }
 
         } else {
             if(org.omg.CORBA.Object.class.isAssignableFrom(type)) {
-                return new CorbaObjectFieldDescriptor(owner, type, name, f);
+                return new CorbaObjectFieldDescriptor(owner, type, name, f, repository);
             }
             if (java.lang.Object.class.equals(type)
                     || java.io.Externalizable.class.equals(type)
                     || java.io.Serializable.class.equals(type)) {
-                return new AnyFieldDescriptor(owner, type, name, f);
+                return new AnyFieldDescriptor(owner, type, name, f,repository);
 
             } else if (java.rmi.Remote.class.isAssignableFrom(type) 
                     || java.rmi.Remote.class.equals(type))
             {
-                return new RemoteFieldDescriptor(owner, type, name, f);
+                return new RemoteFieldDescriptor(owner, type, name, f, repository);
 
             } else if (String.class.equals(type)) {
-                return new StringFieldDescriptor(owner, type, name, f);
+                return new StringFieldDescriptor(owner, type, name, f, repository);
 
             } else if (java.io.Serializable.class.isAssignableFrom(type)) {
-                return new ValueFieldDescriptor(owner, type, name, f);
+                return new ValueFieldDescriptor(owner, type, name, f, repository);
             } else if (type.isInterface() && type.getMethods().length > 0) {
                 // interface classes that define methods 
-                return new ValueFieldDescriptor(owner, type, name, f);
+                return new ValueFieldDescriptor(owner, type, name, f, repository);
             } else {
-                return new ObjectFieldDescriptor(owner, type, name, f);
+                return new ObjectFieldDescriptor(owner, type, name, f, repository);
             }
         }
     }
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
-        pw.print(getJavaName());
+        pw.print(java_name);
         pw.print("=");
         try {
             Object obj = field.get(val);
             if (obj == null) {
                 pw.print("null");
             } else {
-                TypeDescriptor desc = getTypeRepository().getDescriptor(
-                        obj.getClass());
+                TypeDescriptor desc = repo.getDescriptor(obj.getClass());
                 desc.print(pw, recurse, obj);
             }
         } catch (IllegalAccessException ex) {
@@ -212,8 +222,8 @@ class RemoteFieldDescriptor extends FieldDescriptor {
     Class interfaceType;
 
     RemoteFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
 
         if (type.isInterface()) {
             interfaceType = type;
@@ -289,14 +299,14 @@ class RemoteFieldDescriptor extends FieldDescriptor {
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         java.rmi.Remote value = (java.rmi.Remote) reader
                 .readRemoteObject(interfaceType);
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        java.rmi.Remote value = (java.rmi.Remote) map.get(getJavaName());
+        java.rmi.Remote value = (java.rmi.Remote) map.get(java_name);
         writer.writeRemoteObject(value);
     }
 
@@ -309,8 +319,8 @@ class AnyFieldDescriptor extends FieldDescriptor {
     boolean narrowValue;
 
     AnyFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
         narrowValue = java.rmi.Remote.class.isAssignableFrom(type);
     }
 
@@ -369,14 +379,14 @@ class AnyFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         org.omg.CORBA.Any value = (org.omg.CORBA.Any) reader.readAny();
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        org.omg.CORBA.Any value = (org.omg.CORBA.Any) map.get(getJavaName());
+        org.omg.CORBA.Any value = (org.omg.CORBA.Any) map.get(java_name);
         writer.writeAny(value);
     }
 
@@ -384,8 +394,8 @@ class AnyFieldDescriptor extends FieldDescriptor {
 
 class ValueFieldDescriptor extends FieldDescriptor {
     ValueFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -431,7 +441,7 @@ class ValueFieldDescriptor extends FieldDescriptor {
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         java.io.Serializable value = (java.io.Serializable) reader
                 .readValueObject();
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
@@ -439,7 +449,7 @@ class ValueFieldDescriptor extends FieldDescriptor {
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         java.io.Serializable value = (java.io.Serializable) map
-                .get(getJavaName());
+                .get(java_name);
         writer.writeValueObject(value);
     }
 
@@ -447,8 +457,8 @@ class ValueFieldDescriptor extends FieldDescriptor {
 
 class StringFieldDescriptor extends FieldDescriptor {
     StringFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -483,14 +493,14 @@ class StringFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         String value = (String) reader.readValueObject();
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        String value = (String) map.get(getJavaName());
+        String value = (String) map.get(java_name);
         writer.writeValueObject(value);
     }
 
@@ -498,8 +508,8 @@ class StringFieldDescriptor extends FieldDescriptor {
 
 class ObjectFieldDescriptor extends FieldDescriptor {
     ObjectFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -545,14 +555,14 @@ class ObjectFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Object value = (Object) reader.readAbstractObject();
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Object value = (Object) map.get(getJavaName());
+        Object value = (Object) map.get(java_name);
         writer.writeObject(value);
     }
 
@@ -560,8 +570,8 @@ class ObjectFieldDescriptor extends FieldDescriptor {
 
 class BooleanFieldDescriptor extends FieldDescriptor {
     BooleanFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -601,7 +611,7 @@ class BooleanFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getBoolean(val));
         } catch (IllegalAccessException ex) {
@@ -613,14 +623,14 @@ class BooleanFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Boolean value = new Boolean(reader.readBoolean());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Boolean value = (Boolean) map.get(getJavaName());
+        Boolean value = (Boolean) map.get(java_name);
         if (value == null) {
             writer.writeBoolean(false);
         } else {
@@ -632,8 +642,8 @@ class BooleanFieldDescriptor extends FieldDescriptor {
 
 class ByteFieldDescriptor extends FieldDescriptor {
     ByteFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -673,7 +683,7 @@ class ByteFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getByte(val));
         } catch (IllegalAccessException ex) {
@@ -685,14 +695,14 @@ class ByteFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Byte value = new Byte(reader.readByte());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Byte value = (Byte) map.get(getJavaName());
+        Byte value = (Byte) map.get(java_name);
         if (value == null) {
             writer.writeByte(0);
         } else {
@@ -704,8 +714,8 @@ class ByteFieldDescriptor extends FieldDescriptor {
 
 class ShortFieldDescriptor extends FieldDescriptor {
     ShortFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -745,7 +755,7 @@ class ShortFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getShort(val));
         } catch (IllegalAccessException ex) {
@@ -757,14 +767,14 @@ class ShortFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Short value = new Short(reader.readShort());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Short value = (Short) map.get(getJavaName());
+        Short value = (Short) map.get(java_name);
         if (value == null) {
             writer.writeShort(0);
         } else {
@@ -776,8 +786,8 @@ class ShortFieldDescriptor extends FieldDescriptor {
 
 class CharFieldDescriptor extends FieldDescriptor {
     CharFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -817,7 +827,7 @@ class CharFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             char ch = field.getChar(val);
             pw.print(ch);
@@ -833,14 +843,14 @@ class CharFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Character value = new Character(reader.readChar());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Character value = (Character) map.get(getJavaName());
+        Character value = (Character) map.get(java_name);
         if (value == null) {
             writer.writeChar(0);
         } else {
@@ -852,8 +862,8 @@ class CharFieldDescriptor extends FieldDescriptor {
 
 class IntFieldDescriptor extends FieldDescriptor {
     IntFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -894,7 +904,7 @@ class IntFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getInt(val));
         } catch (IllegalAccessException ex) {
@@ -906,14 +916,14 @@ class IntFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Integer value = new Integer(reader.readInt());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Integer value = (Integer) map.get(getJavaName());
+        Integer value = (Integer) map.get(java_name);
         if (value == null) {
             writer.writeInt(0);
         } else {
@@ -925,8 +935,8 @@ class IntFieldDescriptor extends FieldDescriptor {
 
 class LongFieldDescriptor extends FieldDescriptor {
     LongFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -967,7 +977,7 @@ class LongFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getLong(val));
         } catch (IllegalAccessException ex) {
@@ -979,14 +989,14 @@ class LongFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Long value = new Long(reader.readLong());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Long value = (Long) map.get(getJavaName());
+        Long value = (Long) map.get(java_name);
         if (value == null) {
             writer.writeLong(0);
         } else {
@@ -998,8 +1008,8 @@ class LongFieldDescriptor extends FieldDescriptor {
 
 class FloatFieldDescriptor extends FieldDescriptor {
     FloatFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -1039,7 +1049,7 @@ class FloatFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getFloat(val));
         } catch (IllegalAccessException ex) {
@@ -1051,14 +1061,14 @@ class FloatFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Float value = new Float(reader.readFloat());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Float value = (Float) map.get(getJavaName());
+        Float value = (Float) map.get(java_name);
         if (value == null) {
             writer.writeFloat(0.0F);
         } else {
@@ -1070,8 +1080,8 @@ class FloatFieldDescriptor extends FieldDescriptor {
 
 class DoubleFieldDescriptor extends FieldDescriptor {
     DoubleFieldDescriptor(Class owner, Class type, String name,
-            java.lang.reflect.Field f) {
-        super(owner, type, name, f);
+            java.lang.reflect.Field f, TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     public void read(ObjectReader reader, Object obj)
@@ -1111,7 +1121,7 @@ class DoubleFieldDescriptor extends FieldDescriptor {
 
     void print(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
         try {
-            pw.print(getJavaName());
+            pw.print(java_name);
             pw.print("=");
             pw.print(field.getDouble(val));
         } catch (IllegalAccessException ex) {
@@ -1123,14 +1133,14 @@ class DoubleFieldDescriptor extends FieldDescriptor {
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Double value = new Double(reader.readDouble());
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
     }
 
     /**
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        Double value = (Double) map.get(getJavaName());
+        Double value = (Double) map.get(java_name);
         if (value == null) {
             writer.writeDouble(0.0D);
         } else {
@@ -1142,8 +1152,8 @@ class DoubleFieldDescriptor extends FieldDescriptor {
 
 class CorbaObjectFieldDescriptor extends FieldDescriptor {
 
-    protected CorbaObjectFieldDescriptor(Class owner, Class type, String name, Field f) {
-        super(owner, type, name, f);
+    protected CorbaObjectFieldDescriptor(Class owner, Class type, String name, Field f,TypeRepository repository) {
+        super(owner, type, name, f, repository);
     }
 
     void copyState(final Object orig, final Object copy, CopyState state) {
@@ -1175,7 +1185,7 @@ class CorbaObjectFieldDescriptor extends FieldDescriptor {
 
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Object value = reader.readCorbaObject(null);
-        map.put(getJavaName(), value);
+        map.put(java_name, value);
 
     }
 
@@ -1189,7 +1199,7 @@ class CorbaObjectFieldDescriptor extends FieldDescriptor {
     }
 
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
-        org.omg.CORBA.Object value = (org.omg.CORBA.Object) map.get(getJavaName());
+        org.omg.CORBA.Object value = (org.omg.CORBA.Object) map.get(java_name);
         writer.writeCorbaObject(value);
 
     }

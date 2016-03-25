@@ -18,17 +18,14 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class AbstractObjectDescriptor extends ValueDescriptor {
+class AbstractObjectDescriptor extends ValueDescriptor {
     protected AbstractObjectDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
     }
 
-    public String getRepositoryID() {
-        if (_repid == null)
-            _repid = "IDL:" + getJavaClass().getName().replace('.', '/')
-                    + ":1.0";
-
-        return _repid;
+    @Override
+    protected String genRepId() {
+        return String.format("IDL:%s:1.0", _java_class.getName().replace('.', '/'));
     }
 
     /** Read an instance of this value from a CDR stream */
@@ -60,7 +57,7 @@ public class AbstractObjectDescriptor extends ValueDescriptor {
         if (_type_code == null) {
             org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
             _type_code = orb.create_abstract_interface_tc(getRepositoryID(),
-                    getJavaClass().getName());
+                    _java_class.getName());
         }
 
         return _type_code;

@@ -31,7 +31,7 @@ import javax.rmi.CORBA.ValueHandler;
 
 import org.omg.CORBA.MARSHAL;
 
-public class ClassDescriptor extends ClassBaseDescriptor {
+class ClassDescriptor extends ClassBaseDescriptor {
     private static final Logger logger = Logger.getLogger(ClassDescriptor.class.getName());
 
     private Field repid_field;

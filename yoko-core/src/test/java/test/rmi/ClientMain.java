@@ -218,6 +218,13 @@ public class ClientMain extends Assert {
             assertTrue(Arrays.deepEquals(sa, oa));
         }
 
+        public void testData() throws RemoteException {
+            SampleData sd = new SampleData();
+            sample.setSerializable(sd);
+            Serializable s = sample.getSerializable();
+            assertEquals(sd, s);
+        }
+
         public void testTimeUnit() throws RemoteException {
             TimeUnit tu = TimeUnit.NANOSECONDS;
             sample.setSerializable(tu);
@@ -403,6 +410,7 @@ public class ClientMain extends Assert {
         test.testHashMap();
         test.testEnum();
         test.testEnumArray();
+        test.testData();
         test.testTimeUnit();
         test.testTimeUnitArray();
         test.testCmsfv2Data();

@@ -18,51 +18,29 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class ModelElement {
-    protected String idl_name;        // fully resolved package name
-    protected String type_name = "";       // the simple type name (minus package, if any)
-    protected String package_name = "";    // the package name qualifier (if any)
-    protected String java_name;       // the java name of the type 
+abstract class ModelElement {
+    final TypeRepository repo;
+    final String java_name;    // the java name of the type
+    private String idl_name;   // fully resolved package name
+    private volatile boolean notInit = true;
 
-    protected void setIDLName(String name) {
-        idl_name = name;
+    protected ModelElement(TypeRepository repo, String java_name) {
+        this.repo = repo;
+        this.java_name = java_name;
     }
-    
+
+    protected void init() {
+        idl_name = genIDLName();
+        notInit = false;
+    }
+
+    protected abstract String genIDLName();
+
+    final void checkInit() {
+        if (notInit) throw new IllegalStateException("Not initialized: " + java_name);
+    }
     public String getIDLName() {
+        checkInit();
         return idl_name;
-    }
-
-    protected void setTypeName(String name) {
-        type_name = name;
-    }
-    
-    public String getTypeName() {
-        return type_name;
-    }
-
-    protected void setPackageName(String name) {
-        package_name = name;
-    }
-    
-    public String getPackageName() {
-        return package_name;
-    }
-
-    protected void setJavaName(String name) {
-        java_name = name;
-    }
-
-    public String getJavaName() {
-        return java_name;
-    }
-
-    protected TypeRepository repository;
-
-    protected void setTypeRepository(TypeRepository repository) {
-        this.repository = repository;
-    }
-
-    public TypeRepository getTypeRepository() {
-        return repository;
     }
 }

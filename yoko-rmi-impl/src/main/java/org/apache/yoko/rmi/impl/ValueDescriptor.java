@@ -70,10 +70,8 @@ import org.omg.SendingContext.RunTime;
 
 import sun.reflect.ReflectionFactory;
 
-public class ValueDescriptor extends TypeDescriptor {
+class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
-
-    private boolean _is_enum;
 
     private boolean _is_externalizable;
 
@@ -112,40 +110,24 @@ public class ValueDescriptor extends TypeDescriptor {
         super(type, repository);
     }
 
-    public String getRepositoryID() {
-        if (_repid == null) {
-            StringBuilder buf = new StringBuilder("RMI:");
-            buf.append(StringUtil.convertToValidIDLNames(getJavaClass().getName()));
-            buf.append(":");
+    protected boolean isEnum() { return false; }
 
-            String hashCode = Long.toHexString(_hash_code).toUpperCase();
-            for (int i = 0; (i + hashCode.length()) != 16; i++)
-                buf.append('0');
-            buf.append(hashCode);
-
-            long serialVersionUID = getSerialVersionUID();
-
-            buf.append(":");
-            String serialID = Long.toHexString(serialVersionUID).toUpperCase();
-            for (int i = 0; (i + serialID.length()) != 16; i++)
-                buf.append('0');
-            buf.append(serialID);
-
-            _repid = buf.toString();
-        }
-
-        return _repid;
+    @Override
+    protected String genRepId() {
+        return String.format("RMI:%s:%016X:%016X", StringUtil.convertToValidIDLNames(_java_class.getName()),
+                _hash_code, getSerialVersionUID());
     }
 
-    public String getCustomRepositoryID() {
-        if (_custom_repid == null) {
-            _custom_repid = "RMI:org.omg.custom." + getRepositoryID().substring(4);
-        }
+    private String genCustomRepId() {
+        return String.format("RMI:org.omg.custom.%s", getRepositoryID().substring(4));
+    }
+
+    public final String getCustomRepositoryID() {
+        if (_custom_repid == null) _custom_repid = genCustomRepId();
         return _custom_repid;
     }
 
-    long getSerialVersionUID() {
-        if (_is_enum) return 0L;
+    protected long getSerialVersionUID() {
         if (_serial_version_uid_field != null) {
 
             try {
@@ -154,7 +136,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 // skip //
             }
         }
-        ObjectStreamClass serialForm = ObjectStreamClass.lookup(getJavaClass());
+        ObjectStreamClass serialForm = ObjectStreamClass.lookup(_java_class);
 
         return (serialForm != null) ? serialForm.getSerialVersionUID() : 0L;
     }
@@ -162,6 +144,7 @@ public class ValueDescriptor extends TypeDescriptor {
     public void init() {
         try {
             init0();
+            super.init();
 
             if (_fields == null) {
                 throw new RuntimeException("fields==null after init!");
@@ -173,10 +156,9 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     private void init0() {
-        final Class<?> type = getJavaClass();
+        final Class<?> type = _java_class;
         final Class<?> superClass = type.getSuperclass();
 
-        _is_enum = Enum.class.isAssignableFrom(type);
         _is_rmi_stub = RMIStub.class.isAssignableFrom(type);
         _is_externalizable = Externalizable.class.isAssignableFrom(type);
         _is_serializable = Serializable.class.isAssignableFrom(type);
@@ -184,7 +166,7 @@ public class ValueDescriptor extends TypeDescriptor {
         _is_immutable_value = _immutable_value_classes.contains(type);
 
         if ((superClass != null) && (superClass != Object.class)) {
-            TypeDescriptor superDesc = getTypeRepository().getDescriptor(superClass);
+            TypeDescriptor superDesc = repo.getDescriptor(superClass);
 
             if (superDesc instanceof ValueDescriptor) {
                 _super_descriptor = (ValueDescriptor) superDesc;
@@ -240,7 +222,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 // validate readObject
                 //
                 if ((_write_object_method == null) || !Modifier.isPrivate(_write_object_method.getModifiers())
-                        || Modifier.isStatic(_write_object_method.getModifiers()) || (_write_object_method.getDeclaringClass() != getJavaClass())) {
+                        || Modifier.isStatic(_write_object_method.getModifiers()) || (_write_object_method.getDeclaringClass() != _java_class)) {
 
                     _write_object_method = null;
 
@@ -322,7 +304,7 @@ public class ValueDescriptor extends TypeDescriptor {
                             _constructor = ReflectionFactory.getReflectionFactory().newConstructorForSerialization(type, init_cons);
 
                             if (_constructor == null) {
-                                logger.warning("Unable to get constructor for serialization for class " + getJavaName());
+                                logger.warning("Unable to get constructor for serialization for class " + java_name);
                             } else {
                                 _constructor.setAccessible(true);
                             }
@@ -355,8 +337,7 @@ public class ValueDescriptor extends TypeDescriptor {
                             }
 
                             f.setAccessible(true);
-                            FieldDescriptor fd = FieldDescriptor.get(f);
-                            fd.setTypeRepository(getTypeRepository());
+                            FieldDescriptor fd = FieldDescriptor.get(f, repo);
                             flist.add(fd);
                         }
 
@@ -382,16 +363,14 @@ public class ValueDescriptor extends TypeDescriptor {
                             rf.setAccessible(true);
 
                             if (rf.getType() == f.getType()) {
-                                fd = FieldDescriptor.get(rf);
+                                fd = FieldDescriptor.get(rf,repo);
                             }
                         } catch (SecurityException | NoSuchFieldException ex) {
                         }
 
                         if (fd == null) {
-                            fd = FieldDescriptor.get(type, f);
+                            fd = FieldDescriptor.get(type, f, repo);
                         }
-
-                        fd.setTypeRepository(getTypeRepository());
                         _fields[i] = fd;
                     }
 
@@ -513,7 +492,7 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     protected void defaultWriteValue(ObjectWriter writer, Serializable val) throws IOException {
-        logger.finer("writing fields for " + getJavaClass());
+        logger.finer("writing fields for " + _java_class);
         FieldDescriptor[] fields = _fields;
 
         if (fields == null) {
@@ -521,7 +500,7 @@ public class ValueDescriptor extends TypeDescriptor {
         }
 
         for (int i = 0; i < fields.length; i++) {
-            logger.finer("writing field " + _fields[i].getJavaName());
+            logger.finer("writing field " + _fields[i].java_name);
 
             fields[i].write(writer, val);
         }
@@ -570,7 +549,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 throw (UnknownException) new UnknownException(ex.getTargetException()).initCause(ex.getTargetException());
 
             } catch (NullPointerException ex) {
-                logger.log(Level.WARNING, "unable to create instance of " + getJavaClass().getName(), ex);
+                logger.log(Level.WARNING, "unable to create instance of " + _java_class.getName(), ex);
                 logger.warning("constructor => " + _constructor);
 
                 throw ex;
@@ -623,7 +602,7 @@ public class ValueDescriptor extends TypeDescriptor {
             int key = System.identityHashCode(val);
             recurse.put(val, key);
 
-            pw.println(getJavaClass().getName() + "@" + Integer.toHexString(key) + "[");
+            pw.println(_java_class.getName() + "@" + Integer.toHexString(key) + "[");
 
             printFields(pw, recurse, val);
 
@@ -659,11 +638,11 @@ public class ValueDescriptor extends TypeDescriptor {
             return;
         }
 
-        logger.fine("reading fields for " + getJavaClass().getName());
+        logger.fine("reading fields for " + _java_class.getName());
 
         for (FieldDescriptor _field : _fields) {
 
-            logger.fine("reading field " + _field.getJavaName() + " of type " + _field.getType().getName() + " using " + _field.getClass().getName());
+            logger.fine("reading field " + _field.java_name + " of type " + _field.getType().getName() + " using " + _field.getClass().getName());
 
             try {
                 _field.read(reader, value);
@@ -671,7 +650,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 if (ex.getMessage() != null)
                     throw ex;
 
-                String msg = String.format("%s, while reading %s.%s", ex, getJavaName(), _field.getJavaName());
+                String msg = String.format("%s, while reading %s.%s", ex, java_name, _field.java_name);
                 throw (MARSHAL) new MARSHAL(msg, ex.minor, ex.completed).initCause(ex);
             }
         }
@@ -682,13 +661,13 @@ public class ValueDescriptor extends TypeDescriptor {
             return Collections.EMPTY_MAP;
         }
 
-        logger.finer("reading fields for " + getJavaClass().getName());
+        logger.finer("reading fields for " + _java_class.getName());
 
         Map map = new HashMap();
 
         for (FieldDescriptor _field : _fields) {
 
-            logger.finer("reading field " + _field.getJavaName());
+            logger.finer("reading field " + _field.java_name);
 
             _field.readFieldIntoMap(reader, map);
         }
@@ -701,11 +680,11 @@ public class ValueDescriptor extends TypeDescriptor {
             return;
         }
 
-        logger.finer("writing fields for " + getJavaClass().getName());
+        logger.finer("writing fields for " + _java_class.getName());
 
         for (FieldDescriptor _field : _fields) {
 
-            logger.finer("writing field " + _field.getJavaName());
+            logger.finer("writing field " + _field.java_name);
 
             _field.writeFieldFromMap(writer, fieldMap);
         }
@@ -769,7 +748,7 @@ public class ValueDescriptor extends TypeDescriptor {
     }
 
     protected long computeHashCode() {
-        Class type = getJavaClass();
+        Class type = _java_class;
 
         if (_is_externalizable) {
             return 1L;
@@ -788,7 +767,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
             Class superType = type.getSuperclass();
             if (superType != null) {
-                TypeDescriptor desc = getTypeRepository().getDescriptor(superType);
+                TypeDescriptor desc = repo.getDescriptor(superType);
                 out.writeLong(desc.getHashCode());
             }
 
@@ -804,7 +783,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 Arrays.sort(fds, compareByName);
 
             for (FieldDescriptor f : fds) {
-                out.writeUTF(f.getJavaName());
+                out.writeUTF(f.java_name);
                 out.writeUTF(makeSignature(f.getType()));
             }
 
@@ -833,8 +812,8 @@ public class ValueDescriptor extends TypeDescriptor {
 
     private static final Comparator compareByName = new Comparator() {
         public int compare(Object f1, Object f2) {
-            String n1 = ((FieldDescriptor) f1).getJavaName();
-            String n2 = ((FieldDescriptor) f2).getJavaName();
+            String n1 = ((FieldDescriptor) f1).java_name;
+            String n2 = ((FieldDescriptor) f2).java_name;
             return n1.compareTo(n2);
         }
     };
@@ -851,7 +830,7 @@ public class ValueDescriptor extends TypeDescriptor {
         if (_value_members == null) {
             _value_members = new ValueMember[_fields.length];
             for (int i = 0; i < _fields.length; i++) {
-                _value_members[i] = _fields[i].getValueMember(getTypeRepository());
+                _value_members[i] = _fields[i].getValueMember(repo);
             }
         }
 
@@ -867,9 +846,9 @@ public class ValueDescriptor extends TypeDescriptor {
 
         TypeCode _base = ((_super_descriptor == null) ? null : _super_descriptor.getTypeCode());
 
-        Class javaClass = getJavaClass();
+        Class javaClass = _java_class;
         if (javaClass.isArray()) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(javaClass.getComponentType());
+            TypeDescriptor desc = repo.getDescriptor(javaClass.getComponentType());
             _type_code = desc.getTypeCode();
             _type_code = orb.create_sequence_tc(0, _type_code);
             _type_code = orb.create_value_box_tc(getRepositoryID(), "Sequence", _type_code);
@@ -887,7 +866,7 @@ public class ValueDescriptor extends TypeDescriptor {
     
     FullValueDescription getFullValueDescription() {
         FullValueDescription fvd = new FullValueDescription();
-        fvd.name = getJavaClass().getName();
+        fvd.name = _java_class.getName();
         fvd.id = getRepositoryID();
         fvd.is_abstract = false;
         fvd.is_custom = isCustomMarshalled();
@@ -923,17 +902,17 @@ public class ValueDescriptor extends TypeDescriptor {
         }
 
         ObjectDeserializer(FullValueDescription desc, RunTime runtime) throws IOException {
-            Class myClass = ValueDescriptor.this.getJavaClass();
+            Class myClass = _java_class;
             ValueMember[] members = desc.members;
             fields = new FieldDescriptor[members.length];
             for (int i = 0; i < members.length; i++) {
                 Class type = getClassFromTypeCode(members[i].type);
-                fields[i] = FieldDescriptor.get(myClass, type, members[i].name, null);
+                fields[i] = FieldDescriptor.get(myClass, type, members[i].name, null, repo);
             }
 
             if (!"".equals(desc.base_value)) {
                 Class clz = ValueHandlerImpl.getClassFromRepositoryID(desc.base_value);
-                TypeDescriptor tdesc = getTypeRepository().getDescriptor(clz);
+                TypeDescriptor tdesc = repo.getDescriptor(clz);
 
                 if ((tdesc instanceof ValueDescriptor)) {
                     super_descriptor = ((ValueDescriptor) tdesc).getObjectDeserializer(desc.base_value, runtime);
@@ -981,9 +960,9 @@ public class ValueDescriptor extends TypeDescriptor {
         if (oorig == orig) {
             wdesc = this;
         } else {
-            wdesc = (ValueDescriptor) getTypeRepository().getDescriptor(oorig.getClass());
+            wdesc = (ValueDescriptor) repo.getDescriptor(oorig.getClass());
 
-            logger.finer("writeReplace -> " + getJavaClass().getName());
+            logger.finer("writeReplace -> " + _java_class.getName());
         }
 
         return wdesc.copyObject2(oorig, state);
@@ -1012,7 +991,7 @@ public class ValueDescriptor extends TypeDescriptor {
             writeValue(writer, oorig);
             return writer;
         } catch (IOException ex) {
-            String msg = String.format("%s writing %s", ex, getJavaClass().getName());
+            String msg = String.format("%s writing %s", ex, _java_class.getName());
             throw (MARSHAL) new MARSHAL(msg).initCause(ex);
         }
     }
@@ -1023,7 +1002,7 @@ public class ValueDescriptor extends TypeDescriptor {
             readValue(reader, copy);
             return readResolve(copy);
         } catch (IOException ex) {
-            String msg = String.format("%s reading instance of %s", ex, getJavaClass().getName());
+            String msg = String.format("%s reading instance of %s", ex, _java_class.getName());
             throw (MARSHAL) new MARSHAL(msg).initCause(ex);
         }
     }
@@ -1042,7 +1021,7 @@ public class ValueDescriptor extends TypeDescriptor {
 
         pw.print(paramName);
         pw.print(',');
-        MethodDescriptor.writeJavaType(pw, getJavaClass());
+        MethodDescriptor.writeJavaType(pw, _java_class);
         pw.print(".class)");
     }
 
@@ -1051,12 +1030,12 @@ public class ValueDescriptor extends TypeDescriptor {
         pw.print('.');
         pw.print("read_value");
         pw.print('(');
-        MethodDescriptor.writeJavaType(pw, getJavaClass());
+        MethodDescriptor.writeJavaType(pw, _java_class);
         pw.print(".class)");
     }
 
     void addDependencies(Set<Class<?>> classes) {
-        Class c = getJavaClass();
+        Class c = _java_class;
 
         if ((c == Object.class) || classes.contains(c))
             return;
@@ -1064,13 +1043,13 @@ public class ValueDescriptor extends TypeDescriptor {
         classes.add(c);
 
         if (c.getSuperclass() != null) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(c.getSuperclass());
+            TypeDescriptor desc = repo.getDescriptor(c.getSuperclass());
             desc.addDependencies(classes);
         }
 
         Class[] ifaces = c.getInterfaces();
         for (Class iface : ifaces) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(iface);
+            TypeDescriptor desc = repo.getDescriptor(iface);
             desc.addDependencies(classes);
         }
 
@@ -1079,7 +1058,7 @@ public class ValueDescriptor extends TypeDescriptor {
                 if (_field.isPrimitive())
                     continue;
 
-                TypeDescriptor desc = getTypeRepository().getDescriptor(_field.type);
+                TypeDescriptor desc = repo.getDescriptor(_field.type);
                 desc.addDependencies(classes);
             }
         }

@@ -27,24 +27,32 @@ import java.util.logging.Logger;
 
 import org.omg.CORBA.portable.InputStream;
 
-public abstract class TypeDescriptor extends ModelElement {
+abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    protected final Class _java_class;
+    final Class _java_class;
 
-    protected String _repid;
+    private volatile String _repid;
 
     protected RemoteInterfaceDescriptor remoteDescriptor;
 
     private FullKey _key;
 
-    public Class getJavaClass() {
-        return _java_class;
+    private String package_name;    // the package name qualifier (if any)
+    public String getPackageName() {
+        checkInit();
+        return package_name;
+    }
+
+    private String type_name;       // the simple type name (minus package, if any)
+    public String getTypeName() {
+        checkInit();
+        return type_name;
     }
 
     public final FullKey getKey() {
         if (null == _key) {
-            _key = new FullKey(getRepositoryID(), getJavaClass());
+            _key = new FullKey(getRepositoryID(), _java_class);
         }
         return _key;
     }
@@ -101,33 +109,43 @@ public abstract class TypeDescriptor extends ModelElement {
     @Override
     public String toString() {
         return String.format("%s{class=\"%s\",repId=\"%s\"}",
-                this.getClass().getName(), getJavaClass(),
+                this.getClass().getName(), _java_class,
                 getRepositoryID());
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
+        super(repository, type.getName());
         _java_class = type;
-        String typeName = type.getName(); 
-        setTypeRepository(repository);
-        setIDLName(typeName.replace('.', '_'));
-        // break up the simple type and package
-        int idx = typeName.lastIndexOf('.');
-        // if we have a package, split it into the component parts
-        if (idx >= 0) {
-            setPackageName(typeName.substring(0, idx));
-            setTypeName(typeName.substring(idx + 1));
-        }
-        else {
-            // no package...the type is the simple name
-            setPackageName(""); 
-            setTypeName(typeName); 
-        }
     }
 
-    public String getRepositoryID() {
-        if (_repid == null)
-            _repid = "RMI:" + getJavaClass().getName() + ":0000000000000000";
+    @Override
+    protected void init() {
+        package_name = genPackageName();
+        type_name = genTypeName();
+        super.init();
+    }
 
+    protected String genPackageName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? "" : java_name.substring(0, idx));
+    }
+
+    protected String genTypeName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? java_name : java_name.substring(idx + 1));
+    }
+
+    @Override
+    protected String genIDLName() {
+        return java_name.replace('.', '_');
+    }
+
+    protected String genRepId() {
+        return String.format("RMI:%s:%016X", _java_class.getName(), 0);
+    }
+
+    public final String getRepositoryID() {
+        if (_repid == null) _repid = genRepId();
         return _repid;
     }
 
@@ -145,9 +163,6 @@ public abstract class TypeDescriptor extends ModelElement {
     /** Write an instance of this value to a CDR stream */
     public abstract void write(org.omg.CORBA.portable.OutputStream out,
             Object val);
-
-    public void init() {
-    }
 
     public boolean isCustomMarshalled() {
         return false;
@@ -273,7 +288,7 @@ public abstract class TypeDescriptor extends ModelElement {
             pw.print("^" + old);
         } else {
             Integer key = new Integer(System.identityHashCode(val));
-            pw.println(getJavaClass().getName() + "@"
+            pw.println(_java_class.getName() + "@"
                     + Integer.toHexString(key.intValue()));
         }
     }

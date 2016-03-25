@@ -39,7 +39,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
     byte[] _id;
 
     Class getJavaClass() {
-        return _descriptor.getJavaClass();
+        return _descriptor._java_class;
     }
 
     RMIState getRMIState() {

@@ -28,8 +28,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.yasf.Yasf;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
 
 abstract class ObjectWriter extends ObjectOutputStream {
     protected final Serializable object;
@@ -40,7 +43,8 @@ abstract class ObjectWriter extends ObjectOutputStream {
 
     private WriteObjectState state = WriteObjectState.NOT_IN_WRITE_OBJECT;
 
-    private byte streamFormatVersion = 1;
+    final byte cmsf;
+    final Set<Yasf> yasfSet;
 
     private enum WriteObjectState {
         NOT_IN_WRITE_OBJECT {
@@ -58,7 +62,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
                 // If we're in stream format version 2, we must
                 // put the "null" marker to say that there isn't
                 // any optional data
-                if (writer.getStreamFormatVersion() == 2) {
+                if (writer.cmsf == 2) {
                     writer._nullValue();
                 }
             }
@@ -74,7 +78,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
                 // writeDefaultObject was not invoked
                 writer.writeBoolean(false);
 
-                if (writer.getStreamFormatVersion() == 2) {
+                if (writer.cmsf == 2) {
                     writer._startValue(writer._desc.getCustomRepositoryID());
                 }
             }
@@ -92,7 +96,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
 
                 // write a null-marker to identify that there is no custom
                 // state being marshalled...
-                if (writer.getStreamFormatVersion() == 2) {
+                if (writer.cmsf == 2) {
                     writer._nullValue();
                 }
             }
@@ -102,14 +106,14 @@ abstract class ObjectWriter extends ObjectOutputStream {
                 // been emitted in IN_WRITE_OBJECT.beforeWriteDefaultObject
                 writer.state = WROTE_CUSTOM_DATA;
 
-                if (writer.getStreamFormatVersion() == 2) {
+                if (writer.cmsf == 2) {
                     writer._startValue(writer._desc.getCustomRepositoryID());
                 }
             }
         },
         WROTE_CUSTOM_DATA {
             void afterWriteObject(ObjectWriter writer) throws IOException {
-                if (writer.getStreamFormatVersion() == 2) {
+                if (writer.cmsf == 2) {
                     writer._endValue();
                 }
 
@@ -144,11 +148,8 @@ abstract class ObjectWriter extends ObjectOutputStream {
 
     ObjectWriter(Serializable obj) throws IOException {
         object = obj;
-        streamFormatVersion = CmsfThreadLocal.get();
-    }
-
-    private byte getStreamFormatVersion() {
-        return streamFormatVersion;
+        cmsf = CmsfThreadLocal.get();
+        yasfSet = YasfThreadLocal.get();
     }
 
     abstract ObjectReader getObjectReader(Object newObject);
@@ -282,7 +283,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
         state = WriteObjectState.NOT_IN_WRITE_OBJECT;
         try {
             setCurrentValueDescriptor(descriptor);
-            writeByte(getStreamFormatVersion());
+            writeByte(cmsf);
             state.beforeWriteObject(this);
             _write_object_method.invoke(val, this);
             state.afterWriteObject(this);
@@ -299,7 +300,7 @@ abstract class ObjectWriter extends ObjectOutputStream {
     protected abstract void _nullValue() throws IOException;
 
     void invokeWriteExternal(Externalizable externalizable) throws IOException {
-        writeByte(getStreamFormatVersion());
+        writeByte(cmsf);
         externalizable.writeExternal(this);
     }
 }

@@ -69,9 +69,8 @@ public final class MethodDescriptor extends ModelElement {
     }
 
     MethodDescriptor(java.lang.reflect.Method method, TypeRepository repository) {
+        super(repository, method.getName());
         reflected_method = method;
-        setTypeRepository(repository);
-        setJavaName(method.getName());
     }
 
     /** The number of arguments */
@@ -121,7 +120,7 @@ public final class MethodDescriptor extends ModelElement {
             }
 
         } else if (copyWithinState) {
-            CopyState state = new CopyState(getTypeRepository());
+            CopyState state = new CopyState(repo);
             for (int i = 0; i < args.length; i++) {
                 if (parameter_types[i].copyWithinState()) {
                     try {
@@ -167,7 +166,7 @@ public final class MethodDescriptor extends ModelElement {
             }
 
         } else if (copyWithinState) {
-            CopyState state = new CopyState(getTypeRepository());
+            CopyState state = new CopyState(repo);
             try {
                 return state.copy(result);
             } catch (CopyRecursionException e) {
@@ -227,7 +226,7 @@ public final class MethodDescriptor extends ModelElement {
     public org.omg.CORBA.portable.OutputStream writeException(
             org.omg.CORBA.portable.ResponseHandler response, Throwable ex) {
         for (int i = 0; i < exception_types.length; i++) {
-            if (exception_types[i].getJavaClass().isInstance(ex)) {
+            if (exception_types[i]._java_class.isInstance(ex)) {
                 org.omg.CORBA.portable.OutputStream out = response
                         .createExceptionReply();
                 org.omg.CORBA_2_3.portable.OutputStream out2 = (org.omg.CORBA_2_3.portable.OutputStream) out;
@@ -330,8 +329,7 @@ public final class MethodDescriptor extends ModelElement {
 
         for (int i = 0; i < param_types.length; i++) {
             try {
-                parameter_types[i] = getTypeRepository().getDescriptor(
-                        param_types[i]);
+                parameter_types[i] = repo.getDescriptor(param_types[i]);
                 copyWithinState |= parameter_types[i].copyWithinState();
 
             } catch (RuntimeException ex) {
@@ -340,20 +338,20 @@ public final class MethodDescriptor extends ModelElement {
         }
 
         Class result_type = reflected_method.getReturnType();
-        return_type = getTypeRepository().getDescriptor(result_type);
+        return_type = repo.getDescriptor(result_type);
 
         Class[] exc_types = reflected_method.getExceptionTypes();
         exception_types = new ExceptionDescriptor[exc_types.length];
         for (int i = 0; i < exc_types.length; i++) {
-            exception_types[i] = (ExceptionDescriptor) getTypeRepository()
-                    .getDescriptor(exc_types[i]);
+            exception_types[i] = (ExceptionDescriptor) repo.getDescriptor(exc_types[i]);
         }
 
         parameter_count = param_types.length;
-        generateIDLName();
+        super.init();
     }
 
-    void generateIDLName() {
+    @Override
+    protected String genIDLName() {
         String idl_name = null;
 
         if (isSetterMethod()) {
@@ -361,7 +359,7 @@ public final class MethodDescriptor extends ModelElement {
         } else if (isGetterMethod()) {
             idl_name = "_get_" + transformIdentifier(attributeName());
         } else {
-            idl_name = transformIdentifier(getJavaName());
+            idl_name = transformIdentifier(java_name);
         }
 
         if (isCaseSensitive) {
@@ -371,12 +369,11 @@ public final class MethodDescriptor extends ModelElement {
         if (isOverloaded) {
             idl_name = transformOverloading(idl_name);
         }
-
-        setIDLName(idl_name);
+        return idl_name;
     }
 
     private String attributeName() {
-        String methodName = getJavaName();
+        String methodName = java_name;
         StringBuffer buf = new StringBuffer();
 
         int pfxLen;
@@ -542,7 +539,7 @@ public final class MethodDescriptor extends ModelElement {
         writeJavaType(pw, reflected_method.getReturnType());
 
         pw.print(' ');
-        pw.print(getJavaName());
+        pw.print(java_name);
 
         pw.print(" (");
         Class[] args = reflected_method.getParameterTypes();
@@ -597,7 +594,7 @@ public final class MethodDescriptor extends ModelElement {
 
         Class[] args = reflected_method.getParameterTypes();
         for (int i = 0; i < args.length; i++) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(args[i]);
+            TypeDescriptor desc = repo.getDescriptor(args[i]);
             pw.print("\t\t\t");
             desc.writeMarshalValue(pw, "out", "arg" + i);
             pw.println(";");
@@ -613,7 +610,7 @@ public final class MethodDescriptor extends ModelElement {
             writeJavaType(pw, rtype);
             pw.print(")");
 
-            TypeDescriptor desc = getTypeRepository().getDescriptor(rtype);
+            TypeDescriptor desc = repo.getDescriptor(rtype);
             desc.writeUnmarshalValue(pw, "in");
             pw.println(";");
         }
@@ -631,8 +628,7 @@ public final class MethodDescriptor extends ModelElement {
                 continue;
             }
 
-            ExceptionDescriptor exd = (ExceptionDescriptor) getTypeRepository()
-                    .getDescriptor(ex[i]);
+            ExceptionDescriptor exd = (ExceptionDescriptor) repo.getDescriptor(ex[i]);
 
             pw.println("\t\t\tif (exname.equals(\""
                     + exd.getExceptionRepositoryID() + "\"))");
@@ -676,7 +672,7 @@ public final class MethodDescriptor extends ModelElement {
         // copy arguments
         Class[] args = reflected_method.getParameterTypes();
         if (args.length == 1) {
-            if (getTypeRepository().getDescriptor(args[0]).copyInStub()) {
+            if (repo.getDescriptor(args[0]).copyInStub()) {
                 pw.print("\t\t\t\targ0 = (");
                 writeJavaType(pw, args[0]);
                 pw.println(")" + UTIL + ".copyObject(arg0, _orb());");
@@ -686,7 +682,7 @@ public final class MethodDescriptor extends ModelElement {
             int copyCount = 0;
 
             for (int i = 0; i < args.length; i++) {
-                TypeDescriptor td = getTypeRepository().getDescriptor(args[i]);
+                TypeDescriptor td = repo.getDescriptor(args[i]);
                 copy[i] = td.copyInStub();
                 if (copy[i]) {
                     copyCount += 1;
@@ -727,7 +723,7 @@ public final class MethodDescriptor extends ModelElement {
         pw.print("((");
         writeJavaType(pw, thisClass);
         pw.print(")so.servant).");
-        pw.print(getJavaName());
+        pw.print(java_name);
         pw.print("(");
 
         for (int i = 0; i < args.length; i++) {
@@ -741,7 +737,7 @@ public final class MethodDescriptor extends ModelElement {
 
         pw.print("\t\t\t\treturn ");
         if (out != Void.TYPE) {
-            TypeDescriptor td = getTypeRepository().getDescriptor(out);
+            TypeDescriptor td = repo.getDescriptor(out);
             if (td.copyInStub()) {
                 pw.print('(');
                 writeJavaType(pw, out);
@@ -761,22 +757,21 @@ public final class MethodDescriptor extends ModelElement {
     }
 
     void addDependencies(java.util.Set classes) {
-        TypeRepository rep = getTypeRepository();
 
         TypeDescriptor desc = null;
 
-        desc = rep.getDescriptor(reflected_method.getReturnType());
+        desc = repo.getDescriptor(reflected_method.getReturnType());
         desc.addDependencies(classes);
 
         Class[] param = reflected_method.getParameterTypes();
         for (int i = 0; i < param.length; i++) {
-            desc = rep.getDescriptor(param[i]);
+            desc = repo.getDescriptor(param[i]);
             desc.addDependencies(classes);
         }
 
         Class[] ex = reflected_method.getExceptionTypes();
         for (int i = 0; i < ex.length; i++) {
-            desc = rep.getDescriptor(ex[i]);
+            desc = repo.getDescriptor(ex[i]);
             desc.addDependencies(classes);
         }
     }

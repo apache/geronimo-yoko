@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class BooleanDescriptor extends SimpleDescriptor {
+final class BooleanDescriptor extends SimpleDescriptor {
     BooleanDescriptor(TypeRepository repository) {
         super(Boolean.TYPE, repository, "boolean",
                 org.omg.CORBA.TCKind.tk_boolean);

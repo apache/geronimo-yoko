@@ -18,20 +18,23 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class StringDescriptor extends ValueDescriptor {
+class StringDescriptor extends ValueDescriptor {
     public String getIDLName() {
         return "CORBA_WStringValue";
     }
     
     StringDescriptor(TypeRepository repository) {
         super(String.class, repository);
-        // strings have a special type and package name other than the java class name. 
-        setTypeName("WStringValue"); 
-        setPackageName("CORBA"); 
     }
 
-    public void init() {
-        super.init();
+    @Override
+    protected String genPackageName() {
+        return "CORBA";
+    }
+
+    @Override
+    protected String genTypeName() {
+        return "WStringValue";
     }
 
     /** Read an instance of this value from a CDR stream */
