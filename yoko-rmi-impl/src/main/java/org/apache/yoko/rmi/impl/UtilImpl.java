@@ -715,7 +715,7 @@ public class UtilImpl implements UtilDelegate {
     static Object copyRMIStub(RMIStub stub) throws RemoteException {
         ClassLoader loader = getContextClassLoader();
 
-        if (getClassLoader(stub._descriptor._java_class) == loader) {
+        if (getClassLoader(stub._descriptor.type) == loader) {
             return stub;
         }
 
@@ -724,7 +724,7 @@ public class UtilImpl implements UtilDelegate {
         Class<?> targetClass;
 
         try {
-            targetClass = Util.loadClass(desc._java_class.getName(), stub
+            targetClass = Util.loadClass(desc.type.getName(), stub
                     ._get_codebase(), loader);
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINER, "copyRMIStub exception (current loader is: " + loader

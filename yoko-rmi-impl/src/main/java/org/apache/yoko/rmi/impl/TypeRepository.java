@@ -125,15 +125,15 @@ public class TypeRepository {
                     return ((enumType == type) ? new EnumSubclassDescriptor(type, repo) : get(enumType));
                 } else if (type.isArray()) {
                     return ArrayDescriptor.get(type, repo);
-                } else if (!type.isInterface()
-                        && Serializable.class.isAssignableFrom(type)) {
-                    return new ValueDescriptor(type, repo);
                 } else if (Remote.class.isAssignableFrom(type)) {
                     if (type.isInterface()) {
                         return new RemoteInterfaceDescriptor(type, repo);
                     } else {
                         return new RemoteClassDescriptor(type, repo);
                     }
+                } else if (!type.isInterface()
+                && Serializable.class.isAssignableFrom(type)) {
+                    return new ValueDescriptor(type, repo);
                 } else if (Object.class.isAssignableFrom(type)) {
                     if (isAbstractInterface(type)) {
                         logger.finer("encoding " + type + " as abstract interface");
@@ -267,33 +267,8 @@ public class TypeRepository {
         return getDescriptor(type).getRepositoryID();
     }
 
-    public RemoteInterfaceDescriptor getRemoteDescriptor(Class<?> type) {
-        TypeDescriptor td = getDescriptor(type);
-        RemoteInterfaceDescriptor result = td.getRemoteInterface();
-
-        if (result != null) {
-            return result;
-        }
-
-        RemoteDescriptor desc;
-
-        if (java.rmi.Remote.class.isAssignableFrom(type)) {
-            if (type.isInterface()) {
-                desc = new RemoteInterfaceDescriptor(type, this);
-            } else {
-                desc = new RemoteClassDescriptor(type, this);
-            }
-
-            desc.init();
-        } else {
-            throw new IllegalArgumentException("class " + type.toString()
-                    + " does not implement" + " java.rmi.Remote");
-        }
-
-        result = desc.getRemoteInterface();
-        td.setRemoteInterface(result);
-
-        return result;
+    public RemoteInterfaceDescriptor getRemoteInterface(Class<?> type) {
+        return getDescriptor(type).getRemoteInterface();
     }
 
     public TypeDescriptor getDescriptor(Class<?> type) {

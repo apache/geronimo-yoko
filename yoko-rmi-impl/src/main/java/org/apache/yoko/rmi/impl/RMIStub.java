@@ -19,7 +19,6 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.rmi.api.PortableRemoteObjectExt;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.Delegate;
 import org.omg.CORBA.portable.ServantObject;
@@ -40,7 +39,7 @@ public abstract class RMIStub extends javax.rmi.CORBA.Stub {
         Class remote_interface = getClass().getInterfaces()[0];
 
         RMIState state = (RMIState) PortableRemoteObjectExt.getState();
-        Object o = state.getTypeRepository().getRemoteDescriptor(
+        Object o = state.getTypeRepository().getRemoteInterface(
                 remote_interface);
 
         _descriptor = (RemoteDescriptor) o;

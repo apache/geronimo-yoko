@@ -33,7 +33,7 @@ public final class MethodDescriptor extends ModelElement {
     static final Logger logger = Logger.getLogger(MethodDescriptor.class.getName());
 
     /** The refleced method object for this method */
-    java.lang.reflect.Method reflected_method;
+    final java.lang.reflect.Method reflected_method;
 
     java.lang.Object invocation_block_selector;
 
@@ -226,7 +226,7 @@ public final class MethodDescriptor extends ModelElement {
     public org.omg.CORBA.portable.OutputStream writeException(
             org.omg.CORBA.portable.ResponseHandler response, Throwable ex) {
         for (int i = 0; i < exception_types.length; i++) {
-            if (exception_types[i]._java_class.isInstance(ex)) {
+            if (exception_types[i].type.isInstance(ex)) {
                 org.omg.CORBA.portable.OutputStream out = response
                         .createExceptionReply();
                 org.omg.CORBA_2_3.portable.OutputStream out2 = (org.omg.CORBA_2_3.portable.OutputStream) out;

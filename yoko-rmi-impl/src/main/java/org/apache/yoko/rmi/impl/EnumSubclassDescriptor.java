@@ -18,13 +18,12 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.InputStream;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Map;
-
-import org.apache.yoko.rmi.util.StringUtil;
-import org.omg.CORBA.portable.IndirectionException;
-import org.omg.CORBA.portable.InputStream;
 
 class EnumSubclassDescriptor extends ValueDescriptor {
     @SuppressWarnings("rawtypes")
@@ -39,12 +38,6 @@ class EnumSubclassDescriptor extends ValueDescriptor {
         if (!!!Enum.class.isAssignableFrom(type)) throw new IllegalArgumentException(type.getName() + " is not an Enum");
         while (!!!type.isEnum()) type = type.getSuperclass();
         return type;
-    }
-
-    @Override
-    public final void init() {
-        super.init();
-        // Avoid doing anything that would cause the calculated classHash to change
     }
 
     @Override

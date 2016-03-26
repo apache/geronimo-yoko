@@ -16,17 +16,8 @@ import org.omg.CORBA.MARSHAL;
 class ClassDescDescriptor extends ClassBaseDescriptor {
     private static final Logger logger = Logger.getLogger(ClassDescDescriptor.class.getName());
 
-    private Field repid_field;
-    private Field codebase_field;
-
     ClassDescDescriptor(TypeRepository repository) {
         super(ClassDesc.class, repository);
-    }
-
-    @Override
-    void init(Field repid_field, Field codebase_field) {
-        this.repid_field = repid_field;
-        this.codebase_field = codebase_field;
     }
 
     /** Read an instance of this value from a CDR stream */
@@ -38,8 +29,8 @@ class ClassDescDescriptor extends ClassBaseDescriptor {
             public Class<?> run() {
                 String className = "<unknown>";
                 try {
-                    String repid = (String) repid_field.get(desc);
-                    String codebase = (String) codebase_field.get(desc);
+                    String repid = (String) getRepidField().get(desc);
+                    String codebase = (String) getCobebaseField().get(desc);
 
                     Class<?> result = RepIds.query(repid).codebase(codebase).toClass();
                     if (null != result) return result;

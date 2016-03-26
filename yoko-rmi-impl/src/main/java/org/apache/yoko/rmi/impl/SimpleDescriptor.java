@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.TypeCode;
+
 abstract class SimpleDescriptor extends TypeDescriptor {
     private final String idl_name;
     SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
@@ -30,34 +32,37 @@ abstract class SimpleDescriptor extends TypeDescriptor {
     }
 
     @Override
-    protected String genIDLName() {
+    protected final String genIDLName() {
         return idl_name;
     }
 
     @Override
-    protected String genPackageName() {
+    protected final String genPackageName() {
         return "";
     }
 
     @Override
-    protected String genTypeName() {
+    protected final String genTypeName() {
         return idl_name;
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
+    @Override
+    protected final TypeCode genTypeCode() {
         return _type_code;
     }
 
+    @Override
     boolean copyInStub() {
         return false;
     }
 
+    @Override
     public boolean copyBetweenStates() {
         return false;
     }
 
+    @Override
     public boolean copyWithinState() {
         return false;
     }
-
 }

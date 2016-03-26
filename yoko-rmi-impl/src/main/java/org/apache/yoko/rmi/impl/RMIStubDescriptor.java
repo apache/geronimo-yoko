@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.io.IOException;
+
 class RMIStubDescriptor extends ValueDescriptor {
     RMIStubDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
@@ -25,7 +27,7 @@ class RMIStubDescriptor extends ValueDescriptor {
 
     @Override
     protected String genRepId() {
-        final Class[] ifaces = _java_class.getInterfaces();
+        final Class[] ifaces = type.getInterfaces();
         if (ifaces.length != 2 || ifaces[1] != org.apache.yoko.rmi.util.stub.Stub.class) {
             throw new RuntimeException("Unexpected RMIStub structure");
         }
@@ -41,14 +43,15 @@ class RMIStubDescriptor extends ValueDescriptor {
     // state is written. This ensures that fields in the proxy are
     // not included on the wire.
     //
+    @Override
     protected void writeValue(ObjectWriter writer, java.io.Serializable val)
-            throws java.io.IOException {
+            throws IOException {
         _super_descriptor.writeValue(writer, val);
     }
 
+    @Override
     protected void readValue(ObjectReader reader, java.io.Serializable value)
-            throws java.io.IOException {
+            throws IOException {
         _super_descriptor.readValue(reader, value);
     }
-
 }

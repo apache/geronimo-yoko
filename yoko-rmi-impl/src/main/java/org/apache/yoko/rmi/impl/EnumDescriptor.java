@@ -19,11 +19,9 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.util.yasf.Yasf;
-import org.apache.yoko.util.yasf.YasfThreadLocal;
 
 import java.io.IOException;
 import java.io.Serializable;
-import java.util.Set;
 
 class EnumDescriptor extends ValueDescriptor {
     public EnumDescriptor(Class<?> type, TypeRepository repo) {
@@ -58,7 +56,6 @@ class EnumDescriptor extends ValueDescriptor {
 
     @Override
     protected void defaultWriteValue(ObjectWriter writer, Serializable val) throws IOException {
-        checkInit();
         if ((writer.yasfSet != null) && !!!writer.yasfSet.contains(Yasf.ENUM_FIXED)) {
             // talking to an old yoko that expects an ordinal field to be written;
             ordinalField.write(writer, val);

@@ -172,7 +172,7 @@ public class ValueHandlerImpl implements ValueHandler {
         if (val instanceof RMIStub) {
 
             RMIStub stub = (RMIStub) val;
-            Class type = stub._descriptor._java_class;
+            Class type = stub._descriptor.type;
 
             RMIState state = RMIState.current();
             Stub result = state.getStaticStub(stub._get_codebase(), type);

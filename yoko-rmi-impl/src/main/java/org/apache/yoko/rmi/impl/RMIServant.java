@@ -39,7 +39,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
     byte[] _id;
 
     Class getJavaClass() {
-        return _descriptor._java_class;
+        return _descriptor.type;
     }
 
     RMIState getRMIState() {
@@ -178,7 +178,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
             throw new IllegalArgumentException();
         }
 
-        _descriptor = _state.getTypeRepository().getRemoteDescriptor(target.getClass()).getRemoteInterface();
+        _descriptor = _state.getTypeRepository().getRemoteInterface(target.getClass()).getRemoteInterface();
 
         if (_descriptor == null) {
             throw new RuntimeException("remote classes not supported");

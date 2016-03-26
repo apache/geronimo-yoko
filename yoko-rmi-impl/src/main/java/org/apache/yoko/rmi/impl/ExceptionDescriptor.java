@@ -26,7 +26,7 @@ class ExceptionDescriptor extends ValueDescriptor {
     private volatile String ex_repid = null;
 
     private String genExceptionRepId() {
-        String name = _java_class.getName();
+        String name = type.getName();
         final String encname;
 
         if (name.endsWith("Exception")) {
@@ -38,7 +38,7 @@ class ExceptionDescriptor extends ValueDescriptor {
         return String.format("IDL:%s:1.0", encname.replace('.', '/'));
     }
 
-    public final String getExceptionRepositoryID() {
+    final String getExceptionRepositoryID() {
         if (ex_repid == null) ex_repid = genExceptionRepId();
         return ex_repid;
     }

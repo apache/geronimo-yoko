@@ -18,43 +18,51 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.io.IOException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+
+import java.io.PrintWriter;
+import java.rmi.Remote;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.logging.Logger;
-
-import org.omg.CORBA.portable.InputStream;
 
 abstract class TypeDescriptor extends ModelElement {
     static Logger logger = Logger.getLogger(TypeDescriptor.class.getName());
 
-    final Class _java_class;
+    final Class type;
 
-    private volatile String _repid;
+    private volatile String _repid = null;
 
-    protected RemoteInterfaceDescriptor remoteDescriptor;
-
-    private FullKey _key;
-
-    private String package_name;    // the package name qualifier (if any)
-    public String getPackageName() {
-        checkInit();
-        return package_name;
+    private volatile String packageName = null;    // the package name qualifier (if any)
+    protected String genPackageName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? "" : java_name.substring(0, idx));
+    }
+    public final String getPackageName() {
+        if (null == packageName) packageName = genPackageName();
+        return packageName;
     }
 
-    private String type_name;       // the simple type name (minus package, if any)
-    public String getTypeName() {
-        checkInit();
-        return type_name;
+    private volatile String typeName = null;       // the simple type name (minus package, if any)
+    protected String genTypeName() {
+        int idx = java_name.lastIndexOf('.');
+        return ((idx < 0) ? java_name : java_name.substring(idx + 1));
+    }
+    public final String getTypeName() {
+        if (null == typeName) typeName = genTypeName();
+        return typeName;
     }
 
+    private volatile FullKey key = null;
+    private FullKey genKey() {
+        return new FullKey(getRepositoryID(), type);
+    }
     public final FullKey getKey() {
-        if (null == _key) {
-            _key = new FullKey(getRepositoryID(), _java_class);
-        }
-        return _key;
+        if (null == key) key = genKey();
+        return key;
     }
 
     public static class SimpleKey {
@@ -109,30 +117,13 @@ abstract class TypeDescriptor extends ModelElement {
     @Override
     public String toString() {
         return String.format("%s{class=\"%s\",repId=\"%s\"}",
-                this.getClass().getName(), _java_class,
+                this.getClass().getName(), type,
                 getRepositoryID());
     }
 
     protected TypeDescriptor(Class type, TypeRepository repository) {
         super(repository, type.getName());
-        _java_class = type;
-    }
-
-    @Override
-    protected void init() {
-        package_name = genPackageName();
-        type_name = genTypeName();
-        super.init();
-    }
-
-    protected String genPackageName() {
-        int idx = java_name.lastIndexOf('.');
-        return ((idx < 0) ? "" : java_name.substring(0, idx));
-    }
-
-    protected String genTypeName() {
-        int idx = java_name.lastIndexOf('.');
-        return ((idx < 0) ? java_name : java_name.substring(idx + 1));
+        this.type = type;
     }
 
     @Override
@@ -141,59 +132,32 @@ abstract class TypeDescriptor extends ModelElement {
     }
 
     protected String genRepId() {
-        return String.format("RMI:%s:%016X", _java_class.getName(), 0);
+        return String.format("RMI:%s:%016X", type.getName(), 0);
     }
-
     public final String getRepositoryID() {
         if (_repid == null) _repid = genRepId();
         return _repid;
     }
 
-    RemoteInterfaceDescriptor getRemoteInterface() {
-        return remoteDescriptor;
+    private volatile RemoteInterfaceDescriptor remoteInterface = null;
+    protected RemoteInterfaceDescriptor genRemoteInterface() {
+        throw new UnsupportedOperationException("class " + type + " does not implement " + Remote.class.getName());
+    }
+    final RemoteInterfaceDescriptor getRemoteInterface() {
+        if (null == remoteInterface) remoteInterface = genRemoteInterface();
+        return remoteInterface;
     }
 
-    void setRemoteInterface(RemoteInterfaceDescriptor desc) {
-        remoteDescriptor = desc;
-    }
+
 
     /** Read an instance of this value from a CDR stream */
-    public abstract Object read(org.omg.CORBA.portable.InputStream in);
+    public abstract Object read(InputStream in);
 
     /** Write an instance of this value to a CDR stream */
-    public abstract void write(org.omg.CORBA.portable.OutputStream out,
-            Object val);
+    public abstract void write(OutputStream out, Object val);
 
     public boolean isCustomMarshalled() {
         return false;
-    }
-
-    static class WrappedIOException extends RuntimeException {
-        IOException wrapped;
-
-        WrappedIOException(IOException ex) {
-            super("wrapped IO exception");
-            this.wrapped = ex;
-        }
-    }
-
-    CorbaObjectReader makeCorbaObjectReader(final InputStream in,
-            final Map offsetMap, final java.io.Serializable obj)
-            throws IOException {
-        try {
-            return (CorbaObjectReader) AccessController
-                    .doPrivileged(new PrivilegedAction() {
-                        public Object run() {
-                            try {
-                                return new CorbaObjectReader(in, offsetMap, obj);
-                            } catch (IOException ex) {
-                                throw new WrappedIOException(ex);
-                            }
-                        }
-                    });
-        } catch (WrappedIOException ex) {
-            throw ex.wrapped;
-        }
     }
 
     String makeSignature(Class type) {
@@ -242,15 +206,20 @@ abstract class TypeDescriptor extends ModelElement {
         return 0L;
     }
 
-    protected org.omg.CORBA.TypeCode _type_code = null;
+    protected TypeCode _type_code = null;
 
-    abstract org.omg.CORBA.TypeCode getTypeCode();
+    private volatile TypeCode typeCode = null;
+    protected abstract TypeCode genTypeCode();
+    final TypeCode getTypeCode() {
+        if (null == typeCode) typeCode = genTypeCode();
+        return typeCode;
+    }
 
     Object copyObject(Object value, CopyState state) {
         throw new InternalError("cannot copy " + value.getClass().getName());
     }
 
-    void writeMarshalValue(java.io.PrintWriter pw, String outName,
+    void writeMarshalValue(PrintWriter pw, String outName,
             String paramName) {
         pw.print(outName);
         pw.print('.');
@@ -261,7 +230,7 @@ abstract class TypeDescriptor extends ModelElement {
         pw.print(')');
     }
 
-    void writeUnmarshalValue(java.io.PrintWriter pw, String inName) {
+    void writeUnmarshalValue(PrintWriter pw, String inName) {
         pw.print(inName);
         pw.print('.');
         pw.print("read_");
@@ -270,7 +239,7 @@ abstract class TypeDescriptor extends ModelElement {
         pw.print(')');
     }
 
-    void addDependencies(java.util.Set<Class<?>> classes) {
+    void addDependencies(Set<Class<?>> classes) {
         return;
     }
 
@@ -278,7 +247,7 @@ abstract class TypeDescriptor extends ModelElement {
         return true;
     }
 
-    void print(java.io.PrintWriter pw, java.util.Map<Object,Integer> recurse, Object val) {
+    void print(PrintWriter pw, Map<Object,Integer> recurse, Object val) {
         if (val == null) {
             pw.print("null");
         }
@@ -288,13 +257,9 @@ abstract class TypeDescriptor extends ModelElement {
             pw.print("^" + old);
         } else {
             Integer key = new Integer(System.identityHashCode(val));
-            pw.println(_java_class.getName() + "@"
+            pw.println(type.getName() + "@"
                     + Integer.toHexString(key.intValue()));
         }
-    }
-
-    synchronized TypeDescriptor getSelf() {
-        return this;
     }
 
     /**

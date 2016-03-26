@@ -18,14 +18,26 @@
 
 package org.apache.yoko.rmi.impl;
 
-class RemoteClassDescriptor extends RemoteDescriptor {
+final class RemoteClassDescriptor extends RemoteDescriptor {
 
     @Override
     protected String genRepId() {
-        return String.format("IDL:%s:1.0", _java_class.getName().replace('.', '/'));
+        return String.format("IDL:%s:1.0", type.getName().replace('.', '/'));
     }
 
     RemoteClassDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
+    }
+
+    @Override
+    protected RemoteInterfaceDescriptor genRemoteInterface() {
+        Class[] remotes = collect_remote_interfaces(type);
+        if (remotes.length == 0) {
+            throw new RuntimeException(type.getName()
+                    + " has no remote interfaces");
+        }
+        Class most_specific_interface = remotes[0];
+
+        return repo.getDescriptor(most_specific_interface).getRemoteInterface();
     }
 }

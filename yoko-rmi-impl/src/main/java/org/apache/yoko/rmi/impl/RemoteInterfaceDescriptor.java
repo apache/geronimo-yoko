@@ -18,8 +18,13 @@
 
 package org.apache.yoko.rmi.impl;
 
-class RemoteInterfaceDescriptor extends RemoteDescriptor {
+final class RemoteInterfaceDescriptor extends RemoteDescriptor {
     RemoteInterfaceDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
+    }
+
+    @Override
+    protected RemoteInterfaceDescriptor genRemoteInterface() {
+        return this;
     }
 }
