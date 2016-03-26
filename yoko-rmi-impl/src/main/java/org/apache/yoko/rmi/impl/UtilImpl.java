@@ -467,8 +467,7 @@ public class UtilImpl implements UtilDelegate {
     }
 
     public ValueHandler createValueHandler() {
-        return RMIState.current().createValueHandler();
-        // return new ValueHandlerImpl (null);
+        return ValueHandlerImpl.get();
     }
 
     public String getCodebase(@SuppressWarnings("rawtypes") Class clz) {
@@ -775,7 +774,7 @@ public class UtilImpl implements UtilDelegate {
          * mapSystemException (ex); }
          */
         try {
-            TypeRepository rep = RMIState.current().getTypeRepository();
+            TypeRepository rep = RMIState.current().repo;
             CopyState state = new CopyState(rep);
             return state.copy(obj);
         } catch (CopyRecursionException ex) {
@@ -806,7 +805,7 @@ public class UtilImpl implements UtilDelegate {
 
         try {
 
-            TypeRepository rep = RMIState.current().getTypeRepository();
+            TypeRepository rep = RMIState.current().repo;
             CopyState state = new CopyState(rep);
             try {
                 return (Object[]) state.copy(objs);

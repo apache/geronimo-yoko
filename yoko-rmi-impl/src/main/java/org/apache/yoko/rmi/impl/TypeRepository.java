@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,8 +54,6 @@ import org.apache.yoko.rmi.impl.TypeDescriptor.SimpleKey;
 
 public class TypeRepository {
     static final Logger logger = Logger.getLogger(TypeRepository.class.getName());
-
-    org.omg.CORBA.ORB orb;
 
     private static final class TypeDescriptorCache {
         private final ConcurrentMap<WeakKey<FullKey>, WeakReference<TypeDescriptor>> map =
@@ -249,8 +248,7 @@ public class TypeRepository {
         return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(types)));
     }
 
-    public TypeRepository(org.omg.CORBA.ORB orb) {
-        this.orb = orb;
+    private TypeRepository() {
         repIdDescriptors = new TypeDescriptorCache();
         localDescriptors = new LocalDescriptors(this, repIdDescriptors);
 
@@ -259,8 +257,22 @@ public class TypeRepository {
         }
     }
 
-    org.omg.CORBA.ORB getORB() {
-        return orb;
+    private static final AtomicReference<WeakReference<TypeRepository>> singletonWeakRef = new AtomicReference<>();
+    public static TypeRepository get() {
+        TypeRepository repo = null;
+        WeakReference<TypeRepository> weakRef = singletonWeakRef.get();
+        if (null != weakRef) {
+            repo = weakRef.get();
+            if (null != repo) return repo;
+        }
+        final TypeRepository newRepo = new TypeRepository();
+        final WeakReference<TypeRepository> newRef = new WeakReference<>(newRepo);
+        while(!!!singletonWeakRef.compareAndSet(weakRef, newRef)) {
+            weakRef = singletonWeakRef.get();
+            repo = weakRef.get();
+            if (null != repo) return repo;
+        }
+        return newRepo;
     }
 
     public String getRepositoryID(Class<?> type) {

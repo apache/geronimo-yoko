@@ -39,7 +39,7 @@ public abstract class RMIStub extends javax.rmi.CORBA.Stub {
         Class remote_interface = getClass().getInterfaces()[0];
 
         RMIState state = (RMIState) PortableRemoteObjectExt.getState();
-        Object o = state.getTypeRepository().getRemoteInterface(
+        Object o = state.repo.getRemoteInterface(
                 remote_interface);
 
         _descriptor = (RemoteDescriptor) o;

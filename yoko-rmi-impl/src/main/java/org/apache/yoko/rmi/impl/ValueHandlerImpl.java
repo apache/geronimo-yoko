@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.lang.ref.WeakReference;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -33,30 +35,43 @@ public class ValueHandlerImpl implements ValueHandler {
     static final Logger logger = Logger.getLogger(ValueHandlerImpl.class
             .getName());
 
-    TypeRepository repository;
+    private final TypeRepository repo;
 
     RunTimeCodeBaseImpl codeBase;
 
-    private TypeRepository getRepository() {
-        return RMIState.current().getTypeRepository(); // repository;
+    private ValueHandlerImpl() {
+        this.repo = TypeRepository.get();
     }
 
-    ValueHandlerImpl(TypeRepository rep) {
-        this.repository = rep;
+    private static final AtomicReference<WeakReference<ValueHandlerImpl>> singletonWeakRef = new AtomicReference<>();
+    public static ValueHandlerImpl get() {
+        ValueHandlerImpl vh = null;
+        WeakReference<ValueHandlerImpl> weakRef = singletonWeakRef.get();
+        if (null != weakRef) {
+            vh = weakRef.get();
+            if (null != vh) return vh;
+        }
+        final ValueHandlerImpl newVh = new ValueHandlerImpl();
+        final WeakReference<ValueHandlerImpl> newRef = new WeakReference<>(newVh);
+        while(!!!singletonWeakRef.compareAndSet(weakRef, newRef)) {
+            weakRef = singletonWeakRef.get();
+            vh = weakRef.get();
+            if (null != vh) return vh;
+        }
+        return newVh;
     }
 
     private ValueDescriptor desc(Class clz) {
-        return (ValueDescriptor) getRepository().getDescriptor(clz);
+        return (ValueDescriptor) repo.getDescriptor(clz);
     }
 
     private ValueDescriptor desc(String repId) {
-        return (ValueDescriptor)getRepository().getDescriptor(repId);
+        return (ValueDescriptor) repo.getDescriptor(repId);
     }
 
     private ValueDescriptor desc(Class clz, String repid, RunTime runtime) {
         try {
-            return (ValueDescriptor) getRepository().getDescriptor(clz, repid,
-                    runtime);
+            return repo.getDescriptor(clz, repid, runtime);
         } catch (ClassNotFoundException ex) {
             MARSHAL m = new MARSHAL("class not found " + ex.getMessage());
             m.initCause(ex);
@@ -127,7 +142,7 @@ public class ValueHandlerImpl implements ValueHandler {
     }
 
     public java.lang.String getRMIRepositoryID(java.lang.Class clz) {
-        return getRepository().getDescriptor(clz).getRepositoryID();
+        return repo.getDescriptor(clz).getRepositoryID();
     }
 
     @Override
@@ -331,7 +346,7 @@ public class ValueHandlerImpl implements ValueHandler {
     }
 
     private void addIfRMIClass(java.util.List list, Class clz) {
-        TypeDescriptor desc = getRepository().getDescriptor(clz);
+        TypeDescriptor desc = repo.getDescriptor(clz);
 
         if (desc instanceof RemoteDescriptor)
             list.add(desc);

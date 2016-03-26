@@ -45,7 +45,7 @@ public class StubBuilder {
         Set pending = new HashSet();
         ArrayList result = new ArrayList();
 
-        TypeRepository rep = new TypeRepository(null);
+        TypeRepository rep = TypeRepository.get();
         Iterator it = interfaces.iterator();
         while (it.hasNext()) {
             Class cl = (Class) it.next();
