@@ -18,16 +18,15 @@
 package org.apache.yoko.rmi.impl;
 
 import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.ValueMember;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.ValueMember;
 
 /**
  * @author krab
  */
 class FVDValueDescriptor extends ValueDescriptor {
-    FullValueDescription fvd;
-
-    String repid;
+    final FullValueDescription fvd;
+    final String repid;
 
     FVDValueDescriptor(FullValueDescription fvd, Class clazz,
             TypeRepository rep, String repid, ValueDescriptor super_desc) {
@@ -61,10 +60,10 @@ class FVDValueDescriptor extends ValueDescriptor {
         _fields = new_fields;
     }
 
-    FieldDescriptor findField(ValueMember valueMember) {
+    private FieldDescriptor findField(ValueMember valueMember) {
         FieldDescriptor result = null;
 
-        for (Class c = _java_class; c != null; c = c.getSuperclass()) {
+        for (Class c = type; c != null; c = c.getSuperclass()) {
             TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
                 ValueDescriptor vd = (ValueDescriptor) td;
@@ -90,26 +89,18 @@ class FVDValueDescriptor extends ValueDescriptor {
         return repid;
     }
 
+    @Override
     org.omg.CORBA.ValueDefPackage.FullValueDescription getFullValueDescription() {
         return fvd;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#getTypeCode()
-     */
-    public TypeCode getTypeCode() {
+    @Override
+    protected final TypeCode genTypeCode() {
         return fvd.type;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#isCustomMarshalled()
-     */
+    @Override
     public boolean isCustomMarshalled() {
         return fvd.is_custom;
     }
-
 }

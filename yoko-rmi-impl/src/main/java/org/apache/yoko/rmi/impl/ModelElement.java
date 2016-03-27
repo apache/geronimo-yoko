@@ -21,26 +21,18 @@ package org.apache.yoko.rmi.impl;
 abstract class ModelElement {
     final TypeRepository repo;
     final String java_name;    // the java name of the type
-    private String idl_name;   // fully resolved package name
-    private volatile boolean notInit = true;
-
     protected ModelElement(TypeRepository repo, String java_name) {
         this.repo = repo;
         this.java_name = java_name;
     }
 
     protected void init() {
-        idl_name = genIDLName();
-        notInit = false;
     }
 
+    private volatile String idlName = null;   // fully resolved package name
     protected abstract String genIDLName();
-
-    final void checkInit() {
-        if (notInit) throw new IllegalStateException("Not initialized: " + java_name);
-    }
-    public String getIDLName() {
-        checkInit();
-        return idl_name;
+    public final String getIDLName() {
+        if (null == idlName) idlName = genIDLName();
+        return idlName;
     }
 }

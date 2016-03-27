@@ -34,17 +34,8 @@ import org.omg.CORBA.MARSHAL;
 class ClassDescriptor extends ClassBaseDescriptor {
     private static final Logger logger = Logger.getLogger(ClassDescriptor.class.getName());
 
-    private Field repid_field;
-    private Field codebase_field;
-
     ClassDescriptor(TypeRepository repository) {
         super(Class.class, repository);
-    }
-
-    @Override
-    void init(Field repid_field, Field codebase_field) {
-        this.repid_field = repid_field;
-        this.codebase_field = codebase_field;
     }
 
     @Override
@@ -66,10 +57,10 @@ class ClassDescriptor extends ClassBaseDescriptor {
 
                             ValueHandler handler = Util.createValueHandler();
                             String repId = handler.getRMIRepositoryID(type);
-                            repid_field.set(desc, repId);
+                            getRepidField().set(desc, repId);
 
                             String codebase = Util.getCodebase(type);
-                            codebase_field.set(desc, codebase);
+                            getCobebaseField().set(desc, codebase);
 
                             return desc;
 
@@ -84,5 +75,4 @@ class ClassDescriptor extends ClassBaseDescriptor {
 
         return result;
     }
-
 }

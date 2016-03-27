@@ -46,7 +46,7 @@ class FVDEnumDescriptor extends EnumDescriptor {
     }
 
     @Override
-    TypeCode getTypeCode() {
+    protected TypeCode genTypeCode() {
         return fvd.type;
     }
 

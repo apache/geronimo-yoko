@@ -18,46 +18,51 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+
 abstract class SimpleDescriptor extends TypeDescriptor {
     private final String idl_name;
-    SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
-            org.omg.CORBA.TCKind tc) {
+    private final TCKind tc;
+    SimpleDescriptor(Class type, TypeRepository repository, String idl_name, TCKind tc) {
         super(type, repository);
         this.idl_name = idl_name;
-
-        org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
-        _type_code = orb.get_primitive_tc(tc);
+        this.tc = tc;
     }
 
     @Override
-    protected String genIDLName() {
+    protected final String genIDLName() {
         return idl_name;
     }
 
     @Override
-    protected String genPackageName() {
+    protected final String genPackageName() {
         return "";
     }
 
     @Override
-    protected String genTypeName() {
+    protected final String genTypeName() {
         return idl_name;
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        return _type_code;
+    @Override
+    protected final TypeCode genTypeCode() {
+        return ORB.init().get_primitive_tc(tc);
     }
 
+    @Override
     boolean copyInStub() {
         return false;
     }
 
+    @Override
     public boolean copyBetweenStates() {
         return false;
     }
 
+    @Override
     public boolean copyWithinState() {
         return false;
     }
-
 }

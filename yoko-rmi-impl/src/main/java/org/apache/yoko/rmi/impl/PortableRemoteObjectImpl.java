@@ -298,8 +298,8 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             return cons;
         }
 
-        TypeRepository repository = state.getTypeRepository();
-        RemoteDescriptor desc = (RemoteDescriptor) repository.getRemoteDescriptor(type);
+        TypeRepository repository = state.repo;
+        RemoteDescriptor desc = (RemoteDescriptor) repository.getRemoteInterface(type);
 
         MethodDescriptor[] mdesc = desc.getMethods();
         MethodDescriptor[] descriptors = new MethodDescriptor[mdesc.length + 1];

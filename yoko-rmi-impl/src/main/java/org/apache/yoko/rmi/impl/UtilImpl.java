@@ -467,8 +467,7 @@ public class UtilImpl implements UtilDelegate {
     }
 
     public ValueHandler createValueHandler() {
-        return RMIState.current().createValueHandler();
-        // return new ValueHandlerImpl (null);
+        return ValueHandlerImpl.get();
     }
 
     public String getCodebase(@SuppressWarnings("rawtypes") Class clz) {
@@ -715,7 +714,7 @@ public class UtilImpl implements UtilDelegate {
     static Object copyRMIStub(RMIStub stub) throws RemoteException {
         ClassLoader loader = getContextClassLoader();
 
-        if (getClassLoader(stub._descriptor._java_class) == loader) {
+        if (getClassLoader(stub._descriptor.type) == loader) {
             return stub;
         }
 
@@ -724,7 +723,7 @@ public class UtilImpl implements UtilDelegate {
         Class<?> targetClass;
 
         try {
-            targetClass = Util.loadClass(desc._java_class.getName(), stub
+            targetClass = Util.loadClass(desc.type.getName(), stub
                     ._get_codebase(), loader);
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINER, "copyRMIStub exception (current loader is: " + loader
@@ -775,7 +774,7 @@ public class UtilImpl implements UtilDelegate {
          * mapSystemException (ex); }
          */
         try {
-            TypeRepository rep = RMIState.current().getTypeRepository();
+            TypeRepository rep = RMIState.current().repo;
             CopyState state = new CopyState(rep);
             return state.copy(obj);
         } catch (CopyRecursionException ex) {
@@ -806,7 +805,7 @@ public class UtilImpl implements UtilDelegate {
 
         try {
 
-            TypeRepository rep = RMIState.current().getTypeRepository();
+            TypeRepository rep = RMIState.current().repo;
             CopyState state = new CopyState(rep);
             try {
                 return (Object[]) state.copy(objs);

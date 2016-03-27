@@ -42,7 +42,7 @@ public class RMIStubHandler implements StubHandler, java.io.Serializable {
     static final RMIStubHandler instance = new RMIStubHandler();
 
     public Object stubWriteReplace(RMIStub stub) {
-        Class type = stub._descriptor._java_class;
+        Class type = stub._descriptor.type;
     return new org.apache.yoko.rmi.impl.RMIPersistentStub(stub, type);
     }
     

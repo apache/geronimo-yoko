@@ -43,5 +43,4 @@ class DateValueDescriptor extends ValueDescriptor {
         state.put(orig, result);
         return result;
     }
-
 }
