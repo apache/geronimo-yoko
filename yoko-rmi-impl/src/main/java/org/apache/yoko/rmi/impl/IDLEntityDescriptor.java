@@ -56,7 +56,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
 
     private volatile Method readMethod = null;
     private Method getReadMethod() {
-        if (null == readMethod) readMethod = genHelperMethod("write");
+        if (null == readMethod) readMethod = genHelperMethod("read");
         return readMethod;
     }
 
