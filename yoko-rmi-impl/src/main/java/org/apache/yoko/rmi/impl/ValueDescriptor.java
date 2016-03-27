@@ -839,21 +839,21 @@ class ValueDescriptor extends TypeDescriptor {
     @Override
     protected TypeCode genTypeCode() {
         ORB orb = ORB.init();
-        TypeCode typeCode = orb.create_recursive_tc(getRepositoryID());
+        setTypeCode(orb.create_recursive_tc(getRepositoryID()));
 
         TypeCode _base = ((_super_descriptor == null) ? null : _super_descriptor.getTypeCode());
 
-        Class javaClass = type;
-        if (javaClass.isArray()) {
-            TypeDescriptor desc = repo.getDescriptor(javaClass.getComponentType());
-            typeCode = desc.getTypeCode();
-            typeCode = orb.create_sequence_tc(0, typeCode);
-            typeCode = orb.create_value_box_tc(getRepositoryID(), "Sequence", typeCode);
+        TypeCode tc;
+        if (type.isArray()) {
+            TypeDescriptor desc = repo.getDescriptor(type.getComponentType());
+            tc = desc.getTypeCode();
+            tc = orb.create_sequence_tc(0, tc);
+            tc = orb.create_value_box_tc(getRepositoryID(), "Sequence", tc);
         } else {
-            typeCode = orb.create_value_tc(getRepositoryID(), javaClass.getSimpleName(), VM_NONE.value, _base, getValueMembers());
+            tc = orb.create_value_tc(getRepositoryID(), type.getSimpleName(), VM_NONE.value, _base, getValueMembers());
         }
 
-        return typeCode;
+        return tc;
     }
 
     private static final OperationDescription[] ZERO_OPERATIONS = {};

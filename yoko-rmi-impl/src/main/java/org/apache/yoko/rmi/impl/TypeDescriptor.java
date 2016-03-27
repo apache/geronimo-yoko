@@ -206,13 +206,20 @@ abstract class TypeDescriptor extends ModelElement {
         return 0L;
     }
 
-    protected TypeCode _type_code = null;
+    @Override
+    protected void init() {
+        typeCode = genTypeCode();
+    }
 
     private volatile TypeCode typeCode = null;
     protected abstract TypeCode genTypeCode();
     final TypeCode getTypeCode() {
+        // typeCode should have already been set from within init(), so this is just defensive
         if (null == typeCode) typeCode = genTypeCode();
         return typeCode;
+    }
+    protected final void setTypeCode(TypeCode tc) {
+        typeCode = tc;
     }
 
     Object copyObject(Object value, CopyState state) {

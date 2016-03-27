@@ -18,17 +18,17 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCode;
 
 abstract class SimpleDescriptor extends TypeDescriptor {
     private final String idl_name;
-    SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
-            org.omg.CORBA.TCKind tc) {
+    private final TCKind tc;
+    SimpleDescriptor(Class type, TypeRepository repository, String idl_name, TCKind tc) {
         super(type, repository);
         this.idl_name = idl_name;
-
-        org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
-        _type_code = orb.get_primitive_tc(tc);
+        this.tc = tc;
     }
 
     @Override
@@ -48,7 +48,7 @@ abstract class SimpleDescriptor extends TypeDescriptor {
 
     @Override
     protected final TypeCode genTypeCode() {
-        return _type_code;
+        return ORB.init().get_primitive_tc(tc);
     }
 
     @Override
