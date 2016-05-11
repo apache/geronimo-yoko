@@ -55,7 +55,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      * @param provider The loader used to resolve the provider class.
      */
     public void registerProvider(BundleProviderLoader provider) {
-        log(Level.FINE, "registering provider " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "registering provider " + provider);
         providers.register(provider);
     }
 
@@ -65,7 +66,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      * @param provider The provider registration instance
      */
     public void unregisterProvider(BundleProviderLoader provider) {
-        log(Level.FINE, "unregistering provider " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "unregistering provider " + provider);
         providers.unregister(provider);
     }
 
@@ -76,7 +78,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      * @param provider The loader used to resolve the provider class.
      */
     public void registerService(BundleProviderLoader provider) {
-        log(Level.FINE, "registering service " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "registering service " + provider);
         serviceProviders.register(provider);
     }
 
@@ -86,7 +89,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      * @param provider The provider registration instance
      */
     public void unregisterService(BundleProviderLoader provider) {
-        log(Level.FINE, "unregistering service " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "unregistering service " + provider);
         serviceProviders.unregister(provider);
     }
 
@@ -242,10 +246,6 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
         return null;
     }
 
-    private void log(Level level, String message) {
-        log.log(level, message);
-    }
-
     /**
      * Holder class for information about a given collection of
      * id to provider mappings.  Used for both the providers and
@@ -298,7 +298,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
         private synchronized BundleProviderLoader getLoader(String id) {
             // synchronize on the registry instance
             if (registry != null) {
-                log.fine("registry: " + registry);
+                if (log.isLoggable(Level.FINE))
+                    log.fine("registry: " + registry);
                 // return the first match, if any
                 List<BundleProviderLoader> list = registry.get(id);
                 if (list != null && !list.isEmpty()) {
