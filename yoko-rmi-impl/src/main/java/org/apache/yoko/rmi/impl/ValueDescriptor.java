@@ -821,19 +821,20 @@ class ValueDescriptor extends TypeDescriptor {
         return _hash_code;
     }
 
-    protected ValueMember[] _value_members = null;
-
-    private ValueMember[] getValueMembers() {
-        getTypeCode(); // ensure recursion through typecode for non-array types
-
-        if (_value_members == null) {
-            _value_members = new ValueMember[_fields.length];
-            for (int i = 0; i < _fields.length; i++) {
-                _value_members[i] = _fields[i].getValueMember(repo);
-            }
+    private volatile ValueMember[] valueMembers = null;
+    protected ValueMember[] genValueMembers() {
+        final ValueMember[] members = new ValueMember[_fields.length];
+        for (int i = 0; i < _fields.length; i++) {
+            members[i] = _fields[i].getValueMember(repo);
         }
 
-        return _value_members;
+        return members;
+    }
+    final ValueMember[] getValueMembers() {
+        getTypeCode(); // ensure recursion through typecode for non-array types
+
+        if (null == valueMembers) valueMembers = genValueMembers();
+        return valueMembers;
     }
 
     @Override
