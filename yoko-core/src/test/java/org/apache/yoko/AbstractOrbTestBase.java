@@ -97,9 +97,6 @@ public class AbstractOrbTestBase extends TestCase {
         server.launch();
         Future<Void> serverFuture = server.invokeMainAsync(serverClass, serverArgs);
         waitForFile();
-        // TODO: Need to find a better way, this slows down testing unneccesarily,
-        // and is somewhat non-robust.
-        Thread.sleep(1000);
         client.invokeMain(clientClass, clientArgs);
         try {
             serverFuture.get(2, SECONDS);

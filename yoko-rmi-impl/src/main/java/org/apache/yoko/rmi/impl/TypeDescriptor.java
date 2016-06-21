@@ -208,14 +208,17 @@ abstract class TypeDescriptor extends ModelElement {
 
     @Override
     protected void init() {
-        typeCode = genTypeCode();
+        getTypeCode();
     }
 
     private volatile TypeCode typeCode = null;
     protected abstract TypeCode genTypeCode();
     final TypeCode getTypeCode() {
-        // typeCode should have already been set from within init(), so this is just defensive
-        if (null == typeCode) typeCode = genTypeCode();
+        if (null == typeCode) {
+            synchronized (repo) {
+                if (null == typeCode) typeCode = genTypeCode();
+            }
+        }
         return typeCode;
     }
     protected final void setTypeCode(TypeCode tc) {

@@ -459,6 +459,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
     // ------------------------------------------------------------------
 
     private Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper xhelper, Codec codec) {
+        if ((null == helper) && (null == xhelper)) throw new IllegalArgumentException("Both connection helpers must not be null");
         ior_ = ior;
         policies_ = policies;
         keepAlive_ = keepAlive;
@@ -474,8 +475,8 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
         this(ior, policies, host, port, keepAlive, cb, lm, helper, null, codec);
     }
 
-    public Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper helper, Codec codec) {
-        this(ior, policies, host, port, keepAlive, cb, lm, null, helper, codec);
+    public Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper xhelper, Codec codec) {
+        this(ior, policies, host, port, keepAlive, cb, lm, null, xhelper, codec);
     }
 
     public void finalize() throws Throwable {

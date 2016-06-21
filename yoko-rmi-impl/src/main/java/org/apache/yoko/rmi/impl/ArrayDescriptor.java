@@ -185,27 +185,20 @@ abstract class ArrayDescriptor extends ValueDescriptor {
         _out.write_value((Serializable)value, getRepositoryID());
     }
 
-    ValueMember[] getValueMembers() {
+    @Override
+    protected final ValueMember[] genValueMembers() {
+        final ValueMember[] members = new ValueMember[1];
+        final TypeDescriptor elemDesc = repo.getDescriptor(elementType);
+        final String elemRepID = elemDesc.getRepositoryID();
 
-        if (_value_members == null) {
+        final ORB orb = ORB.init();
+        TypeCode memberTC = orb.create_sequence_tc(0, elemDesc.getTypeCode());
 
-            _value_members = new ValueMember[1];
-
-            TypeDescriptor elemDesc = repo.getDescriptor(elementType);
-
-            String elemRepID = elemDesc.getRepositoryID();
-
-            ORB orb = ORB.init();
-            TypeCode memberTC = orb.create_sequence_tc(0, elemDesc
-                    .getTypeCode());
-
-            _value_members[0] = new ValueMember("", // member has no name!
+        members[0] = new ValueMember("", // member has no name!
                     elemRepID, this.getRepositoryID(), "1.0", memberTC, null,
                     (short) 1);
-            // public
-        }
 
-        return _value_members;
+        return members;
     }
 
     @Override

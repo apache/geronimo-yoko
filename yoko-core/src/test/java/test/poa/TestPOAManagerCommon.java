@@ -23,45 +23,55 @@ import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 
+import java.util.concurrent.CountDownLatch;
+
 final class TestPOAManagerCommon extends test.common.TestBase {
     final static class TestHoldingState extends Thread {
         private Test test_;
 
-        private int state_;
+        private final CountDownLatch startLatch = new CountDownLatch(1);
+        public volatile Result result = null;
 
-        final static int NONE = 0;
-
-        final static int CALL_STARTED = 1;
-
-        final static int CALL_FAILURE = 2;
-
-        final static int CALL_SUCCESS = 3;
-
-        private synchronized void setState(int val) {
-            state_ = val;
-        }
+        public enum Result { SUCCESS, FAILURE, ERROR };
 
         TestHoldingState(Test test) {
             test_ = test;
-            state_ = NONE;
         }
 
         public void run() {
-            setState(CALL_STARTED);
+            startLatch.countDown();
             try {
                 test_.aMethod();
+                result = Result.SUCCESS;
             } catch (TRANSIENT ex) {
-                setState(CALL_FAILURE);
+                result = Result.FAILURE;
                 return;
             } catch (SystemException ex) {
+                result = Result.ERROR;
                 System.err.println("Unexpected: " + ex);
                 ex.printStackTrace();
             }
-            setState(CALL_SUCCESS);
         }
 
-        synchronized int callState() {
-            return state_;
+        public void waitForStart() {
+            do {
+                try {
+                    startLatch.await();
+                    return;
+                } catch (InterruptedException e) {
+                }
+            } while (true);
+        }
+
+
+
+        public void waitForEnd() {
+            while (isAlive()) {
+                try {
+                    join();
+                } catch (java.lang.InterruptedException e) {
+                }
+            }
         }
     }
 
@@ -142,33 +152,16 @@ final class TestPOAManagerCommon extends test.common.TestBase {
 
             TestHoldingState t = new TestHoldingState(info[i].obj);
             t.start();
-
-            //
-            // Wait for the call to start
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-                // Ignore
-            }
-
-            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
+            t.waitForStart();
 
             try {
                 manager.activate();
             } catch (test.poa.POAManagerProxyPackage.AdapterInactive ex) {
                 assertTrue(false);
             }
+            t.waitForEnd();
+            assertTrue(t.result == TestHoldingState.Result.SUCCESS);
 
-            //
-            // Wait for the call to complete
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-            }
-
-            assertTrue(t.callState() == TestHoldingState.CALL_SUCCESS);
 
             //
             // Test discard_requests when holding.
@@ -182,18 +175,7 @@ final class TestPOAManagerCommon extends test.common.TestBase {
 
             t = new TestHoldingState(info[i].obj);
             t.start();
-
-            //
-            // Wait for the call to start
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-                // Ignore
-            }
-
-            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
-
+            t.waitForStart();
             try {
                 manager.discard_requests(false);
                 assertTrue(manager.get_state() == test.poa.POAManagerProxyPackage.State.DISCARDING);
@@ -208,16 +190,11 @@ final class TestPOAManagerCommon extends test.common.TestBase {
                 // Expected
             }
 
-            while (t.isAlive()) {
-                try {
-                    t.join();
-                } catch (java.lang.InterruptedException e) {
-                }
-            }
+            t.waitForEnd();
             //
             // Queued call should have been discarded.
             //
-            assertTrue(t.callState() == TestHoldingState.CALL_FAILURE);
+            assertTrue(t.result == TestHoldingState.Result.FAILURE);
 
             //
             // Test hold_requests when discarding.
@@ -231,17 +208,7 @@ final class TestPOAManagerCommon extends test.common.TestBase {
 
             t = new TestHoldingState(info[i].obj);
             t.start();
-
-            //
-            // Wait for the call to start
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-                // Ignore
-            }
-
-            assertTrue(t.callState() == TestHoldingState.CALL_STARTED);
+            t.waitForStart();
 
             try {
                 manager.activate();
@@ -249,15 +216,8 @@ final class TestPOAManagerCommon extends test.common.TestBase {
                 assertTrue(false);
             }
 
-            //
-            // Wait for the call to complete
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-            }
-
-            assertTrue(t.callState() == TestHoldingState.CALL_SUCCESS);
+            t.waitForEnd();
+            assertTrue(t.result == TestHoldingState.Result.SUCCESS);
 
             //
             // Try deactivate with wait completion == true,
