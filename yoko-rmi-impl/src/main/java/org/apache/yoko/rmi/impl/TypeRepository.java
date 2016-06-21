@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -257,22 +256,13 @@ public class TypeRepository {
         }
     }
 
-    private static final AtomicReference<WeakReference<TypeRepository>> singletonWeakRef = new AtomicReference<>();
+    private static enum RepoHolder {
+        ;
+        static final TypeRepository value = new TypeRepository();
+    }
+
     public static TypeRepository get() {
-        TypeRepository repo = null;
-        WeakReference<TypeRepository> weakRef = singletonWeakRef.get();
-        if (null != weakRef) {
-            repo = weakRef.get();
-            if (null != repo) return repo;
-        }
-        final TypeRepository newRepo = new TypeRepository();
-        final WeakReference<TypeRepository> newRef = new WeakReference<>(newRepo);
-        while(!!!singletonWeakRef.compareAndSet(weakRef, newRef)) {
-            weakRef = singletonWeakRef.get();
-            repo = weakRef.get();
-            if (null != repo) return repo;
-        }
-        return newRepo;
+        return RepoHolder.value;
     }
 
     public String getRepositoryID(Class<?> type) {
