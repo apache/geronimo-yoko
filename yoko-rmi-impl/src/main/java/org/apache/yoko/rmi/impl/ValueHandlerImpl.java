@@ -18,8 +18,6 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.lang.ref.WeakReference;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,22 +41,13 @@ public class ValueHandlerImpl implements ValueHandler {
         this.repo = TypeRepository.get();
     }
 
-    private static final AtomicReference<WeakReference<ValueHandlerImpl>> singletonWeakRef = new AtomicReference<>();
+    private static enum HandlerHolder {
+        ;
+        static final ValueHandlerImpl value = new ValueHandlerImpl();
+    }
+
     public static ValueHandlerImpl get() {
-        ValueHandlerImpl vh = null;
-        WeakReference<ValueHandlerImpl> weakRef = singletonWeakRef.get();
-        if (null != weakRef) {
-            vh = weakRef.get();
-            if (null != vh) return vh;
-        }
-        final ValueHandlerImpl newVh = new ValueHandlerImpl();
-        final WeakReference<ValueHandlerImpl> newRef = new WeakReference<>(newVh);
-        while(!!!singletonWeakRef.compareAndSet(weakRef, newRef)) {
-            weakRef = singletonWeakRef.get();
-            vh = weakRef.get();
-            if (null != vh) return vh;
-        }
-        return newVh;
+        return HandlerHolder.value;
     }
 
     private ValueDescriptor desc(Class clz) {
