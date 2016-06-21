@@ -831,9 +831,12 @@ class ValueDescriptor extends TypeDescriptor {
         return members;
     }
     final ValueMember[] getValueMembers() {
-        getTypeCode(); // ensure recursion through typecode for non-array types
-
-        if (null == valueMembers) valueMembers = genValueMembers();
+        getTypeCode(); // ensure recursion through typecode
+        if (null == valueMembers) {
+            synchronized (repo) {
+                if (null == valueMembers) valueMembers = genValueMembers();
+            }
+        }
         return valueMembers;
     }
 
