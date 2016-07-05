@@ -98,11 +98,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         result.append("iiop_version: " + (int) body.iiop_version.major + '.'
                 + (int) body.iiop_version.minor + '\n');
         result.append("host: " + body.host + '\n');
-        int port;
-        if (body.port < 0)
-            port = 0xffff + (int) body.port + 1;
-        else
-            port = body.port;
+        final int port = ((char)body.port);
         result.append("port: " + port + '\n');
         result.append("object_key: (" + body.object_key.length + ")\n");
         IORUtil.dump_octets(body.object_key, 0, body.object_key.length, result);
@@ -111,9 +107,9 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         // Print IIOP 1.1 information (components)
         //
         if (body.iiop_version.major > 1 || body.iiop_version.minor >= 1) {
-            int l = in.read_ulong();
+            final int tcCount = in.read_ulong();
 
-            for (int i = 0; i < l; i++) {
+            for (int i = 0; i < tcCount; i++) {
                 TaggedComponent component = TaggedComponentHelper.read(in);
 
                 IORUtil.describe_component(component, result);
@@ -160,7 +156,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             //
             // Create new connector for this profile
             //
-            final int port = ((body.port < 0) ? (0xffff + (int) body.port + 1) : body.port);
+            final int port = ((char)body.port);
             ConnectCB[] cbs = info_._OB_getConnectCBSeq();
             logger.fine("Creating connector to host=" + body.host +", port=" + port);
             Codec codec = null;
@@ -181,10 +177,10 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                 //
                 // Unmarshal the tagged components
                 //
-                int len = in.read_ulong();
-                TaggedComponent[] components = new TaggedComponent[len];
-                for (int c = 0; c < len; c++)
-                    components[c] = TaggedComponentHelper.read(in);
+                final int tcCount = in.read_ulong();
+                List<TaggedComponent> components = new ArrayList<>(tcCount);
+                for (int c = 0; c < tcCount; c++)
+                    components.add(TaggedComponentHelper.read(in));
 
                 //
                 // Check for TAG_ALTERNATE_IIOP_ADDRESS
@@ -196,7 +192,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                         cin._OB_readEndian();
                         final String host = cin.read_string();
                         final short s = cin.read_ushort();
-                        final int cport = ((s < 0) ? (0xffff + (int) s + 1) : s);
+                        final int cport = ((char)s);
 
                         //
                         // Create new connector for this component
