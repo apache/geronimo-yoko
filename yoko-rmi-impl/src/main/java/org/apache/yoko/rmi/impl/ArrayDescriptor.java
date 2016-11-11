@@ -154,10 +154,10 @@ abstract class ArrayDescriptor extends ValueDescriptor {
         if (Serializable.class.equals(elemType) ||
                 Externalizable.class.equals(elemType) || Object.class.equals(elemType)) {
             return new ObjectArrayDescriptor(type, elemType, rep);
-        } else if (Remote.class.isAssignableFrom(elemType)) {
-            return new RemoteArrayDescriptor(type, elemType, rep);
         } else if (Serializable.class.isAssignableFrom(elemType)) {
             return new ValueArrayDescriptor(type, elemType, rep);
+        } else if (Remote.class.isAssignableFrom(elemType)) {
+            return new RemoteArrayDescriptor(type, elemType, rep);
         } else {
             return new AbstractObjectArrayDescriptor(type, elemType, rep);
         }

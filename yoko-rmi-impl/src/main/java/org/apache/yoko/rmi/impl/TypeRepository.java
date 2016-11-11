@@ -123,15 +123,14 @@ public class TypeRepository {
                     return ((enumType == type) ? new EnumSubclassDescriptor(type, repo) : get(enumType));
                 } else if (type.isArray()) {
                     return ArrayDescriptor.get(type, repo);
+                } else if ((!!!type.isInterface()) && Serializable.class.isAssignableFrom(type)) {
+                    return new ValueDescriptor(type, repo);
                 } else if (Remote.class.isAssignableFrom(type)) {
                     if (type.isInterface()) {
                         return new RemoteInterfaceDescriptor(type, repo);
                     } else {
                         return new RemoteClassDescriptor(type, repo);
                     }
-                } else if (!type.isInterface()
-                && Serializable.class.isAssignableFrom(type)) {
-                    return new ValueDescriptor(type, repo);
                 } else if (Object.class.isAssignableFrom(type)) {
                     if (isAbstractInterface(type)) {
                         logger.finer("encoding " + type + " as abstract interface");

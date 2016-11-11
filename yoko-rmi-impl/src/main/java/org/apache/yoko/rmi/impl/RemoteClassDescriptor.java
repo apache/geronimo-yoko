@@ -31,13 +31,6 @@ final class RemoteClassDescriptor extends RemoteDescriptor {
 
     @Override
     protected RemoteInterfaceDescriptor genRemoteInterface() {
-        Class[] remotes = collect_remote_interfaces(type);
-        if (remotes.length == 0) {
-            throw new RuntimeException(type.getName()
-                    + " has no remote interfaces");
-        }
-        Class most_specific_interface = remotes[0];
-
-        return repo.getDescriptor(most_specific_interface).getRemoteInterface();
+        return RemoteDescriptor.genMostSpecificRemoteInterface(type, repo);
     }
 }
