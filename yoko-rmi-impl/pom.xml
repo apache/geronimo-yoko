@@ -70,6 +70,17 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-Xmx128m -Djava.endorsed.dirs=${project.build.directory}/endorsed</argLine>
+                    <includes>
+                        <include>**/org/apache/yoko/*Test.java</include>
+                    </includes>
+                </configuration>
+            </plugin>
+
+            <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
