@@ -113,6 +113,12 @@ class ValueDescriptor extends TypeDescriptor {
     protected boolean isEnum() { return false; }
 
     @Override
+    protected final RemoteInterfaceDescriptor genRemoteInterface() {
+        if (!!!java.rmi.Remote.class.isAssignableFrom(type)) return super.genRemoteInterface();
+        return RemoteDescriptor.genMostSpecificRemoteInterface(type, repo);
+    }
+
+    @Override
     protected String genRepId() {
         return String.format("RMI:%s:%016X:%016X", StringUtil.convertToValidIDLNames(type.getName()),
                 _hash_code, getSerialVersionUID());

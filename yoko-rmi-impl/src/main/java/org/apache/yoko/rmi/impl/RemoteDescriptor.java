@@ -23,14 +23,11 @@ import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.InputStream;
 import org.omg.CORBA.portable.OutputStream;
 
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -39,6 +36,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.logging.Level;
 
@@ -58,28 +56,24 @@ abstract class RemoteDescriptor extends TypeDescriptor {
     @Override
     protected abstract RemoteInterfaceDescriptor genRemoteInterface();
 
-    static final Class REMOTE_CLASS = Remote.class;
+    private static final Class REMOTE_CLASS = Remote.class;
 
-    static final Class OBJECT_CLASS = java.lang.Object.class;
+    private static final Class OBJECT_CLASS = java.lang.Object.class;
 
-    static final java.lang.Class REMOTE_EXCEPTION = java.rmi.RemoteException.class;
+    private static final java.lang.Class REMOTE_EXCEPTION = java.rmi.RemoteException.class;
 
-    String[] _ids;
-
-    public String[] all_interfaces() {
-        if (_ids == null) {
-            Class[] ifaces = collect_remote_interfaces(type);
-            int len = ifaces.length;
-            String[] ids = new String[len];
-            for (int i = 0; i < len; i++) {
-                TypeDescriptor desc = repo.getDescriptor(ifaces[i]);
-                ids[i] = desc.getRepositoryID();
-            }
-
-            _ids = ids;
+    private volatile String[] ids;
+    private String[] genIds() {
+        final SortedSet<Class<?>> allRemoteInterfaces = genAllRemoteInterfaces(type);
+        final List<String> ids = new ArrayList(allRemoteInterfaces.size());
+        for (Class<?> i: allRemoteInterfaces) {
+            ids.add(repo.getDescriptor(i).getRepositoryID());
         }
-
-        return _ids;
+        return ids.toArray(new String[ids.size()]);
+    }
+    public String[] all_interfaces() {
+        if (ids == null) ids = genIds();
+        return ids;
     }
 
     public MethodDescriptor getMethod(String idl_name) {
@@ -324,59 +318,41 @@ abstract class RemoteDescriptor extends TypeDescriptor {
         entry.add(mname);
     }
 
-    private void collect_interfaces(Set s, Class c) {
-        if (c.isInterface() && !REMOTE_CLASS.equals(c))
-            s.add(c);
-
-        Class sup = c.getSuperclass();
-        if (sup != null && !OBJECT_CLASS.equals(sup)) {
-            collect_interfaces(s, sup);
+    static RemoteInterfaceDescriptor genMostSpecificRemoteInterface(Class type, TypeRepository repo) {
+        final SortedSet<Class<?>> remoteInterfaces = genAllRemoteInterfaces(type);
+        if (remoteInterfaces.isEmpty()) {
+            throw new RuntimeException(type.getName() + " has no remote interfaces");
         }
+        //first remoteInterface is the most specific
+        return repo.getDescriptor(remoteInterfaces.first()).getRemoteInterface();
+    }
 
-        Class[] supers = c.getInterfaces();
+    private enum InterfaceComparator implements Comparator<Class<?>> {
+        INSTANCE;
 
-        for (int i = 0; i < supers.length; i++) {
-            Class iface = supers[i];
-
-            if (!REMOTE_CLASS.equals(iface)
-                    && REMOTE_CLASS.isAssignableFrom(iface)) {
-                collect_interfaces(s, iface);
-            }
+        public int compare(Class<?> c1, Class<?> c2) {
+            if (c1.equals(c2)) return 0;
+            if (c1.isAssignableFrom(c2)) return 1;
+            if (c2.isAssignableFrom(c1)) return -1;
+            //classes are unrelated, so sort on class name
+            return c1.getName().compareTo(c2.getName());
         }
     }
 
-    protected Class[] collect_remote_interfaces(Class c) {
-        if (remote_interfaces != null)
-            return remote_interfaces;
+    private static SortedSet<Class<?>> genAllRemoteInterfaces(Class<?> type) {
+        final SortedSet<Class<?>> remoteInterfaces = new TreeSet(InterfaceComparator.INSTANCE);
+        addRemoteInterfacesToSet(type, remoteInterfaces);
+        return remoteInterfaces;
+    }
 
-        Set s = new TreeSet(new Comparator() {
-            public int compare(Object o1, Object o2) {
-                Class c1 = (Class) o1;
-                Class c2 = (Class) o2;
-
-                if (c1.equals(c2))
-                    return 0;
-
-                if (c1.isAssignableFrom(c2)) {
-                    // c2 is more specific (so it should come first)
-
-                    return 1;
-                } else if (c2.isAssignableFrom(c1)) {
-                    // c1 is more specific (so it should come first)
-
-                    return -1;
-                } else // they are unrelated
-                {
-                    // just define some consistent order...
-                    return c1.getName().compareTo(c2.getName());
-                }
-            }
-        });
-
-        collect_interfaces(s, c);
-        remote_interfaces = new Class[s.size()];
-        s.toArray(remote_interfaces);
-        return remote_interfaces;
+    private static void addRemoteInterfacesToSet(Class<?> type, Set<Class<?>> interfaces) {
+        if (REMOTE_CLASS.equals(type)) return;
+        if (type.isInterface()) interfaces.add(type);
+        Class<?> parent = type.getSuperclass();
+        if ((parent != null) && !OBJECT_CLASS.equals(parent)) addRemoteInterfacesToSet(parent, interfaces);
+        for (Class<?> i: type.getInterfaces()) {
+            if (REMOTE_CLASS.isAssignableFrom(i)) addRemoteInterfacesToSet(i, interfaces);
+        }
     }
 
     /** Read an instance of this value from a CDR stream */
