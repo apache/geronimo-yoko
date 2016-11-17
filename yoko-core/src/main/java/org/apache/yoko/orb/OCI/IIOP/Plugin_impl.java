@@ -17,8 +17,20 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.apache.yoko.orb.OB.CorbalocURLScheme;
+import org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists;
+import org.apache.yoko.orb.OB.URLRegistry;
+import org.apache.yoko.orb.OB.URLRegistryHelper;
+import org.apache.yoko.orb.OB.URLScheme;
+import org.apache.yoko.orb.OCI.AccFactoryRegistry;
+import org.apache.yoko.orb.OCI.AccFactoryRegistryHelper;
+import org.apache.yoko.orb.OCI.ConFactoryRegistry;
+import org.apache.yoko.orb.OCI.ConFactoryRegistryHelper;
+import org.apache.yoko.orb.OCI.FactoryAlreadyExists;
 import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+
+import static org.apache.yoko.orb.OB.Assert.*;
 
 public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Plugin {
@@ -59,55 +71,42 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         // Install the ConFactory
         //
         try {
-            org.omg.CORBA.Object obj = orb_
-                    .resolve_initial_references("OCIConFactoryRegistry");
-            org.apache.yoko.orb.OCI.ConFactoryRegistry registry = org.apache.yoko.orb.OCI.ConFactoryRegistryHelper
-                    .narrow(obj);
+            ConFactoryRegistry registry = ConFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIConFactoryRegistry"));
             if (connectionHelper_ != null) {
                 registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper_));
             } else {
                 registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, extendedConnectionHelper_));                
             }
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.apache.yoko.orb.OCI.FactoryAlreadyExists ex) {
-            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already "
-                    + "installed");
+        } catch (InvalidName ex) {
+            _OB_assert(ex);
+        } catch (FactoryAlreadyExists ex) {
+            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
         }
 
         //
         // Install the "iiop" corbaloc URL protocol
         //
         try {
-            org.omg.CORBA.Object obj = orb_
-                    .resolve_initial_references("URLRegistry");
-            org.apache.yoko.orb.OB.URLRegistry registry = org.apache.yoko.orb.OB.URLRegistryHelper
-                    .narrow(obj);
-            org.apache.yoko.orb.OB.URLScheme scheme = registry
-                    .find_scheme("corbaloc");
-            org.apache.yoko.orb.OB.Assert._OB_assert(scheme != null);
-            org.apache.yoko.orb.OB.CorbalocURLScheme corbaloc = org.apache.yoko.orb.OB.CorbalocURLSchemeHelper
-                    .narrow(scheme);
+            URLRegistry registry = URLRegistryHelper.narrow(orb_.resolve_initial_references("URLRegistry"));
+            URLScheme scheme = registry.find_scheme("corbaloc");
+            _OB_assert(scheme != null);
+            CorbalocURLScheme corbaloc = org.apache.yoko.orb.OB.CorbalocURLSchemeHelper.narrow(scheme);
             corbaloc.add_protocol(new CorbalocProtocol_impl());
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InvalidName ex) {
+            _OB_assert(ex);
+        } catch (ProtocolAlreadyExists ex) {
+            _OB_assert(ex);
         }
     }
 
     public void init_server(String[] params) {
         try {
-            org.omg.CORBA.Object obj = orb_
-                    .resolve_initial_references("OCIAccFactoryRegistry");
-            org.apache.yoko.orb.OCI.AccFactoryRegistry registry = org.apache.yoko.orb.OCI.AccFactoryRegistryHelper
-                    .narrow(obj);
+            AccFactoryRegistry registry = AccFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIAccFactoryRegistry"));
             registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper_, extendedConnectionHelper_));
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.apache.yoko.orb.OCI.FactoryAlreadyExists ex) {
-            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already "
-                    + "installed");
+        } catch (InvalidName ex) {
+            _OB_assert(ex);
+        } catch (FactoryAlreadyExists ex) {
+            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
         }
     }
 

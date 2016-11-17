@@ -23,39 +23,33 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.ServerSocket;
-
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
+import org.omg.IOP.TaggedComponent;
 
-//
-// IDL:orb.yoko.apache.org/OCI/IIOP/AcceptorInfo:1.0
-//
-/**
- *
- * Information on an IIOP OCI Acceptor object.
- *
- * @see Acceptor
- * @see AcceptorInfo
- *
- **/
+import java.io.IOException;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public interface ExtendedConnectionHelper
 {
-    public void init(ORB orb, String parms);
+    void init(ORB orb, String parms);
 
-    public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException;
+    Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException;
 
-    public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException;
+    Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException;
 
-    public ServerSocket createServerSocket(int port, int backlog, String[] params)  throws IOException, ConnectException;
+    ServerSocket createServerSocket(int port, int backlog, String[] params)  throws IOException, ConnectException;
 
-    public ServerSocket createServerSocket(int port, int backlog, InetAddress address, String[] params) throws IOException, ConnectException;
+    ServerSocket createServerSocket(int port, int backlog, InetAddress address, String[] params) throws IOException, ConnectException;
 
+    /** The component tags this helper knows about, e.g. TAG_CSI_SEC_MECH_LIST */
+    int[] tags();
+
+    /** The ports  */
+    int[] getPorts(TaggedComponent tc);
 }
 

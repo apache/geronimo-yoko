@@ -17,11 +17,6 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.IORDump;
@@ -32,6 +27,7 @@ import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
+import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
 import org.omg.IIOP.ProfileBody_1_0;
@@ -48,23 +44,33 @@ import org.omg.IOP.TaggedComponent;
 import org.omg.IOP.TaggedComponentHelper;
 import org.omg.IOP.TaggedProfile;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.ConFactory {
     // the real logger backing instance.  We use the interface class as the locator
     static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.ConFactory.class.getName());
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
 
-    private boolean keepAlive_; // The keepalive flag
+    private final boolean keepAlive_; // The keepalive flag
     
-    private org.omg.CORBA.ORB orb_; // The ORB
+    private final ORB orb_; // The ORB
 
-    private ConFactoryInfo_impl info_; // ConFactory info
+    private final ConFactoryInfo_impl info_; // ConFactory info
 
-    private ListenerMap listenMap_;
+    private final ListenerMap listenMap_;
 
-    private ConnectionHelper connectionHelper_;  // plugin for making ssl transport decisions.
+    private final ConnectionHelper connectionHelper_;  // plugin for making ssl transport decisions.
 
-    private ExtendedConnectionHelper extendedConnectionHelper_;
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
+
+    private final Set<Integer> helperComponentTags;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -173,39 +179,51 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             // If this is a 1.1 profile, check for
             // TAG_ALTERNATE_IIOP_ADDRESS in the components
             //
-            if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
-                //
-                // Unmarshal the tagged components
-                //
-                final int tcCount = in.read_ulong();
-                List<TaggedComponent> components = new ArrayList<>(tcCount);
-                for (int c = 0; c < tcCount; c++)
-                    components.add(TaggedComponentHelper.read(in));
+            if (body.iiop_version.major == 1 && body.iiop_version.minor == 0)
+                continue;
+            //
+            // Unmarshal the tagged components
+            //
+            final int tcCount = in.read_ulong();
+            TaggedComponent[] components = new TaggedComponent[tcCount];
+            for (int c = 0; c < tcCount; c++)
+                components[c] = TaggedComponentHelper.read(in);
 
-                //
-                // Check for TAG_ALTERNATE_IIOP_ADDRESS
-                //
-                for (TaggedComponent tc: components) {
-                    if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                        final Buffer cbuf = new Buffer(tc.component_data, tc.component_data.length);
-                        final InputStream cin = new InputStream(cbuf, 0, false);
-                        cin._OB_readEndian();
-                        final String host = cin.read_string();
-                        final short s = cin.read_ushort();
-                        final int cport = ((char)s);
+            //
+            // Check for tag components - yoko deals with TAG_ALTERNATE_IIOP_ADDRESS
+            // and the extendedConnectionHelper can express an interest in any other tagged component
+            // (e.g. the TAG_CSI_SEC_MECH_LIST)
+            //
+            final ConnectCB[] ccbs = info_._OB_getConnectCBSeq();
+            for (TaggedComponent tc: components) {
+                if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
+                    final Buffer cbuf = new Buffer(tc.component_data, tc.component_data.length);
+                    final InputStream cin = new InputStream(cbuf, 0, false);
+                    cin._OB_readEndian();
+                    final String host = cin.read_string();
+                    final short s = cin.read_ushort();
+                    final int cport = ((char)s);
 
-                        //
-                        // Create new connector for this component
-                        //
-                        ConnectCB[] ccbs = info_._OB_getConnectCBSeq();
-                        logger.fine("Creating alternate connector to host=" + host + ", port=" + cport);
-                        connectors.add(createConnector(ior, policies, host, cport, ccbs, codec));
+                    if (logger.isLoggable(Level.FINE)) logger.fine("Creating alternate connector to host=" + host + ", port=" + cport);
+                    Connector newConnector = createConnector(ior, policies, host, cport, ccbs, codec);
+                    connectors.add(newConnector);
+                } else if (helperComponentTags.contains(tc.tag)) {
+                    for (int hport : extendedConnectionHelper_.getPorts(tc)) {
+                        // do not cast or mask the integer port since the extra bits may contain discriminators
+                        String hhost = body.host;
+                        if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + hhost + ", port=" + portInfo(hport));
+                        Connector newConnector = createConnector(ior, policies, hhost, hport, ccbs, codec);
+                        connectors.add(newConnector);
                     }
                 }
             }
         }
-
         return connectors.toArray(EMPTY_CONNECTORS);
+    }
+
+    private static String portInfo(int port) {
+        // calculate both the hex string and the shortest number
+        return String.format("%8x (%d)", port, (char) port);
     }
 
     private Connector createConnector(IOR ior, Policy[] policies, String host, int port, ConnectCB[] cbs, Codec codec) {
@@ -231,26 +249,33 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public ConFactory_impl(org.omg.CORBA.ORB orb, boolean keepAlive, ListenerMap lm, ConnectionHelper helper) {
+    public ConFactory_impl(ORB orb, boolean keepAlive, ListenerMap lm, ConnectionHelper helper) {
         // System.out.println("ConFactory");
         orb_ = orb;
         keepAlive_ = keepAlive;
         info_ = new ConFactoryInfo_impl();
         listenMap_ = lm;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = null;
+        helperComponentTags = Collections.emptySet();
     }
 
-    public ConFactory_impl(org.omg.CORBA.ORB orb, boolean keepAlive, ListenerMap lm, ExtendedConnectionHelper helper) {
+    public ConFactory_impl(ORB orb, boolean keepAlive, ListenerMap lm, ExtendedConnectionHelper helper) {
         // System.out.println("ConFactory");
         orb_ = orb;
         keepAlive_ = keepAlive;
         info_ = new ConFactoryInfo_impl();
         listenMap_ = lm;
+        connectionHelper_ = null;
         extendedConnectionHelper_ = helper;
+        helperComponentTags = asSet(helper.tags());
     }
 
-    public void finalize() throws Throwable {
-        // System.out.println("~ConFactory");
-        super.finalize();
+    private static Set<Integer> asSet(int...elems) {
+        if (elems == null || elems.length == 0)
+            return Collections.emptySet();
+        final Set<Integer> set = new HashSet<>();
+        for (int elem : elems) set.add(elem);
+        return Collections.unmodifiableSet(set);
     }
 }
