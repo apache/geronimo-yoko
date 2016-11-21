@@ -460,4 +460,26 @@ final public class Util {
 
         return hash % (maximum + 1);
     }
+
+    static public String encodeHost(String host, String protocol, String info) {
+        return "_" + protocol + "[" + info + "]." + host;
+    }
+
+    static public boolean isEncodedHost(String host, String protocol) {
+        return host != null & host.startsWith("_" + protocol);
+    }
+
+    static public String decodeHost(String host) {
+        if (host == null) return null;
+        int index = host.lastIndexOf("].");
+        return index < 0 ? host : host.substring(index + 2);
+    }
+
+    static public String decodeHostInfo(String host) {
+        if (host == null) return null;
+        int start = host.indexOf('[');
+        int end = host.lastIndexOf("].");
+        if (start < 0 || end < 0 || end <= start) return null;
+        return host.substring(start + 1, end);
+    }
 }

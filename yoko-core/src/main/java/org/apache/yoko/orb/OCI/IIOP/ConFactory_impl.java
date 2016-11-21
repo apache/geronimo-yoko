@@ -30,6 +30,7 @@ import org.apache.yoko.orb.OCI.Connector;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
+import org.omg.CSIIOP.TransportAddress;
 import org.omg.IIOP.ProfileBody_1_0;
 import org.omg.IIOP.ProfileBody_1_0Helper;
 import org.omg.IOP.Codec;
@@ -208,22 +209,15 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                     Connector newConnector = createConnector(ior, policies, host, cport, ccbs, codec);
                     connectors.add(newConnector);
                 } else if (helperComponentTags.contains(tc.tag)) {
-                    for (int hport : extendedConnectionHelper_.getPorts(tc)) {
-                        // do not cast or mask the integer port since the extra bits may contain discriminators
-                        String hhost = body.host;
-                        if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + hhost + ", port=" + portInfo(hport));
-                        Connector newConnector = createConnector(ior, policies, hhost, hport, ccbs, codec);
+                    for (TransportAddress endpoint : extendedConnectionHelper_.getEndpoints(tc, policies)) {
+                        if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + endpoint.host_name + ", port=" + endpoint.port);
+                        Connector newConnector = createConnector(ior, policies, endpoint.host_name, endpoint.port, ccbs, codec);
                         connectors.add(newConnector);
                     }
                 }
             }
         }
         return connectors.toArray(EMPTY_CONNECTORS);
-    }
-
-    private static String portInfo(int port) {
-        // calculate both the hex string and the shortest number
-        return String.format("%8x (%d)", port, (char) port);
     }
 
     private Connector createConnector(IOR ior, Policy[] policies, String host, int port, ConnectCB[] cbs, Codec codec) {
