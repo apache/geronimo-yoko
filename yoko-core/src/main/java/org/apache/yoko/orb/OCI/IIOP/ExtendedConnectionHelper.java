@@ -37,7 +37,12 @@ public interface ExtendedConnectionHelper
 {
     void init(ORB orb, String parms);
 
-    Socket createSocket(String address, int port) throws IOException;
+    /**
+     * The host may be encoded as described in {@link #getEndpoints(TaggedComponent, Policy[])}.
+     * Implementors should use and {@link Util#isEncodedHost(String, String)}, {@link Util#decodeHost(String)},
+     * and {@link Util#decodeHostInfo(String)} to retrieve the encoded information.
+     */
+    Socket createSocket(String host, int port) throws IOException;
 
     Socket createSelfConnection(InetAddress address, int port) throws IOException;
 
@@ -50,8 +55,8 @@ public interface ExtendedConnectionHelper
 
     /**
      * The policy-compliant endpoints from the specified tagged component.
-     * Note that the address in the endpoints may encode additional information if it begins with an underscore.
-     * Use {@link Util#}
+     * Note that the host strings in the endpoints may encode additional information.
+     * Implementors should use {@link Util#encodeHost(String, String, String)} to encode the information.
      */
     TransportAddress[] getEndpoints(TaggedComponent tc, Policy[] policies);
 }
