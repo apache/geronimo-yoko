@@ -17,12 +17,7 @@
 
 package org.apache.yoko.orb.OB;
  
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
+import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
@@ -63,6 +58,13 @@ import org.omg.Messaging.PolicyValue;
 import org.omg.Messaging.PolicyValueSeqHelper;
 import org.omg.Messaging.PolicyValueSeqHolder;
 import org.omg.Messaging.ReplyHandler;
+
+import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 //
 // DowncallStub is equivalent to the C++ class OB::MarshalStubImpl
@@ -105,7 +107,7 @@ public final class DowncallStub {
     // Private and protected member implementations
     // ------------------------------------------------------------------
 
-    private synchronized Client getClientProfilePair(org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo)
+    private synchronized Client getClientProfilePair(ProfileInfoHolder profileInfo)
             throws FailureException {
         //
         // Lazy initialization of the client/profile pairs
@@ -128,7 +130,7 @@ public final class DowncallStub {
                 logger.fine("retry: no profiles available");
             }
 
-            throw new FailureException(new TRANSIENT(org.apache.yoko.orb.OB.MinorCodes.describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR), org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR, CompletionStatus.COMPLETED_NO));
+            throw new FailureException(new TRANSIENT(describeTransient(MinorCodes.MinorNoUsableProfileInIOR), MinorCodes.MinorNoUsableProfileInIOR, CompletionStatus.COMPLETED_NO));
         }
 
         ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_.elementAt(0);
@@ -185,7 +187,7 @@ public final class DowncallStub {
     //
     public Downcall createDowncall(String op, boolean resp)
             throws FailureException {
-        org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
@@ -202,7 +204,7 @@ public final class DowncallStub {
     }
 
     public Downcall createLocateRequestDowncall() throws FailureException {
-        org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
@@ -213,7 +215,7 @@ public final class DowncallStub {
     }
 
     public Downcall createPIArgsDowncall(String op, boolean resp, ParameterDesc[] argDesc, ParameterDesc retDesc, TypeCode[] exceptionTC) throws FailureException {
-        org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
@@ -229,7 +231,7 @@ public final class DowncallStub {
     }
 
     public Downcall createPIDIIDowncall(String op, boolean resp, NVList args, NamedValue result, ExceptionList exceptions) throws FailureException {
-        org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
@@ -349,8 +351,8 @@ public final class DowncallStub {
         if (clientManager == null)
             throw new BAD_INV_ORDER(
                     MinorCodes.describeBadInvOrder(
-                            org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled,
+                            MinorCodes.MinorShutdownCalled),
+                            MinorCodes.MinorShutdownCalled,
                             CompletionStatus.COMPLETED_NO);
 
         for (ClientProfilePair pair : clientProfilePairs_) {
@@ -396,7 +398,7 @@ public final class DowncallStub {
     public boolean locate_request() throws LocationForward, FailureException {
         logger.fine("performing a locate_request"); 
         while (true) {
-            org.apache.yoko.orb.OB.Downcall down = createLocateRequestDowncall();
+            Downcall down = createLocateRequestDowncall();
 
             try {
                 try {
@@ -446,7 +448,7 @@ public final class DowncallStub {
 
     public org.apache.yoko.orb.OCI.ConnectorInfo get_oci_connector_info() {
         try {
-            org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+            ProfileInfoHolder profileInfo = new ProfileInfoHolder();
             org.apache.yoko.orb.OB.Client client = getClientProfilePair(profileInfo);
             org.apache.yoko.orb.OB.Assert._OB_assert(client != null);
             return client.connectorInfo();
@@ -458,7 +460,7 @@ public final class DowncallStub {
 
     public org.apache.yoko.orb.OCI.TransportInfo get_oci_transport_info() {
         try {
-            org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+            ProfileInfoHolder profileInfo = new ProfileInfoHolder();
             org.apache.yoko.orb.OB.Client client = getClientProfilePair(profileInfo);
             org.apache.yoko.orb.OB.Assert._OB_assert(client != null);
             return client.transportInfo();
@@ -474,7 +476,7 @@ public final class DowncallStub {
     public org.apache.yoko.orb.CORBA.OutputStream setupRequest(
             org.omg.CORBA.Object self, String operation, boolean responseExpected) throws LocationForward, FailureException {
         while (true) {
-            org.apache.yoko.orb.OB.Downcall downcall = createDowncall(
+            Downcall downcall = createDowncall(
                     operation, responseExpected);
 
             try {
@@ -511,7 +513,7 @@ public final class DowncallStub {
         //
         // Obtain information regarding our target
         //
-        org.apache.yoko.orb.OCI.ProfileInfoHolder info = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder info = new ProfileInfoHolder();
         Client client = getClientProfilePair(info);
 
         out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client.codeConverters(), GIOP1_2);
@@ -540,7 +542,7 @@ public final class DowncallStub {
     public GIOPOutgoingMessage AMIRouterPreMarshal(String operation,
             boolean responseExpected,
             org.apache.yoko.orb.CORBA.OutputStreamHolder out,
-            org.apache.yoko.orb.OCI.ProfileInfoHolder info)
+            ProfileInfoHolder info)
             throws FailureException {
         //
         // Create buffer to contain our marshalable data
@@ -718,7 +720,7 @@ public final class DowncallStub {
         //
         // Obtain information regarding our target
         //
-        org.apache.yoko.orb.OCI.ProfileInfoHolder info = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
+        ProfileInfoHolder info = new ProfileInfoHolder();
         info.value = null;
         try {
             getClientProfilePair(info);

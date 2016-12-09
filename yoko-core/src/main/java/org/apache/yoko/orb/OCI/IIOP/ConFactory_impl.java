@@ -161,21 +161,31 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
             //
-            // Create new connector for this profile
+            // Retrieve CodecFactory via ORB initial refs
             //
-            final int port = ((char)body.port);
-            ConnectCB[] cbs = info_._OB_getConnectCBSeq();
-            logger.fine("Creating connector to host=" + body.host +", port=" + port);
             Codec codec = null;
             try {
-                    codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+                codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
             } catch (InvalidName e) {
                 logger.fine("Could not obtain codec factory using name 'CodecFactory'");
             } catch (UnknownEncoding e) {
                 logger.fine("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
             }
-            connectors.add(createConnector(ior, policies, body.host, port, cbs, codec));
 
+            if (body.port == 0) {
+                //
+                // If the port is zero, this profile does not support unsecured connections.
+                // so leave it to the helper to provide the transport addresses for the endpoints
+                //
+            } else {
+                //
+                // Create new connector for this profile
+                //
+                final int port = ((char)body.port);
+                logger.fine("Creating connector to host=" + body.host + ", port=" + port);
+                ConnectCB[] cbs = info_._OB_getConnectCBSeq();
+                connectors.add(createConnector(ior, policies, body.host, port, cbs, codec));
+            }
             //
             // If this is a 1.1 profile, check for
             // TAG_ALTERNATE_IIOP_ADDRESS in the components

@@ -105,4 +105,9 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
 
     @Override
     public int hashCode() {return 31*port + getInetAddress().hashCode();}
+
+    @Override
+    public String toString() {
+        return "[" + host + ":" + port + "]";
+    }
 }

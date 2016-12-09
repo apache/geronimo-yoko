@@ -39,7 +39,7 @@ public interface ExtendedConnectionHelper
 
     /**
      * The host may be encoded as described in {@link #getEndpoints(TaggedComponent, Policy[])}.
-     * Implementors should use and {@link Util#isEncodedHost(String, String)}, {@link Util#decodeHost(String)},
+     * Implementors should use and {@link Util#isEncodedHost(String)}, {@link Util#decodeHost(String)},
      * and {@link Util#decodeHostInfo(String)} to retrieve the encoded information.
      */
     Socket createSocket(String host, int port) throws IOException;
@@ -50,14 +50,26 @@ public interface ExtendedConnectionHelper
 
     ServerSocket createServerSocket(int port, int backlog, InetAddress address, String[] params) throws IOException;
 
-    /** The component tags this helper knows about, e.g. TAG_CSI_SEC_MECH_LIST */
+    /**
+     * The component tags this helper knows about, e.g. TAG_CSI_SEC_MECH_LIST.
+     *
+     * @return an array of known tags, possibly empty but not null
+     */
     int[] tags();
 
     /**
      * The policy-compliant endpoints from the specified tagged component.
+     * <br>
      * Note that the host strings in the endpoints may encode additional information.
      * Implementors should use {@link Util#encodeHost(String, String, String)} to encode the information.
+     *
+     * @param taggedComponent the tagged component to examine for endpoints:
+     *                        note that <code>taggedComponent.tag</code> must be in <code>this.tags()</code>
+     *
+     * @param policies the policies against which to filter the possible endpoints
+     *
+     * @return a possibly empty but non-null array of endpoints
      */
-    TransportAddress[] getEndpoints(TaggedComponent tc, Policy[] policies);
+    TransportAddress[] getEndpoints(TaggedComponent taggedComponent, Policy[] policies);
 }
 

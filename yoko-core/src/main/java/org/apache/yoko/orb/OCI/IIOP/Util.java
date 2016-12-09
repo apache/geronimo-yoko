@@ -465,6 +465,10 @@ final public class Util {
         return "_" + protocol + "[" + info + "]." + host;
     }
 
+    static public boolean isEncodedHost(String host) {
+        return host != null & host.startsWith("_");
+    }
+
     static public boolean isEncodedHost(String host, String protocol) {
         return host != null & host.startsWith("_" + protocol);
     }
