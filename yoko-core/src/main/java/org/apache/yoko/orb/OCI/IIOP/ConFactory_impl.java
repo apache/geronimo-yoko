@@ -159,6 +159,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             final InputStream in = new InputStream(buf, 0, false);
             in._OB_readEndian();
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
+            boolean recordPortZero = false;
 
             //
             // Retrieve CodecFactory via ORB initial refs
@@ -173,10 +174,11 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             }
 
             if (body.port == 0) {
-                //
                 // If the port is zero, this profile does not support unsecured connections.
-                // so leave it to the helper to provide the transport addresses for the endpoints
-                //
+                // if the helper provides the transport addresses for the endpoints, we won't create a connector
+                // but if it does not provide the transport addresses, we will create the zero port connector
+                // so that the helper gets a chance to handle the zero port later
+                recordPortZero = true;
             } else {
                 //
                 // Create new connector for this profile
@@ -223,8 +225,19 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                         if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + endpoint.host_name + ", port=" + endpoint.port);
                         Connector newConnector = createConnector(ior, policies, endpoint.host_name, endpoint.port, ccbs, codec);
                         connectors.add(newConnector);
+                        recordPortZero = false;
                     }
                 }
+            }
+
+            // if there was a port value of zero in the profile and the helper did not provide alternate addresses
+            // to connect to (i.e. CSIv2 ones) then we create the zero port connector to give the helper a second chance
+            // to handle it
+            if (recordPortZero) {
+                logger.fine("Creating connector with port=0 to host=" + body.host);
+                ConnectCB[] cbs = info_._OB_getConnectCBSeq();
+                connectors.add(createConnector(ior, policies, body.host, 0, cbs, codec));
+
             }
         }
         return connectors.toArray(EMPTY_CONNECTORS);
