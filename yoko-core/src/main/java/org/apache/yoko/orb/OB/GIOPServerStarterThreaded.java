@@ -65,6 +65,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             // Close the acceptor
             //
             acceptor_.close();
+            orbInstance_.getServerPhaser().arriveAndDeregister();
 
         }
     }
@@ -174,7 +175,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
     // Run method for starter thread
     //
-    public void starterRun() {
+    private void starterRun() {
         while (true) {
             //
             // Get new transport, blocking
@@ -247,7 +248,6 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
 
                 if (state_ == StateClosed) {
                     logger.fine("Shutting down server thread"); 
-                    orbInstance_.getServerPhaser().arrive();
                     break;
                 }
             }

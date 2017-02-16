@@ -244,9 +244,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
 
     private void arrive() {
         if ((properties_ & Property.CreatedByClient) != 0)
-            orbInstance_.getClientPhaser().arrive();
+            orbInstance_.getClientPhaser().arriveAndDeregister();
         else
-            orbInstance_.getServerPhaser().arrive();
+            orbInstance_.getServerPhaser().arriveAndDeregister();
     }
 
     // ----------------------------------------------------------------
