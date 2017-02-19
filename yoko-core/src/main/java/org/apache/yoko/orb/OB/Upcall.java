@@ -17,11 +17,25 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.DispatchRequest;
-import org.apache.yoko.orb.OB.DispatchStrategy;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.portable.UnknownException;
+import org.omg.IOP.ExceptionDetailMessage;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.UnknownExceptionInfo;
 
 public class Upcall {
     static final Logger logger = Logger.getLogger(Upcall.class.getName());
@@ -76,7 +90,7 @@ public class Upcall {
     // The reply service context list
     // (Must be a Vector because it can be modified by interceptors)
     //
-    protected java.util.Vector replySCL_ = new java.util.Vector();
+    protected Vector<ServiceContext> replySCL_ = new Vector<>();
 
     //
     // The dispatch request
@@ -188,8 +202,7 @@ public class Upcall {
                 offset);
         buf.pos(offset);
         out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
-                ._OB_codeConverters(), (profileInfo_.major << 8)
-                | profileInfo_.minor);
+                ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
     }
 
     public org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
@@ -294,8 +307,23 @@ public class Upcall {
         // OutputStream to make the skeleton happy and avoid a crash.
         //
         if (upcallReturn_ != null) {
-            if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
-                initServiceContexts();
+            addUnsentConnectionServiceContexts();
+            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+                    .size()];
+            replySCL_.copyInto(scl);
+            upcallReturn_.upcallBeginReply(this, scl);
+        } else {
+            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
+                    ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+        }
+        out_._OB_ORBInstance(this.orbInstance());
+        return out_;
+    }
+
+    private void addUnsentConnectionServiceContexts() {
+        if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
+            initServiceContexts();
 //                CoreTraceLevels coreTraceLevels = orbInstance_
 //                        .getCoreTraceLevels();
 //                if (coreTraceLevels.traceConnections() >= 2) {
@@ -323,21 +351,9 @@ public class Upcall {
 //                Assert._OB_assert(codeSetSC_ != null);
 //                replySCL_.add(codeSetSC_);
 
-                Assert._OB_assert(codeBaseSC_ != null);
-                replySCL_.add(codeBaseSC_);
-            }
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
-                    .size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallBeginReply(this, scl);
-        } else {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
-                    ._OB_codeConverters(), (profileInfo_.major << 8)
-                    | profileInfo_.minor);
+            Assert._OB_assert(codeBaseSC_ != null);
+            replySCL_.add(codeBaseSC_);
         }
-        out_._OB_ORBInstance(this.orbInstance());
-        return out_;
     }
 
     public void marshalEx(org.omg.CORBA.SystemException ex)
@@ -423,11 +439,32 @@ public class Upcall {
 
     public void setSystemException(org.omg.CORBA.SystemException ex) {
         if (upcallReturn_ != null) {
-            userEx_ = false; // Java only
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
-                    .size()];
+            addUnsentConnectionServiceContexts();
+            userEx_ = false;
+            if (ex instanceof UnknownException) {
+                // need to create service contexts for underlying exception
+                createUnknownExceptionServiceContexts((UnknownException)ex, replySCL_);
+            }
+            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallSystemException(this, ex, scl);
+        }
+    }
+
+    private static void createUnknownExceptionServiceContexts(UnknownException ex, Vector<ServiceContext> scl) {
+        final Throwable t = ex.originalEx;
+        try (CmsfOverride o = CmsfThreadLocal.override()) {
+            CodeConverters codeConverters = new CodeConverters();
+            codeConverters.outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
+            Buffer buf = new Buffer();
+            try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
+                os._OB_writeEndian();
+                os.write_value(t, Throwable.class);
+                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
+                scl.add(sc);
+            }
+        } catch (IOException e) {
+            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 

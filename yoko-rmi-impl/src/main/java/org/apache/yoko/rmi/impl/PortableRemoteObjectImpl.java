@@ -24,10 +24,13 @@ import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
 import javax.rmi.CORBA.PortableRemoteObjectDelegate;
+import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 
@@ -38,21 +41,18 @@ import org.apache.yoko.rmi.util.stub.StubClass;
 import org.apache.yoko.rmi.util.stub.StubInitializer;
 import org.apache.yoko.rmispec.util.UtilLoader;
 import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.portable.IDLEntity;
 import org.omg.CORBA.portable.ObjectImpl;
 
 
 public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
-    static final Logger logger = Logger
+    static final Logger LOGGER = Logger
             .getLogger(PortableRemoteObjectImpl.class.getName());
 
     static {
-        // Initialize the stub handler factory when first loaded to ensure we have 
-        // class loading visibility to the factory. 
-        getRMIStubInitializer(); 
-    }
-
-    private static TypeRepository getTypeRepository() {
-        return RMIState.current().getTypeRepository();
+        // Initialize the stub handler factory when first loaded to ensure we have
+        // class loading visibility to the factory.
+        getRMIStubInitializer();
     }
 
     static org.omg.CORBA.ORB getORB() {
@@ -80,15 +80,14 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
             try {
                 exportObject(target);
-            } catch (java.rmi.RemoteException ex) {
+            } catch (RemoteException ex) {
                 // ignore "already exported test" //
             }
 
             try {
                 obj = (ObjectImpl) toStub(target);
             } catch (java.rmi.NoSuchObjectException ex) {
-                throw (java.rmi.RemoteException)new 
-                    java.rmi.RemoteException("cannot convert to stub!").initCause(ex);
+                throw (RemoteException)new RemoteException("cannot convert to stub!").initCause(ex);
             }
         }
 
@@ -100,7 +99,77 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         }
     }
 
-    public Object narrow(Object narrowFrom, Class narrowTo)
+    private Object narrowRMI(ObjectImpl narrowFrom, Class<?> narrowTo) {
+        if (LOGGER.isLoggable(Level.FINE))
+            LOGGER.fine(String.format("RMI narrowing %s => %s", narrowFrom.getClass().getName(), narrowTo.getName()));
+        ObjectImpl object = narrowFrom;
+
+        final String codebase = getCodebase(narrowFrom);
+
+        RMIState state = RMIState.current();
+
+        javax.rmi.CORBA.Stub stub;
+        try {
+            stub = createStub(state, codebase, narrowTo);
+        } catch (ClassNotFoundException ex) {
+            throw (ClassCastException)new ClassCastException(narrowTo.getName()).initCause(ex);
+        }
+
+        org.omg.CORBA.portable.Delegate delegate;
+        try {
+            // let the stub adopt narrowFrom's identity
+            delegate = object._get_delegate();
+
+        } catch (org.omg.CORBA.BAD_OPERATION ex) {
+            // ignore
+            delegate = null;
+        }
+
+        stub._set_delegate(delegate);
+
+        return stub;
+    }
+
+    private String getCodebase(ObjectImpl narrowFrom) {
+        String codebase;
+        if (narrowFrom instanceof org.omg.CORBA_2_3.portable.ObjectImpl) {
+            org.omg.CORBA_2_3.portable.ObjectImpl object_2_3 = (org.omg.CORBA_2_3.portable.ObjectImpl) narrowFrom;
+
+            try {
+                codebase = object_2_3._get_codebase();
+            } catch (org.omg.CORBA.BAD_OPERATION ex) {
+                codebase = null;
+            }
+        } else {
+            codebase = null;
+        }
+        return codebase;
+    }
+
+    private Object narrowIDL(ObjectImpl narrowFrom, Class<?> narrowTo) {
+        if (LOGGER.isLoggable(Level.FINE))
+            LOGGER.fine(String.format("IDL narrowing %s => %s", narrowFrom.getClass().getName(), narrowTo.getName()));
+        final ClassLoader idlClassLoader = UtilImpl.getClassLoader(narrowTo);
+        final String codebase = getCodebase(narrowFrom);
+        final String helperClassName = narrowTo.getName() + "Helper";
+
+        try {
+            final Class<?> helperClass = Util.loadClass(helperClassName, codebase, idlClassLoader);
+            final Method helperNarrow = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
+                @Override
+                public Method run() throws Exception {
+                    return helperClass.getMethod("narrow", org.omg.CORBA.Object.class);
+                }
+            });
+            return helperNarrow.invoke(null, narrowFrom);
+        } catch (PrivilegedActionException e) {
+            throw (ClassCastException)new ClassCastException(narrowTo.getName()).initCause(e.getCause());
+        } catch (Exception e) {
+            throw (ClassCastException)new ClassCastException(narrowTo.getName()).initCause(e);
+        }
+    }
+
+    public Object narrow(Object narrowFrom, @SuppressWarnings("rawtypes") Class narrowTo)
             throws ClassCastException {
         if (narrowFrom == null)
             return null;
@@ -108,124 +177,37 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         if (narrowTo.isInstance(narrowFrom))
             return narrowFrom;
 
-        logger.finer("narrow " + narrowFrom.getClass().getName() + " => " + narrowTo.getName());
+        final String fromClassName = narrowFrom.getClass().getName();
+        final String toClassName = narrowTo.getName();
+        if (LOGGER.isLoggable(Level.FINE))
+            LOGGER.finer(String.format("narrow %s => %s", fromClassName, toClassName));
 
-        if (narrowFrom instanceof org.omg.CORBA.portable.ObjectImpl
-                && narrowTo.isInterface()
-                && java.rmi.Remote.class.isAssignableFrom(narrowTo)) {
-            org.omg.CORBA.portable.ObjectImpl object = (org.omg.CORBA.portable.ObjectImpl) narrowFrom;
+        if (!(narrowFrom instanceof org.omg.CORBA.portable.ObjectImpl))
+            throw new ClassCastException(String.format(
+                    "object to narrow (runtime type %s) is not an instance of %s",
+                    fromClassName, ObjectImpl.class.getName()));
+        if (!narrowTo.isInterface())
+            throw new ClassCastException(String.format("%s is not an interface", toClassName));
 
-            String id = getTypeRepository().getDescriptor(narrowTo)
-                    .getRepositoryID();
+        final boolean isRemote = Remote.class.isAssignableFrom(narrowTo);
+        final boolean isIDLEntity = IDLEntity.class.isAssignableFrom(narrowTo);
 
-            //
-            // actually call _is_a to verify runtime type
-            //
-            /*
-             * if (! object._is_a (id)) { throw new ClassCastException (id); }
-             */
-            //
-            // Get the codebase for this object, if possible...
-            //
-            String codebase = null;
-            if (narrowFrom instanceof org.omg.CORBA_2_3.portable.ObjectImpl) {
-                org.omg.CORBA_2_3.portable.ObjectImpl object_2_3 = (org.omg.CORBA_2_3.portable.ObjectImpl) narrowFrom;
+        if (isRemote && isIDLEntity)
+            throw new ClassCastException(String.format(
+                    "%s invalidly extends both %s and %s",
+                    toClassName, Remote.class.getName(), IDLEntity.class.getName()));
+        if (isRemote)
+            return narrowRMI((ObjectImpl) narrowFrom, narrowTo);
+        if (isIDLEntity)
+            return narrowIDL((ObjectImpl) narrowFrom, narrowTo);
 
-                try {
-                    codebase = object_2_3._get_codebase();
-                } catch (org.omg.CORBA.BAD_OPERATION ex) {
-                    codebase = null;
-                }
-            }
-
-            if (false) {
-                //
-                // use most specific class possible, so as to allow
-                // introspection
-                // of the available methods...
-                //
-                try {
-
-                    //
-                    // write object reference and read just the repository id
-                    //
-                    org.omg.CORBA.portable.OutputStream out = RMIState
-                            .current().getORB().create_output_stream();
-                    out.write_Object(object);
-                    org.omg.CORBA.portable.InputStream in = out
-                            .create_input_stream();
-                    String object_id = in.read_string();
-
-                    if (!object_id.equals(id) && object_id.startsWith("RMI:")) {
-
-                        String name = object_id.substring(4, object_id.indexOf(
-                                ':', 4));
-
-                        String baseName = RemoteDescriptor
-                                .classNameFromStub(name);
-                        if (baseName == null)
-                            baseName = name;
-
-                        //
-                        // Try loading the found type...
-                        //
-                        Class newNarrowTo = javax.rmi.CORBA.Util.loadClass(
-                                baseName, codebase, Thread.currentThread()
-                                        .getContextClassLoader());
-
-                        //
-                        // if the new narrow to is more specific, use it!
-                        //
-                        if (narrowTo.isAssignableFrom(newNarrowTo)) {
-                            narrowTo = newNarrowTo;
-
-                            logger.finer("NARROW " + object_id + " TO "
-                                    + narrowTo.getName());
-                        }
-                    }
-                } catch (ClassNotFoundException ex) {
-                    // ignore ..
-                } catch (org.omg.CORBA.SystemException ex) {
-                    // ignore
-                }
-            }
-
-            RMIState state = null;
-            if (narrowFrom instanceof RMIServant) {
-                state = ((RMIServant) narrowFrom).getRMIState();
-            } else {
-                state = RMIState.current();
-            }
-
-            javax.rmi.CORBA.Stub stub;
-            try {
-                stub = createStub(state, codebase, narrowTo);
-            } catch (ClassNotFoundException ex) {
-                throw (ClassCastException)new ClassCastException(narrowTo.getName()).initCause(ex);
-            }
-
-            org.omg.CORBA.portable.Delegate delegate;
-            try {
-                // let the stub adopt narrowFrom's identity
-                delegate = object._get_delegate();
-
-            } catch (org.omg.CORBA.BAD_OPERATION ex) {
-                // ignore
-                delegate = null;
-            }
-
-            stub._set_delegate(delegate);
-
-            return stub;
-        }
-
-        throw new ClassCastException(narrowTo.getName());
+        throw new ClassCastException(String.format(
+                    "%s extends neither %s nor %s",
+                    toClassName, Remote.class.getName(), IDLEntity.class.getName()));
     }
 
-    static java.rmi.Remote narrow1(RMIState state,
-            org.omg.CORBA.portable.ObjectImpl object, Class narrowTo)
-            throws ClassCastException {
-        javax.rmi.CORBA.Stub stub;
+    static java.rmi.Remote narrow1(RMIState state, ObjectImpl object, Class<?> narrowTo) throws ClassCastException {
+        Stub stub;
 
         try {
             stub = createStub(state, null, narrowTo);
@@ -248,14 +230,13 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         return (java.rmi.Remote) stub;
     }
 
-    static private javax.rmi.CORBA.Stub createStub(RMIState state,
-            String codebase, Class type) throws ClassNotFoundException {
-        if (java.rmi.Remote.class == type) {
+    static private Stub createStub(RMIState state, String codebase, Class<?> type) throws ClassNotFoundException {
+        if (Remote.class == type) {
             return new RMIRemoteStub();
         }
 
         if (ClientUtil.isRunningAsClientContainer()) {
-            javax.rmi.CORBA.Stub stub = state.getStaticStub(codebase, type);
+            Stub stub = state.getStaticStub(codebase, type);
             if (stub != null) {
                 return stub;
             }
@@ -266,25 +247,24 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
     static Object[] NO_ARG = new Object[0];
 
-    static javax.rmi.CORBA.Stub createRMIStub(RMIState state, Class type)
-            throws ClassNotFoundException {
+    static Stub createRMIStub(RMIState state, Class<?> type) throws ClassNotFoundException {
         if (!type.isInterface()) {
             throw new RuntimeException("non-interfaces not supported");
         }
-        
-        logger.fine("Creating RMI stub for class " + type.getName()); 
 
-        Constructor cons = getRMIStubClassConstructor(state, type);
+        LOGGER.fine("Creating RMI stub for class " + type.getName());
+
+        Constructor<? extends Stub> cons = getRMIStubClassConstructor(state, type);
 
         try {
-            javax.rmi.CORBA.Stub result = (javax.rmi.CORBA.Stub) cons.newInstance(NO_ARG);
+            Stub result = cons.newInstance(NO_ARG);
             return result;
         } catch (InstantiationException ex) {
             throw new RuntimeException(
                     "internal problem: cannot instantiate stub", ex);
         } catch (InvocationTargetException ex) {
             throw new RuntimeException(
-                    "internal problem: cannot instantiate stub", ex);
+                    "internal problem: cannot instantiate stub", ex.getCause());
         } catch (IllegalAccessException ex) {
             throw new RuntimeException(
                     "internal problem: cannot instantiate stub", ex);
@@ -299,50 +279,49 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
                     "writeReplace", new Class[0]);
 
         } catch (Throwable ex) {
-            logger.log(Level.WARNING, "cannot initialize: \n" + ex.getMessage(), ex);
+            LOGGER.log(Level.WARNING, "cannot initialize: \n" + ex.getMessage(), ex);
             throw new Error("cannot initialize", ex);
         }
     }
 
-    static synchronized Class getRMIStubClass(RMIState state, Class type)
-            throws ClassNotFoundException {
+    static synchronized Class<?> getRMIStubClass(RMIState state, Class<?> type) throws ClassNotFoundException {
         return getRMIStubClassConstructor(state, type).getDeclaringClass();
     }
 
-    static Constructor getRMIStubClassConstructor(RMIState state, Class type)
-            throws ClassNotFoundException {
-        logger.fine("Requesting stub constructor of class " + type.getName()); 
-        Constructor cons = (Constructor) state.stub_map.get(type);
+    static Constructor<? extends Stub> getRMIStubClassConstructor(RMIState state, Class<?> type) throws ClassNotFoundException {
+        LOGGER.fine("Requesting stub constructor of class " + type.getName());
+        @SuppressWarnings("unchecked")
+        Constructor<? extends Stub> cons = (Constructor<? extends Stub>) state.stub_map.get(type);
 
         if (cons != null) {
-            logger.fine("Returning cached constructor of class " + cons.getDeclaringClass().getName()); 
+            LOGGER.fine("Returning cached constructor of class " + cons.getDeclaringClass().getName());
             return cons;
         }
 
-        TypeRepository repository = state.getTypeRepository();
-        RemoteDescriptor desc = (RemoteDescriptor) repository.getRemoteDescriptor(type);
+        TypeRepository repository = state.repo;
+        RemoteDescriptor desc = (RemoteDescriptor) repository.getRemoteInterface(type);
 
         MethodDescriptor[] mdesc = desc.getMethods();
         MethodDescriptor[] descriptors = new MethodDescriptor[mdesc.length + 1];
         for (int i = 0; i < mdesc.length; i++) {
             descriptors[i] = mdesc[i];
         }
-        
-        logger.finer("TYPE ----> " + type);
-        logger.finer("LOADER --> " + UtilImpl.getClassLoader(type));
-        logger.finer("CONTEXT -> " + getClassLoader());
+
+        LOGGER.finer("TYPE ----> " + type);
+        LOGGER.finer("LOADER --> " + UtilImpl.getClassLoader(type));
+        LOGGER.finer("CONTEXT -> " + getClassLoader());
 
         MethodRef[] methods = new MethodRef[descriptors.length];
 
         for (int i = 0; i < mdesc.length; i++) {
             Method m = descriptors[i].getReflectedMethod();
-            logger.finer("Method ----> " + m);
+            LOGGER.finer("Method ----> " + m);
             methods[i] = new MethodRef(m);
         }
         methods[mdesc.length] = new MethodRef(stub_write_replace);
 
 
-        Class clazz = null;
+        Class<?> clazz = null;
 
         try {
             /* Construct class! */
@@ -405,10 +384,10 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
         if (clazz != null) {
             try {
-                cons = clazz.getConstructor(new Class[0]);
+                cons = (Constructor<? extends Stub>) clazz.getConstructor();
                 state.stub_map.put(type, cons);
             } catch (NoSuchMethodException e) {
-                logger.log(Level.FINER, "constructed stub has no default constructor", e);
+                LOGGER.log(Level.FINER, "constructed stub has no default constructor", e);
             }
         }
 
@@ -446,45 +425,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         return poa_stub_invoke_method;
 
     }
-    
-
-    /*
-     * private ClassLoader last_loader = null; private Class last_remote_type =
-     * null; private String last_codebase = null; private Class last_stubclass =
-     * null;
-     *
-     * static javax.rmi.CORBA.Stub createStaticStub (RMIState state, String
-     * codebase, Class type) { String key = (codebase == null ? "null" :
-     * codebase) + "#" + type.getName();
-     *
-     * if (state.negative_stub_set.contains (key)) return null;
-     *
-     * ClassLoader loader = getClassLoader ();
-     *
-     * synchronized (this) { if (type == last_remote_type && codebase ==
-     * last_codebase && last_loader == loader) { try { return
-     * (javax.rmi.CORBA.Stub)last_stubclass.newInstance (); } catch
-     * (InstantiationException ex) { // ignore } catch (IllegalAccessException
-     * ex) { // ignore } } }
-     *
-     * String stubName = RemoteDescriptor.stubClassName (type);
-     *
-     * try { Class stub_class = javax.rmi.CORBA.Util.loadClass (stubName,
-     * codebase, loader);
-     *
-     * last_loader = loader; last_remote_type = type; last_codebase = codebase;
-     * last_stubclass = stub_class;
-     *
-     * return (javax.rmi.CORBA.Stub)stub_class.newInstance (); } catch
-     * (ClassNotFoundException ex) {
-     *  } catch (InstantiationException ex) { // ignore } catch
-     * (IllegalAccessException ex) { // ignore } catch (ClassCastException ex) { //
-     * ignore }
-     *
-     * state.negative_stub_set.add (key);
-     *
-     * return null; }
-     */
 
     public java.rmi.Remote toStub(java.rmi.Remote value)
             throws java.rmi.NoSuchObjectException {
@@ -493,14 +433,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
         javax.rmi.CORBA.Tie tie = javax.rmi.CORBA.Util.getTie(value);
         if (tie == null) {
-
-            // Throwable trace =
-            // org.apache.yoko.rmi.api.PortableRemoteObjectExt.getStateTrace ();
-
-            // log.info("Instance of "+value.getClass()+" is not exported in
-            // "+RMIState.current().getName()+" tie="+tie+";
-            // "+(trace==null?"trace is null":""), trace);
-
             throw new java.rmi.NoSuchObjectException("object not exported");
         }
 
@@ -534,7 +466,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         RMIServant servant = new RMIServant(state);
         javax.rmi.CORBA.Util.registerTarget(servant, obj);
 
-        logger.finer("exporting instance of " + obj.getClass().getName()
+        LOGGER.finer("exporting instance of " + obj.getClass().getName()
                 + " in " + state.getName());
 
         try {
@@ -550,17 +482,17 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             throws java.rmi.NoSuchObjectException {
         javax.rmi.CORBA.Util.unexportObject(obj);
     }
-    
+
     // the factory object used for creating stub initializers
     static private StubInitializer initializer = null;
-    // the default stub handler, which is ours without overrides. 
-    private static final String defaultInitializer = "org.apache.yoko.rmi.impl.RMIStubInitializer"; 
-    
+    // the default stub handler, which is ours without overrides.
+    private static final String defaultInitializer = "org.apache.yoko.rmi.impl.RMIStubInitializer";
+
     /**
-     * Get the RMI stub handler initializer to use for RMI invocation 
-     * stubs.  The Class in question must implement the StubInitializer method. 
-     * 
-     * @return The class used to create StubHandler instances. 
+     * Get the RMI stub handler initializer to use for RMI invocation
+     * stubs.  The Class in question must implement the StubInitializer method.
+     *
+     * @return The class used to create StubHandler instances.
      */
     private static StubInitializer getRMIStubInitializer() {
         if (initializer == null) {
@@ -572,6 +504,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
                     "Can not create RMIStubInitializer: " + factory).initCause(e);
             }
         }
-        return initializer; 
+        return initializer;
     }
 }

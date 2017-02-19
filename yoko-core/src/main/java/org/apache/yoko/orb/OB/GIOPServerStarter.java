@@ -17,21 +17,21 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.apache.yoko.orb.OCI.Acceptor;
 
-import org.apache.yoko.orb.PortableServer.*;
+import java.util.Vector;
+import java.util.logging.Logger;
 
 abstract class GIOPServerStarter {
     static final Logger logger = Logger.getLogger(GIOPServerStarter.class.getName());
     
-    protected ORBInstance orbInstance_; // The ORBInstance
+    protected final ORBInstance orbInstance_; // The ORBInstance
 
-    protected org.apache.yoko.orb.OCI.Acceptor acceptor_; // The acceptor
+    protected final Acceptor acceptor_; // The acceptor
 
-    protected OAInterface oaInterface_; // The OA interface
+    protected final OAInterface oaInterface_; // The OA interface
 
-    protected java.util.Vector connections_ = new java.util.Vector(); // Workers
+    protected final Vector connections_ = new java.util.Vector(); // Workers
 
     public static final int StateActive = 0;
 
@@ -66,8 +66,7 @@ abstract class GIOPServerStarter {
 
     protected void reapWorkers() {
         for (int i = 0; i < connections_.size();) {
-            GIOPConnection connection = (GIOPConnection) connections_
-                    .elementAt(i);
+            GIOPConnection connection = (GIOPConnection) connections_.elementAt(i);
             if (connection.destroyed())
                 connections_.removeElementAt(i);
             else
@@ -113,11 +112,11 @@ abstract class GIOPServerStarter {
 
     //
     // given a host/port this will search the workers of this
-    // GIOPServerStarter for a transport which matches the specific
-    // connection information. It returns null if not found.
+    // GIOPServerStarter for an inbound connection transport
+    // which matches the specific connection information.
+    // It returns null if not found.
     //
-    public synchronized GIOPConnection getWorker(
-            org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
+    public synchronized GIOPConnection getMatchingConnection(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
         //
         // reap the workers first since we don't want to return a
         // destroyed transport
@@ -130,11 +129,14 @@ abstract class GIOPServerStarter {
         for (int i = 0; i < connections_.size(); i++) {
             GIOPConnection worker = (GIOPConnection) connections_.elementAt(i);
 
+            // we only want to find inbound connections
+            if (worker.isOutbound())
+                continue;
+
             org.apache.yoko.orb.OCI.Transport transport = worker.transport();
 
-            if (transport != null)
-                if (transport.get_info().endpoint_alias_match(connInfo))
-                    return worker;
+            if (transport != null && transport.get_info().endpoint_alias_match(connInfo))
+                return worker;
         }
 
         // 

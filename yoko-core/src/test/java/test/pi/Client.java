@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,15 +17,50 @@
 
 package test.pi;
 
+import static org.junit.Assert.assertTrue;
+import static org.omg.CORBA.SetOverrideType.ADD_OVERRIDE;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.Properties;
-import org.omg.CORBA.*;
-import org.omg.PortableInterceptor.*;
-import test.pi.TestInterfacePackage.*;
-import java.io.*;
+
+import org.apache.yoko.orb.OB.Assert;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.NO_PERMISSION;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.Request;
+import org.omg.CORBA.StringHolder;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.WrongTransaction;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryHelper;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
+import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.omg.IOP.CodecPackage.InvalidTypeForEncoding;
+import org.omg.IOP.CodecPackage.TypeMismatch;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
+import org.omg.PortableInterceptor.Current;
+import org.omg.PortableInterceptor.CurrentHelper;
+import org.omg.PortableInterceptor.InvalidSlot;
+
+import test.pi.TestInterfacePackage.s;
+import test.pi.TestInterfacePackage.sHelper;
+import test.pi.TestInterfacePackage.sHolder;
+import test.pi.TestInterfacePackage.user;
+import test.pi.TestInterfacePackage.userHelper;
 
 public final class Client extends test.common.TestBase {
-    private static void TestTranslation(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
+    private static void TestTranslation(ORB orb, ClientProxyManager manager, TestInterface ti) {
         //
         // Set up the correct interceptor
         //
@@ -40,7 +75,7 @@ public final class Client extends test.common.TestBase {
         i0.throwOnRequest(new NO_PERMISSION());
         try {
             ti.noargs();
-            TEST(false);
+            assertTrue(false);
         } catch (NO_PERMISSION ex) {
             // Expected
         }
@@ -49,7 +84,7 @@ public final class Client extends test.common.TestBase {
         i0.throwOnReply(new NO_PERMISSION());
         try {
             ti.noargs();
-            TEST(false);
+            assertTrue(false);
         } catch (NO_PERMISSION ex) {
             // Expected
         }
@@ -60,7 +95,7 @@ public final class Client extends test.common.TestBase {
         i0.expectException(new NO_PERMISSION());
         try {
             ti.noargs();
-            TEST(false);
+            assertTrue(false);
         } catch (NO_PERMISSION ex) {
             // Expected
         }
@@ -74,7 +109,7 @@ public final class Client extends test.common.TestBase {
 
         try {
             ti.noargs();
-            TEST(false);
+            assertTrue(false);
         } catch (NO_PERMISSION ex) {
             // Expected
         }
@@ -84,7 +119,7 @@ public final class Client extends test.common.TestBase {
 
         try {
             ti.noargs();
-            TEST(false);
+            assertTrue(false);
         } catch (NO_PERMISSION ex) {
             // Expected
         }
@@ -92,16 +127,14 @@ public final class Client extends test.common.TestBase {
         manager.clearInterceptors();
     }
 
-    private static void TestCalls(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
-        org.omg.PortableInterceptor.Current pic = null;
+    private static void TestCalls(ORB orb, ClientProxyManager manager, TestInterface ti) {
+        Current pic = null;
         try {
-            org.omg.CORBA.Object obj = orb
-                    .resolve_initial_references("PICurrent");
-            pic = org.omg.PortableInterceptor.CurrentHelper.narrow(obj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            org.omg.CORBA.Object obj = orb.resolve_initial_references("PICurrent");
+            pic = CurrentHelper.narrow(obj);
+        } catch (InvalidName ex) {
         }
-        TEST(pic != null);
+        assertTrue(pic != null);
 
         Any slotData = orb.create_any();
         slotData.insert_long(10);
@@ -109,7 +142,7 @@ public final class Client extends test.common.TestBase {
         try {
             pic.set_slot(0, slotData);
         } catch (InvalidSlot ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -121,62 +154,62 @@ public final class Client extends test.common.TestBase {
         int num = 0;
 
         ti.noargs();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         ti.noargs_oneway();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         try {
             ti.userexception();
-            TEST(false);
+            assertTrue(false);
         } catch (user ex) {
         }
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         try {
             ti.systemexception();
-            TEST(false);
+            assertTrue(false);
         } catch (SystemException ex) {
         }
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         ti.test_service_context();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         try {
             ti.location_forward();
         } catch (NO_IMPLEMENT ex) {
         }
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         //
         // Test simple attribute
         //
         ti.string_attrib("TEST");
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
         String satt = ti.string_attrib();
-        TEST(satt.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(satt.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         //
         // Test in, inout and out simple parameters
         //
         ti.one_string_in("TEST");
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         StringHolder spinout = new StringHolder("TESTINOUT");
         ti.one_string_inout(spinout);
-        TEST(spinout.value.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(spinout.value.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         StringHolder spout = new StringHolder();
         ti.one_string_out(spout);
-        TEST(spout.value.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(spout.value.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         String sprc = ti.one_string_return();
-        TEST(sprc.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(sprc.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         //
         // Test struct attribute
@@ -184,30 +217,30 @@ public final class Client extends test.common.TestBase {
         s ss = new s();
         ss.sval = "TEST";
         ti.struct_attrib(ss);
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
         s ssatt = ti.struct_attrib();
-        TEST(ssatt.sval.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(ssatt.sval.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         //
         // Test in, inout and out struct parameters
         //
         ti.one_struct_in(ss);
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         sHolder sinout = new sHolder(new s("TESTINOUT"));
         ti.one_struct_inout(sinout);
-        TEST(sinout.value.sval.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(sinout.value.sval.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         sHolder sout = new sHolder();
         ti.one_struct_out(sout);
-        TEST(sout.value.sval.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(sout.value.sval.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         s ssrc = ti.one_struct_return();
-        TEST(ssrc.sval.equals("TEST"));
-        TEST(++num == impl._OB_numReq());
+        assertTrue(ssrc.sval.equals("TEST"));
+        assertTrue(++num == impl._OB_numReq());
 
         manager.clearInterceptors();
 
@@ -218,22 +251,20 @@ public final class Client extends test.common.TestBase {
         try {
             slotData2 = pic.get_slot(0);
         } catch (InvalidSlot ex) {
-            TEST(false);
+            assertTrue(false);
         }
         int v = slotData2.extract_long();
-        TEST(v == 10);
+        assertTrue(v == 10);
     }
 
-    private static void TestDIICalls(ORB orb, ClientProxyManager manager,
-            TestInterface ti) {
-        org.omg.PortableInterceptor.Current pic = null;
+    private static void TestDIICalls(ORB orb, ClientProxyManager manager, TestInterface ti) {
+        Current pic = null;
         try {
-            org.omg.CORBA.Object obj = orb
-                    .resolve_initial_references("PICurrent");
-            pic = org.omg.PortableInterceptor.CurrentHelper.narrow(obj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            org.omg.CORBA.Object obj = orb.resolve_initial_references("PICurrent");
+            pic = CurrentHelper.narrow(obj);
+        } catch (InvalidName ex) {
         }
-        TEST(pic != null);
+        assertTrue(pic != null);
 
         Any slotData = orb.create_any();
         slotData.insert_long(10);
@@ -241,7 +272,7 @@ public final class Client extends test.common.TestBase {
         try {
             pic.set_slot(0, slotData);
         } catch (InvalidSlot ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -255,16 +286,16 @@ public final class Client extends test.common.TestBase {
         Request req;
         req = ti._request("noargs");
         req.invoke();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         req = ti._request("noargs_oneway");
         req.send_oneway();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         req = ti._request("userexception");
         req.exceptions().add(userHelper.type());
         req.invoke();
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         req = ti._request("systemexception");
         try {
@@ -272,7 +303,7 @@ public final class Client extends test.common.TestBase {
         } catch (NO_IMPLEMENT ex) {
             // expected - raised by remote servant
         }
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         req = ti._request("location_forward");
         try {
@@ -280,7 +311,7 @@ public final class Client extends test.common.TestBase {
         } catch (NO_IMPLEMENT ex) {
             // expected - raised by local interceptor
         }
-        TEST(++num == impl._OB_numReq());
+        assertTrue(++num == impl._OB_numReq());
 
         //
         // Test in, inout and out simple parameters
@@ -290,7 +321,7 @@ public final class Client extends test.common.TestBase {
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_void));
             req.add_in_arg().insert_string("TEST");
             req.invoke();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             req = ti._request("one_string_inout");
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_void));
@@ -299,8 +330,8 @@ public final class Client extends test.common.TestBase {
             inOutAny.insert_string(sp);
             req.invoke();
             String sprc = inOutAny.extract_string();
-            TEST(sprc.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(sprc.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
 
             req = ti._request("one_string_out");
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_void));
@@ -308,15 +339,15 @@ public final class Client extends test.common.TestBase {
             outAny.insert_string("");
             req.invoke();
             sprc = outAny.extract_string();
-            TEST(sprc.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(sprc.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
 
             req = ti._request("one_string_return");
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_string));
             req.invoke();
             sprc = req.return_value().extract_string();
-            TEST(sprc.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(sprc.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
         }
 
         //
@@ -329,7 +360,7 @@ public final class Client extends test.common.TestBase {
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_void));
             sHelper.insert(req.add_in_arg(), ss);
             req.invoke();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             ss.sval = "TESTINOUT";
             req = ti._request("one_struct_inout");
@@ -338,8 +369,8 @@ public final class Client extends test.common.TestBase {
             sHelper.insert(inOutAny, ss);
             req.invoke();
             s ssrc = sHelper.extract(inOutAny);
-            TEST(ssrc.sval.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(ssrc.sval.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
 
             req = ti._request("one_struct_out");
             req.set_return_type(orb.get_primitive_tc(TCKind.tk_void));
@@ -347,15 +378,15 @@ public final class Client extends test.common.TestBase {
             outAny.type(sHelper.type());
             req.invoke();
             ssrc = sHelper.extract(outAny);
-            TEST(ssrc.sval.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(ssrc.sval.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
 
             req = ti._request("one_struct_return");
             req.set_return_type(sHelper.type());
             req.invoke();
             ssrc = sHelper.extract(req.return_value());
-            TEST(ssrc.sval.equals("TEST"));
-            TEST(++num == impl._OB_numReq());
+            assertTrue(ssrc.sval.equals("TEST"));
+            assertTrue(++num == impl._OB_numReq());
         }
 
         //
@@ -365,10 +396,10 @@ public final class Client extends test.common.TestBase {
         try {
             slotData2 = pic.get_slot(0);
         } catch (InvalidSlot ex) {
-            TEST(false);
+            assertTrue(false);
         }
         int v = slotData2.extract_long();
-        TEST(v == 10);
+        assertTrue(v == 10);
 
         //
         // Test: ASYNC calls
@@ -378,42 +409,42 @@ public final class Client extends test.common.TestBase {
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             req = ti._request("noargs");
             req.send_deferred();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             v = slotData2.extract_long();
-            TEST(v == 10);
+            assertTrue(v == 10);
 
             slotData.insert_long(11);
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 req.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
             v = slotData2.extract_long();
-            TEST(v == 11);
+            assertTrue(v == 11);
         }
 
         {
@@ -421,43 +452,43 @@ public final class Client extends test.common.TestBase {
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             req = ti._request("userexception");
             req.exceptions().add(userHelper.type());
             req.send_deferred();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             v = slotData2.extract_long();
-            TEST(v == 10);
+            assertTrue(v == 10);
 
             slotData.insert_long(11);
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 req.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
             v = slotData2.extract_long();
-            TEST(v == 11);
+            assertTrue(v == 11);
         }
 
         {
@@ -465,33 +496,33 @@ public final class Client extends test.common.TestBase {
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             req = ti._request("systemexception");
             req.send_deferred();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             v = slotData2.extract_long();
-            TEST(v == 10);
+            assertTrue(v == 10);
 
             slotData.insert_long(11);
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 req.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (NO_IMPLEMENT ex) {
                 // expected - raised by remote servant
             }
@@ -499,10 +530,10 @@ public final class Client extends test.common.TestBase {
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
             v = slotData2.extract_long();
-            TEST(v == 11);
+            assertTrue(v == 11);
         }
 
         {
@@ -510,33 +541,33 @@ public final class Client extends test.common.TestBase {
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             req = ti._request("location_forward");
             req.send_deferred();
-            TEST(++num == impl._OB_numReq());
+            assertTrue(++num == impl._OB_numReq());
 
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             v = slotData2.extract_long();
-            TEST(v == 10);
+            assertTrue(v == 10);
 
             slotData.insert_long(11);
             try {
                 pic.set_slot(0, slotData);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             try {
                 req.get_response();
             } catch (WrongTransaction ex) {
-                TEST(false);
+                assertTrue(false);
             } catch (NO_IMPLEMENT ex) {
                 // expected - raised by local interceptor
             }
@@ -544,10 +575,10 @@ public final class Client extends test.common.TestBase {
             try {
                 slotData2 = pic.get_slot(0);
             } catch (InvalidSlot ex) {
-                TEST(false);
+                assertTrue(false);
             }
             v = slotData2.extract_long();
-            TEST(v == 11);
+            assertTrue(v == 11);
         }
 
         manager.clearInterceptors();
@@ -557,16 +588,15 @@ public final class Client extends test.common.TestBase {
         //
         // Test: Resolve CodecFactory
         //
-        org.omg.IOP.CodecFactory factory = null;
+        CodecFactory factory = null;
         try {
-            factory = org.omg.IOP.CodecFactoryHelper.narrow(orb
-                    .resolve_initial_references("CodecFactory"));
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            TEST(false);
+            factory = CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
+        } catch (InvalidName ex) {
+            assertTrue(false);
         }
-        TEST(factory != null);
+        assertTrue(factory != null);
 
-        org.omg.IOP.Encoding how = new org.omg.IOP.Encoding();
+        Encoding how = new Encoding();
         how.major_version = 0;
         how.minor_version = 0;
 
@@ -575,23 +605,23 @@ public final class Client extends test.common.TestBase {
         //
         try {
             how.format = 1; // Some unknown value
-            org.omg.IOP.Codec codec = factory.create_codec(how);
-            TEST(false);
-        } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
+            factory.create_codec(how);
+            assertTrue(false);
+        } catch (UnknownEncoding ex) {
             // Expected
         }
 
         //
         // Test: CDR Codec
         //
-        how.format = org.omg.IOP.ENCODING_CDR_ENCAPS.value;
-        org.omg.IOP.Codec cdrCodec = null;
+        how.format = ENCODING_CDR_ENCAPS.value;
+        Codec cdrCodec = null;
         try {
             cdrCodec = factory.create_codec(how);
-        } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
-            TEST(false);
+        } catch (UnknownEncoding ex) {
+            assertTrue(false);
         }
-        org.apache.yoko.orb.OB.Assert._OB_assert(cdrCodec != null);
+        Assert._OB_assert(cdrCodec != null);
 
         //
         // Test: Encode/decode
@@ -604,77 +634,62 @@ public final class Client extends test.common.TestBase {
         byte[] encoding = null;
         try {
             encoding = cdrCodec.encode(any);
-        } catch (org.omg.IOP.CodecPackage.InvalidTypeForEncoding ex) {
-            TEST(false);
+        } catch (InvalidTypeForEncoding ex) {
+            assertTrue(false);
         }
         Any result = null;
         try {
             result = cdrCodec.decode(encoding);
-        } catch (org.omg.IOP.CodecPackage.FormatMismatch ex) {
-            TEST(false);
+        } catch (FormatMismatch ex) {
+            assertTrue(false);
         }
 
         foo newf = fooHelper.extract(result);
-        TEST(newf.l == 10);
+        assertTrue(newf.l == 10);
 
         //
         // Test: Encode/decode
         //
         try {
             encoding = cdrCodec.encode_value(any);
-        } catch (org.omg.IOP.CodecPackage.InvalidTypeForEncoding ex) {
-            TEST(false);
+        } catch (InvalidTypeForEncoding ex) {
+            assertTrue(false);
         }
         try {
             result = cdrCodec.decode_value(encoding, fooHelper.type());
-        } catch (org.omg.IOP.CodecPackage.FormatMismatch ex) {
-            TEST(false);
-        } catch (org.omg.IOP.CodecPackage.TypeMismatch ex) {
-            TEST(false);
+        } catch (FormatMismatch ex) {
+            assertTrue(false);
+        } catch (TypeMismatch ex) {
+            assertTrue(false);
         }
 
         newf = fooHelper.extract(result);
-        TEST(newf.l == 10);
+        assertTrue(newf.l == 10);
     }
 
-    static void ClientRegisterInterceptors(java.util.Properties props,
-            boolean local) {
-        props.put("org.omg.PortableInterceptor.ORBInitializerClass."
-                + "test.pi.ClientORBInitializer_impl", "");
+    static void ClientRegisterInterceptors(Properties props, boolean local) {
+        props.put("org.omg.PortableInterceptor.ORBInitializerClass." + ClientORBInitializer_impl.class.getName(), "");
         ClientORBInitializer_impl._OB_setLocal(local);
     }
 
-    static int ClientRun(ORB orb, boolean nonBlocking, String[] args)
-            throws org.omg.CORBA.UserException {
+    static void ClientRun(ORB orb, boolean nonBlocking, String[] args) throws Exception {
         String impl;
         String dsiImpl;
 
         //
         // Get TestInterface
         //
-        try {
-            String refFile = "TestInterface.ref";
-            FileInputStream file = new FileInputStream(refFile);
-            BufferedReader in = new BufferedReader(new InputStreamReader(file));
-            impl = in.readLine();
-            dsiImpl = in.readLine();
-            file.close();
-        } catch (IOException ex) {
-            System.err.println("Can't read from `" + ex.getMessage() + "'");
-            return 1;
+        try (BufferedReader in = new BufferedReader(new FileReader("TestInterface.ref"))) {
+            impl = readRef(in);
+            dsiImpl = readRef(in);
         }
-
-        System.out.print("Testing initial reference registration... ");
-        System.out.flush();
-        // TODO
-        System.out.println("Done!");
 
         System.out.print("Testing string_to_object()... ");
         System.out.flush();
         org.omg.CORBA.Object obj = orb.string_to_object(impl);
         org.omg.CORBA.Object dsiObj = orb.string_to_object(dsiImpl);
-        TEST(obj != null);
-        TEST(dsiObj != null);
+        assertTrue(obj != null);
+        assertTrue(dsiObj != null);
         System.out.println("Done!");
 
         //
@@ -687,89 +702,96 @@ public final class Client extends test.common.TestBase {
 
         System.out.print("Testing _narrow()... ");
         System.out.flush();
-        obj = obj._set_policy_override(pl,
-                org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
+        obj = obj._set_policy_override(pl, ADD_OVERRIDE);
         TestInterface ti = TestInterfaceHelper.narrow(obj);
-        dsiObj = dsiObj._set_policy_override(pl,
-                org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
-        TestInterface tiDSI = TestInterfaceHelper.narrow(dsiObj);
-        TEST(ti != null);
-        TEST(tiDSI != null);
-        System.out.println("Done!");
+        assertTrue(ti != null);
+        try {
+            if ("".isEmpty()) return;
+            dsiObj = dsiObj._set_policy_override(pl, ADD_OVERRIDE);
+            TestInterface tiDSI = TestInterfaceHelper.narrow(dsiObj);
+            assertTrue(tiDSI != null);
+            System.out.println("Done!");
 
-        //
-        // Test: Codec
-        //
-        System.out.print("Testing Codec... ");
-        System.out.flush();
-        TestCodec(orb);
-        System.out.println("Done!");
+            //
+            // Test: Codec
+            //
+            System.out.print("Testing Codec... ");
+            System.out.flush();
+            TestCodec(orb);
+            System.out.println("Done!");
 
-        //
-        // Test: Exception translation
-        //
-        System.out.print("Testing client side exception translation... ");
-        System.out.flush();
-        TestTranslation(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            //
+            // Test: Exception translation
+            //
+            System.out.print("Testing client side exception translation... ");
+            System.out.flush();
+            TestTranslation(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        //
-        // Run tests
-        //
-        System.out.print("Testing standard method calls with static stubs... ");
-        System.out.flush();
-        TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            //
+            // Run tests
+            //
+            System.out.print("Testing standard method calls with static stubs... ");
+            System.out.flush();
+            TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        System.out.print("Ditto, but with the DSI implementation... ");
-        System.out.flush();
-        TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
-        System.out.println("Done!");
+            System.out.print("Ditto, but with the DSI implementation... ");
+            System.out.flush();
+            TestCalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
+            System.out.println("Done!");
 
-        System.out.print("Testing standard method calls with the DII... ");
-        System.out.flush();
-        TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
-        System.out.println("Done!");
+            System.out.print("Testing standard method calls with the DII... ");
+            System.out.flush();
+            TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, ti);
+            System.out.println("Done!");
 
-        System.out.print("Ditto, but with the DSI implementation... ");
-        System.out.flush();
-        TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
-        System.out.println("Done!");
-
-        ti.deactivate();
-
-        return 0;
+            System.out.print("Ditto, but with the DSI implementation... ");
+            System.out.flush();
+            TestDIICalls(orb, ClientORBInitializer_impl.clientProxyManager, tiDSI);
+            System.out.println("Done!");
+        } finally {
+            System.out.println("About to call deactivate");
+            ti.deactivate();
+            System.out.println("Deactivate returned normally");
+        }
     }
 
-    public static void main(String[] args) {
+    private static String readRef(BufferedReader in) throws Exception {
+        String line = in.readLine();
+        if (line == null) {
+            throw new RuntimeException("Unknown Server error");
+        } else if (!!!line.equals("ref:")) {
+            try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+                pw.println("Server error:");
+                do {
+                    pw.print('\t');
+                    pw.println(line);
+                } while ((line = in.readLine()) != null);
+                pw.flush();
+                throw new RuntimeException(sw.toString());
+            }
+        }
+        return in.readLine();
+    }
+
+    public static void main(String[] args) throws Exception {
         java.util.Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
+        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
 
-        int status = 0;
         ORB orb = null;
 
         try {
             ClientRegisterInterceptors(props, false);
 
             orb = ORB.init(args, props);
-            status = ClientRun(orb, false, args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
+            ClientRun(orb, false, args);
+        } finally {
+            if (orb != null) {
                 orb.destroy();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                status = 1;
             }
         }
-
-        System.exit(status);
     }
 }

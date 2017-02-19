@@ -17,8 +17,10 @@
 
 package test.pi;
 
-import org.omg.CORBA.*;
-import org.omg.PortableInterceptor.*;
+import org.omg.PortableInterceptor.IORInterceptor;
+import org.omg.PortableInterceptor.ORBInitInfo;
+import org.omg.PortableInterceptor.ORBInitializer;
+import org.omg.PortableInterceptor.PolicyFactory;
 
 final public class ServerORBInitializer_impl extends org.omg.CORBA.LocalObject
         implements ORBInitializer {
@@ -40,7 +42,7 @@ final public class ServerORBInitializer_impl extends org.omg.CORBA.LocalObject
         // Test: PICurrent::allocate_slot_id
         //
         int id = info.allocate_slot_id();
-        TEST(id == 0);
+        TEST(id >= 0);
 
         //
         // Test: register an IORInterceptor

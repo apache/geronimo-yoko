@@ -53,7 +53,7 @@ public abstract class Client {
     //
     // Destroy the client
     //
-    public abstract void destroy(boolean terminate);
+    public abstract void destroy();
 
     //
     // Increment usage (not mutex protected)
@@ -85,7 +85,7 @@ public abstract class Client {
     //
     // Get a new request ID
     //
-    public abstract int requestId();
+    public abstract int getNewRequestID();
 
     //
     // get a list of ServiceContexts that have to be sent on an AMI router
@@ -119,7 +119,7 @@ public abstract class Client {
     //
     // Checks whether this client is equal to another client
     //
-    public abstract boolean equal(Client clt);
+    public abstract boolean matches(Client clt);
 
     //
     // Force connection establishment
@@ -130,4 +130,6 @@ public abstract class Client {
     // Determines whether this client supports twoway invocations
     //
     public abstract boolean twoway();
+
+    public void prepareForDowncall(RefCountPolicyList policies) {}
 }

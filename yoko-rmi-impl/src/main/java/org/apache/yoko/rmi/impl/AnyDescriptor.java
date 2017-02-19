@@ -18,40 +18,49 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class AnyDescriptor extends TypeDescriptor {
+import java.io.PrintWriter;
+
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+
+class AnyDescriptor extends TypeDescriptor {
     AnyDescriptor(Class type, TypeRepository rep) {
         super(type, rep);
     }
 
-    public String getRepositoryID() {
-        if (_repid == null)
-            _repid = "IDL:" + getJavaClass().getName().replace('.', '/')
-                    + ":1.0";
-
-        return _repid;
+    @Override
+    protected String genRepId() {
+        return String.format("IDL:%s:1.0", type.getName().replace('.', '/'));
     }
 
     /** Read an instance of this value from a CDR stream */
-    public Object read(org.omg.CORBA.portable.InputStream in) {
+    @Override
+    public Object read(InputStream in) {
         return javax.rmi.CORBA.Util.readAny(in);
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object val) {
+    @Override
+    public void write(OutputStream out, Object val) {
         javax.rmi.CORBA.Util.writeAny(out, val);
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
-        return orb.get_primitive_tc(org.omg.CORBA.TCKind.tk_any);
+    @Override
+    protected TypeCode genTypeCode() {
+        ORB orb = ORB.init();
+        return orb.get_primitive_tc(TCKind.tk_any);
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         throw new InternalError("cannot copy org.omg.CORBA.Any");
     }
 
-    void writeMarshalValue(java.io.PrintWriter pw, String outName,
-            String paramName) {
+    @Override
+    void writeMarshalValue(PrintWriter pw, String outName, String paramName) {
         pw.print("javax.rmi.CORBA.Util.writeAny(");
         pw.print(outName);
         pw.print(',');
@@ -59,10 +68,10 @@ public class AnyDescriptor extends TypeDescriptor {
         pw.print(')');
     }
 
-    void writeUnmarshalValue(java.io.PrintWriter pw, String inName) {
+    @Override
+    void writeUnmarshalValue(PrintWriter pw, String inName) {
         pw.print("javax.rmi.CORBA.Util.readAny(");
         pw.print(inName);
         pw.print(")");
     }
-
 }

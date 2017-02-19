@@ -1057,11 +1057,4 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         return downcallStub_;
     }
 
-    public synchronized void _OB_closeConnection(boolean terminate) {
-        if (downcallStub_ == null) {
-            return;
-        }
-        downcallStub_._OB_closeConnection(terminate);
-        downcallStub_ = null;
-    }
 }

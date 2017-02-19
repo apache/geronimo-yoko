@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class ByteDescriptor extends SimpleDescriptor {
+final class ByteDescriptor extends SimpleDescriptor {
     ByteDescriptor(TypeRepository repository) {
         super(Byte.TYPE, repository, "octet", org.omg.CORBA.TCKind.tk_octet);
     }

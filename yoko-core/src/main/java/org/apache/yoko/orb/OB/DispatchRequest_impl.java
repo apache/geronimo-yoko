@@ -54,7 +54,6 @@ final public class DispatchRequest_impl extends org.omg.CORBA.LocalObject
 
     public void invoke() {
         poa_._OB_dispatch(oid_, upcall_);
-
         upcall_ = null;
     }
 }

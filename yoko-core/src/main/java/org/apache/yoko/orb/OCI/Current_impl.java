@@ -68,14 +68,6 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
                 .firstElement();
     }
 
-    public org.apache.yoko.orb.OCI.AcceptorInfo get_oci_acceptor_info() {
-        org.apache.yoko.orb.OCI.TransportInfo info = get_oci_transport_info();
-        if (info != null)
-            return info.acceptor_info();
-        else
-            return null;
-    }
-
     // ------------------------------------------------------------------
     // Yoko internal functions
     // Application programs must not use these functions directly

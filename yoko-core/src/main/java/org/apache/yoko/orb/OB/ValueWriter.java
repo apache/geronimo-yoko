@@ -21,9 +21,11 @@ import java.io.Serializable;
 
 import javax.rmi.CORBA.ValueHandler;
 
-import org.apache.yoko.orb.CORBA.ORB;
+import org.apache.yoko.util.cmsf.RepIds;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
+import org.omg.CORBA.portable.IDLEntity;
 
 final public class ValueWriter {
     //
@@ -183,7 +185,14 @@ final public class ValueWriter {
         BoxedValueHelper result = null;
 
         Class helperClass = null;
+        final Class<?> valueClass = value.getClass();
 
+        //Short-cuts
+        if (String.class == valueClass) {
+            return new WStringValueHelper();
+        } else if (!!!IDLEntity.class.isAssignableFrom(valueClass)) {
+            return null;
+        }
         //
         // First try constructing a class name based on the class of
         // the value. This will only work for primitive types, because
@@ -209,7 +218,7 @@ final public class ValueWriter {
                 org.omg.CORBA.TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode
                         ._OB_getOrigType(type);
                 String id = origType.id();
-                helperClass = Util.idToClass(id, "Helper");
+                helperClass = RepIds.query(id).suffix("Helper").toClass();
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
                 Assert._OB_assert(ex);
             }
@@ -470,7 +479,7 @@ final public class ValueWriter {
         //
         // Determine if chunked encoding is needed.
         //
-        boolean isChunked = valueHandler.isCustomMarshaled (clz);
+        boolean isChunked = valueHandler.isCustomMarshaled(clz);
 
         int pos = beginValue (tag, ids, codebase, isChunked);
         instanceTable_.put (value, new Integer (pos));
@@ -531,8 +540,8 @@ final public class ValueWriter {
                 out_.write_boolean(false); // discriminator for valuetype
                 writeValue((java.io.Serializable) obj, null);
             } else
-                throw new org.omg.CORBA.MARSHAL("Object is not an object "
-                        + "reference or valuetype");
+                throw new org.omg.CORBA.MARSHAL("Object of class " + obj.getClass().getName() 
+                        + " is not an object reference or valuetype");
         } else {
             //
             // A nil abstract interface is marshalled as a null valuetype
@@ -642,7 +651,6 @@ final public class ValueWriter {
 
     public void endValue() {
         if (chunked_) {
-            boolean nc = needChunk_;
             needChunk_ = false;
 
             //
@@ -658,15 +666,7 @@ final public class ValueWriter {
                 buf_.pos_ = lastEndTagPos_; // same as "buf_.pos_ -= 4;"
                 out_.write_long(lastTag_);
             } else {
-                //
-                // This value does not coterminate with a nested value.
-                // If we still need a chunk, then add an empty chunk,
-                // otherwise end the current chunk.
-                //
-                if (nc)
-                    out_.write_long(0);
-                else
-                    endChunk();
+                endChunk();
 
                 //
                 // Write the end tag and remember its position

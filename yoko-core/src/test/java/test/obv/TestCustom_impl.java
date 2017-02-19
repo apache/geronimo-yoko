@@ -17,6 +17,8 @@
 
 package test.obv;
 
+import static org.junit.Assert.assertTrue;
+
 public class TestCustom_impl extends TestCustom {
     public void marshal(org.omg.CORBA.DataOutputStream os) {
         //
@@ -32,7 +34,7 @@ public class TestCustom_impl extends TestCustom {
 
     public void unmarshal(org.omg.CORBA.DataInputStream is) {
         String str = is.read_string();
-        test.common.TestBase.TEST(str.equals("Extra String"));
+        assertTrue(str.equals("Extra String"));
 
         stringVal = is.read_string();
         doubleVal = is.read_double();

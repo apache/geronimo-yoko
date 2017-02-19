@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OB;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
+import org.apache.yoko.util.cmsf.RepIds;
+
 public final class ValueFactoryManager {
     static final Logger logger = Logger.getLogger(ValueFactoryManager.class.getName());
     //
@@ -176,7 +178,7 @@ public final class ValueFactoryManager {
         //
         // Try to convert the repository ID into a class name.
         //
-        Class c = Util.idToClass(id, "DefaultFactory");
+        Class c = RepIds.query(id).suffix("DefaultFactory").toClass();
         if (c != null) {
             try {
                 logger.finer("Attempting to create value factory from class " + c.getName());

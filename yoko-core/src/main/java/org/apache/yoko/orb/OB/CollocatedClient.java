@@ -36,14 +36,14 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // Destroy the client
     //
-    public void destroy(boolean terminate) {
+    public void destroy() {
         // Nothing to do here
     }
 
     //
     // Get a new request ID
     //
-    public int requestId() {
+    public int getNewRequestID() {
         //
         // This operation *must* delegate to CollocatedServer, because
         // request IDs must be unique per CollocatedServer, not per
@@ -88,18 +88,10 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // Checks whether this client is equal to another client
     //
-    public boolean equal(Client cl) {
-        CollocatedClient client = null;
-        try {
-            client = (CollocatedClient) cl;
-        } catch (ClassCastException ex) {
-            return false;
-        }
-
-        if (server_ != client.server_)
-            return false;
-
-        return true;
+    public boolean matches(Client other) {
+        if (!!!(other instanceof CollocatedClient)) return false;
+        CollocatedClient that = (CollocatedClient) other;
+        return (this.server_ == that.server_);
     }
 
     //

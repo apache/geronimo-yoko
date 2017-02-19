@@ -17,21 +17,21 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.Transport;
+
+import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+
 final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
     // The starter thread
     //
-    protected final class StarterThread extends Thread {
-        private GIOPServerStarterThreaded starter_;
-
-        StarterThread(ThreadGroup group, GIOPServerStarterThreaded starter) {
-            super(group, "Yoko:Server:StarterThread");
-            starter_ = starter;
-        }
+    protected final class Starter implements Runnable {
 
         public void run() {
             try {
-                starter_.starterRun();
+                starterRun();
             } catch (RuntimeException ex) {
                 Assert._OB_assert(ex);
             }
@@ -41,71 +41,54 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             // Shutdown the acceptor so that no further connections are
             // accepted
             //
-            starter_.logCloseAcceptor();
-            starter_.acceptor_.shutdown();
+            logCloseAcceptor();
+            acceptor_.shutdown();
 
             //
             // Accept all connections which might have queued up in the
             // listen() backlog
-            while (true) {
-                org.apache.yoko.orb.OCI.Transport transport = null;
+            do {
 
                 try {
-                    transport = starter_.acceptor_.accept(false);
-                } catch (org.omg.CORBA.SystemException ex) {
-                }
-
-                if (transport == null) {
-                    logger.fine("Null transport received from a connect"); 
-                    break;
-                }
-
-                try {
-                    GIOPConnection connection = new GIOPConnectionThreaded(
-                            starter_.orbInstance_, transport,
-                            starter_.oaInterface_);
-
+                    Transport t = acceptor_.accept(false);
+                    if (t == null) {
+                        logger.fine("Null transport received from a connect");
+                        break;
+                    }
+                    GIOPConnection connection = new GIOPConnectionThreaded(orbInstance_, t, oaInterface_);
                     connection.setState(GIOPConnection.State.Closing);
                 } catch (org.omg.CORBA.SystemException ex) {
-                    // Ignore SystemExceptions
                 }
-            }
+            } while (true);
 
             //
             // Close the acceptor
             //
-            starter_.acceptor_.close();
+            acceptor_.close();
+            orbInstance_.getServerPhaser().arriveAndDeregister();
 
-            //
-            // Break cyclic object dependency
-            //
-            starter_ = null;
         }
     }
-
-    protected Thread starterThread_;
 
     // ----------------------------------------------------------------------
     // GIOPServerStarterThreaded package member implementation
     // ----------------------------------------------------------------------
 
-    GIOPServerStarterThreaded(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.Acceptor acceptor, OAInterface oaInterface) {
+    GIOPServerStarterThreaded(ORBInstance orbInstance, Acceptor acceptor, OAInterface oaInterface) {
         super(orbInstance, acceptor, oaInterface);
 
         logger.fine("GIOPServer thread started " + this + " using acceptor " + acceptor); 
         try {
+            orbInstance_.getServerPhaser().register();
             //
             // Retrieve the thread group for the servers
             //
-            ThreadGroup group = orbInstance_.getServerWorkerGroup();
+            ExecutorService executor = orbInstance_.getServerExecutor();
 
             //
             // Start starter thread
             //
-            starterThread_ = new StarterThread(group, this);
-            starterThread_.setDaemon(true); 
-            starterThread_.start();
+            executor.submit(new Starter());
         } catch (OutOfMemoryError ex) {
             acceptor_.close();
             state_ = StateClosed;
@@ -192,7 +175,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
     // Run method for starter thread
     //
-    public void starterRun() {
+    private void starterRun() {
         while (true) {
             //
             // Get new transport, blocking
@@ -249,11 +232,13 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             // StateClosing for proper connection shutdown
                             //
                             Assert._OB_assert(state_ == StateClosed);
-
+                            logger.fine("Processing an inbound connection because state is closed"); 
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
+                            logger.fine("Created connection " + connection); 
 
                             connection.setState(GIOPConnection.State.Closing);
+                            logger.fine("set connection state to closing"); 
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
                         String msg = "can't accept connection\n" + ex.getMessage();

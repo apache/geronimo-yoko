@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class IntegerDescriptor extends SimpleDescriptor {
+final class IntegerDescriptor extends SimpleDescriptor {
     IntegerDescriptor(TypeRepository repository) {
         super(Integer.TYPE, repository, "long", org.omg.CORBA.TCKind.tk_long);
     }

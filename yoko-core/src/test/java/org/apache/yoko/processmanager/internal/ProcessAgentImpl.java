@@ -30,7 +30,7 @@ import java.util.concurrent.TimeUnit;
 import org.apache.yoko.osgi.ProviderLocator;
 
 public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgent {
-
+    private static final long serialVersionUID = 1L;
     private String name;
     private ProcessManagerRemoteIF processManager;
     protected ProcessAgentImpl() throws RemoteException {
@@ -89,17 +89,8 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
         }
     }
 
-    public static void inProcessMain(String[] args) throws Exception {
-        String agentName = args[0];
-        String registryHost = args[1];
-        int registryPort = Integer.parseInt(args[2]);
-        String processManagerName = args[3];
-
-        Registry reg = LocateRegistry.getRegistry(registryHost, registryPort);
-
-        final ProcessAgentImpl agent = new ProcessAgentImpl();
-        ProcessManagerRemoteIF manager = (ProcessManagerRemoteIF) reg.lookup(processManagerName);
-        agent.init(agentName,manager);
+    public static void startLocalProcess(ProcessManagerRemoteIF manager, String agentName) throws Exception {
+        new ProcessAgentImpl().init(agentName,manager);
     }
 
     private void waitForShutdown() {

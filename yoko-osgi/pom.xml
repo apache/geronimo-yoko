@@ -23,21 +23,42 @@
         <groupId>org.apache.yoko</groupId>
         <version>1.5-SNAPSHOT</version>
     </parent>
+
     <artifactId>yoko-osgi</artifactId>
-    <name>Apache Yoko OSGI Support</name>
+
+    <name>Apache Yoko OSGi Utilities</name>
+
     <packaging>bundle</packaging>
+
     <dependencies>
         <!-- this contains the osgi-relevant classes in the endorsed dir -->
         <dependency>
-            <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-spec-corba</artifactId>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.core</artifactId>
+            <version>5.0.0</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
-            <version>4.3.0</version>
+            <artifactId>org.osgi.compendium</artifactId>
+            <version>5.0.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Export-Package>
+                            org.apache.yoko.osgi
+                        </Export-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

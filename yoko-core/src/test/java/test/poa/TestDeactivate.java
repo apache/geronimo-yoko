@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -95,9 +98,9 @@ public final class TestDeactivate extends test.common.TestBase {
         try {
             oid = root.servant_to_id(impl);
         } catch (ServantNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         Thread thr = new LongCaller(t);
@@ -111,9 +114,9 @@ public final class TestDeactivate extends test.common.TestBase {
         try {
             root.deactivate_object(oid);
         } catch (ObjectNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -123,18 +126,18 @@ public final class TestDeactivate extends test.common.TestBase {
         try {
             root.activate_object_with_id(oid, impl);
         } catch (ObjectAlreadyActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (ServantAlreadyActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
         // The destroy call shouldn't return until the aMethod call is
         // complete
         //
-        TEST(impl.callComplete());
+        assertTrue(impl.callComplete());
 
         //
         // Wait for the thread to terminate
@@ -149,9 +152,9 @@ public final class TestDeactivate extends test.common.TestBase {
         try {
             root.deactivate_object(oid);
         } catch (ObjectNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
     }
 
@@ -166,22 +169,22 @@ public final class TestDeactivate extends test.common.TestBase {
         try {
             oid = root.servant_to_id(impl);
         } catch (ServantNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             root.deactivate_object(oid);
         } catch (ObjectNotActive ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (WrongPolicy ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             t.aMethod();
-            TEST(false); // expected OBJECT_NOT_EXIST
+            assertTrue(false); // expected OBJECT_NOT_EXIST
         } catch (OBJECT_NOT_EXIST ex) {
             // Expected
         }
@@ -209,12 +212,12 @@ public final class TestDeactivate extends test.common.TestBase {
             // Activate the RootPOA manager
             //
             POAManager rootMgr = root.the_POAManager();
-            TEST(rootMgr != null);
+            assertTrue(rootMgr != null);
 
             try {
                 rootMgr.activate();
             } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                TEST(false);
+                assertTrue(false);
             }
 
             System.out.print("Testing deactivate... ");

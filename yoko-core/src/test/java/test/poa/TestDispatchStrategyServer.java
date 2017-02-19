@@ -17,135 +17,78 @@
 
 package test.poa;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
 
 public final class TestDispatchStrategyServer extends test.common.TestBase {
     //
     // Implementation to test same thread dispatch strategy
     //
-    final static class TestSameThread_impl extends TestPOA {
-        private Thread thread_;
+    abstract static class AbstractTest extends TestPOA {
+        private volatile boolean failed = false;
 
-        private boolean failed_;
-
-        private boolean first_;
-
-        TestSameThread_impl() {
-            failed_ = false;
-            first_ = true;
+        public final boolean failed() {
+            return failed;
         }
 
-        public void aMethod() {
-            //
-            // Test to ensure that all requests handled by the same thread
-            //
-            if (first_) {
-                thread_ = Thread.currentThread();
-                first_ = false;
-            } else if (!Thread.currentThread().equals(thread_)) {
-                failed_ = true;
+        protected void fail() {
+            failed = true;
+        }
+    }
+
+    abstract static class AbstractTestPool extends AbstractTest {
+        private final Set<Thread> threadSet = new HashSet<>();
+        private final int maxSize;
+
+        AbstractTestPool(int maxSize) {
+            this.maxSize = maxSize;
+        }
+
+        public final synchronized void aMethod() {
+            final Thread thisThread = Thread.currentThread();
+            if (threadSet.contains(thisThread)) return;
+            if (threadSet.size() < maxSize) {
+                threadSet.add(thisThread);
+                return;
             }
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ex) {
-            }
+            fail();
         }
+    }
 
-        public boolean failed() {
-            return failed_;
-        }
+    final static class TestSameThread_impl extends AbstractTestPool {
+        TestSameThread_impl() { super(1); }
     }
 
     //
     // Implementation to test thread per request dispatch strategy
     //
-    final static class TestThreadPerReq_impl extends TestPOA {
-        private Thread threads_[];
+    final static class TestThreadPerReq_impl extends AbstractTest {
+        private final Set<Thread> threadSet = new HashSet<>();
 
-        private int thread_count_;
-
-        private boolean failed_;
-
-        TestThreadPerReq_impl() {
-            failed_ = false;
-            thread_count_ = 0;
-            threads_ = new Thread[5];
-        }
-
-        public void aMethod() {
-            int idx;
-            synchronized (this) {
-                //
-                // Test to ensure that each request is being handled
-                // by a different thread.
-                //
-                for (idx = 0; idx < thread_count_; idx++) {
-                    if (Thread.currentThread().equals(threads_[idx]))
-                        failed_ = true;
-                }
-
-                if (idx == thread_count_) {
-                    threads_[thread_count_++] = Thread.currentThread();
-                }
+        public synchronized void aMethod() {
+            final Thread thisThread = Thread.currentThread();
+            //
+            // Test to ensure that each request is being handled
+            // by a different thread.
+            //
+            if (threadSet.contains(thisThread)) {
+                fail();
+                return;
             }
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ex) {
-            }
-        }
-
-        public boolean failed() {
-            return failed_;
+            threadSet.add(thisThread);
         }
     }
 
     //
     // Implementation to test thread pool dispatch strategy
     //
-    final static class TestThreadPool_impl extends TestPOA {
-        private Thread threads_[];
-
-        private int thread_count_;
-
-        private boolean failed_;
-
-        TestThreadPool_impl() {
-            failed_ = false;
-            thread_count_ = 0;
-            threads_ = new Thread[2];
-        }
-
-        public void aMethod() {
-            synchronized (this) {
-                //
-                // Test to ensure that all requests are handled only by
-                // the two threads in the thread pool.
-                //
-                if (thread_count_ == 0) {
-                    threads_[0] = Thread.currentThread();
-                    ++thread_count_;
-                } else if (!Thread.currentThread().equals(threads_[0])) {
-                    if (thread_count_ == 1) {
-                        threads_[1] = Thread.currentThread();
-                        ++thread_count_;
-                    } else if (!Thread.currentThread().equals(threads_[1])) {
-                        failed_ = true;
-                    }
-                }
-            }
-
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException ex) {
-            }
-        }
-
-        public boolean failed() {
-            return failed_;
-        }
+    final static class TestThreadPool_impl extends AbstractTestPool {
+        TestThreadPool_impl() { super(2); }
     }
 
     //

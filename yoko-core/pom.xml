@@ -33,7 +33,12 @@
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>org.osgi.core</artifactId>
-            <version>4.3.0</version>
+            <version>5.0.0</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.yoko</groupId>
+            <artifactId>yoko-osgi</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -48,23 +53,32 @@
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-rmi-impl</artifactId>
-            <scope>test</scope>
+            <artifactId>yoko-util</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.yoko</groupId>
-            <artifactId>yoko-osgi</artifactId>
+            <artifactId>yoko-rmi-impl</artifactId>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <configuration>
+                    <instructions>
+                        <Bundle-Activator>org.apache.yoko.orb.activator.Activator</Bundle-Activator>
+                    </instructions>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
@@ -90,6 +104,13 @@
                                     <overWrite>true</overWrite>
                                     <outputDirectory>${project.build.directory}/endorsed</outputDirectory>
                                 </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.yoko</groupId>
+                                    <artifactId>yoko-osgi</artifactId>
+                                    <type>jar</type>
+                                    <overWrite>true</overWrite>
+                                    <outputDirectory>${project.build.directory}/endorsed</outputDirectory>
+                                </artifactItem>
                             </artifactItems>
                         </configuration>
                     </execution>
@@ -110,15 +131,10 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <argLine>-Xmx128m -Djava.endorsed.dirs=${project.build.directory}/endorsed</argLine>
                     <includes>
                         <include>**/org/apache/yoko/*Test.java</include>
                     </includes>
-                    <systemProperties>
-                        <property>
-                            <name>java.endorsed.dirs</name>
-                            <value>${basedir}/target/endorsed</value>
-                        </property>
-                    </systemProperties>
                 </configuration>
             </plugin>
 

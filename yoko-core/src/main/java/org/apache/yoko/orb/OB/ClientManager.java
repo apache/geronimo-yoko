@@ -16,16 +16,14 @@
  */
 
 package org.apache.yoko.orb.OB;
- 
-import java.util.logging.Level;
+
+import java.util.Arrays;
+import java.util.Vector;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.CONNECTION_REUSE_POLICY_ID;
-import org.apache.yoko.orb.OB.ConnectionReusePolicy;
-import org.apache.yoko.orb.OB.ConnectionReusePolicyHelper;
-import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
-import org.apache.yoko.orb.OB.ProtocolPolicy;
-import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.omg.CORBA.Policy;
+import org.omg.IOP.IOR;
 import org.omg.PortableServer.POAManagerPackage.State;
 
 public final class ClientManager {
@@ -40,12 +38,12 @@ public final class ClientManager {
     //
     // All clients
     //
-    private java.util.Vector allClients_ = new java.util.Vector();
+    private Vector<Client> allClients_ = new Vector<>();
 
     //
     // All reusable clients
     //
-    private java.util.Vector reusableClients_ = new java.util.Vector();
+    private Vector<Client> reusableClients_ = new Vector<>();
 
     //
     // The concurrency model with which new Clients are created
@@ -84,11 +82,7 @@ public final class ClientManager {
         //
         // Destroy all clients
         //
-        java.util.Enumeration e = allClients_.elements();
-        while (e.hasMoreElements()) {
-            Client client = (Client) e.nextElement();
-            client.destroy(false);
-        }
+        for (Client c : allClients_) c.destroy();
 
         //
         // Reset internal data
@@ -114,8 +108,7 @@ public final class ClientManager {
     //
     // Get a list of ClientProfilePairs for an IOR and a list of policies
     //
-    public synchronized java.util.Vector getClientProfilePairs(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies) {
+    public synchronized Vector<ClientProfilePair> getClientProfilePairs(IOR ior, Policy[] policies) {
         Assert._OB_assert(ior.type_id != null);
 
         //
@@ -135,18 +128,15 @@ public final class ClientManager {
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
-            
+
 
         //
         // Find out whether private clients are requested
         //
         boolean privateClients = false;
-        for (int i = 0; i < policies.length; i++) {
-            if (policies[i].policy_type() == CONNECTION_REUSE_POLICY_ID.value) {
-                ConnectionReusePolicy p = ConnectionReusePolicyHelper.narrow(policies[i]);
-                if (p.value() == false) {
-                    privateClients = true;
-                }
+        for (Policy pol : policies) {
+            if (pol.policy_type() == CONNECTION_REUSE_POLICY_ID.value) {
+                privateClients = !!!(ConnectionReusePolicyHelper.narrow(pol).value());
                 break;
             }
         }
@@ -155,9 +145,9 @@ public final class ClientManager {
         // Get the protocol policy, if any
         //
         ProtocolPolicy protocolPolicy = null;
-        for (int i = 0; i < policies.length; i++) {
-            if (policies[i].policy_type() == PROTOCOL_POLICY_ID.value) {
-                protocolPolicy = ProtocolPolicyHelper.narrow(policies[i]);
+        for (Policy pol : policies) {
+            if (pol.policy_type() == PROTOCOL_POLICY_ID.value) {
+                protocolPolicy = ProtocolPolicyHelper.narrow(pol);
                 break;
             }
         }
@@ -166,44 +156,39 @@ public final class ClientManager {
         // check whether the BiDir policy is enabled
         //
         boolean enableBidir = false;
-        for (int i = 0; i < policies.length; i++) {
-            if (policies[i].policy_type() == org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value) {
+        for (Policy pol : policies) {
+            if (pol.policy_type() == org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value) {
                 org.omg.BiDirPolicy.BidirectionalPolicy p = org.omg.BiDirPolicy.BidirectionalPolicyHelper
-                        .narrow(policies[i]);
+                        .narrow(pol);
                 if (p.value() == org.omg.BiDirPolicy.BOTH.value) {
                     enableBidir = true;
                 }
             }
         }
 
-        java.util.Vector pairs = new java.util.Vector();
+        Vector<ClientProfilePair> pairs = new Vector<>();
 
         //
         // First try to create CollocatedClients
         //
         org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory = orbInstance_.getPOAManagerFactory();
-        org.omg.PortableServer.POAManager[] managers = pmFactory.list();
-
-        for (int i = 0; i < managers.length; i++) {
+        for (org.omg.PortableServer.POAManager mgr : pmFactory.list()) {
             try {
-                org.apache.yoko.orb.OCI.Acceptor[] acceptors = ((org.apache.yoko.orb.OBPortableServer.POAManager) managers[i])
-                        .get_acceptors();
-
                 boolean local = false;
-                for (int j = 0; j < acceptors.length && !local; j++) {
-                    org.apache.yoko.orb.OCI.ProfileInfo[] localProfileInfos = acceptors[j].get_local_profiles(ior);
+                for (org.apache.yoko.orb.OCI.Acceptor acceptor : ((org.apache.yoko.orb.OBPortableServer.POAManager)mgr).get_acceptors()) {
+                    org.apache.yoko.orb.OCI.ProfileInfo[] localProfileInfos = acceptor.get_local_profiles(ior);
                     if (localProfileInfos.length > 0) {
                         local = true;
                     }
                 }
 
-                // we can get into hang situations if we return a collocated server for an 
-                // inactive POA.  This can happen with the RootPOA, which is generally not activated. 
-                if (local && managers[i].get_state() == State.ACTIVE) {
+                // we can get into hang situations if we return a collocated server for an
+                // inactive POA.  This can happen with the RootPOA, which is generally not activated.
+                if (local && mgr.get_state() == State.ACTIVE) {
                     //
                     // Retrieve the CollocatedServer from the POAManager
                     //
-                    org.apache.yoko.orb.OBPortableServer.POAManager_impl manager = (org.apache.yoko.orb.OBPortableServer.POAManager_impl) managers[i];
+                    org.apache.yoko.orb.OBPortableServer.POAManager_impl manager = (org.apache.yoko.orb.OBPortableServer.POAManager_impl) mgr;
                     CollocatedServer collocatedServer = manager._OB_getCollocatedServer();
 
                     //
@@ -215,11 +200,10 @@ public final class ClientManager {
                     Client client = new CollocatedClient(collocatedServer, concModel_, conv);
                     allClients_.addElement(client);
 
-                    org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = client.getUsableProfiles(ior, policies);
-                    for (int j = 0; j < profileInfos.length; j++) {
+                    for (org.apache.yoko.orb.OCI.ProfileInfo profileInfo : client.getUsableProfiles(ior, policies)) {
                         ClientProfilePair pair = new ClientProfilePair();
                         pair.client = client;
-                        pair.profile = profileInfos[j];
+                        pair.profile = profileInfo;
                         pairs.addElement(pair);
                     }
 
@@ -227,8 +211,7 @@ public final class ClientManager {
                     // TODO: Introduce reusable CollocatedClients?
                     //
                 }
-            } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                // Ignore
+            } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ignored) {
             }
         }
 
@@ -237,8 +220,7 @@ public final class ClientManager {
         // clients which are usable for the given IOR and policies
         //
         if (!privateClients) {
-            for (int i = 0; i < reusableClients_.size(); i++) {
-                Client reusableClient = (Client) reusableClients_.elementAt(i);
+            for (Client reusableClient : reusableClients_) {
 
                 //
                 // Skip any client whose protocol is not present in the
@@ -246,19 +228,15 @@ public final class ClientManager {
                 //
                 if (protocolPolicy != null) {
                     org.apache.yoko.orb.OCI.ConnectorInfo info = reusableClient.connectorInfo();
-                    if (info != null) {
-                        if (!protocolPolicy.contains(info.id())) {
-                            continue;
-                        }
+                    if (info != null && !protocolPolicy.contains(info.id())) {
+                        continue;
                     }
                 }
 
-                org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = reusableClient
-                        .getUsableProfiles(ior, policies);
-                for (int j = 0; j < profileInfos.length; j++) {
+                for (org.apache.yoko.orb.OCI.ProfileInfo profileInfo : reusableClient.getUsableProfiles(ior, policies)) {
                     ClientProfilePair pair = new ClientProfilePair();
                     pair.client = reusableClient;
-                    pair.profile = profileInfos[j];
+                    pair.profile = profileInfo;
                     pairs.addElement(pair);
                 }
             }
@@ -267,30 +245,22 @@ public final class ClientManager {
         //
         // Finally, create new GIOPClients for all connectors we can get
         //
-        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = orbInstance_
-                .getConFactoryRegistry();
-        org.apache.yoko.orb.OCI.ConFactory[] factories = conFactoryRegistry
-                .get_factories();
-        for (int i = 0; i < factories.length; i++) {
-            org.apache.yoko.orb.OCI.Connector[] connectors = factories[i]
-                    .create_connectors(ior, policies);
-            for (int j = 0; j < connectors.length; j++) {
+        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = orbInstance_.getConFactoryRegistry();
+        for (org.apache.yoko.orb.OCI.ConFactory factory : conFactoryRegistry.get_factories()) {
+            for (org.apache.yoko.orb.OCI.Connector connector : factory.create_connectors(ior, policies)) {
                 //
                 // Skip any connector whose protocol is not present in the
                 // protocol list
                 //
-                if (protocolPolicy != null)
-                {
-                    if (!protocolPolicy.contains(connectors[j].id())) {
-                        continue;
-                    }
+                if (protocolPolicy != null && !protocolPolicy.contains(connector.id())) {
+                    continue;
                 }
 
                 //
                 // Get all usable profiles
                 //
-                org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = connectors[j].get_usable_profiles(ior, policies);
-                Assert._OB_assert(profileInfos.length >= 1);
+                org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = connector.get_usable_profiles(ior, policies);
+                Assert._OB_assert(profileInfos.length != 0);
 
                 //
                 // Create a new GIOPClient for each usable profile, and set
@@ -298,25 +268,23 @@ public final class ClientManager {
                 // clients that are equivalent to other clients we already
                 // have.
                 //
-                for (int k = 0; k < profileInfos.length; k++) {
-                    CodeConverters conv = CodeSetUtil.getCodeConverters(
-                            orbInstance_, profileInfos[k]);
+                for (org.apache.yoko.orb.OCI.ProfileInfo profileInfo: profileInfos) {
+                    CodeConverters conv = CodeSetUtil.getCodeConverters(orbInstance_, profileInfo);
 
-                    Client client = new GIOPClient(orbInstance_, connectors[j],
-                            concModel_, conv, enableBidir);
+                    Client newClient = new GIOPClient(orbInstance_, connector, concModel_, conv, enableBidir);
 
                     if (!pairs.isEmpty()) {
-                        int l;
+                        boolean matched = false;
 
-                        for (l = 0; l < pairs.size(); l++) {
-                            ClientProfilePair pair = (ClientProfilePair) pairs.elementAt(l);
-                            if (pair.client.equal(client)) {
+                        for (ClientProfilePair pair : pairs) {
+                            if (pair.client.matches(newClient)) {
+                                matched = true;
                                 break;
                             }
                         }
 
-                        if (l != pairs.size()) {
-                            client.destroy(false);
+                        if (matched) {
+                            newClient.destroy();
                             continue;
                         }
                     }
@@ -324,17 +292,15 @@ public final class ClientManager {
                     //
                     // Add the new client to the list of all clients
                     //
-                    allClients_.addElement(client);
+                    allClients_.addElement(newClient);
 
                     //
                     // Add client/profile pairs
                     //
-                    org.apache.yoko.orb.OCI.ProfileInfo[] clientProfileInfos = client
-                            .getUsableProfiles(ior, policies);
-                    for (int l = 0; l < clientProfileInfos.length; l++) {
+                    for (org.apache.yoko.orb.OCI.ProfileInfo clientProfileInfo : newClient.getUsableProfiles(ior, policies)) {
                         ClientProfilePair pair = new ClientProfilePair();
-                        pair.client = client;
-                        pair.profile = clientProfileInfos[l];
+                        pair.client = newClient;
+                        pair.profile = clientProfileInfo;
                         pairs.addElement(pair);
                     }
 
@@ -343,7 +309,7 @@ public final class ClientManager {
                     // client to the list of existing reusable clients
                     //
                     if (!privateClients) {
-                        reusableClients_.addElement(client);
+                        reusableClients_.addElement(newClient);
                     }
                 }
             }
@@ -359,15 +325,13 @@ public final class ClientManager {
         if (!pairs.isEmpty() && protocolPolicy != null) {
             String[] protocols = protocolPolicy.value();
 
-            java.util.Vector newPairs = new java.util.Vector();
+            Vector<ClientProfilePair> newPairs = new Vector<>();
 
             //
             // First, add any pairs whose clients do not have ConnectorInfo
             //
-            for (int i = 0; i < pairs.size(); i++) {
-                ClientProfilePair pair = (ClientProfilePair) pairs.elementAt(i);
-                org.apache.yoko.orb.OCI.ConnectorInfo info = pair.client.connectorInfo();
-                if (info == null) {
+            for (ClientProfilePair pair : pairs) {
+                if (pair.client.connectorInfo() == null) {
                     newPairs.addElement(pair);
                 }
             }
@@ -375,14 +339,11 @@ public final class ClientManager {
             //
             // Next, add the pairs in the order specified by the policy
             //
-            for (int i = 0; i < protocols.length; i++) {
-                for (int j = 0; j < pairs.size(); j++) {
-                    ClientProfilePair pair = (ClientProfilePair) pairs.elementAt(j);
-                    org.apache.yoko.orb.OCI.ConnectorInfo info = pair.client.connectorInfo();
-                    if (info != null) {
-                        if (protocols[i].equals(info.id())) {
-                            newPairs.addElement(pair);
-                        }
+            for (String protocol : protocols) {
+                for (ClientProfilePair pair : pairs) {
+                    ConnectorInfo info = pair.client.connectorInfo();
+                    if (info != null && protocol.equals(info.id())) {
+                        newPairs.addElement(pair);
                     }
                 }
             }
@@ -405,14 +366,13 @@ public final class ClientManager {
         //
         // Increment the usage count on all clients
         //
-        for (int i = 0; i < pairs.size(); i++) {
-            ClientProfilePair pair = (ClientProfilePair) pairs.elementAt(i);
+        for (ClientProfilePair pair : pairs) {
             pair.client.incUsage();
         }
         return pairs;
     }
 
-    public synchronized void releaseClient(Client client, boolean terminate) {
+    public synchronized void releaseClient(Client client) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
@@ -437,37 +397,21 @@ public final class ClientManager {
         boolean inUse = client.decUsage();
 
         if (!inUse) {
-            int i;
+            reusableClients_.remove(client);
 
-            for (i = 0; i < reusableClients_.size(); i++) {
-                Client c = (Client) reusableClients_.elementAt(i);
-                if (c == client) {
-                    reusableClients_.removeElementAt(i);
-                    break;
-                }
+            if (allClients_.remove(client)) {
+                client.destroy();
+            } else {
+                Assert._OB_assert("Release called on unknown client");
             }
-
-            for (i = 0; i < allClients_.size(); i++) {
-                Client c = (Client) allClients_.elementAt(i);
-                if (c == client) {
-                    client.destroy(terminate);
-                    allClients_.removeElementAt(i);
-                    return;
-                }
-            }
-
-            Assert._OB_assert("Release called on unknown client");
         }
     }
 
     public boolean equivalent(org.omg.IOP.IOR ior1, org.omg.IOP.IOR ior2) {
-        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = orbInstance_
-                .getConFactoryRegistry();
+        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = orbInstance_.getConFactoryRegistry();
 
-        org.apache.yoko.orb.OCI.ConFactory[] factories = conFactoryRegistry
-                .get_factories();
-        for (int i = 0; i < factories.length; i++) {
-            if (!factories[i].equivalent(ior1, ior2)) {
+        for (org.apache.yoko.orb.OCI.ConFactory factory : conFactoryRegistry.get_factories()) {
+            if (!!!factory.equivalent(ior1, ior2)) {
                 return false;
             }
         }
@@ -475,14 +419,6 @@ public final class ClientManager {
     }
 
     public int hash(org.omg.IOP.IOR ior, int maximum) {
-        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = orbInstance_
-                .getConFactoryRegistry();
-
-        org.apache.yoko.orb.OCI.ConFactory[] factories = conFactoryRegistry.get_factories();
-        int hash = 0;
-        for (int i = 0; i < factories.length; i++) {
-            hash ^= factories[i].hash(ior, maximum);
-        }
-        return hash % (maximum + 1);
+        return Arrays.hashCode(orbInstance_.getConFactoryRegistry().get_factories());
     }
 }

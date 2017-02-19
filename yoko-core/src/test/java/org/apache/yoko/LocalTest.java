@@ -24,7 +24,7 @@ public class LocalTest extends AbstractOrbTestBase {
 
     public void setUp() throws Exception {
         super.setUp();
-        setWaitForFile(new java.io.File(OUTPUT_FILE));
+        setWaitForFile(OUTPUT_FILE);
     }
 
     public void testLocal() throws Exception {

@@ -17,9 +17,12 @@
 
 package test.types;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 
 public class TestTypeCode extends test.common.TestBase {
+    private static final boolean CHECK_IDL_NAMES = false;
     public TestTypeCode(ORB orb) {
         //
         // Test CompletionStatus
@@ -30,452 +33,452 @@ public class TestTypeCode extends test.common.TestBase {
         //
         try {
             TCKind kind = CompletionStatusHelper.type().kind();
-            TEST(kind == TCKind.tk_enum);
+            assertTrue(kind == TCKind.tk_enum);
 
             String name = CompletionStatusHelper.type().name();
-            TEST(name.equals("completion_status")
-                    || name.equals("CompletionStatus"));
+            assertTrue(name.equals("completion_status")
+			|| name.equals("CompletionStatus"));
 
             String id = CompletionStatusHelper.type().id();
-            TEST(id.equals("IDL:omg.org/CORBA/completion_status:1.0")
-                    || id.equals("IDL:omg.org/CORBA/CompletionStatus:1.0"));
+            assertTrue(id.equals("IDL:omg.org/CORBA/completion_status:1.0")
+			|| id.equals("IDL:omg.org/CORBA/CompletionStatus:1.0"));
 
             int count = CompletionStatusHelper.type().member_count();
-            TEST(count == 3);
+            assertTrue(count == 3);
 
             String name0 = CompletionStatusHelper.type().member_name(0);
-            TEST(name0.equals("COMPLETED_YES"));
+            assertTrue(name0.equals("COMPLETED_YES"));
 
             String name1 = CompletionStatusHelper.type().member_name(1);
-            TEST(name1.equals("COMPLETED_NO"));
+            assertTrue(name1.equals("COMPLETED_NO"));
 
             String name2 = CompletionStatusHelper.type().member_name(2);
-            TEST(name2.equals("COMPLETED_MAYBE"));
+            assertTrue(name2.equals("COMPLETED_MAYBE"));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TypeCode type = org.omg.CORBA.TypeCodePackage.BoundsHelper.type();
 
             TCKind kind = type.kind();
-            TEST(kind == TCKind.tk_except);
+            assertTrue(kind == TCKind.tk_except);
 
             String name = type.name();
-            TEST(name.equals("Bounds"));
+            assertTrue(name.equals("Bounds"));
 
             String id = type.id();
-            TEST(id.equals("IDL:omg.org/CORBA/TypeCode/Bounds:1.0"));
+            assertTrue(id.equals("IDL:omg.org/CORBA/TypeCode/Bounds:1.0"));
 
             int count = type.member_count();
-            TEST(count == 0);
+            assertTrue(count == 0);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TypeCode type = org.omg.CORBA.TypeCodePackage.BadKindHelper.type();
 
             TCKind kind = type.kind();
-            TEST(kind == TCKind.tk_except);
+            assertTrue(kind == TCKind.tk_except);
 
             String name = type.name();
-            TEST(name.equals("BadKind"));
+            assertTrue(name.equals("BadKind"));
 
             String id = type.id();
-            TEST(id.equals("IDL:omg.org/CORBA/TypeCode/BadKind:1.0"));
+            assertTrue(id.equals("IDL:omg.org/CORBA/TypeCode/BadKind:1.0"));
 
             int count = type.member_count();
-            TEST(count == 0);
+            assertTrue(count == 0);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TCKind kind = TestStruct1Helper.type().kind();
-            TEST(kind == TCKind.tk_struct);
+            assertTrue(kind == TCKind.tk_struct);
 
             String name = TestStruct1Helper.type().name();
-            TEST(name.equals("TestStruct1"));
+            assertTrue(name.equals("TestStruct1"));
 
             long count = TestStruct1Helper.type().member_count();
-            TEST(count == 7);
+            assertTrue(count == 7);
 
             String name0 = TestStruct1Helper.type().member_name(0);
-            TEST(name0.equals("s"));
+            assertTrue(name0.equals("s"));
 
             String name1 = TestStruct1Helper.type().member_name(1);
-            TEST(name1.equals("l"));
+            assertTrue(name1.equals("l"));
 
             String name2 = TestStruct1Helper.type().member_name(2);
-            TEST(name2.equals("d"));
+            assertTrue(name2.equals("d"));
 
             String name3 = TestStruct1Helper.type().member_name(3);
-            TEST(name3.equals("b"));
+            assertTrue(name3.equals("b"));
 
             String name4 = TestStruct1Helper.type().member_name(4);
-            TEST(name4.equals("c"));
+            assertTrue(name4.equals("c"));
 
             String name5 = TestStruct1Helper.type().member_name(5);
-            TEST(name5.equals("o"));
+            assertTrue(name5.equals("o"));
 
             String name6 = TestStruct1Helper.type().member_name(6);
-            TEST(name6.equals("str"));
+            assertTrue(name6.equals("str"));
 
             TypeCode type0 = TestStruct1Helper.type().member_type(0);
-            TEST(type0.equal(orb.get_primitive_tc(TCKind.tk_short)));
+            assertTrue(type0.equal(orb.get_primitive_tc(TCKind.tk_short)));
 
             TypeCode type1 = TestStruct1Helper.type().member_type(1);
-            TEST(type1.equal(orb.get_primitive_tc(TCKind.tk_long)));
+            assertTrue(type1.equal(orb.get_primitive_tc(TCKind.tk_long)));
 
             TypeCode type2 = TestStruct1Helper.type().member_type(2);
-            TEST(type2.equal(orb.get_primitive_tc(TCKind.tk_double)));
+            assertTrue(type2.equal(orb.get_primitive_tc(TCKind.tk_double)));
 
             TypeCode type3 = TestStruct1Helper.type().member_type(3);
-            TEST(type3.equal(orb.get_primitive_tc(TCKind.tk_boolean)));
+            assertTrue(type3.equal(orb.get_primitive_tc(TCKind.tk_boolean)));
 
             TypeCode type4 = TestStruct1Helper.type().member_type(4);
-            TEST(type4.equal(orb.get_primitive_tc(TCKind.tk_char)));
+            assertTrue(type4.equal(orb.get_primitive_tc(TCKind.tk_char)));
 
             TypeCode type5 = TestStruct1Helper.type().member_type(5);
-            TEST(type5.equal(orb.get_primitive_tc(TCKind.tk_octet)));
+            assertTrue(type5.equal(orb.get_primitive_tc(TCKind.tk_octet)));
 
             TypeCode type6 = TestStruct1Helper.type().member_type(6);
-            TEST(type6.equal(orb.get_primitive_tc(TCKind.tk_string)));
+            assertTrue(type6.equal(orb.get_primitive_tc(TCKind.tk_string)));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TCKind kind = TestStruct2Helper.type().kind();
-            TEST(kind == TCKind.tk_struct);
+            assertTrue(kind == TCKind.tk_struct);
 
             String name = TestStruct2Helper.type().name();
-            TEST(name.equals("TestStruct2"));
+            assertTrue(name.equals("TestStruct2"));
 
             long count = TestStruct2Helper.type().member_count();
-            TEST(count == 4);
+            assertTrue(count == 4);
 
             String name0 = TestStruct2Helper.type().member_name(0);
-            TEST(name0.equals("s"));
+            assertTrue(name0.equals("s"));
 
             TypeCode type0 = TestStruct2Helper.type().member_type(0);
-            TEST(type0.equal(TestStruct1Helper.type()));
+            assertTrue(type0.equal(TestStruct1Helper.type()));
 
             String name1 = TestStruct2Helper.type().member_name(1);
-            TEST(name1.equals("a"));
+            assertTrue(name1.equals("a"));
 
             TypeCode type1 = TestStruct2Helper.type().member_type(1);
-            TEST(type1.equal(orb.get_primitive_tc(TCKind.tk_any)));
+            assertTrue(type1.equal(orb.get_primitive_tc(TCKind.tk_any)));
 
             String name2 = TestStruct2Helper.type().member_name(2);
-            TEST(name2.equals("da"));
+            assertTrue(name2.equals("da"));
 
             TypeCode type2 = TestStruct2Helper.type().member_type(2);
-            TEST(type2.equal(DoubleArrayHelper.type()));
+            assertTrue(type2.equal(DoubleArrayHelper.type()));
 
             String name3 = TestStruct2Helper.type().member_name(3);
-            TEST(name3.equals("sa"));
+            assertTrue(name3.equals("sa"));
 
             TypeCode type3 = TestStruct2Helper.type().member_type(3);
-            TEST(type3.equal(orb.create_array_tc(100, orb
-                    .get_primitive_tc(TCKind.tk_string))));
+            assertTrue(type3.equal(orb.create_array_tc(100, orb
+			.get_primitive_tc(TCKind.tk_string))));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TCKind kind = TestStruct3Helper.type().kind();
-            TEST(kind == TCKind.tk_struct);
+            assertTrue(kind == TCKind.tk_struct);
 
             String name = TestStruct3Helper.type().name();
-            TEST(name.equals("TestStruct3"));
+            assertTrue(name.equals("TestStruct3"));
 
             int count = TestStruct3Helper.type().member_count();
-            TEST(count == 2);
+            assertTrue(count == 2);
 
             String name0 = TestStruct3Helper.type().member_name(0);
-            TEST(name0.equals("l"));
+            assertTrue(name0.equals("l"));
 
             TypeCode type0 = TestStruct3Helper.type().member_type(0);
-            TEST(type0.equal(orb.get_primitive_tc(TCKind.tk_long)));
+            assertTrue(type0.equal(orb.get_primitive_tc(TCKind.tk_long)));
 
             String name1 = TestStruct3Helper.type().member_name(1);
-            TEST(name1.equals("seq"));
+            assertTrue(name1.equals("seq"));
 
             TypeCode type1 = TestStruct3Helper.type().member_type(1);
             TypeCode contentType = type1.content_type();
-            TEST(contentType.equal(TestStruct3Helper.type()));
+            assertTrue(contentType.equal(TestStruct3Helper.type()));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TCKind kind = TestStruct4Helper.type().kind();
-            TEST(kind == TCKind.tk_struct);
+            assertTrue(kind == TCKind.tk_struct);
 
             String name = TestStruct4Helper.type().name();
-            TEST(name.equals("TestStruct4"));
+            assertTrue(name.equals("TestStruct4"));
 
             int count = TestStruct4Helper.type().member_count();
-            TEST(count == 2);
+            assertTrue(count == 2);
 
             String name0 = TestStruct4Helper.type().member_name(0);
-            TEST(name0.equals("a"));
+            assertTrue(name0.equals("a"));
 
             TypeCode type0 = TestStruct4Helper.type().member_type(0);
-            TEST(type0.equal(TestStruct3Helper.type()));
+            assertTrue(type0.equal(TestStruct3Helper.type()));
 
             String name1 = TestStruct4Helper.type().member_name(1);
-            TEST(name1.equals("b"));
+            assertTrue(name1.equals("b"));
 
             TypeCode type1 = TestStruct4Helper.type().member_type(1);
             TypeCode contentType = type1.content_type();
-            TEST(contentType.equal(TestStruct3Helper.type()));
+            assertTrue(contentType.equal(TestStruct3Helper.type()));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TCKind kind = TestUnion4Helper.type().kind();
-            TEST(kind == TCKind.tk_union);
+            assertTrue(kind == TCKind.tk_union);
 
             String name = TestUnion4Helper.type().name();
-            TEST(name.equals("TestUnion4"));
+            assertTrue(name.equals("TestUnion4"));
 
             int count = TestUnion4Helper.type().member_count();
-            TEST(count == 2);
+            assertTrue(count == 2);
 
             String name0 = TestUnion4Helper.type().member_name(0);
-            TEST(name0.equals("seq"));
+            assertTrue(name0.equals("seq"));
 
             TypeCode type0 = TestUnion4Helper.type().member_type(0);
             TypeCode contentType = type0.content_type();
-            TEST(contentType.equal(TestUnion4Helper.type()));
+            assertTrue(contentType.equal(TestUnion4Helper.type()));
 
             String name1 = TestUnion4Helper.type().member_name(1);
-            TEST(name1.equals("c"));
+            assertTrue(name1.equals("c"));
 
             TypeCode type1 = TestUnion4Helper.type().member_type(1);
-            TEST(type1.equal(orb.get_primitive_tc(TCKind.tk_char)));
+            assertTrue(type1.equal(orb.get_primitive_tc(TCKind.tk_char)));
 
             Any label = TestUnion4Helper.type().member_label(1);
             TypeCode labelType = label.type();
-            TEST(labelType.equal(org.apache.yoko.orb.OB.TypeCodeFactory
-                    .createPrimitiveTC(org.omg.CORBA_2_4.TCKind
-                            .from_int(org.omg.CORBA.TCKind._tk_short))));
+            assertTrue(labelType.equal(org.apache.yoko.orb.OB.TypeCodeFactory
+			.createPrimitiveTC(org.omg.CORBA_2_4.TCKind
+			        .from_int(org.omg.CORBA.TCKind._tk_short))));
             short labelValue = label.extract_short();
-            TEST(labelValue == 1);
+            assertTrue(labelValue == 1);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             Any label = TestUnion1Helper.type().member_label(
                     TestUnion1Helper.type().default_index());
             byte defaultValue = label.extract_octet();
-            TEST(defaultValue == 0);
+            assertTrue(defaultValue == 0);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             Any label = TestUnion2Helper.type().member_label(0);
             TestEnum enumValue = TestEnumHelper.extract(label);
-            TEST(enumValue.value() == TestEnum._A);
+            assertTrue(enumValue.value() == TestEnum._A);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         try {
             TypeCode p;
 
             p = RepositoryIdHelper.type();
-            TEST(p.name().equals("RepositoryId"));
+            assertTrue(p.name().equals("RepositoryId"));
 
             p = ScopedNameHelper.type();
-            TEST(p.name().equals("ScopedName"));
+            assertTrue(p.name().equals("ScopedName"));
 
             p = IdentifierHelper.type();
-            TEST(p.name().equals("Identifier"));
+            assertTrue(p.name().equals("Identifier"));
 
             p = DefinitionKindHelper.type();
-            TEST(p.name().equals("DefinitionKind"));
+            assertTrue(p.name().equals("DefinitionKind"));
 
             p = IRObjectHelper.type();
-            TEST(p.name().equals("IRObject"));
+            assertTrue(p.name().equals("IRObject"));
 
             p = VersionSpecHelper.type();
-            TEST(p.name().equals("VersionSpec"));
+            assertTrue(p.name().equals("VersionSpec"));
 
             p = ContainedHelper.type();
-            TEST(p.name().equals("Contained"));
+            assertTrue(p.name().equals("Contained"));
 
             p = org.omg.CORBA.ContainedPackage.DescriptionHelper.type();
-            TEST(p.name().equals("Description"));
+            assertTrue(p.name().equals("Description"));
 
             p = InterfaceDefSeqHelper.type();
-            TEST(p.name().equals("InterfaceDefSeq"));
+            assertTrue(p.name().equals("InterfaceDefSeq"));
 
             p = ContainedSeqHelper.type();
-            TEST(p.name().equals("ContainedSeq"));
+            assertTrue(p.name().equals("ContainedSeq"));
 
             p = StructMemberHelper.type();
-            TEST(p.name().equals("StructMember"));
+            assertTrue(p.name().equals("StructMember"));
 
             p = StructMemberSeqHelper.type();
-            TEST(p.name().equals("StructMemberSeq"));
+            assertTrue(p.name().equals("StructMemberSeq"));
 
             p = UnionMemberHelper.type();
-            TEST(p.name().equals("UnionMember"));
+            assertTrue(p.name().equals("UnionMember"));
 
             p = UnionMemberSeqHelper.type();
-            TEST(p.name().equals("UnionMemberSeq"));
+            assertTrue(p.name().equals("UnionMemberSeq"));
 
             p = EnumMemberSeqHelper.type();
-            TEST(p.name().equals("EnumMemberSeq"));
+            assertTrue(p.name().equals("EnumMemberSeq"));
 
             p = ContainerHelper.type();
-            TEST(p.name().equals("Container"));
+            assertTrue(p.name().equals("Container"));
 
             p = org.omg.CORBA.ContainerPackage.DescriptionHelper.type();
-            TEST(p.name().equals("Description"));
+            assertTrue(p.name().equals("Description"));
 
             p = org.omg.CORBA.ContainerPackage.DescriptionSeqHelper.type();
-            TEST(p.name().equals("DescriptionSeq"));
+            assertTrue(p.name().equals("DescriptionSeq"));
 
             p = IDLTypeHelper.type();
-            TEST(p.name().equals("IDLType"));
+            assertTrue(p.name().equals("IDLType"));
 
             p = PrimitiveKindHelper.type();
-            TEST(p.name().equals("PrimitiveKind"));
+            assertTrue(p.name().equals("PrimitiveKind"));
 
             p = RepositoryHelper.type();
-            TEST(p.name().equals("Repository"));
+            assertTrue(p.name().equals("Repository"));
 
             p = ModuleDefHelper.type();
-            TEST(p.name().equals("ModuleDef"));
+            assertTrue(p.name().equals("ModuleDef"));
 
             p = ModuleDescriptionHelper.type();
-            TEST(p.name().equals("ModuleDescription"));
+            assertTrue(p.name().equals("ModuleDescription"));
 
             p = ConstantDefHelper.type();
-            TEST(p.name().equals("ConstantDef"));
+            assertTrue(p.name().equals("ConstantDef"));
 
             p = ConstantDescriptionHelper.type();
-            TEST(p.name().equals("ConstantDescription"));
+            assertTrue(p.name().equals("ConstantDescription"));
 
             p = TypedefDefHelper.type();
-            TEST(p.name().equals("TypedefDef"));
+            assertTrue(p.name().equals("TypedefDef"));
 
             p = TypeDescriptionHelper.type();
-            TEST(p.name().equals("TypeDescription"));
+            assertTrue(p.name().equals("TypeDescription"));
 
             p = StructDefHelper.type();
-            TEST(p.name().equals("StructDef"));
+            assertTrue(p.name().equals("StructDef"));
 
             p = UnionDefHelper.type();
-            TEST(p.name().equals("UnionDef"));
+            assertTrue(p.name().equals("UnionDef"));
 
             p = EnumDefHelper.type();
-            TEST(p.name().equals("EnumDef"));
+            assertTrue(p.name().equals("EnumDef"));
 
             p = AliasDefHelper.type();
-            TEST(p.name().equals("AliasDef"));
+            assertTrue(p.name().equals("AliasDef"));
 
             p = PrimitiveDefHelper.type();
-            TEST(p.name().equals("PrimitiveDef"));
+            assertTrue(p.name().equals("PrimitiveDef"));
 
             p = StringDefHelper.type();
-            TEST(p.name().equals("StringDef"));
+            assertTrue(p.name().equals("StringDef"));
 
             p = SequenceDefHelper.type();
-            TEST(p.name().equals("SequenceDef"));
+            assertTrue(p.name().equals("SequenceDef"));
 
             p = ArrayDefHelper.type();
-            TEST(p.name().equals("ArrayDef"));
+            assertTrue(p.name().equals("ArrayDef"));
 
             p = ExceptionDefHelper.type();
-            TEST(p.name().equals("ExceptionDef"));
+            assertTrue(p.name().equals("ExceptionDef"));
 
             p = ExceptionDescriptionHelper.type();
-            TEST(p.name().equals("ExceptionDescription"));
+            assertTrue(p.name().equals("ExceptionDescription"));
 
             p = AttributeModeHelper.type();
-            TEST(p.name().equals("AttributeMode"));
+            assertTrue(p.name().equals("AttributeMode"));
 
             p = AttributeDefHelper.type();
-            TEST(p.name().equals("AttributeDef"));
+            assertTrue(p.name().equals("AttributeDef"));
 
             p = AttributeDescriptionHelper.type();
-            TEST(p.name().equals("AttributeDescription"));
+            assertTrue(p.name().equals("AttributeDescription"));
 
             p = OperationModeHelper.type();
-            TEST(p.name().equals("OperationMode"));
+            assertTrue(p.name().equals("OperationMode"));
 
             p = ParameterModeHelper.type();
-            TEST(p.name().equals("ParameterMode"));
+            assertTrue(p.name().equals("ParameterMode"));
 
             p = ParameterDescriptionHelper.type();
-            TEST(p.name().equals("ParameterDescription"));
+            assertTrue(p.name().equals("ParameterDescription"));
 
             p = ParDescriptionSeqHelper.type();
-            TEST(p.name().equals("ParDescriptionSeq"));
+            assertTrue(p.name().equals("ParDescriptionSeq"));
 
             p = ContextIdentifierHelper.type();
-            TEST(p.name().equals("ContextIdentifier"));
+            assertTrue(p.name().equals("ContextIdentifier"));
 
             p = ContextIdSeqHelper.type();
-            TEST(p.name().equals("ContextIdSeq"));
+            assertTrue(p.name().equals("ContextIdSeq"));
 
             p = ExceptionDefSeqHelper.type();
-            TEST(p.name().equals("ExceptionDefSeq"));
+            assertTrue(p.name().equals("ExceptionDefSeq"));
 
             p = ExcDescriptionSeqHelper.type();
-            TEST(p.name().equals("ExcDescriptionSeq"));
+            assertTrue(p.name().equals("ExcDescriptionSeq"));
 
             p = OperationDefHelper.type();
-            TEST(p.name().equals("OperationDef"));
+            assertTrue(p.name().equals("OperationDef"));
 
             p = OperationDescriptionHelper.type();
-            TEST(p.name().equals("OperationDescription"));
+            assertTrue(p.name().equals("OperationDescription"));
 
             p = RepositoryIdSeqHelper.type();
-            TEST(p.name().equals("RepositoryIdSeq"));
+            assertTrue(p.name().equals("RepositoryIdSeq"));
 
             p = OpDescriptionSeqHelper.type();
-            TEST(p.name().equals("OpDescriptionSeq"));
+            assertTrue(p.name().equals("OpDescriptionSeq"));
 
             p = AttrDescriptionSeqHelper.type();
-            TEST(p.name().equals("AttrDescriptionSeq"));
+            assertTrue(p.name().equals("AttrDescriptionSeq"));
 
             p = InterfaceDefHelper.type();
-            TEST(p.name().equals("InterfaceDef"));
+            assertTrue(p.name().equals("InterfaceDef"));
 
             p = org.omg.CORBA.InterfaceDefPackage.FullInterfaceDescriptionHelper
                     .type();
-            TEST(p.name().equals("FullInterfaceDescription"));
+            assertTrue(p.name().equals("FullInterfaceDescription"));
 
             p = InterfaceDescriptionHelper.type();
-            TEST(p.name().equals("InterfaceDescription"));
+            assertTrue(p.name().equals("InterfaceDescription"));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -491,7 +494,7 @@ public class TestTypeCode extends test.common.TestBase {
                     members[0].type = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_struct_tc(bogusIds[i], "foo", members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -507,7 +510,7 @@ public class TestTypeCode extends test.common.TestBase {
                     members[0].label = orb.create_any();
                     members[0].label.insert_short((short) 1);
                     orb.create_union_tc(bogusIds[i], "foo", tcShort, members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -516,7 +519,7 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.TypeCode tcShort = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_alias_tc(bogusIds[i], "foo", tcShort);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -528,14 +531,14 @@ public class TestTypeCode extends test.common.TestBase {
                     members[0].type = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_exception_tc(bogusIds[i], "foo", members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_interface_tc(bogusIds[i], "foo");
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -544,7 +547,7 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.ValueMember[] members = new org.omg.CORBA.ValueMember[0];
                     orb.create_value_tc(bogusIds[i], "foo",
                             org.omg.CORBA.VM_NONE.value, null, members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -553,21 +556,21 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.TypeCode tcShort = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_value_box_tc(bogusIds[i], "foo", tcShort);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_native_tc(bogusIds[i], "foo");
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_abstract_interface_tc(bogusIds[i], "foo");
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -575,7 +578,7 @@ public class TestTypeCode extends test.common.TestBase {
                 try {
                     ((org.omg.CORBA_2_4.ORB) orb).create_local_interface_tc(
                             bogusIds[i], "foo");
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -585,7 +588,7 @@ public class TestTypeCode extends test.common.TestBase {
         //
         // Check IDL name
         //
-        {
+        if (CHECK_IDL_NAMES) {
             String[] bogusNames = { "_foo", "1foo", "f.oo" };
             for (int i = 0; i < bogusNames.length; i++) {
                 try {
@@ -595,7 +598,7 @@ public class TestTypeCode extends test.common.TestBase {
                     members[0].type = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_struct_tc("IDL:foo:1.0", bogusNames[i], members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -612,7 +615,7 @@ public class TestTypeCode extends test.common.TestBase {
                     members[0].label.insert_short((short) 1);
                     orb.create_union_tc("IDL:foo:1.0", bogusNames[i], tcShort,
                             members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -621,7 +624,7 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.TypeCode tcShort = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_alias_tc("IDL:foo:1.0", bogusNames[i], tcShort);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -634,14 +637,14 @@ public class TestTypeCode extends test.common.TestBase {
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_exception_tc("IDL:foo:1.0", bogusNames[i],
                             members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_interface_tc("IDL:foo:1.0", bogusNames[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -650,7 +653,7 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.ValueMember[] members = new org.omg.CORBA.ValueMember[0];
                     orb.create_value_tc("IDL:foo:1.0", bogusNames[i],
                             org.omg.CORBA.VM_NONE.value, null, members);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -660,14 +663,14 @@ public class TestTypeCode extends test.common.TestBase {
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_value_box_tc("IDL:foo:1.0", bogusNames[i],
                             tcShort);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_native_tc("IDL:foo:1.0", bogusNames[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -675,7 +678,7 @@ public class TestTypeCode extends test.common.TestBase {
                 try {
                     orb.create_abstract_interface_tc("IDL:foo:1.0",
                             bogusNames[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -683,7 +686,7 @@ public class TestTypeCode extends test.common.TestBase {
                 try {
                     ((org.omg.CORBA_2_4.ORB) orb).create_local_interface_tc(
                             "IDL:foo:1.0", bogusNames[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -710,7 +713,7 @@ public class TestTypeCode extends test.common.TestBase {
                     seq[0].name = "v";
                     seq[0].type = types[i];
                     orb.create_struct_tc("IDL:foo:1.0", "foo", seq);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
@@ -724,7 +727,7 @@ public class TestTypeCode extends test.common.TestBase {
                     seq[0].label = orb.create_any();
                     seq[0].label.insert_short((short) 1);
                     orb.create_union_tc("IDL:foo:1.0", "foo", types[i], seq);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_PARAM ex) {
                     // Expected
                 }
@@ -739,14 +742,14 @@ public class TestTypeCode extends test.common.TestBase {
                     org.omg.CORBA.TypeCode disc = orb
                             .get_primitive_tc(org.omg.CORBA.TCKind.tk_short);
                     orb.create_union_tc("IDL:foo:1.0", "foo", disc, seq);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_alias_tc("IDL:foo:1.0", "foo", types[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
@@ -757,21 +760,21 @@ public class TestTypeCode extends test.common.TestBase {
                     seq[0].name = "v";
                     seq[0].type = types[i];
                     orb.create_exception_tc("IDL:foo:1.0", "foo", seq);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_sequence_tc(0, types[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_array_tc(1, types[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
@@ -784,14 +787,14 @@ public class TestTypeCode extends test.common.TestBase {
                     seq[0].access = org.omg.CORBA.PUBLIC_MEMBER.value;
                     orb.create_value_tc("IDL:foo:1.0", "foo",
                             org.omg.CORBA.VM_NONE.value, null, seq);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }
 
                 try {
                     orb.create_value_box_tc("IDL:foo:1.0", "foo", types[i]);
-                    TEST(false);
+                    assertTrue(false);
                 } catch (org.omg.CORBA.BAD_TYPECODE ex) {
                     // Expected
                 }

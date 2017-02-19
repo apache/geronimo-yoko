@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -31,7 +34,7 @@ public final class TestFind extends test.common.TestBase {
         String str;
 
         POAManager rootMgr = root.the_POAManager();
-        TEST(rootMgr != null);
+        assertTrue(rootMgr != null);
 
         //
         // Create child POA
@@ -52,15 +55,15 @@ public final class TestFind extends test.common.TestBase {
         } catch (AdapterNonExistent ex) {
             throw new RuntimeException();
         }
-        TEST(poa2 != null);
-        TEST(poa2._is_equivalent(poa));
+        assertTrue(poa2 != null);
+        assertTrue(poa2._is_equivalent(poa));
 
         //
         // Test: AdapterNonExistent exception
         //
         try {
             poa2 = root.find_POA("poaX", false);
-            TEST(false); // find_POA should not have succeeded
+            assertTrue(false); // find_POA should not have succeeded
         } catch (AdapterNonExistent ex) {
             // expected
         }
@@ -85,8 +88,8 @@ public final class TestFind extends test.common.TestBase {
             throw new RuntimeException();
         }
 
-        TEST(poa3 != null);
-        TEST(poa3._is_equivalent(poa2));
+        assertTrue(poa3 != null);
+        assertTrue(poa3._is_equivalent(poa2));
     }
 
     public static void main(String[] args) {

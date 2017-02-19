@@ -17,6 +17,8 @@
 
 package test.retry;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
 
 public class Client extends test.common.TestBase {
@@ -29,10 +31,10 @@ public class Client extends test.common.TestBase {
         Test test = server.get_location_forward_object();
         try {
             test.aMethod();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TRANSIENT ex) {
             // Expected
-            TEST(ex.minor == org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded);
+            assertTrue(ex.minor == org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded);
         }
         System.out.println("Done!");
     }
@@ -55,7 +57,7 @@ public class Client extends test.common.TestBase {
             return RetryHelper.narrow(obj);
         } catch (org.omg.CORBA.UserException ex) {
             ex.printStackTrace();
-            TEST(false);
+            assertTrue(false);
             return null;
         }
     }
@@ -75,10 +77,10 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(1, false);
         try {
             retry.aMethod();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TRANSIENT ex) {
             // Expected
-            TEST(retry.get_count() == 1);
+            assertTrue(retry.get_count() == 1);
         }
 
         //
@@ -89,9 +91,9 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(1, false);
         try {
             retry.aMethod();
-            TEST(retry.get_count() == 2);
+            assertTrue(retry.get_count() == 2);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
 
@@ -106,10 +108,10 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(1, true);
         try {
             retry.aMethod();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.SystemException ex) {
             // Expected
-            TEST(retry.get_count() == 1);
+            assertTrue(retry.get_count() == 1);
         }
         System.out.println("Done!");
 
@@ -123,10 +125,10 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(1, false);
         try {
             retry.aMethod();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TRANSIENT ex) {
             // Expected
-            TEST(retry.get_count() == 1);
+            assertTrue(retry.get_count() == 1);
         }
         System.out.println("Done!");
 
@@ -140,9 +142,9 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(1, true);
         try {
             retry.aMethod();
-            TEST(retry.get_count() == 2);
+            assertTrue(retry.get_count() == 2);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
 
@@ -156,9 +158,9 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(5, false);
         try {
             retry.aMethod();
-            TEST(retry.get_count() == 6);
+            assertTrue(retry.get_count() == 6);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
 
         //
@@ -169,10 +171,10 @@ public class Client extends test.common.TestBase {
         retry.raise_exception(6, false);
         try {
             retry.aMethod();
-            TEST(false);
+            assertTrue(false);
         } catch (org.omg.CORBA.TRANSIENT ex) {
             // Expected
-            TEST(retry.get_count() == 6);
+            assertTrue(retry.get_count() == 6);
         }
         System.out.println("Done!");
 
@@ -188,9 +190,9 @@ public class Client extends test.common.TestBase {
             long start = System.currentTimeMillis();
             retry.aMethod();
             long stop = System.currentTimeMillis();
-            TEST((stop - start) > 1000);
+            assertTrue((stop - start) > 1000);
         } catch (org.omg.CORBA.SystemException ex) {
-            TEST(false);
+            assertTrue(false);
         }
         System.out.println("Done!");
     }
@@ -215,7 +217,7 @@ public class Client extends test.common.TestBase {
                 System.exit(1);
             }
             RetryServer server = RetryServerHelper.narrow(obj);
-            TEST(server != null);
+            assertTrue(server != null);
 
             testLocationForward(orb, server);
             testRetry(orb, server);

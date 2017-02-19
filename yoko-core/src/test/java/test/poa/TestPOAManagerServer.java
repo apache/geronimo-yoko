@@ -17,10 +17,14 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
+
 import java.io.*;
 
 public final class TestPOAManagerServer extends test.common.TestBase {
@@ -113,10 +117,8 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             POA retain = null;
             try {
                 retain = root.create_POA("retain", null, policies);
-            } catch (AdapterAlreadyExists ex) {
-                throw new RuntimeException();
-            } catch (InvalidPolicy ex) {
-                throw new RuntimeException();
+            } catch (AdapterAlreadyExists | InvalidPolicy ex) {
+                throw new RuntimeException(ex);
             }
 
             POAManager retainManager = retain.the_POAManager();
@@ -129,12 +131,8 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             byte[] oid = ("test").getBytes();
             try {
                 retain.activate_object_with_id(oid, testImpl);
-            } catch (ObjectAlreadyActive ex) {
-                TEST(false);
-            } catch (ServantAlreadyActive ex) {
-                TEST(false);
-            } catch (WrongPolicy ex) {
-                TEST(false);
+            } catch (ObjectAlreadyActive | ServantAlreadyActive | WrongPolicy ex) {
+                throw new RuntimeException(ex);
             }
 
             Test test = testImpl._this();
@@ -143,12 +141,8 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             byte[] oidDSI = ("testDSI").getBytes();
             try {
                 retain.activate_object_with_id(oidDSI, testDSIImpl);
-            } catch (ObjectAlreadyActive ex) {
-                TEST(false);
-            } catch (ServantAlreadyActive ex) {
-                TEST(false);
-            } catch (WrongPolicy ex) {
-                TEST(false);
+            } catch (ObjectAlreadyActive | ServantAlreadyActive | WrongPolicy ex) {
+                throw new RuntimeException(ex);
             }
 
             org.omg.CORBA.Object objDSI = retain.create_reference_with_id(
@@ -175,13 +169,7 @@ public final class TestPOAManagerServer extends test.common.TestBase {
             //
             PMSTestThread t = new PMSTestThread(test);
             t.start();
-
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-            }
-
-            TEST(t.callState() == PMSTestThread.CALL_STARTED);
+            t.waitForStart();
 
             //
             // Run implementation. This should cause the blocked call in
@@ -191,19 +179,11 @@ public final class TestPOAManagerServer extends test.common.TestBase {
                 manager.activate();
                 retainManager.activate();
             } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                throw new RuntimeException();
+                throw new RuntimeException(ex);
             }
+            t.waitForEnd();
 
-            //
-            // Wait for the call to complete
-            //
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException ex) {
-                // Ignore
-            }
-
-            TEST(t.callState() == PMSTestThread.CALL_SUCCESS);
+            assertTrue(t.result == PMSTestThread.Result.SUCCESS);
 
             new TestPOAManagerCommon(proxy, info);
 

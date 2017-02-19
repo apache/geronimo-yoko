@@ -17,6 +17,11 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+import org.apache.yoko.util.yasf.YasfThreadLocal;
+import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
+
 final public class ClientRequestInfo_impl extends RequestInfo_impl implements
         org.omg.PortableInterceptor.ClientRequestInfo {
     //
@@ -361,23 +366,26 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
         argStrategy_.setArgsAvail(true);
         argStrategy_.setExceptAvail(true);
 
-        java.util.Enumeration e = interceptors.elements();
-        while (e.hasMoreElements()) {
-            org.omg.PortableInterceptor.ClientRequestInterceptor interceptor = (org.omg.PortableInterceptor.ClientRequestInterceptor) e
-                    .nextElement();
-            try {
-                interceptor.send_request(this);
-                interceptors_.addElement(interceptor);
-            } catch (org.omg.CORBA.SystemException ex) {
-                status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
-                receivedException_ = ex;
-                _OB_reply();
-            } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-                status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
-                org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
-                        ._get_delegate());
-                forwardReference_ = p._OB_IOR();
-                _OB_reply();
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
+             YasfOverride yasfo = YasfThreadLocal.override()) {
+            java.util.Enumeration e = interceptors.elements();
+            while (e.hasMoreElements()) {
+                org.omg.PortableInterceptor.ClientRequestInterceptor interceptor = (org.omg.PortableInterceptor.ClientRequestInterceptor) e
+                        .nextElement();
+                try {
+                    interceptor.send_request(this);
+                    interceptors_.addElement(interceptor);
+                } catch (org.omg.CORBA.SystemException ex) {
+                    status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
+                    receivedException_ = ex;
+                    _OB_reply();
+                } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
+                    status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
+                    org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+                            ._get_delegate());
+                    forwardReference_ = p._OB_IOR();
+                    _OB_reply();
+                }
             }
         }
 
@@ -393,49 +401,52 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
             current_._OB_pushSlotData(currentSlots_);
         }
 
-        int curr = interceptors_.size() - 1;
-        while (!interceptors_.isEmpty()) {
-            try {
-                org.omg.PortableInterceptor.ClientRequestInterceptor i = (org.omg.PortableInterceptor.ClientRequestInterceptor) interceptors_
-                        .elementAt(curr);
+        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
+             YasfOverride yasfo = YasfThreadLocal.override()) {
+            int curr = interceptors_.size() - 1;
+            while (!interceptors_.isEmpty()) {
+                try {
+                    org.omg.PortableInterceptor.ClientRequestInterceptor i = (org.omg.PortableInterceptor.ClientRequestInterceptor) interceptors_
+                            .elementAt(curr);
 
-                if (status_ == org.omg.PortableInterceptor.SUCCESSFUL.value) {
-                    //
-                    // The result, arguments are available
-                    //
-                    argStrategy_.setResultAvail(true);
+                    if (status_ == org.omg.PortableInterceptor.SUCCESSFUL.value) {
+                        //
+                        // The result, arguments are available
+                        //
+                        argStrategy_.setResultAvail(true);
 
-                    i.receive_reply(this);
-                } else if (status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                        || status_ == org.omg.PortableInterceptor.USER_EXCEPTION.value) {
-                    //
-                    // The result, arguments not available
-                    //
-                    argStrategy_.setResultAvail(false);
-                    argStrategy_.setArgsAvail(false);
+                        i.receive_reply(this);
+                    } else if (status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
+                            || status_ == org.omg.PortableInterceptor.USER_EXCEPTION.value) {
+                        //
+                        // The result, arguments not available
+                        //
+                        argStrategy_.setResultAvail(false);
+                        argStrategy_.setArgsAvail(false);
 
-                    i.receive_exception(this);
-                } else {
-                    //
-                    // The result, arguments not available
-                    //
-                    argStrategy_.setResultAvail(false);
-                    argStrategy_.setArgsAvail(false);
+                        i.receive_exception(this);
+                    } else {
+                        //
+                        // The result, arguments not available
+                        //
+                        argStrategy_.setResultAvail(false);
+                        argStrategy_.setArgsAvail(false);
 
-                    i.receive_other(this);
+                        i.receive_other(this);
+                    }
+                } catch (org.omg.CORBA.SystemException ex) {
+                    status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
+                    receivedException_ = ex;
+                    receivedId_ = null;
+                } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
+                    status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
+                    org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+                            ._get_delegate());
+                    forwardReference_ = p._OB_IOR();
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
-                status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
-                receivedException_ = ex;
-                receivedId_ = null;
-            } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-                status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
-                org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
-                        ._get_delegate());
-                forwardReference_ = p._OB_IOR();
+                interceptors_.removeElementAt(curr);
+                --curr;
             }
-            interceptors_.removeElementAt(curr);
-            --curr;
         }
 
         //

@@ -18,35 +18,51 @@
 
 package org.apache.yoko.rmi.impl;
 
-public abstract class SimpleDescriptor extends TypeDescriptor {
-    SimpleDescriptor(Class type, TypeRepository repository, String idl_name,
-            org.omg.CORBA.TCKind tc) {
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+
+abstract class SimpleDescriptor extends TypeDescriptor {
+    private final String idl_name;
+    private final TCKind tc;
+    SimpleDescriptor(Class type, TypeRepository repository, String idl_name, TCKind tc) {
         super(type, repository);
-        setJavaName(type.getName());
-        setIDLName(idl_name);
-        // the simple type name is the same as the IDL name.  The 
-        // package name is null 
-        setTypeName(idl_name); 
-        setPackageName("");
-
-        org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
-        _type_code = orb.get_primitive_tc(tc);
+        this.idl_name = idl_name;
+        this.tc = tc;
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        return _type_code;
+    @Override
+    protected final String genIDLName() {
+        return idl_name;
     }
 
+    @Override
+    protected final String genPackageName() {
+        return "";
+    }
+
+    @Override
+    protected final String genTypeName() {
+        return idl_name;
+    }
+
+    @Override
+    protected final TypeCode genTypeCode() {
+        return ORB.init().get_primitive_tc(tc);
+    }
+
+    @Override
     boolean copyInStub() {
         return false;
     }
 
+    @Override
     public boolean copyBetweenStates() {
         return false;
     }
 
+    @Override
     public boolean copyWithinState() {
         return false;
     }
-
 }

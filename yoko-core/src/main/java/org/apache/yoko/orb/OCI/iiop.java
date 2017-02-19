@@ -17,10 +17,11 @@
 
 package org.apache.yoko.orb.OCI;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.OB.AssertionFailed;
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
+import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
 import org.apache.yoko.osgi.ProviderLocator;
 
 public class iiop implements PluginInit {
@@ -51,21 +52,32 @@ public class iiop implements PluginInit {
         //
         args.value = parse_args(args.value, props);
 
-        ConnectionHelper helper = null;
-
         try {
             // get the appropriate class for the loading.
             ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
             Class c = ProviderLocator.loadClass(connectionHelper, getClass(), loader);
-            helper = (org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) c.newInstance();
-            // give this a chance to initializer
-            helper.init(orb, helperArgs);
+            Object o = c.newInstance();
+            if (o instanceof org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) {
+                ConnectionHelper helper = (org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) o;
+                // give this a chance to initializer
+                helper.init(orb, helperArgs);
+                return new org.apache.yoko.orb.OCI.IIOP.Plugin_impl(orb, helper);
+            } else if (o instanceof org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper) {
+                ExtendedConnectionHelper helper = (org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper) o;
+                // give this a chance to initializer
+                helper.init(orb, helperArgs);
+                return new org.apache.yoko.orb.OCI.IIOP.Plugin_impl(orb, helper);
+            }
+            throw new AssertionFailed("connection helper class " + connectionHelper + " does not implement ConnectionHelper or ExtendedConnectionHelper");
+        } catch (AssertionFailed af) {
+            throw af;
+        } catch (org.omg.CORBA.INITIALIZE i) {
+            throw i;
         } catch (Exception ex) {
             throw new org.omg.CORBA.INITIALIZE("unable to load IIOP ConnectionHelper plug-in `" + connectionHelper + "': " + ex.getMessage());
         }
 
-        return new org.apache.yoko.orb.OCI.IIOP.Plugin_impl(orb, helper);
     }
 
     //

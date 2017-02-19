@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class DoubleDescriptor extends SimpleDescriptor {
+final class DoubleDescriptor extends SimpleDescriptor {
     DoubleDescriptor(TypeRepository repository) {
         super(Double.TYPE, repository, "double", org.omg.CORBA.TCKind.tk_double);
     }

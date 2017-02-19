@@ -17,47 +17,48 @@
 
 package test.poa;
 
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
-import org.omg.PortableServer.POAPackage.*;
-import java.io.*;
+import java.util.concurrent.CountDownLatch;
 
 final class PMSTestThread extends Thread {
-    private Test test_;
+    private final Test test_;
 
-    private int state_;
+    private final CountDownLatch startLatch = new CountDownLatch(1);
+    public volatile Result result = null;
 
-    final static int NONE = 0;
-
-    final static int CALL_STARTED = 1;
-
-    final static int CALL_FAILURE = 2;
-
-    final static int CALL_SUCCESS = 3;
-
-    private synchronized void setState(int val) {
-        state_ = val;
-    }
+    public enum Result { SUCCESS, FAILURE, ERROR };
 
     public void run() {
-        setState(CALL_STARTED);
+        startLatch.countDown();
         try {
             test_.aMethod();
+            result = Result.SUCCESS;
         } catch (org.omg.CORBA.TRANSIENT ex) {
-            setState(CALL_FAILURE);
+            result = Result.FAILURE;
             return;
         } catch (org.omg.CORBA.SystemException ex) {
+            result = Result.ERROR;
             System.err.println("Unexpected: " + ex);
         }
-        setState(CALL_SUCCESS);
     }
 
-    synchronized int callState() {
-        return state_;
+    public void waitForStart() {
+        do {
+            try {
+                startLatch.await();
+                return;
+            } catch (InterruptedException ie) {}
+        } while (true);
+    }
+
+    public void waitForEnd() {
+        while (isAlive()) {
+            try {
+                join();
+            } catch (InterruptedException ie) {}
+        }
     }
 
     PMSTestThread(Test test) {
         test_ = test;
-        state_ = NONE;
     }
 }

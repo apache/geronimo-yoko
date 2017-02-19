@@ -18,9 +18,19 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.lang.reflect.Method;
+import java.rmi.Remote;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -34,7 +44,7 @@ import java.util.logging.Level;
 
 import javax.rmi.PortableRemoteObject;
 
-public abstract class RemoteDescriptor extends TypeDescriptor {
+abstract class RemoteDescriptor extends TypeDescriptor {
     private java.util.Map method_map;
 
     private java.util.Map refl_method_map;
@@ -45,32 +55,10 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
     protected List super_descriptors;
 
-    public RemoteInterfaceDescriptor getRemoteInterface() {
-        RemoteInterfaceDescriptor result = super.getRemoteInterface();
-        if (result != null) { 
-            return result;
-        }
+    @Override
+    protected abstract RemoteInterfaceDescriptor genRemoteInterface();
 
-        if (this instanceof RemoteInterfaceDescriptor) {
-            result = (RemoteInterfaceDescriptor) this;
-        } else {
-            Class[] remotes = collect_remote_interfaces(getJavaClass());
-            if (remotes.length == 0) {
-                throw new RuntimeException(getJavaClass().getName()
-                        + " has no remote interfaces");
-            }
-            Class most_specific_interface = remotes[0];
-
-            result = (RemoteInterfaceDescriptor) repository
-                    .getDescriptor(most_specific_interface);
-        }
-
-        setRemoteInterface(result);
-
-        return result;
-    }
-
-    static final Class REMOTE_CLASS = java.rmi.Remote.class;
+    static final Class REMOTE_CLASS = Remote.class;
 
     static final Class OBJECT_CLASS = java.lang.Object.class;
 
@@ -80,11 +68,11 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
     public String[] all_interfaces() {
         if (_ids == null) {
-            Class[] ifaces = collect_remote_interfaces(getJavaClass());
+            Class[] ifaces = collect_remote_interfaces(type);
             int len = ifaces.length;
             String[] ids = new String[len];
             for (int i = 0; i < len; i++) {
-                TypeDescriptor desc = repository.getDescriptor(ifaces[i]);
+                TypeDescriptor desc = repo.getDescriptor(ifaces[i]);
                 ids[i] = desc.getRepositoryID();
             }
 
@@ -100,7 +88,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
 
         if (method_map == null) {
-            method_map = new java.util.HashMap();
+            method_map = new HashMap();
             for (int i = 0; i < operations.length; i++) {
                 method_map.put(operations[i].getIDLName(), operations[i]);
             }
@@ -111,7 +99,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
     void debugMethodMap() {
         if (logger.isLoggable(Level.FINER)) {
-            logger.finer("METHOD MAP FOR " + getJavaClass().getName());
+            logger.finer("METHOD MAP FOR " + type.getName());
 
             Iterator it = method_map.keySet().iterator();
             while (it.hasNext()) {
@@ -128,7 +116,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
 
         if (refl_method_map == null) {
-            refl_method_map = new java.util.HashMap();
+            refl_method_map = new HashMap();
             for (int i = 0; i < operations.length; i++) {
                 refl_method_map.put(operations[i].getReflectedMethod(), operations[i]);
             }
@@ -139,9 +127,6 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
 
     RemoteDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
-    }
-
-    public void init() {
     }
 
     public MethodDescriptor[] getMethods() {
@@ -169,7 +154,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         ArrayList method_list = new ArrayList();
 
         // first step is to build the helpers for any super classes
-        Class[] supers = getJavaClass().getInterfaces();
+        Class[] supers = type.getInterfaces();
         super_descriptors = new ArrayList();
 
         Map all_methods = new HashMap();
@@ -180,8 +165,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
             if (!REMOTE_CLASS.equals(iface) && !OBJECT_CLASS.equals(iface)
                     && REMOTE_CLASS.isAssignableFrom(iface)
                     && iface.isInterface()) {
-                RemoteDescriptor superHelper = (RemoteDescriptor) repository
-                        .getDescriptor(iface);
+                RemoteDescriptor superHelper = (RemoteDescriptor)repo.getDescriptor(iface);
 
                 super_descriptors.add(superHelper);
 
@@ -217,9 +201,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
 
         for (int i = 0; i < methods.length; i++) {
-            MethodDescriptor op = new MethodDescriptor(methods[i], repository);
+            MethodDescriptor op = new MethodDescriptor(methods[i], repo);
 
-            String mname = op.getJavaName();
+            String mname = op.java_name;
 
             // is there another method that differs only in case?
             Set same_case_names = (Set) lower_case_names.get(mname.toLowerCase());
@@ -239,10 +223,10 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
 
         // init method map...
-        method_map = new java.util.HashMap();
+        method_map = new HashMap();
         for (int i = 0; i < method_list.size(); i++) {
             MethodDescriptor desc = (MethodDescriptor) method_list.get(i);
-            logger.finer("Adding method " + desc.getJavaName() + " to method map under " + desc.getIDLName()); 
+            logger.finer("Adding method " + desc.java_name + " to method map under " + desc.getIDLName());
             method_map.put(desc.getIDLName(), desc);
         }
 
@@ -271,7 +255,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
     Method[] getLocalMethods() {
         ArrayList result = new ArrayList();
 
-        addNonRemoteInterfaceMethods(getJavaClass(), result);
+        addNonRemoteInterfaceMethods(type, result);
 
         Method[] out = new Method[result.size()];
         result.toArray(out);
@@ -396,27 +380,26 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
     }
 
     /** Read an instance of this value from a CDR stream */
-    public Object read(org.omg.CORBA.portable.InputStream in) {
-        return javax.rmi.PortableRemoteObject.narrow(in.read_Object(),
-                getJavaClass());
+    @Override
+    public Object read(InputStream in) {
+        return PortableRemoteObject.narrow(in.read_Object(),
+                type);
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object val) {
+    @Override
+    public void write(OutputStream out, Object val) {
         javax.rmi.CORBA.Util.writeRemoteObject(out, val);
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        if (_type_code == null) {
-            org.omg.CORBA.ORB orb = org.omg.CORBA.ORB.init();
-            return orb.create_interface_tc(getRepositoryID(), getJavaClass()
-                    .getName());
-        }
-
-        return _type_code;
+    @Override
+    protected final TypeCode genTypeCode() {
+        ORB orb = ORB.init();
+        return orb.create_interface_tc(getRepositoryID(), type.getName());
     }
 
-    void writeMarshalValue(java.io.PrintWriter pw, String outName,
+    @Override
+    void writeMarshalValue(PrintWriter pw, String outName,
             String paramName) {
         pw.print("javax.rmi.CORBA.Util.writeRemoteObject(");
         pw.print(outName);
@@ -425,16 +408,17 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         pw.print(')');
     }
 
-    void writeUnmarshalValue(java.io.PrintWriter pw, String inName) {
+    @Override
+    void writeUnmarshalValue(PrintWriter pw, String inName) {
         pw.print('(');
-        pw.print(getJavaClass().getName());
+        pw.print(type.getName());
         pw.print(')');
         pw.print(PortableRemoteObject.class.getName());
         pw.print(".narrow(");
         pw.print(inName);
         pw.print('.');
         pw.print("read_Object(),");
-        pw.print(getJavaClass().getName());
+        pw.print(type.getName());
         pw.print(".class)");
     }
 
@@ -473,9 +457,9 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         return pkgname + "._" + cplain + "_Stub";
     }
 
-    void writeStubClass(java.io.PrintWriter pw) {
+    void writeStubClass(PrintWriter pw) {
 
-        Class c = getJavaClass();
+        Class c = type;
         String cname = c.getName();
         String fullname = stubClassName(c);
         //String stubname = fullname.substring(fullname.lastIndexOf('.') + 1);
@@ -520,7 +504,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
     }
 
     String getStubClassName() {
-        Class c = getJavaClass();
+        Class c = type;
         String cname = c.getName();
 
         String pkgname = null;
@@ -536,23 +520,23 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         return pkgname + "." + "_" + cplain + "_Stub";
     }
 
+    @Override
     void addDependencies(Set classes) {
-        Class c = getJavaClass();
+        Class c = type;
 
-        if (c == java.rmi.Remote.class || classes.contains(c))
+        if (c == Remote.class || classes.contains(c))
             return;
 
         classes.add(c);
 
         if (c.getSuperclass() != null) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(
-                    c.getSuperclass());
+            TypeDescriptor desc = repo.getDescriptor(c.getSuperclass());
             desc.addDependencies(classes);
         }
 
         Class[] ifaces = c.getInterfaces();
         for (int i = 0; i < ifaces.length; i++) {
-            TypeDescriptor desc = getTypeRepository().getDescriptor(ifaces[i]);
+            TypeDescriptor desc = repo.getDescriptor(ifaces[i]);
             desc.addDependencies(classes);
         }
 
@@ -562,6 +546,7 @@ public abstract class RemoteDescriptor extends TypeDescriptor {
         }
     }
 
+    @Override
     boolean copyInStub() {
         return false;
     }

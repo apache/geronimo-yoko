@@ -17,10 +17,52 @@
 
 package org.apache.yoko.orb.OB;
  
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.RETRY_ALWAYS;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.BooleanHolder;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.ExceptionList;
+import org.omg.CORBA.NO_RESPONSE;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.NamedValue;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.UserException;
+import org.omg.CORBA.portable.ApplicationException;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.CORBA.portable.RemarshalException;
+import org.omg.GIOP.MessageHeader_1_1;
+import org.omg.GIOP.MessageHeader_1_2Helper;
+import org.omg.GIOP.MsgType_1_1;
+import org.omg.GIOP.RequestHeader_1_2;
+import org.omg.GIOP.RequestHeader_1_2Helper;
+import org.omg.IOP.INVOCATION_POLICIES;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.ServiceContextListHolder;
+import org.omg.MessageRouting.MessageBody;
+import org.omg.MessageRouting.PersistentRequest;
+import org.omg.MessageRouting.PersistentRequestRouter;
+import org.omg.MessageRouting.ReplyDestination;
+import org.omg.MessageRouting.ReplyDisposition;
+import org.omg.MessageRouting.RequestInfo;
+import org.omg.MessageRouting.RequestMessage;
+import org.omg.MessageRouting.Router;
+import org.omg.MessageRouting.RouterListHolder;
+import org.omg.Messaging.PolicyValue;
+import org.omg.Messaging.PolicyValueSeqHelper;
+import org.omg.Messaging.PolicyValueSeqHolder;
+import org.omg.Messaging.ReplyHandler;
 
 //
 // DowncallStub is equivalent to the C++ class OB::MarshalStubImpl
@@ -35,9 +77,9 @@ public final class DowncallStub {
     //
     // The IOR and the original IOR
     //
-    private org.omg.IOP.IOR IOR_;
+    private IOR IOR_;
 
-    private org.omg.IOP.IOR origIOR_;
+    private IOR origIOR_;
 
     //
     // The list of policies
@@ -47,7 +89,7 @@ public final class DowncallStub {
     //
     // All client/profile pairs
     //
-    private java.util.Vector clientProfilePairs_;
+    private Vector<ClientProfilePair> clientProfilePairs_;
 
     //
     // We need a class to carry the DowncallStub and Downcall across
@@ -63,8 +105,7 @@ public final class DowncallStub {
     // Private and protected member implementations
     // ------------------------------------------------------------------
 
-    private synchronized Client getClientProfilePair(
-            org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo)
+    private synchronized Client getClientProfilePair(org.apache.yoko.orb.OCI.ProfileInfoHolder profileInfo)
             throws FailureException {
         //
         // Lazy initialization of the client/profile pairs
@@ -87,10 +128,7 @@ public final class DowncallStub {
                 logger.fine("retry: no profiles available");
             }
 
-            throw new FailureException(new org.omg.CORBA.TRANSIENT(org.apache.yoko.orb.OB.MinorCodes
-                    .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO));
+            throw new FailureException(new TRANSIENT(org.apache.yoko.orb.OB.MinorCodes.describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR), org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR, CompletionStatus.COMPLETED_NO));
         }
 
         ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_.elementAt(0);
@@ -98,17 +136,15 @@ public final class DowncallStub {
         return clientProfilePair.client;
     }
 
-    private void destroy(boolean terminate) {
+    private void destroy() {
         //
         // If the ORB has been destroyed then the clientManager can be nil
         //
         ClientManager clientManager = orbInstance_.getClientManager();
 
         if (clientManager != null && clientProfilePairs_ != null) {
-            for (int i = 0; i < clientProfilePairs_.size(); i++) {
-                ClientProfilePair pair = (ClientProfilePair) clientProfilePairs_
-                        .elementAt(i);
-                clientManager.releaseClient(pair.client, terminate);
+            for (ClientProfilePair pair: clientProfilePairs_) {
+                clientManager.releaseClient(pair.client);
             }
         }
 
@@ -116,7 +152,7 @@ public final class DowncallStub {
     }
 
     protected void finalize() throws Throwable {
-        destroy(false);
+        destroy();
 
         super.finalize();
     }
@@ -125,8 +161,7 @@ public final class DowncallStub {
     // Public member implementations
     // ------------------------------------------------------------------
 
-    public DowncallStub(ORBInstance orbInstance, org.omg.IOP.IOR ior,
-            org.omg.IOP.IOR origIOR, RefCountPolicyList policies) {
+    public DowncallStub(ORBInstance orbInstance, IOR ior, IOR origIOR, RefCountPolicyList policies) {
         clientProfilePairs_ = null;
 
         //
@@ -160,8 +195,7 @@ public final class DowncallStub {
 
         PIManager piManager = orbInstance_.getPIManager();
         if (piManager.haveClientInterceptors()) {
-            return new PIDowncall(orbInstance_, client, profile.value,
-                    policies_, op, resp, IOR_, origIOR_, piManager);
+            return new PIDowncall(orbInstance_, client, profile.value, policies_, op, resp, IOR_, origIOR_, piManager);
         } else {
             return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
         }
@@ -178,47 +212,35 @@ public final class DowncallStub {
         return new Downcall(orbInstance_, client, profile.value, policies_, "_locate", true);
     }
 
-    public Downcall createPIArgsDowncall(String op, boolean resp,
-            ParameterDesc[] argDesc, ParameterDesc retDesc,
-            org.omg.CORBA.TypeCode[] exceptionTC) throws FailureException {
+    public Downcall createPIArgsDowncall(String op, boolean resp, ParameterDesc[] argDesc, ParameterDesc retDesc, TypeCode[] exceptionTC) throws FailureException {
         org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
         if (!policies_.interceptor)
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
 
         PIManager piManager = orbInstance_.getPIManager();
         if (piManager.haveClientInterceptors()) {
-            return new PIArgsDowncall(orbInstance_, client, profile.value,
-                    policies_, op, resp, IOR_, origIOR_, piManager, argDesc,
-                    retDesc, exceptionTC);
+            return new PIArgsDowncall(orbInstance_, client, profile.value, policies_, op, resp, IOR_, origIOR_, piManager, argDesc, retDesc, exceptionTC);
         } else {
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
         }
     }
 
-    public Downcall createPIDIIDowncall(String op, boolean resp,
-            org.omg.CORBA.NVList args, org.omg.CORBA.NamedValue result,
-            org.omg.CORBA.ExceptionList exceptions) throws FailureException {
+    public Downcall createPIDIIDowncall(String op, boolean resp, NVList args, NamedValue result, ExceptionList exceptions) throws FailureException {
         org.apache.yoko.orb.OCI.ProfileInfoHolder profile = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
 
         if (!policies_.interceptor)
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
 
         PIManager piManager = orbInstance_.getPIManager();
         if (piManager.haveClientInterceptors()) {
-            return new PIDIIDowncall(orbInstance_, client, profile.value,
-                    policies_, op, resp, IOR_, origIOR_, piManager, args,
-                    result, exceptions);
+            return new PIDIIDowncall(orbInstance_, client, profile.value, policies_, op, resp, IOR_, origIOR_, piManager, args, result, exceptions);
         } else {
-            return new Downcall(orbInstance_, client, profile.value, policies_,
-                    op, resp);
+            return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
         }
     }
 
@@ -226,18 +248,15 @@ public final class DowncallStub {
     // Marshalling interception points
     //
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal(Downcall down)
-            throws LocationForward, FailureException {
+    public org.apache.yoko.orb.CORBA.OutputStream preMarshal(Downcall down) throws LocationForward, FailureException {
         return down.preMarshal();
     }
 
-    public void marshalEx(Downcall down, org.omg.CORBA.SystemException ex)
-            throws LocationForward, FailureException {
+    public void marshalEx(Downcall down, SystemException ex) throws LocationForward, FailureException {
         down.marshalEx(ex);
     }
 
-    public void postMarshal(Downcall down) throws LocationForward,
-            FailureException {
+    public void postMarshal(Downcall down) throws LocationForward, FailureException {
         down.postMarshal();
     }
 
@@ -257,13 +276,11 @@ public final class DowncallStub {
         down.oneway();
     }
 
-    public void deferred(Downcall down) throws LocationForward,
-            FailureException {
+    public void deferred(Downcall down) throws LocationForward, FailureException {
         down.deferred();
     }
 
-    public void response(Downcall down) throws LocationForward,
-            FailureException {
+    public void response(Downcall down) throws LocationForward, FailureException {
         down.response();
     }
 
@@ -275,26 +292,21 @@ public final class DowncallStub {
     // Unmarshalling interception points
     //
 
-    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal(Downcall down)
-            throws LocationForward, FailureException {
+    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal(Downcall down) throws LocationForward, FailureException {
         return down.preUnmarshal();
     }
 
-    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal(Downcall down,
-            org.omg.CORBA.BooleanHolder uex) throws LocationForward,
-            FailureException {
+    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal(Downcall down, BooleanHolder uex) throws LocationForward, FailureException {
         org.apache.yoko.orb.CORBA.InputStream in = down.preUnmarshal();
         uex.value = down.userException();
         return in;
     }
 
-    public void unmarshalEx(Downcall down, org.omg.CORBA.SystemException ex)
-            throws LocationForward, FailureException {
+    public void unmarshalEx(Downcall down, SystemException ex) throws LocationForward, FailureException {
         down.unmarshalEx(ex);
     }
 
-    public void postUnmarshal(Downcall down) throws LocationForward,
-            FailureException {
+    public void postUnmarshal(Downcall down) throws LocationForward, FailureException {
         down.postUnmarshal();
     }
 
@@ -306,20 +318,18 @@ public final class DowncallStub {
         return down.unmarshalExceptionId();
     }
 
-    public void setUserException(Downcall down, org.omg.CORBA.UserException ex,
-            String exId) {
+    public void setUserException(Downcall down, UserException ex, String exId) {
         down.setUserException(ex, exId);
     }
 
-    public void setUserException(Downcall down, org.omg.CORBA.UserException ex) {
+    public void setUserException(Downcall down, UserException ex) {
         down.setUserException(ex);
     }
 
     //
     // Handle a FailureException
     //
-    public synchronized void handleFailureException(Downcall down,
-            FailureException ex) throws FailureException {
+    public synchronized void handleFailureException(Downcall down, FailureException ex) throws FailureException {
         //
         // Only called if there is really a failure
         //
@@ -332,24 +342,21 @@ public final class DowncallStub {
         Client client = down.client();
         org.apache.yoko.orb.OCI.ProfileInfo profile = down.profileInfo();
 
-        for (int i = 0; i < clientProfilePairs_.size(); i++) {
-            ClientProfilePair pair = (ClientProfilePair) clientProfilePairs_
-                    .elementAt(i);
-            if (pair.client == client && pair.profile == profile) {
-                ClientManager clientManager = orbInstance_.getClientManager();
-
-                //
-                // Make sure the ORB has not been destroyed
-                //
-                if (clientManager == null)
-                    throw new org.omg.CORBA.BAD_INV_ORDER(
-                            MinorCodes
-                                    .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
+        final ClientManager clientManager = orbInstance_.getClientManager();
+        //
+        // Make sure the ORB has not been destroyed
+        //
+        if (clientManager == null)
+            throw new BAD_INV_ORDER(
+                    MinorCodes.describeBadInvOrder(
+                            org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
                             org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            CompletionStatus.COMPLETED_NO);
 
-                clientManager.releaseClient(pair.client, false);
-                clientProfilePairs_.removeElementAt(i);
+        for (ClientProfilePair pair : clientProfilePairs_) {
+            if (pair.client == client && pair.profile == profile) {
+                clientManager.releaseClient(pair.client);
+                clientProfilePairs_.remove(pair);
                 break;
             }
         }
@@ -359,10 +366,8 @@ public final class DowncallStub {
         //
         try {
             throw ex.exception;
-        } catch (org.omg.CORBA.COMM_FAILURE e) {
-        } catch (org.omg.CORBA.TRANSIENT e) {
-        } catch (org.omg.CORBA.NO_RESPONSE e) {
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (COMM_FAILURE|TRANSIENT|NO_RESPONSE forceRetry) {
+        } catch (SystemException systemException) {
             throw ex; // Not "throw e;"!
         }
 
@@ -370,8 +375,7 @@ public final class DowncallStub {
         // We can't retry if RETRY_STRICT or RETRY_NEVER is set and the
         // completion status is not COMPLETED_NO
         //
-        if (policies_.retry.mode != RETRY_ALWAYS.value
-                && ex.exception.completed != org.omg.CORBA.CompletionStatus.COMPLETED_NO) {
+        if (policies_.retry.mode != RETRY_ALWAYS.value && ex.exception.completed != CompletionStatus.COMPLETED_NO) {
             throw ex;
         }
 
@@ -386,7 +390,6 @@ public final class DowncallStub {
         //
         // OK, let's continue with the next profile
         //
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
         logger.log(Level.FINE, "trying next profile", ex.exception);
     }
 
@@ -419,7 +422,7 @@ public final class DowncallStub {
                         logger.fine("Twoway invocations not supported, returning true"); 
                         return true;
                     }
-                } catch (org.omg.CORBA.SystemException ex) {
+                } catch (SystemException ex) {
                     logger.log(Level.FINE, "Exception occurred during locate request", ex); 
                     throw new FailureException(ex);
                 }
@@ -431,7 +434,7 @@ public final class DowncallStub {
                 postUnmarshal(down);
                 logger.fine("Object located"); 
                 return true;
-            } catch (org.omg.CORBA.OBJECT_NOT_EXIST ex) {
+            } catch (OBJECT_NOT_EXIST ex) {
                 logger.log(Level.FINE, "Object does not exist", ex); 
                 return false;
             } catch (FailureException ex) {
@@ -469,8 +472,7 @@ public final class DowncallStub {
     // Prepare a request from a portable stub
     //
     public org.apache.yoko.orb.CORBA.OutputStream setupRequest(
-            org.omg.CORBA.Object self, String operation,
-            boolean responseExpected) throws LocationForward, FailureException {
+            org.omg.CORBA.Object self, String operation, boolean responseExpected) throws LocationForward, FailureException {
         while (true) {
             org.apache.yoko.orb.OB.Downcall downcall = createDowncall(
                     operation, responseExpected);
@@ -499,8 +501,7 @@ public final class DowncallStub {
     //
     // public org.apache.yoko.orb.CORBA.OutputStream
     public org.apache.yoko.orb.OB.CodeConverters setupPollingRequest(
-            org.omg.IOP.ServiceContextListHolder sclHolder,
-            org.apache.yoko.orb.CORBA.OutputStreamHolder out)
+            ServiceContextListHolder sclHolder, org.apache.yoko.orb.CORBA.OutputStreamHolder out)
             throws FailureException {
         //
         // Create buffer to contain out marshalable data
@@ -513,8 +514,7 @@ public final class DowncallStub {
         org.apache.yoko.orb.OCI.ProfileInfoHolder info = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
         Client client = getClientProfilePair(info);
 
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client
-                .codeConverters(), 258);
+        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client.codeConverters(), GIOP1_2);
 
         sclHolder.value = client.getAMIRouterSCL();
 
@@ -554,28 +554,23 @@ public final class DowncallStub {
         //
         Client client = getClientProfilePair(info);
 
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client
-                .codeConverters(), 258);
-        org.omg.IOP.ServiceContext[] scl = client.getAMIRouterSCL();
+        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client.codeConverters(), GIOP1_2);
+        ServiceContext[] scl = client.getAMIRouterSCL();
 
-        GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_,
-                out.value, info.value);
+        GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, info.value);
 
         //
         // Put the request header into the stream
         //
-        outgoing.writeRequestHeader(client.requestId(), operation,
-                responseExpected, scl);
+        outgoing.writeRequestHeader(client.getNewRequestID(), operation, responseExpected, scl);
 
         return outgoing;
     }
 
-    public void AMIRouterPostMarshal(GIOPOutgoingMessage outgoing,
-            org.apache.yoko.orb.CORBA.OutputStreamHolder out) {
+    public void AMIRouterPostMarshal(GIOPOutgoingMessage outgoing, org.apache.yoko.orb.CORBA.OutputStreamHolder out) {
         int pos = out.value._OB_pos();
         out.value._OB_pos(0);
-        outgoing.writeMessageHeader(org.omg.GIOP.MsgType_1_1.Request, false,
-                pos - 12);
+        outgoing.writeMessageHeader(MsgType_1_1.Request, false, pos - 12);
         out.value._OB_pos(pos);
 
         //
@@ -594,8 +589,8 @@ public final class DowncallStub {
     public org.apache.yoko.orb.CORBA.InputStream invoke(
             org.omg.CORBA.Object self,
             org.apache.yoko.orb.CORBA.OutputStream out)
-            throws org.omg.CORBA.portable.ApplicationException,
-            org.omg.CORBA.portable.RemarshalException, LocationForward,
+            throws ApplicationException,
+            RemarshalException, LocationForward,
             FailureException {
         //
         // We should have an InvocationContext associated with the
@@ -609,7 +604,7 @@ public final class DowncallStub {
         // If the DowncallStub has changed, then remarshal
         //
         if (ctx.downcallStub != this) {
-            throw new org.omg.CORBA.portable.RemarshalException();
+            throw new RemarshalException();
         }
 
         Downcall down = ctx.downcall;
@@ -640,7 +635,7 @@ public final class DowncallStub {
                         // Extract the exception's repository ID
                         //
                         id = down.unmarshalExceptionId();
-                    } catch (org.omg.CORBA.SystemException ex) {
+                    } catch (SystemException ex) {
                         down.unmarshalEx(ex);
                     }
 
@@ -652,8 +647,7 @@ public final class DowncallStub {
                     down.setUserException(id);
                     down.postUnmarshal();
 
-                    throw new org.omg.CORBA.portable.ApplicationException(id,
-                            in);
+                    throw new ApplicationException(id, in);
                 } else {
                     //
                     // We're using portable stubs, so we'll never
@@ -676,7 +670,7 @@ public final class DowncallStub {
         //
         // If we reach this point, then we need to reinvoke
         //
-        throw new org.omg.CORBA.portable.RemarshalException();
+        throw new RemarshalException();
     }
 
     public org.omg.CORBA.Object getAMIPollTarget() {
@@ -685,15 +679,11 @@ public final class DowncallStub {
         // generated stub, we will call this method to create the target
         // object for a polling request
         //
-        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_
-                .getObjectFactory();
+        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_.getObjectFactory();
         return objectFactory.createObject(IOR_);
     }
 
-    public org.omg.MessageRouting.PersistentRequest ami_poll_request(
-            org.omg.CORBA.portable.OutputStream out, String operation,
-            org.omg.IOP.ServiceContext[] scl)
-            throws org.omg.CORBA.portable.RemarshalException {
+    public PersistentRequest ami_poll_request(OutputStream out, String operation, ServiceContext[] scl) throws RemarshalException {
         //
         // setup the ORBInstance
         //
@@ -701,8 +691,7 @@ public final class DowncallStub {
         Assert._OB_assert(out != null);
 
         //
-        // We should have an InvocationContext associated with the
-        // OutputStream
+        // We should have an InvocationContext associated with the OutputStream
         //
         org.apache.yoko.orb.CORBA.OutputStream o = (org.apache.yoko.orb.CORBA.OutputStream) out;
         InvocationContext ctx = (InvocationContext) o._OB_invocationContext();
@@ -712,19 +701,18 @@ public final class DowncallStub {
         // If the DowncallStub has changed, then remarshal
         //
         if (ctx.downcallStub != this)
-            throw new org.omg.CORBA.portable.RemarshalException();
+            throw new RemarshalException();
 
         //
         // Obtain the ORB
         //
-        org.omg.CORBA.ORB orb = orbInstance_.getORB();
+        ORB orb = orbInstance_.getORB();
         Assert._OB_assert(orb != null);
 
         //
         // Obtain the PersistentRequestRouter
         //
-        org.omg.MessageRouting.PersistentRequestRouter router = org.apache.yoko.orb.OB.MessageRoutingUtil
-                .getPersistentRouterFromConfig(orbInstance_);
+        PersistentRequestRouter router = org.apache.yoko.orb.OB.MessageRoutingUtil.getPersistentRouterFromConfig(orbInstance_);
         org.apache.yoko.orb.OB.Assert._OB_assert(router != null);
 
         //
@@ -732,11 +720,10 @@ public final class DowncallStub {
         //
         org.apache.yoko.orb.OCI.ProfileInfoHolder info = new org.apache.yoko.orb.OCI.ProfileInfoHolder();
         info.value = null;
-        Client client = null;
         try {
-            client = getClientProfilePair(info);
+            getClientProfilePair(info);
         } catch (org.apache.yoko.orb.OB.FailureException ex) {
-            throw new org.omg.CORBA.portable.RemarshalException();
+            throw new RemarshalException();
         }
 
         //
@@ -747,23 +734,21 @@ public final class DowncallStub {
         //
         // Create the router to_visit list
         //
-        org.omg.MessageRouting.RouterListHolder to_visit = new org.omg.MessageRouting.RouterListHolder();
-        to_visit.value = new org.omg.MessageRouting.Router[0];
-        org.apache.yoko.orb.OB.MessageRoutingUtil.getRouterListFromComponents(
-                orbInstance_, info.value, to_visit);
+        RouterListHolder to_visit = new RouterListHolder();
+        to_visit.value = new Router[0];
+        org.apache.yoko.orb.OB.MessageRoutingUtil.getRouterListFromComponents(orbInstance_, info.value, to_visit);
 
         //
         // Obtain the target objects
         //
-        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_
-                .getObjectFactory();
+        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_.getObjectFactory();
         org.omg.CORBA.Object target = objectFactory.createObject(IOR_);
 
         //
         // Populate the RequestMessage payload
         //
-        org.omg.MessageRouting.RequestMessage payload = new org.omg.MessageRouting.RequestMessage();
-        // payload.service_contexts = new org.omg.IOP.ServiceContext[0];
+        RequestMessage payload = new RequestMessage();
+        // payload.service_contexts = new ServiceContext[0];
         //
         // XXX
         //
@@ -778,29 +763,25 @@ public final class DowncallStub {
         payload.reserved[2] = 0;
         payload.operation = operation;
         payload.object_key = new byte[info.value.key.length];
-        System.arraycopy(info.value.key, 0, payload.object_key, 0,
-                info.value.key.length);
+        System.arraycopy(info.value.key, 0, payload.object_key, 0, info.value.key.length);
 
         o._OB_pos(0);
         org.apache.yoko.orb.OCI.Buffer buf = o._OB_buffer();
-        org.omg.MessageRouting.MessageBody messageBody = new org.omg.MessageRouting.MessageBody();
+        MessageBody messageBody = new MessageBody();
         messageBody.byte_order = false; // Java is always false
         messageBody.body = new byte[buf.rest_length()];
-        System.arraycopy(buf.data(), buf.pos(), messageBody.body, 0, buf
-                .rest_length());
+        System.arraycopy(buf.data(), buf.pos(), messageBody.body, 0, buf.rest_length());
         payload.body = messageBody;
 
         //
         // Empty QoS list
         //
-        org.omg.CORBA.Policy[] qosList = new org.omg.CORBA.Policy[0];
+        Policy[] qosList = new Policy[0];
 
         //
         // Create a new Persistent request
         //
-        org.omg.MessageRouting.PersistentRequest request = router
-                .create_persistent_request(index, to_visit.value, target,
-                        qosList, payload);
+        PersistentRequest request = router.create_persistent_request(index, to_visit.value, target, qosList, payload);
 
         //
         // Return the persistent request back to the stub
@@ -808,11 +789,7 @@ public final class DowncallStub {
         return request;
     }
 
-    public boolean ami_callback_request(
-            org.omg.CORBA.portable.OutputStream out,
-            org.omg.Messaging.ReplyHandler reply,
-            org.apache.yoko.orb.OCI.ProfileInfo info)
-            throws org.omg.CORBA.portable.RemarshalException {
+    public boolean ami_callback_request(OutputStream out, ReplyHandler reply, org.apache.yoko.orb.OCI.ProfileInfo info) throws RemarshalException {
         //
         // We should have an InvocationContext associated with the
         // OutputStream
@@ -825,16 +802,14 @@ public final class DowncallStub {
         // If the DowncallStub has changed, then remarshal
         //
         if (ctx.downcallStub != this)
-            throw new org.omg.CORBA.portable.RemarshalException();
+            throw new RemarshalException();
 
-        org.apache.yoko.orb.CORBA.InputStream tmpIn = (org.apache.yoko.orb.CORBA.InputStream) out
-                .create_input_stream();
+        org.apache.yoko.orb.CORBA.InputStream tmpIn = (org.apache.yoko.orb.CORBA.InputStream) out.create_input_stream();
 
         //
         // Unmarshal the message header
         //
-        org.omg.GIOP.MessageHeader_1_1 msgHeader = org.omg.GIOP.MessageHeader_1_2Helper
-                .read(tmpIn);
+        MessageHeader_1_1 msgHeader = MessageHeader_1_2Helper.read(tmpIn);
 
         //
         // Check the GIOP version
@@ -849,7 +824,7 @@ public final class DowncallStub {
         //
         // Check the message type
         //
-        if (msgHeader.message_type != (byte) org.omg.GIOP.MsgType_1_1._Request) {
+        if (msgHeader.message_type != (byte) MsgType_1_1._Request) {
             //
             // Report error - throw exception
             //
@@ -859,35 +834,32 @@ public final class DowncallStub {
         //
         // Create and populate a RequestInfo to send to the router
         //
-        org.omg.MessageRouting.RequestInfo requestInfo = new org.omg.MessageRouting.RequestInfo();
+        RequestInfo requestInfo = new RequestInfo();
 
         //
         // Unmarshal the request header
         // 
-        org.omg.GIOP.RequestHeader_1_2 requestHeader = org.omg.GIOP.RequestHeader_1_2Helper
-                .read(tmpIn);
+        RequestHeader_1_2 requestHeader = RequestHeader_1_2Helper.read(tmpIn);
 
         //
         // Create and populate a RequestInfo structure to send to the
         // Router
         //
-        org.omg.MessageRouting.RouterListHolder configRouterList = new org.omg.MessageRouting.RouterListHolder();
-        configRouterList.value = new org.omg.MessageRouting.Router[0];
+        RouterListHolder configRouterList = new RouterListHolder();
+        configRouterList.value = new Router[0];
 
         //
         // Populate the configRouterList
         //
-        org.apache.yoko.orb.OB.MessageRoutingUtil.getRouterListFromComponents(
-                orbInstance_, info, configRouterList);
+        org.apache.yoko.orb.OB.MessageRoutingUtil.getRouterListFromComponents(orbInstance_, info, configRouterList);
 
-        requestInfo.visited = new org.omg.MessageRouting.Router[0];
-        requestInfo.to_visit = new org.omg.MessageRouting.Router[0];
+        requestInfo.visited = new Router[0];
+        requestInfo.to_visit = new Router[0];
 
         //
         // Get the target for this request
         //
-        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_
-                .getObjectFactory();
+        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_.getObjectFactory();
         //
         // REVISIT: Should we be using IOR_ or origIOR_?
         //
@@ -901,24 +873,23 @@ public final class DowncallStub {
         //
         // Get the reply destination for this request
         //
-        org.omg.MessageRouting.ReplyDestination replyDest = new org.omg.MessageRouting.ReplyDestination();
-        replyDest.handler_type = org.omg.MessageRouting.ReplyDisposition.TYPED;
+        ReplyDestination replyDest = new ReplyDestination();
+        replyDest.handler_type = ReplyDisposition.TYPED;
         replyDest.handler = reply;
         requestInfo.reply_destination = replyDest;
 
         //
         // Get the selected qos for this request
         //
-        org.omg.Messaging.PolicyValueSeqHolder invocPoliciesHolder = new org.omg.Messaging.PolicyValueSeqHolder();
-        invocPoliciesHolder.value = new org.omg.Messaging.PolicyValue[0];
-        org.apache.yoko.orb.OB.MessageRoutingUtil.getInvocationPolicyValues(
-                policies_, invocPoliciesHolder);
+        PolicyValueSeqHolder invocPoliciesHolder = new PolicyValueSeqHolder();
+        invocPoliciesHolder.value = new PolicyValue[0];
+        org.apache.yoko.orb.OB.MessageRoutingUtil.getInvocationPolicyValues(policies_, invocPoliciesHolder);
         requestInfo.selected_qos = invocPoliciesHolder.value;
 
         //
         // Create payload (RequestMessage) for this request
         //
-        org.omg.MessageRouting.RequestMessage requestMessage = new org.omg.MessageRouting.RequestMessage();
+        RequestMessage requestMessage = new RequestMessage();
         requestMessage.giop_version = new org.omg.GIOP.Version();
         requestMessage.giop_version.major = info.major;
         requestMessage.giop_version.minor = info.minor;
@@ -932,8 +903,8 @@ public final class DowncallStub {
         // Add the invocation policies service context for this request.
         // Note that this can change from request to request
         //
-        org.omg.IOP.ServiceContext invocPoliciesSC = new org.omg.IOP.ServiceContext();
-        invocPoliciesSC.context_id = org.omg.IOP.INVOCATION_POLICIES.value;
+        ServiceContext invocPoliciesSC = new ServiceContext();
+        invocPoliciesSC.context_id = INVOCATION_POLICIES.value;
 
         //
         // Create an output stream an write the PolicyValueSeq
@@ -943,20 +914,17 @@ public final class DowncallStub {
             org.apache.yoko.orb.CORBA.OutputStream scOut = new org.apache.yoko.orb.CORBA.OutputStream(
                     scBuf);
             scOut._OB_writeEndian();
-            org.omg.Messaging.PolicyValueSeqHelper.write(scOut,
-                    invocPoliciesHolder.value);
+            PolicyValueSeqHelper.write(scOut, invocPoliciesHolder.value);
             invocPoliciesSC.context_data = new byte[scOut._OB_pos()];
-            System.arraycopy(invocPoliciesSC.context_data, 0, scBuf.data(), 0,
-                    scBuf.length());
+            System.arraycopy(invocPoliciesSC.context_data, 0, scBuf.data(), 0, scBuf.length());
         }
 
         //
         // Add the service context to the list of current service contexts
         //
         int scLength = requestMessage.service_contexts.length;
-        org.omg.IOP.ServiceContext[] scList = new org.omg.IOP.ServiceContext[scLength + 1];
-        System.arraycopy(requestMessage.service_contexts, 0, scList, 0,
-                scLength);
+        ServiceContext[] scList = new ServiceContext[scLength + 1];
+        System.arraycopy(requestMessage.service_contexts, 0, scList, 0, scLength);
         scList[scLength] = invocPoliciesSC;
 
         //
@@ -987,7 +955,7 @@ public final class DowncallStub {
         //
         // Get the body of the request message
         //
-        org.omg.MessageRouting.MessageBody messageBody = new org.omg.MessageRouting.MessageBody();
+        MessageBody messageBody = new MessageBody();
 
         //
         // Java is always big endian
@@ -1022,7 +990,7 @@ public final class DowncallStub {
         int numRouters = configRouterList.value.length;
 
         for (int i = numRouters - 1; (delivered == false) && (i >= 0); --i) {
-            org.omg.MessageRouting.Router curRouter = configRouterList.value[i];
+            Router curRouter = configRouterList.value[i];
 
             //
             // We only add the routers that we have attempted to contact to
@@ -1030,7 +998,7 @@ public final class DowncallStub {
             // the request, then the lower priority routers are not added
             //
             int curLength = requestInfo.to_visit.length;
-            org.omg.MessageRouting.Router[] toVisit = new org.omg.MessageRouting.Router[curLength + 1];
+            Router[] toVisit = new Router[curLength + 1];
             if (curLength > 0) {
                 System.arraycopy(requestInfo.to_visit, 0, toVisit, 1, curLength);
             }
@@ -1044,7 +1012,7 @@ public final class DowncallStub {
                 // Success: stop processing
                 //
                 delivered = true;
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 logger.log(Level.FINE, "Failed to contact router: " + ex.getMessage(), ex); 
                 //
                 // Failure: try the next router in the list
@@ -1056,10 +1024,6 @@ public final class DowncallStub {
         // return whether we were successful or not
         //
         return delivered;
-    }
-
-    public void _OB_closeConnection(boolean terminate) {
-        destroy(terminate);
     }
 
     //

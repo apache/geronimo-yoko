@@ -17,11 +17,20 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+
+import java.io.InterruptedIOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OCI.Transport;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.IOP.Codec;
+import org.omg.IOP.TAG_INTERNET_IOP;
 
 final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Acceptor {
@@ -42,11 +51,15 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
     private java.net.InetAddress localAddress_; // The local address
 
-    private AcceptorInfo_impl info_; // Acceptor information
+    private final AcceptorInfo_impl info_; // Acceptor information
 
     private ListenerMap listenMap_;
 
-    private ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
+    private final ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
+
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
+    
+    private final Codec codec_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -57,7 +70,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
+        return TAG_INTERNET_IOP.value;
     }
 
     public int handle() {
@@ -65,7 +78,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public void close() {
-        logger.fine("Closing connection to host=" + localAddress_ + ", port=" + port_);
+        logger.log(Level.FINE, "Closing server socket with host=" + localAddress_ + ", port=" + port_, new Exception("Stack trace"));
         //
         // Destroy the info object
         //
@@ -77,7 +90,9 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         try {
             socket_.close();
             socket_ = null;
+            logger.log(Level.FINE, "Closed server socket with host=" + localAddress_ + ", port=" + port_);
         } catch (java.io.IOException ex) {
+            logger.log(Level.FINE, "Exception closing server socket with host=" + localAddress_ + ", port=" + port_, ex);
         }
     }
 
@@ -115,22 +130,11 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                 return null; // Timeout
             else {
                 logger.log(Level.FINE, "Failure accepting connection for host=" + localAddress_ + ", port=" + port_, ex);
-
-                throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorAccept)
-                                + ": " + ex.getMessage(),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorAccept,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+                throw asCommFailure(ex, MinorAccept);
             }
         } catch (java.io.IOException ex) {
             logger.log(Level.FINE, "Failure accepting connection for host=" + localAddress_ + ", port=" + port_, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorAccept)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorAccept,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorAccept);
         }
 
         //
@@ -142,18 +146,13 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                 socket.setKeepAlive(true);
         } catch (java.net.SocketException ex) {
             logger.log(Level.FINE, "Failure configuring server connection for host=" + localAddress_ + ", port=" + port_, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorSetsockopt);
         }
 
         //
         // Create new transport
         //
-        org.apache.yoko.orb.OCI.Transport tr = null;
+        Transport tr = null;
         try {
             tr = new Transport_impl(this, socket, listenMap_);
             logger.fine("Inbound connection received from " + socket.getInetAddress()); 
@@ -167,46 +166,28 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         }
 
         //
-        // Call callbacks
-        //
-        org.apache.yoko.orb.OCI.TransportInfo trInfo = tr.get_info();
-        try {
-            info_._OB_callAcceptCB(trInfo);
-        } catch (org.omg.CORBA.SystemException ex) {
-            tr.close();
-            logger.log(Level.FINE, "error calling connection callbacks", ex); 
-            throw ex;
-        }
-
-        //
         // Return new transport
         //
         return tr;
     }
 
-    public org.apache.yoko.orb.OCI.Transport connect_self() {
+    public Transport connect_self() {
         //
         // Create socket and connect to local address
         //
         java.net.Socket socket = null;
         try {
-            socket = connectionHelper_.createSelfConnection(localAddress_, port_);
+            if (connectionHelper_ != null) {
+                socket = connectionHelper_.createSelfConnection(localAddress_, port_);
+            } else {
+                socket = extendedConnectionHelper_.createSelfConnection(localAddress_, port_);
+            }
         } catch (java.net.ConnectException ex) {
             logger.log(Level.FINE, "Failure making self connection for host=" + localAddress_ + ", port=" + port_, ex);
-            throw new org.omg.CORBA.TRANSIENT(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw asTransient(ex, MinorConnectFailed);
         } catch (java.io.IOException ex) {
             logger.log(Level.FINE, "Failure making self connection for host=" + localAddress_ + ", port=" + port_, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorSocket);
         }
 
         //
@@ -220,20 +201,14 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                 socket.close();
             } catch (java.io.IOException e) {
             }
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex);
         }
 
         //
         // Create and return new transport
         //
-        org.apache.yoko.orb.OCI.Transport tr = null;
         try {
-            tr = new Transport_impl(this, socket, listenMap_);
+            return new Transport_impl(this, socket, listenMap_);
         } catch (org.omg.CORBA.SystemException ex) {
             try {
                 socket.close();
@@ -241,7 +216,6 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
             }
             throw ex;
         }
-        return tr;
     }
 
     public void add_profiles(org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
@@ -414,7 +388,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
 
         for (int i = 0; i < hosts_.length; i++) {
             Util.extractAllProfileInfos(ior, profileInfoSeq, true, hosts_[i],
-                    port_, true);
+                    port_, true, codec_);
         }
 
         return profileInfoSeq.value;
@@ -429,81 +403,16 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Acceptor_impl(String[] hosts, boolean multiProfile, int port,
-            int backlog, boolean keepAlive, ConnectionHelper helper, ListenerMap lm) {
-        hosts_ = hosts;
-        multiProfile_ = multiProfile;
-        keepAlive_ = keepAlive;
-        connectionHelper_ = helper;
-        info_ = new AcceptorInfo_impl(this);
-        listenMap_ = lm;
-        
-        if (backlog == 0)
-            backlog = 50; // 50 is the JDK's default value
-
-        //
-        // Get the local address for use by connect_self. Since we are
-        // binding to all network interfaces, we'll use the loopback
-        // address.
-        //
-        try {
-            localAddress_ = java.net.InetAddress.getLocalHost();
-        } catch (java.net.UnknownHostException ex) {
-            logger.log(Level.FINE, "Host resolution failure", ex); 
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        }
-
-        //
-        // Create socket and bind to all network interfaces
-        //
-        try {
-            socket_ = connectionHelper_.createServerSocket(port, backlog);
-
-            //
-            // Read back the port. This is needed if the port was selected by
-            // the operating system.
-            //
-            port_ = socket_.getLocalPort();
-            logger.fine("Acceptor created using socket " + socket_); 
-        } catch (java.net.BindException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorBind)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBind,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-        }
-
-        //
-        // add these endpoints to the listenMap_
-        //
-        synchronized (listenMap_) {
-            for (int i = 0; i < hosts_.length; i++)
-                listenMap_.add(hosts_[i], (short) port_);
-        }
-    }
-
     public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
-            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ListenerMap lm) {
+            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
         // System.out.println("Acceptor_impl");
+        Assert._OB_assert((helper == null) ^ (extendedConnectionHelper == null));
         hosts_ = hosts;
         multiProfile_ = multiProfile;
         keepAlive_ = keepAlive;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = extendedConnectionHelper;
+        codec_ = codec;
         info_ = new AcceptorInfo_impl(this);
         listenMap_ = lm;
 
@@ -514,22 +423,36 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         // Get the local address for use by connect_self
         //
         try {
-            localAddress_ = java.net.InetAddress.getByName(address);
+            if (address == null) {
+                //Since we are
+                // binding to all network interfaces, we'll use the loopback
+                // address.
+                localAddress_ = java.net.InetAddress.getLocalHost();                
+            } else {
+                localAddress_ = java.net.InetAddress.getByName(address);
+            }
         } catch (java.net.UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution failure", ex); 
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex);
         }
 
         //
         // Create socket and bind to requested network interface
         //
         try {
-            socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+            if (address == null) {
+                if (connectionHelper_ != null) {
+                    socket_ = connectionHelper_.createServerSocket(port, backlog);
+                } else {
+                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
+                }
+            } else {
+                if (connectionHelper_ != null) {
+                    socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+                } else {
+                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
+                }
+            }
 
             //
             // Read back the port. This is needed if the port was selected by
@@ -547,12 +470,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
         } catch (java.io.IOException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorSocket);
         }
 
         //

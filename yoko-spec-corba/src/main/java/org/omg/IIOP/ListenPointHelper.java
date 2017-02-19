@@ -72,10 +72,7 @@ final public class ListenPointHelper
     public static ListenPoint
     read(org.omg.CORBA.portable.InputStream in)
     {
-        ListenPoint _ob_v = new ListenPoint();
-        _ob_v.host = in.read_string();
-        _ob_v.port = in.read_ushort();
-        return _ob_v;
+        return new ListenPoint(in.read_string(), in.read_ushort());
     }
 
     public static void

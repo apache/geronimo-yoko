@@ -1229,8 +1229,9 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (inner.recId_ != null) {
             if (inner.recId_.equals(outer.id_)) {
                 if (inner.recType_ != null) {
+                    // Recursive TC already embedded - ensure it's the right one
                     org.apache.yoko.orb.OB.Assert
-                            ._OB_assert(inner.recType_ != outer);
+                            ._OB_assert(inner.recType_ == outer);
                 } else {
                     //
                     // Embed the recursive placeholder TypeCode

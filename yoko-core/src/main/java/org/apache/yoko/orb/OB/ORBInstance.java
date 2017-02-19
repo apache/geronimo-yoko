@@ -17,18 +17,27 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.BootManager;
-import org.apache.yoko.orb.OB.DispatchStrategyFactory;
-import org.apache.yoko.orb.OB.Logger;
-import org.apache.yoko.orb.OB.URLRegistry;
-import org.apache.yoko.orb.OB.UnknownExceptionStrategy;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Phaser;
+
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.concurrent.ReferenceCountedCache;
+import org.apache.yoko.util.concurrent.WeakCountedCache;
 
 public final class ORBInstance {
     private boolean destroy_; // True if destroy() was called
 
-    //
-    // Reference to ORB is needed in Java
-    //
+    private static final Cache.Cleaner<GIOPConnection> CLEANER = new Cache.Cleaner<GIOPConnection>() {
+        @Override
+        public void clean(GIOPConnection conn) {
+            conn.destroy();
+        }
+    };
+
+    private final Cache<ConnectorInfo, GIOPConnection> outboundConnectionCache = new WeakCountedCache<>(CLEANER, 0, 100);
+
     private org.omg.CORBA.ORB orb_;
 
     //
@@ -88,9 +97,11 @@ public final class ORBInstance {
 
     private RecursiveMutex orbSyncMutex_ = new RecursiveMutex();
 
-    private ThreadGroup serverWorkerGroup_;
+    private ExecutorService serverExecutor_;
+    private Phaser serverPhaser = new Phaser(1);
 
-    private ThreadGroup clientWorkerGroup_;
+    private ExecutorService clientExecutor_;
+    private Phaser clientPhaser = new Phaser(1);
 
     private org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry_;
 
@@ -171,10 +182,11 @@ public final class ORBInstance {
         defaultWcs_ = defaultWcs;
 
         //
-        // Create the server and client worker groups
+        // Create the server and client executors
+        // TODO why are these separate?
         //
-        clientWorkerGroup_ = new ThreadGroup("ClientWorkers");
-        serverWorkerGroup_ = new ThreadGroup("ServerWorkers");
+        clientExecutor_ = Executors.newCachedThreadPool();
+        serverExecutor_ = Executors.newCachedThreadPool();
 
         //
         // Use the TypeCode cache?
@@ -303,23 +315,8 @@ public final class ORBInstance {
         // coreTraceLevels_.destroy();
         // coreTraceLevels_ = null;
 
-        try {
-            //
-            // Destroy the client and server worker groups
-            //
-            serverWorkerGroup_.destroy();
-        } catch (IllegalThreadStateException ex) {
-            // we ignore this...occasionally, it is necessary 
-            // to kick the threads to force them to shutdown. 
-        }
-
-        try {
-            clientWorkerGroup_.destroy();
-        } catch (IllegalThreadStateException ex) {
-            // we ignore this...occasionally, it is necessary 
-            // to kick the threads to force them to shutdown. 
-        }
-
+        // Client and server executors shut down in the ORBControl
+        
         //
         // Destroy the ConFactoryRegistry
         //
@@ -424,12 +421,20 @@ public final class ORBInstance {
         return orbSyncMutex_;
     }
 
-    public ThreadGroup getServerWorkerGroup() {
-        return serverWorkerGroup_;
+    public ExecutorService getServerExecutor() {
+        return serverExecutor_;
     }
 
-    public ThreadGroup getClientWorkerGroup() {
-        return clientWorkerGroup_;
+    public Phaser getServerPhaser() {
+        return serverPhaser;
+    }
+    
+    public ExecutorService getClientExecutor() {
+        return clientExecutor_;
+    }
+    
+    public Phaser getClientPhaser() {
+        return clientPhaser;
     }
 
     public org.apache.yoko.orb.OCI.ConFactoryRegistry getConFactoryRegistry() {
@@ -478,4 +483,6 @@ public final class ORBInstance {
     public OrbAsyncHandler getAsyncHandler() {
         return asyncHandler_;
     }
+
+    public Cache<ConnectorInfo, GIOPConnection> getOutboundConnectionCache() {return outboundConnectionCache;}
 }

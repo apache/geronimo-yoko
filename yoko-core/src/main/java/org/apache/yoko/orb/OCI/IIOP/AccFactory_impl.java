@@ -20,13 +20,21 @@ package org.apache.yoko.orb.OCI.IIOP;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
 
 final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.AccFactory {
 
     // the real logger backing instance.  We use the interface class as the locator
     static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.AccFactory.class.getName());
+    private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
     //
     // AccFactory information
     //
@@ -37,6 +45,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
     private ConnectionHelper connectionHelper_;   // client connection helper
 
     private ListenerMap listenMap_;
+    private ExtendedConnectionHelper extendedConnectionHelper_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -142,9 +151,11 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                     throw new org.apache.yoko.orb.OCI.InvalidParam(
                             "invalid port");
                 i += 2;
-            } else {
+            } else  if (connectionHelper_ != null){
                 throw new org.apache.yoko.orb.OCI.InvalidParam(
                         "unknown parameter: " + params[i]);
+            } else {
+                i++;
             }
         }
 
@@ -154,15 +165,16 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         }
 
         logger.fine("Creating acceptor for port=" + port);
+        Codec codec;
+        try {
+                codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+        } catch (InvalidName e) {
+            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
+        } catch (UnknownEncoding e) {
+            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
+        }
 
-        if (bind == null) {
-            return new Acceptor_impl(hosts, multiProfile, port, backlog,
-                    keepAlive, connectionHelper_, listenMap_);
-        }
-        else {
-            return new Acceptor_impl(bind, hosts, multiProfile, port, backlog,
-                    keepAlive, connectionHelper_, listenMap_);
-        }
+        return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 
     public void change_key(org.omg.IOP.IORHolder ior, byte[] key) {
@@ -178,7 +190,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
                         data, data.length);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                        buf, 0, false, null, 0);
+                        buf, 0, false, null, null);
                 in._OB_readEndian();
                 org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
                         .read(in);
@@ -233,10 +245,13 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public AccFactory_impl(org.omg.CORBA.ORB orb, ListenerMap lm, ConnectionHelper helper) {
+    public AccFactory_impl(org.omg.CORBA.ORB orb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper extendedHelper) {
+        Assert._OB_assert((helper == null) ^ (extendedHelper == null));
         orb_ = orb;
         info_ = new AccFactoryInfo_impl();
         listenMap_ = lm;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = extendedHelper;
     }
+    
 }

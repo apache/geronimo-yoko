@@ -25,12 +25,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderRegistry;
 
 /**
  * The implementation of the provider registry used to store
  * the bundle registrations.
  */
-public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegistry, Register {
+public class ProviderRegistryImpl implements ProviderRegistry, Register {
 
     private static final Logger log = Logger.getLogger(ProviderRegistryImpl.class.getName());
     // our mapping between a provider id and the implementation information.  There
@@ -54,7 +55,8 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The loader used to resolve the provider class.
      */
     public void registerProvider(BundleProviderLoader provider) {
-        log(Level.FINE, "registering provider " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "registering provider " + provider);
         providers.register(provider);
     }
 
@@ -64,7 +66,8 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The provider registration instance
      */
     public void unregisterProvider(BundleProviderLoader provider) {
-        log(Level.FINE, "unregistering provider " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "unregistering provider " + provider);
         providers.unregister(provider);
     }
 
@@ -75,7 +78,8 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The loader used to resolve the provider class.
      */
     public void registerService(BundleProviderLoader provider) {
-        log(Level.FINE, "registering service " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "registering service " + provider);
         serviceProviders.register(provider);
     }
 
@@ -85,7 +89,8 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
      * @param provider The provider registration instance
      */
     public void unregisterService(BundleProviderLoader provider) {
-        log(Level.FINE, "unregistering service " + provider);
+        if (log.isLoggable(Level.FINE))
+            log.log(Level.FINE, "unregistering service " + provider);
         serviceProviders.unregister(provider);
     }
 
@@ -241,10 +246,6 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         return null;
     }
 
-    private void log(Level level, String message) {
-        log.log(level, message);
-    }
-
     /**
      * Holder class for information about a given collection of
      * id to provider mappings.  Used for both the providers and
@@ -297,7 +298,8 @@ public class ProviderRegistryImpl implements org.apache.yoko.osgi.ProviderRegist
         private synchronized BundleProviderLoader getLoader(String id) {
             // synchronize on the registry instance
             if (registry != null) {
-                log.fine("registry: " + registry);
+                if (log.isLoggable(Level.FINE))
+                    log.fine("registry: " + registry);
                 // return the first match, if any
                 List<BundleProviderLoader> list = registry.get(id);
                 if (list != null && !list.isEmpty()) {

@@ -48,7 +48,10 @@ public final class TypeCodeFactory {
         return true;
     }
 
+    private static final boolean CHECK_IDL_NAMES = false;
+
     private static boolean checkName(String name) {
+        if (!CHECK_IDL_NAMES) return true;
         //
         // Check for a valid IDL name
         //
@@ -663,6 +666,7 @@ public final class TypeCodeFactory {
                         + ": " + members[i].name,
                         org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            if (!CHECK_IDL_NAMES) continue;
             for (int j = i + 1; j < members.length; j++)
                 if (members[i].name.length() > 0
                         && members[i].name.equalsIgnoreCase(members[j].name)) {

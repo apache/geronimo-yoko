@@ -246,7 +246,7 @@ public final class StubClass {
                 } catch (InstantiationException ex) {
                     logger.log(Level.WARNING, "", ex);
                 } catch (InvocationTargetException ex) {
-                    logger.log(Level.WARNING, "", ex);
+                    logger.log(Level.WARNING, "", ex.getCause());
                 } catch (IllegalAccessException ex) {
                     logger.log(Level.WARNING, "", ex);
                 }

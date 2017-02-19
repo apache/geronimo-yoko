@@ -51,19 +51,12 @@ public class RMIState implements PortableRemoteObjectState {
 
     private String _name;
 
-    private TypeRepository _typerepository;
+    final TypeRepository repo = TypeRepository.get();
     
     private POA poa;
     
     POA getPOA() {
 	return poa;
-    }
-
-    TypeRepository getTypeRepository() {
-        if (_typerepository == null)
-            _typerepository = new TypeRepository(_orb);
-
-        return _typerepository;
     }
 
     RMIState(org.omg.CORBA.ORB orb, String name) {
@@ -133,18 +126,6 @@ public class RMIState implements PortableRemoteObjectState {
         return ref._get_delegate();
     }
 
-    ValueHandler valueHandler;
-
-    public ValueHandler createValueHandler() {
-        checkShutDown();
-
-        if (valueHandler == null) {
-            valueHandler = new ValueHandlerImpl(getTypeRepository());
-        }
-
-        return valueHandler;
-    }
-
     static RMIState current() {
         return (RMIState) PortableRemoteObjectExt.getState();
     }
@@ -190,8 +171,6 @@ public class RMIState implements PortableRemoteObjectState {
     }
 
     void clearState() {
-        _typerepository = null;
-        valueHandler = null;
         stub_map = null;
         tie_map = null;
 
@@ -266,7 +245,7 @@ public class RMIState implements PortableRemoteObjectState {
                     + ex.getMessage(), ex);
         } catch (InvocationTargetException ex) {
             logger.log(Level.FINE, "cannot instantiate stub class for " + type + " :: "
-                    + ex.getMessage(), ex);
+                    + ex.getCause(), ex.getCause());
         }
 
         return null;

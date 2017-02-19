@@ -17,6 +17,8 @@
 
 package test.types;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
 
 public class TestPortableTypes extends test.common.TestBase {
@@ -52,7 +54,7 @@ public class TestPortableTypes extends test.common.TestBase {
             // more than just compare IDs
             //
             tc.id_ = "";
-            TEST(tc.equivalent(types[i]));
+            assertTrue(tc.equivalent(types[i]));
 
             //
             // There's no point in calling equal() because the comparison
@@ -153,7 +155,7 @@ public class TestPortableTypes extends test.common.TestBase {
                     test.types.DynAnyTypes.TestEnum.red);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -170,7 +172,7 @@ public class TestPortableTypes extends test.common.TestBase {
                     new test.types.DynAnyTypes.TestEmptyException());
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -187,7 +189,7 @@ public class TestPortableTypes extends test.common.TestBase {
                     new test.types.DynAnyTypes.TestException("hi", 0));
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -223,7 +225,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestStructHelper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             /**
@@ -251,7 +253,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.TestStruct1Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -269,7 +271,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion1Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -287,7 +289,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion1Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -305,7 +307,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion1Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -323,7 +325,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion2Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -341,7 +343,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion2Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             /**
@@ -363,7 +365,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion3Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -381,7 +383,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion3Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -399,7 +401,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion3Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -417,7 +419,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion4Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -435,7 +437,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion4Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -453,7 +455,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestUnion4Helper.insert(any1, val);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -470,7 +472,7 @@ public class TestPortableTypes extends test.common.TestBase {
                     .insert(any1, new short[5]);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -512,7 +514,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestAnySeqHelper.insert(any1, seq);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb
@@ -531,7 +533,7 @@ public class TestPortableTypes extends test.common.TestBase {
             test.types.DynAnyTypes.TestStringArrayHelper.insert(any1, seq);
             org.omg.DynamicAny.DynAny da = factory.create_dyn_any(any1);
             org.omg.CORBA.Any any2 = da.to_any();
-            TEST(any2.equal(any1));
+            assertTrue(any2.equal(any1));
             da.destroy();
 
             org.omg.CORBA.portable.OutputStream out = orb

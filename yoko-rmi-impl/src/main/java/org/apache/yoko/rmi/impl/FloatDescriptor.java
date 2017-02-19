@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class FloatDescriptor extends SimpleDescriptor {
+final class FloatDescriptor extends SimpleDescriptor {
     FloatDescriptor(TypeRepository repository) {
         super(Float.TYPE, repository, "float", org.omg.CORBA.TCKind.tk_float);
     }

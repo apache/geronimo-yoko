@@ -18,47 +18,57 @@
 
 package org.apache.yoko.rmi.impl;
 
-public class StringDescriptor extends ValueDescriptor {
-    public String getIDLName() {
-        return "CORBA_WStringValue";
-    }
-    
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.WStringValueHelper;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+
+import java.io.Serializable;
+
+class StringDescriptor extends ValueDescriptor {
     StringDescriptor(TypeRepository repository) {
         super(String.class, repository);
-        // strings have a special type and package name other than the java class name. 
-        setTypeName("WStringValue"); 
-        setPackageName("CORBA"); 
     }
 
-    public void init() {
-        super.init();
+    @Override
+    protected final String genIDLName() {
+        return "CORBA_WStringValue";
+    }
+
+    @Override
+    protected String genPackageName() {
+        return "CORBA";
+    }
+
+    @Override
+    protected String genTypeName() {
+        return "WStringValue";
     }
 
     /** Read an instance of this value from a CDR stream */
-    public Object read(org.omg.CORBA.portable.InputStream in) {
-        return org.omg.CORBA.WStringValueHelper.read(in);
+    @Override
+    public Object read(InputStream in) {
+        return WStringValueHelper.read(in);
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object value) {
-        org.omg.CORBA.WStringValueHelper.write(out, (String) value);
+    @Override
+    public void write(OutputStream out, Object value) {
+        WStringValueHelper.write(out, (String) value);
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
-        throw new org.omg.CORBA.MARSHAL("internal error");
+    @Override
+    public void writeValue(OutputStream out, Serializable value) {
+        throw new MARSHAL("internal error");
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.io.Serializable value,
-            java.util.Map offsetMap) {
-        throw new org.omg.CORBA.MARSHAL("internal error");
+    @Override
+    protected final TypeCode genTypeCode() {
+        return WStringValueHelper.type();
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        return org.omg.CORBA.WStringValueHelper.type();
-    }
-
+    @Override
     Object copyObject(Object value, CopyState state) {
         return value;
     }

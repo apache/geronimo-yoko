@@ -17,7 +17,10 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.Properties;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
@@ -87,7 +90,7 @@ public final class TestDestroy extends test.common.TestBase {
     //
     static void TestDestroyThreaded(ORB orb, POA root) {
         POAManager rootMgr = root.the_POAManager();
-        TEST(rootMgr != null);
+        assertTrue(rootMgr != null);
 
         Policy[] policies = new Policy[1];
         policies[0] = root
@@ -123,7 +126,7 @@ public final class TestDestroy extends test.common.TestBase {
         // The destroy call shouldn't return until the aMethod call is
         // complete
         //
-        TEST(impl.callComplete());
+        assertTrue(impl.callComplete());
 
         while (thr.isAlive()) {
             try {
@@ -141,7 +144,7 @@ public final class TestDestroy extends test.common.TestBase {
         String str;
 
         POAManager rootMgr = root.the_POAManager();
-        TEST(rootMgr != null);
+        assertTrue(rootMgr != null);
 
         //
         // Create child POA
@@ -164,7 +167,7 @@ public final class TestDestroy extends test.common.TestBase {
         //
         try {
             root.find_POA("poa1", false);
-            TEST(false); // find_POA should not have succeeded
+            assertTrue(false); // find_POA should not have succeeded
         } catch (AdapterNonExistent ex) {
             // expected
         }
@@ -201,7 +204,7 @@ public final class TestDestroy extends test.common.TestBase {
         //
         try {
             root.find_POA("poa1", false);
-            TEST(false); // find_POA should not have succeeded
+            assertTrue(false); // find_POA should not have succeeded
         } catch (AdapterNonExistent ex) {
             // expected
         }
@@ -230,7 +233,7 @@ public final class TestDestroy extends test.common.TestBase {
             POA root = TestUtil.GetRootPOA(orb);
 
             POAManager rootMgr = root.the_POAManager();
-            TEST(rootMgr != null);
+            assertTrue(rootMgr != null);
 
             try {
                 rootMgr.activate();

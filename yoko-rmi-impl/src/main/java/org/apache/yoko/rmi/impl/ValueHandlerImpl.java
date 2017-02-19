@@ -26,7 +26,6 @@ import javax.rmi.CORBA.ValueHandler;
 
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.SendingContext.RunTime;
 
@@ -34,26 +33,34 @@ public class ValueHandlerImpl implements ValueHandler {
     static final Logger logger = Logger.getLogger(ValueHandlerImpl.class
             .getName());
 
-    TypeRepository repository;
+    private final TypeRepository repo;
 
     RunTimeCodeBaseImpl codeBase;
 
-    private TypeRepository getRepository() {
-        return RMIState.current().getTypeRepository(); // repository;
+    private ValueHandlerImpl() {
+        this.repo = TypeRepository.get();
     }
 
-    ValueHandlerImpl(TypeRepository rep) {
-        this.repository = rep;
+    private static enum HandlerHolder {
+        ;
+        static final ValueHandlerImpl value = new ValueHandlerImpl();
+    }
+
+    public static ValueHandlerImpl get() {
+        return HandlerHolder.value;
     }
 
     private ValueDescriptor desc(Class clz) {
-        return (ValueDescriptor) getRepository().getDescriptor(clz);
+        return (ValueDescriptor) repo.getDescriptor(clz);
+    }
+
+    private ValueDescriptor desc(String repId) {
+        return (ValueDescriptor) repo.getDescriptor(repId);
     }
 
     private ValueDescriptor desc(Class clz, String repid, RunTime runtime) {
         try {
-            return (ValueDescriptor) getRepository().getDescriptor(clz, repid,
-                    runtime);
+            return repo.getDescriptor(clz, repid, runtime);
         } catch (ClassNotFoundException ex) {
             MARSHAL m = new MARSHAL("class not found " + ex.getMessage());
             m.initCause(ex);
@@ -124,11 +131,12 @@ public class ValueHandlerImpl implements ValueHandler {
     }
 
     public java.lang.String getRMIRepositoryID(java.lang.Class clz) {
-        return getRepository().getDescriptor(clz).getRepositoryID();
+        return repo.getDescriptor(clz).getRepositoryID();
     }
 
+    @Override
     public boolean isCustomMarshaled(java.lang.Class clz) {
-        return desc(clz).isCustomMarshalled();
+        return desc(clz).isChunked();
     }
 
     public synchronized org.omg.SendingContext.RunTime getRunTimeCodeBase() {
@@ -168,7 +176,7 @@ public class ValueHandlerImpl implements ValueHandler {
         if (val instanceof RMIStub) {
 
             RMIStub stub = (RMIStub) val;
-            Class type = stub._descriptor.getJavaClass();
+            Class type = stub._descriptor.type;
 
             RMIState state = RMIState.current();
             Stub result = state.getStaticStub(stub._get_codebase(), type);
@@ -263,24 +271,22 @@ public class ValueHandlerImpl implements ValueHandler {
         return result;
     }
 
-    FullValueDescription meta(String id) {
+    FullValueDescription meta(String repId) {
+        if (logger.isLoggable(Level.FINER))
+            logger.finer(String.format("meta \"%s\"", repId));
         try {
-            // System.out.println ("ValueHandlerImpl::meta "+id);
+            ValueDescriptor desc = desc(repId);
+            if (null == desc) {
+                Class clz = getClassFromRepositoryID(repId);
 
-            Class clz = getClassFromRepositoryID(id);
+                if (clz == null) {
+                    logger.warning("class not found: " + repId);
+                    throw new org.omg.CORBA.MARSHAL(0x4f4d0001,
+                            CompletionStatus.COMPLETED_MAYBE);
+                }
 
-            if (clz == null) {
-                logger.warning("class not found: " + id);
-                throw new org.omg.CORBA.MARSHAL(0x4f4d0001,
-                        CompletionStatus.COMPLETED_MAYBE);
+                desc = desc(clz);
             }
-
-            if (logger.isLoggable(Level.FINER)) {
-                logger.finer("meta " + id);
-            }
-
-            ValueDescriptor desc = (ValueDescriptor) getRepository()
-                    .getDescriptor(clz);
 
             return desc.getFullValueDescription();
         } catch (Throwable ex) {
@@ -329,7 +335,7 @@ public class ValueHandlerImpl implements ValueHandler {
     }
 
     private void addIfRMIClass(java.util.List list, Class clz) {
-        TypeDescriptor desc = getRepository().getDescriptor(clz);
+        TypeDescriptor desc = repo.getDescriptor(clz);
 
         if (desc instanceof RemoteDescriptor)
             list.add(desc);

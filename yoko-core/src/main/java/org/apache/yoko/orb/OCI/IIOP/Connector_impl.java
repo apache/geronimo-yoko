@@ -17,44 +17,46 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
+
 import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.OCI.ConnectCB;
+import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST;
+import org.omg.IOP.Codec;
 import org.omg.IOP.IOR;
 import org.omg.IOP.TaggedComponent;
 
-final class Connector_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.Connector {
+final class Connector_impl extends org.omg.CORBA.LocalObject implements Connector {
 
     // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.Connector.class.getName());
+    static final Logger logger = Logger.getLogger(Connector.class.getName());
 
     private final IOR ior_;    // the target IOR we're connecting with
 
     private final Policy[] policies_;    // the policies used for the connection.
 
-    // Some data member must not be private because the info object
-    // must be able to access them
-    public String host_; // The host
-
-    public int port_; // The port
-
     private boolean keepAlive_; // The keepalive flag
 
-    private ConnectorInfo_impl info_; // Connector information
+    private final ConnectorInfo_impl info_; // Connector information
 
     private java.net.Socket socket_; // The socket
 
     private ListenerMap listenMap_;
 
-    private ConnectionHelper connectionHelper_;
+    private final ConnectionHelper connectionHelper_;
 
     private byte[] transportInfo;
+
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
+
+    private final Codec codec_;
 
 
     // ------------------------------------------------------------------
@@ -62,11 +64,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
     // ------------------------------------------------------------------
 
     private void close() {
-        logger.fine("Closing connection to host=" + host_ + ", port=" + port_);
-        //
-        // Destroy the info object
-        //
-        info_._OB_destroy();
+        logger.fine("Closing connection to host=" + this.info_.getHost() + ", port=" + this.info_.getPort());
 
         //
         // Close the socket
@@ -100,15 +98,10 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         java.net.InetAddress address;
         try {
-            address = java.net.InetAddress.getByName(host_);
+            address = java.net.InetAddress.getByName(this.info_.getHost());
         } catch (java.net.UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution error", ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex);
         }
 
 
@@ -116,23 +109,27 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         // Create socket and connect
         //
         try {
-            logger.fine("Connecting to host=" + address + ", port=" + port_);
-            socket_ = connectionHelper_.createSocket(ior_, policies_, address, port_);
-            logger.fine("Connection created with socket " + socket_); 
+            logger.fine("Connecting to host=" + address + ", port=" + this.info_.getPort());
+            if (connectionHelper_ != null) {
+                socket_ = connectionHelper_.createSocket(ior_, policies_, address, this.info_.getPort());
+            } else {
+                socket_ = extendedConnectionHelper_.createSocket(ior_, policies_, address, this.info_.getPort());
+            }
+            logger.fine("Connection created with socket " + socket_);
         } catch (java.net.ConnectException ex) {
-            logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + port_, ex);
+            logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + this.info_.getPort(), ex);
             throw new org.omg.CORBA.TRANSIENT(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed)
-                            + ": " + ex.getMessage(),
+                            + "Error connecting to host=" + address + ", port=" + this.info_.getPort() + ": " + ex.getMessage(),
                     org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         } catch (java.io.IOException ex) {
-            logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + port_, ex);
+            logger.log(Level.FINE, "Error connecting to host=" + address + ", port=" + this.info_.getPort(), ex);
             throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
                     org.apache.yoko.orb.OB.MinorCodes
                             .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSocket)
-                            + ": " + ex.getMessage(),
+                            + "Error connecting to host=" + address + ", port=" + this.info_.getPort() + ": " + ex.getMessage(),
                     org.apache.yoko.orb.OB.MinorCodes.MinorSocket,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
         }
@@ -151,12 +148,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
                 socket_.close();
             } catch (java.io.IOException e) {
             }
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw Exceptions.asCommFailure(ex);
         }
 
         //
@@ -164,7 +156,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         org.apache.yoko.orb.OCI.Transport tr = null;
         try {
-            tr = new Transport_impl(this, socket_, listenMap_);
+            tr = new Transport_impl(socket_, listenMap_);
             socket_ = null;
         } catch (org.omg.CORBA.SystemException ex) {
             logger.log(Level.FINE, "Transport creation error", ex);
@@ -213,7 +205,11 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
 
         public void run() {
             try {
-                so_ = connectionHelper_.createSocket(ior_, policies_, address_, port_);
+                if (connectionHelper_ != null) {
+                    so_ = connectionHelper_.createSocket(ior_, policies_, address_, Connector_impl.this.info_.getPort());
+                } else {
+                    so_ = extendedConnectionHelper_.createSocket(ior_, policies_, address_, Connector_impl.this.info_.getPort());
+                }
             } catch (java.io.IOException ex) {
                 logger.log(Level.FINE, "Socket creation error", ex);
                 ex_ = ex;
@@ -271,15 +267,10 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         java.net.InetAddress address = null;
         try {
-            address = java.net.InetAddress.getByName(host_);
+            address = java.net.InetAddress.getByName(this.info_.getHost());
         } catch (java.net.UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution error", ex);
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorGethostbyname,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex);
         }
 
         //
@@ -325,12 +316,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
                 socket_.close();
             } catch (java.io.IOException e) {
             }
-            throw (org.omg.CORBA.COMM_FAILURE)new org.omg.CORBA.COMM_FAILURE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt)
-                            + ": " + ex.getMessage(),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw Exceptions.asCommFailure(ex);
         }
 
         //
@@ -338,7 +324,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         org.apache.yoko.orb.OCI.Transport tr = null;
         try {
-            tr = new Transport_impl(this, socket_, listenMap_);
+            tr = new Transport_impl(socket_, listenMap_);
             socket_ = null;
         } catch (org.omg.CORBA.SystemException ex) {
             logger.log(Level.FINE, "Transport setup error", ex);
@@ -383,8 +369,8 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
 
         org.apache.yoko.orb.OCI.ProfileInfoSeqHolder profileInfoSeq = new org.apache.yoko.orb.OCI.ProfileInfoSeqHolder();
         profileInfoSeq.value = new org.apache.yoko.orb.OCI.ProfileInfo[0];
-        Util.extractAllProfileInfos(ior, profileInfoSeq, true, host_, port_,
-                false);
+        Util.extractAllProfileInfos(ior, profileInfoSeq, true, this.info_.getHost(), this.info_.getPort(),
+                false, codec_);
 
         //check that the transport info matches ours.
         //we could return just the profiles that match rather than bailing if one doesn't match.
@@ -416,23 +402,23 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         //
         // Compare ports
         //
-        if (port_ != impl.port_)
+        if (this.info_.getPort() != impl.info_.getPort())
             return false;
 
         //
         // Direct host name comparison
         //
-        if (!host_.equals(impl.host_)) {
+        if (!this.info_.getHost().equals(impl.info_.getHost())) {
             //
             // Direct host name comparision failed - must look up
             // addresses to be really sure if the hosts differ
             //
             try {
                 java.net.InetAddress addr1 = java.net.InetAddress
-                        .getByName(host_);
+                        .getByName(this.info_.getHost());
 
                 java.net.InetAddress addr2 = java.net.InetAddress
-                        .getByName(impl.host_);
+                        .getByName(impl.info_.getHost());
 
                 if (!addr1.equals(addr2))
                     return false;
@@ -445,11 +431,6 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
         }
 
         return Arrays.equals(transportInfo, impl.transportInfo);
-
-        //
-        // OK, connectors are the same
-        //
-//        return true;
     }
 
     byte[] extractTransportInfo(IOR ior) {
@@ -477,22 +458,28 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Connector_impl(org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies, String host, int port, boolean keepAlive,
-            org.apache.yoko.orb.OCI.ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper) {
-        // System.out.println("Connector_impl");
+    private Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper xhelper, Codec codec) {
+        if ((null == helper) && (null == xhelper)) throw new IllegalArgumentException("Both connection helpers must not be null");
         ior_ = ior;
         policies_ = policies;
-        host_ = host;
-        port_ = port;
         keepAlive_ = keepAlive;
-        info_ = new ConnectorInfo_impl(this, cb);
+        info_ = new ConnectorInfo_impl(host, port, cb);
         listenMap_ = lm;
         connectionHelper_ = helper;
+        extendedConnectionHelper_ = xhelper;
+        codec_ = codec;
         transportInfo = extractTransportInfo(ior);
     }
 
+    public Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, Codec codec) {
+        this(ior, policies, host, port, keepAlive, cb, lm, helper, null, codec);
+    }
+
+    public Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper xhelper, Codec codec) {
+        this(ior, policies, host, port, keepAlive, cb, lm, null, xhelper, codec);
+    }
+
     public void finalize() throws Throwable {
-        // System.out.println("~Connector_impl");
         if (socket_ != null)
             close();
 

@@ -39,7 +39,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
     byte[] _id;
 
     Class getJavaClass() {
-        return _descriptor.getJavaClass();
+        return _descriptor.type;
     }
 
     RMIState getRMIState() {
@@ -127,7 +127,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
             try {
                 return m.invoke(_target, args);
             } catch (java.lang.reflect.InvocationTargetException ex) {
-                logger.log(Level.FINER, "Error invoking local method", ex);
+                logger.log(Level.FINER, "Error invoking local method", ex.getCause());
                 throw ex.getTargetException();
             }
         } else {
@@ -178,7 +178,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
             throw new IllegalArgumentException();
         }
 
-        _descriptor = _state.getTypeRepository().getRemoteDescriptor(target.getClass()).getRemoteInterface();
+        _descriptor = _state.repo.getRemoteInterface(target.getClass()).getRemoteInterface();
 
         if (_descriptor == null) {
             throw new RuntimeException("remote classes not supported");

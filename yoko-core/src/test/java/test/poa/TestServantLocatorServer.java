@@ -17,11 +17,14 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 import org.omg.PortableServer.POAManagerPackage.*;
 import org.omg.PortableServer.ServantLocatorPackage.*;
+
 import java.io.*;
 import java.util.Properties;
 
@@ -82,7 +85,7 @@ public final class TestServantLocatorServer extends test.common.TestBase {
             // Check the cookie
             //
             String oidString = new String(oid);
-            TEST(oidString.equals((String) the_cookie));
+            assertTrue(oidString.equals((String) the_cookie));
 
             if (oidString.equals("testEx") && !operation.equals("_locate")) {
                 //

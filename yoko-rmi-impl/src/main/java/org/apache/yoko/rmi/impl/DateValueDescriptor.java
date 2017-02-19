@@ -27,12 +27,11 @@ import java.util.Date;
  * Window>Preferences>Java>Templates. To enable and disable the creation of type
  * comments go to Window>Preferences>Java>Code Generation.
  */
-public class DateValueDescriptor extends ValueDescriptor {
+class DateValueDescriptor extends ValueDescriptor {
 
     /**
      * Constructor for DateValueDescriptor.
-     * 
-     * @param type
+     *
      * @param repository
      */
     public DateValueDescriptor(TypeRepository repository) {
@@ -44,5 +43,4 @@ public class DateValueDescriptor extends ValueDescriptor {
         state.put(orig, result);
         return result;
     }
-
 }

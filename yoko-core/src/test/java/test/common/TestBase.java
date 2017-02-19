@@ -17,12 +17,25 @@
 
 package test.common;
 
-public class TestBase {
-    public static void TEST(boolean expr) {
-        if (!expr)
-            throw new TestException();
-    }
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.rmi.Remote;
 
+import javax.rmi.PortableRemoteObject;
+
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextPackage.InvalidName;
+
+public class TestBase {
     public static org.omg.CORBA.TypeCode getOrigType(org.omg.CORBA.TypeCode tc) {
         org.omg.CORBA.TypeCode result = tc;
 
@@ -30,9 +43,71 @@ public class TestBase {
             while (result.kind() == org.omg.CORBA.TCKind.tk_alias)
                 result = result.content_type();
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            TEST(false);
+            throw new AssertionError(ex);
         }
 
         return result;
+    }
+
+    protected static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object obj,
+            NamingContextExt context, NameComponent[] name) throws InvalidName {
+        writeRef(orb, out, obj, context.to_string(name));
+    }
+
+    private static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object obj, String name) {
+        out.println("ref:");
+        out.println(orb.object_to_string(obj));
+        out.println(name);
+    }
+    
+    protected static void writeRef(ORB orb, PrintWriter out, org.omg.CORBA.Object obj) {
+        writeRef(orb, out, obj, "");
+    }
+
+    protected static String[] readRef(BufferedReader reader, String[] refStrings) throws IOException {
+        String line = reader.readLine();
+        if (line == null) {
+            throw new RuntimeException("Unknown Server error");
+        } else if (!!!line.equals("ref:")) {
+            try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+                pw.println("Server error:");
+                do {
+                    pw.print('\t');
+                    pw.println(line);
+                } while ((line = reader.readLine()) != null);
+                pw.flush();
+                throw new RuntimeException(sw.toString());
+            }
+        }
+        refStrings[0] = reader.readLine();
+        refStrings[1] = reader.readLine();
+        return refStrings;
+    }
+
+    private static org.omg.CORBA.Object readGenericStub(ORB orb, BufferedReader reader) throws IOException {
+        return orb.string_to_object(readRef(reader, new String[2])[0]);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static<T extends Remote> T readRmiStub(ORB orb, BufferedReader reader, Class<T> type) throws ClassCastException, IOException {
+        return (T)PortableRemoteObject.narrow(readGenericStub(orb, reader), type);
+    }
+
+    @SuppressWarnings("unchecked")
+    protected static<T extends IDLEntity> T readIdlStub(ORB orb, BufferedReader reader, Class<T> type) throws ClassCastException, IOException {
+        return (T)PortableRemoteObject.narrow(readGenericStub(orb, reader), type);
+    }
+
+    protected static BufferedReader openFileReader(final String refFile) throws FileNotFoundException {
+        return new BufferedReader(new FileReader(refFile)) {
+            @Override
+            public void close() throws IOException {
+                try {
+                    super.close();
+                } finally {
+                    Files.delete(Paths.get(refFile));
+                }
+            }
+        };
     }
 }

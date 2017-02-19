@@ -19,6 +19,7 @@
 package org.apache.yoko;
 
 import java.io.File;
+import java.util.Arrays;
 
 import junit.framework.TestSuite;
 /**
@@ -54,22 +55,19 @@ public class AbstractMatrixOrbTestBase extends AbstractOrbTestBase {
         runServerClientTest(serverClass, serverArgs, clientClass, clientArgs);
     }
                 
-    public static TestSuite generateTestSuite(String serverClass, String clientClass, 
-                                              File waitForFile) {
+    public static TestSuite generateTestSuite(String serverClass, String clientClass, File waitForFile) {
         return generateTestSuite(serverClass, defaultServers, clientClass, defaultClients, waitForFile);
     }
         
-    public static TestSuite generateTestSuite(String serverClass, String[][] servers,
-                                              String clientClass, String[][] clients, File waitForFile) {
+    public static TestSuite generateTestSuite(String serverClass, String[][] servers, String clientClass, String[][] clients, File waitForFile) {
         TestSuite suite = new TestSuite();
-        for(int serverNo = 0; serverNo < servers.length; serverNo++) {
-            for(int clientNo = 0; clientNo < clients.length; clientNo++) {
+        for(String[] serverArgs: servers) {
+            for(String[] clientArgs: clients) {
                 AbstractMatrixOrbTestBase test = new AbstractMatrixOrbTestBase("test"); 
-                test.init(serverClass, servers[serverNo], clientClass, clients[clientNo], waitForFile);
+                test.init(serverClass, serverArgs, clientClass, clientArgs, waitForFile);
                 suite.addTest(test);
             }
         }
         return suite;
-                
     }
 }

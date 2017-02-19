@@ -39,7 +39,7 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                                + ": invalid character in key",
+                                + ": invalid character in key, char value = 0x" + Integer.toHexString(ch),
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             }
@@ -80,7 +80,7 @@ public class CorbalocURLScheme_impl extends org.omg.CORBA.LocalObject implements
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                                + ": invalid initial reference token",
+                                + ": invalid initial reference token \"" + keyStr + "\"",
                         org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             }

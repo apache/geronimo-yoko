@@ -17,7 +17,6 @@
 */ 
 package org.apache.yoko.rmi.impl;
 
-import org.omg.CORBA.AttributeDescription;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.ValueMember;
@@ -25,10 +24,9 @@ import org.omg.CORBA.ValueMember;
 /**
  * @author krab
  */
-public class FVDValueDescriptor extends ValueDescriptor {
-    FullValueDescription fvd;
-
-    String repid;
+class FVDValueDescriptor extends ValueDescriptor {
+    final FullValueDescription fvd;
+    final String repid;
 
     FVDValueDescriptor(FullValueDescription fvd, Class clazz,
             TypeRepository rep, String repid, ValueDescriptor super_desc) {
@@ -62,11 +60,11 @@ public class FVDValueDescriptor extends ValueDescriptor {
         _fields = new_fields;
     }
 
-    FieldDescriptor findField(ValueMember valueMember) {
+    private FieldDescriptor findField(ValueMember valueMember) {
         FieldDescriptor result = null;
 
-        for (Class c = getJavaClass(); c != null; c = c.getSuperclass()) {
-            TypeDescriptor td = getTypeRepository().getDescriptor(c);
+        for (Class c = type; c != null; c = c.getSuperclass()) {
+            TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
                 ValueDescriptor vd = (ValueDescriptor) td;
                 FieldDescriptor[] fds = vd._fields;
@@ -86,35 +84,23 @@ public class FVDValueDescriptor extends ValueDescriptor {
         return result;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#getRepositoryID()
-     */
-    public String getRepositoryID() {
+    @Override
+    protected String genRepId() {
         return repid;
     }
 
+    @Override
     org.omg.CORBA.ValueDefPackage.FullValueDescription getFullValueDescription() {
         return fvd;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#getTypeCode()
-     */
-    public TypeCode getTypeCode() {
+    @Override
+    protected final TypeCode genTypeCode() {
         return fvd.type;
     }
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.yoko.rmi.impl.TypeDescriptor#isCustomMarshalled()
-     */
+    @Override
     public boolean isCustomMarshalled() {
         return fvd.is_custom;
     }
-
 }

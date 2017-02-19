@@ -18,84 +18,78 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.io.Externalizable;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Serializable;
 import java.lang.reflect.Array;
-import java.util.Vector;
+import java.rmi.Remote;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
-
-import javax.rmi.CORBA.Util;
 
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
 
-public abstract class ArrayDescriptor extends ValueDescriptor {
-    protected int order;
-
-    protected Class basicType;
-
-    protected Class elementType;
-    // repository ID for the array class
-    String _repid = null;
-    // repository ID for the contained elements
-    String _elementRepid = null;
-
-    public String getRepositoryID() {
-        if (_repid != null)
-            return _repid;
-
-        if (elementType.isPrimitive() || elementType == Object.class) {
-            _repid = "RMI:" + getJavaClass().getName() + ":0000000000000000";
-        } else {
-            TypeDescriptor desc = getTypeRepository()
-                    .getDescriptor(elementType);
-            String elemRep = desc.getRepositoryIDForArray();
-            String hash = elemRep.substring(elemRep.indexOf(':', 4));
-            _repid = "RMI:" + getJavaClass().getName() + hash;
-        }
-
-        // System.out.println ("REPID "+getJavaClass()+" >> "+_repid);
-
-        return _repid;
-    }
-
-
-    public String getElementRepositoryID() {
-        if (_elementRepid != null) {
-            return _elementRepid;
-        }
-
-        if (elementType.isPrimitive() || elementType == Object.class) {
-            // use the descriptor type past the array type marker
-            _elementRepid = "RMI:" + getJavaClass().getName().substring(1) + ":0000000000000000";
-        } else {
-            TypeDescriptor desc = getTypeRepository()
-                    .getDescriptor(elementType);
-            _elementRepid = desc.getRepositoryIDForArray();
-        }
-
-        // System.out.println ("Element REPID "+getJavaClass()+" >> "+_elementRepid);
-
-        return _elementRepid;
-    }
+abstract class ArrayDescriptor extends ValueDescriptor {
+    final Class elementType;
+    final Class basicType;
+    private final int order;
 
     protected ArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, rep);
-        logger.fine("Creating an array descriptor for type " + type.getName() + " holding elements of " + elemType.getName()); 
+        logger.fine("Creating an array descriptor for type " + type.getName() + " holding elements of " + elemType.getName());
         this.elementType = elemType;
 
-        order = 1;
-        basicType = elemType;
+        int order = 1;
+        Class basicType = elemType;
         while (basicType.isArray()) {
             basicType = basicType.getComponentType();
-            order += 1;
+            order++;
         }
+        this.basicType = basicType;
+        this.order = order;
     }
 
-    public String getIDLName() {
+    @Override
+    protected String genRepId() {
+        if (elementType.isPrimitive() || elementType == Object.class)
+            return String.format("RMI:%s:%016X", type.getName(), 0);
+
+        TypeDescriptor desc = repo.getDescriptor(elementType);
+        String elemRep = desc.getRepositoryID();
+        String hash = elemRep.substring(elemRep.indexOf(':', 4));
+        return String.format("RMI:%s:%s", type.getName(), hash);
+    }
+
+    // repository ID for the contained elements
+    private volatile String _elementRepid = null;
+    private final String genElemRepId() {
+        if (elementType.isPrimitive() || elementType == Object.class) {
+            // use the descriptor type past the array type marker
+            return String.format("RMI:%s:%016X", type.getName().substring(1), 0);
+        }
+        return repo.getDescriptor(elementType).getRepositoryID();
+    }
+
+    public String getElementRepositoryID() {
+        if (_elementRepid == null) _elementRepid = genElemRepId();
+        return _elementRepid;
+    }
+
+    @Override
+    protected final String genIDLName() {
         StringBuffer sb = new StringBuffer("org_omg_boxedRMI_");
 
-        TypeDescriptor desc = getTypeRepository().getDescriptor(basicType);
+        TypeDescriptor desc = repo.getDescriptor(basicType);
         
         // The logic that looks for the last "_" fails when this is a 
         // long_long primitive type.  The primitive types have a "" package 
@@ -129,7 +123,7 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
     }
 
     static ArrayDescriptor get(final Class type, TypeRepository rep) {
-        logger.fine("retrieving an array descriptor for class " + type.getName()); 
+        logger.fine("retrieving an array descriptor for class " + type.getName());
         if (!type.isArray()) {
             throw new IllegalArgumentException("type is not an array");
         }
@@ -137,7 +131,6 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
         Class elemType = type.getComponentType();
 
         if (elemType.isPrimitive()) {
-
             if (elemType == Boolean.TYPE) {
                 return new BooleanArrayDescriptor(type, elemType, rep);
             } else if (elemType == Byte.TYPE) {
@@ -158,76 +151,73 @@ public abstract class ArrayDescriptor extends ValueDescriptor {
                 throw new RuntimeException("unknown array type " + type);
             }
         }
-
-        if (java.io.Serializable.class.isAssignableFrom(elemType)) {
-            return new ValueArrayDescriptor(type, elemType, rep);
-
-        } else if (java.rmi.Remote.class.isAssignableFrom(elemType)) {
-            return new RemoteArrayDescriptor(type, elemType, rep);
-
-        } else if (Object.class.equals(elemType)) {
+        if (Serializable.class.equals(elemType) ||
+                Externalizable.class.equals(elemType) || Object.class.equals(elemType)) {
             return new ObjectArrayDescriptor(type, elemType, rep);
-
+        } else if (Remote.class.isAssignableFrom(elemType)) {
+            return new RemoteArrayDescriptor(type, elemType, rep);
+        } else if (Serializable.class.isAssignableFrom(elemType)) {
+            return new ValueArrayDescriptor(type, elemType, rep);
         } else {
             return new AbstractObjectArrayDescriptor(type, elemType, rep);
         }
-
     }
 
     /**
      * Read an instance of this value from a CDR stream. Overridden to provide a
      * specific type
      */
-    public Object read(org.omg.CORBA.portable.InputStream in) {
+    @Override
+    public Object read(InputStream in) {
         org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
-        logger.fine("Reading an array value with repository id " + getRepositoryID() + " java class is " + getJavaClass()); 
-        
-        // if we have a resolved class, read using that, otherwise fall back on the 
-        // repository id. 
-        Class clz = getJavaClass(); 
-        if (clz == null) {
-            return _in.read_value(getRepositoryID());
-        }
-        else { 
-            return _in.read_value(clz);
-        }
+        logger.fine("Reading an array value with repository id " + getRepositoryID() + " java class is " + type);
+
+        // if we have a resolved class, read using that, otherwise fall back on the
+        // repository id.
+        return ((null == type) ? _in.read_value(getRepositoryID()) : _in.read_value(type));
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object value) {
+    @Override
+    public void write(OutputStream out, Object value) {
         org.omg.CORBA_2_3.portable.OutputStream _out = (org.omg.CORBA_2_3.portable.OutputStream) out;
 
-        _out.write_value((java.io.Serializable)value, getRepositoryID());
+        _out.write_value((Serializable)value, getRepositoryID());
     }
 
-    org.omg.CORBA.ValueMember[] getValueMembers() {
+    @Override
+    protected final ValueMember[] genValueMembers() {
+        final ValueMember[] members = new ValueMember[1];
+        final TypeDescriptor elemDesc = repo.getDescriptor(elementType);
+        final String elemRepID = elemDesc.getRepositoryID();
 
-        if (_value_members == null) {
+        final ORB orb = ORB.init();
+        TypeCode memberTC = orb.create_sequence_tc(0, elemDesc.getTypeCode());
 
-            _value_members = new org.omg.CORBA.ValueMember[1];
-
-            TypeDescriptor elemDesc = getTypeRepository().getDescriptor(
-                    elementType);
-
-            String elemRepID = elemDesc.getRepositoryID();
-
-            ORB orb = org.omg.CORBA.ORB.init();
-            TypeCode memberTC = orb.create_sequence_tc(0, elemDesc
-                    .getTypeCode());
-
-            _value_members[0] = new ValueMember("", // member has no name!
+        members[0] = new ValueMember("", // member has no name!
                     elemRepID, this.getRepositoryID(), "1.0", memberTC, null,
                     (short) 1);
-            // public
+
+        return members;
+    }
+
+    @Override
+    void addDependencies(Set classes) {
+        repo.getDescriptor(basicType).addDependencies(classes);
+    }
+
+    final CorbaObjectReader makeCorbaObjectReader(final InputStream in, final Map offsetMap, final Serializable obj)
+            throws IOException {
+        try {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<CorbaObjectReader>() {
+                public CorbaObjectReader run() throws IOException {
+                    return new CorbaObjectReader(in, offsetMap, obj);
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            throw (IOException)e.getException();
         }
-
-        return _value_members;
     }
-
-    void addDependencies(java.util.Set classes) {
-        getTypeRepository().getDescriptor(basicType).addDependencies(classes);
-    }
-
 }
 
 class ObjectArrayDescriptor extends ArrayDescriptor {
@@ -237,15 +227,15 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out, Serializable value) {
         // System.out.println ("ObjectArrayDescriptor::writeValue
         // "+getRepositoryID ());
 
         Object[] arr = (Object[]) value;
         out.write_long(arr.length);
 
-        logger.finer("writing " + getJavaClass().getName() + " size="
+        logger.finer("writing " + type.getName() + " size="
                 + arr.length);
 
         for (int i = 0; i < arr.length; i++) {
@@ -253,8 +243,9 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -264,7 +255,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
 
             offsetMap.put(key, arr);
 
-            logger.fine("reading " + getJavaClass().getName() + " size="
+            logger.fine("reading " + type.getName() + " size="
                     + arr.length);
 
             for (int i = 0; i < length; i++) {
@@ -276,19 +267,20 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
                     else {
                         logger.finer("Array item " + i + " is null"); 
                     }
-                } catch (org.omg.CORBA.portable.IndirectionException ex) {
+                } catch (IndirectionException ex) {
                     arr[i] = offsetMap.get(new Integer(ex.offset));
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }
-            return (java.io.Serializable) arr;
+            return arr;
 
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
 
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         final Object[] orig = (Object[]) value;
         final Object[] result = new Object[orig.length];
@@ -311,9 +303,10 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
         return result;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -330,11 +323,9 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
-        // System.out.println ("RemoteArrayDescriptor::writeValue
-        // "+getRepositoryID ());
-
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         Object[] arr = (Object[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -342,8 +333,9 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -355,20 +347,21 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
             for (int i = 0; i < length; i++) {
                 try {
                     arr[i] = reader.readRemoteObject(elementType);
-                } catch (org.omg.CORBA.portable.IndirectionException ex) {
+                } catch (IndirectionException ex) {
                     arr[i] = offsetMap.get(new Integer(ex.offset));
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }
 
-            return (java.io.Serializable) arr;
+            return arr;
 
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
 
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         final Object[] orig = (Object[]) value;
         final Object[] result = (Object[]) Array.newInstance(elementType,
@@ -392,9 +385,10 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
         return result;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -411,42 +405,37 @@ class ValueArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
-        // System.out.println ("ValueArrayDescriptor::writeValue
-        // "+getRepositoryID ());
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         Object[] arr = (Object[]) value;
         out.write_long(arr.length);
-        java.io.Serializable[] sarr = (java.io.Serializable[]) arr;
+        Serializable[] sarr = (Serializable[]) arr;
         org.omg.CORBA_2_3.portable.OutputStream _out = (org.omg.CORBA_2_3.portable.OutputStream) out;
         for (int i = 0; i < sarr.length; i++) {
             _out.write_value(sarr[i], getElementRepositoryID());
         }
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
-            Integer key) {
-        try {
-            ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
+    @Override
+    public Serializable readValue(InputStream in, Map offsetMap, Integer key) {
+        final int length = in.read_long();
+        Object[] arr = (Object[]) Array.newInstance(elementType, length);
+        offsetMap.put(key, arr);
 
-            int length = reader.readInt();
-            Object[] arr = (Object[]) Array.newInstance(elementType, length);
-            offsetMap.put(key, arr);
-            // System.out.println ("ValueArrayDescriptor::readValue
-            // len="+length+"; type="+elementType);
-
-            for (int i = 0; i < length; i++) {
-                arr[i] = reader.readValueObject(elementType);
+        final org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
+        for (int i = 0; i < length; i++) {
+            try {
+                arr[i] = _in.read_value(elementType);
+            } catch (IndirectionException ex) {
+                arr[i] = offsetMap.get(new Integer(ex.offset));
             }
-
-            return (java.io.Serializable) arr;
-        } catch (java.io.IOException ex) {
-            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
 
+        return arr;
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         Object[] orig = (Object[]) value;
         final Object[] result = (Object[]) Array.newInstance(value.getClass()
@@ -470,9 +459,10 @@ class ValueArrayDescriptor extends ArrayDescriptor {
         return result;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -489,10 +479,9 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
-        // System.out.println ("AbstractObjectArrayDescriptor::writeValue
-        // "+getRepositoryID ());
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
 
         Object[] arr = (Object[]) value;
         out.write_long(arr.length);
@@ -501,8 +490,9 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -515,19 +505,20 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
             for (int i = 0; i < length; i++) {
                 try {
                     arr[i] = reader.readAbstractObject();
-                } catch (org.omg.CORBA.portable.IndirectionException ex) {
+                } catch (IndirectionException ex) {
                     arr[i] = offsetMap.get(new Integer(ex.offset));
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }
 
-            return (java.io.Serializable) arr;
+            return arr;
 
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         final Object[] orig = (Object[]) value;
         final Object[] result = (Object[]) Array.newInstance(elementType,
@@ -551,9 +542,10 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
         return result;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         Object[] arr = (Object[]) val;
-        TypeDescriptor desc = getTypeRepository().getDescriptor(elementType);
+        TypeDescriptor desc = repo.getDescriptor(elementType);
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
             if (i != 0) {
@@ -570,19 +562,21 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         boolean[] arr = new boolean[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_boolean();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         boolean[] arr = (boolean[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -590,6 +584,7 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((boolean[]) value).length == 0)
             return value;
@@ -599,7 +594,8 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         boolean[] arr = (boolean[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -613,34 +609,32 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
 }
 
 class ByteArrayDescriptor extends ArrayDescriptor {
-
     ByteArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         byte[] arr = new byte[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_octet();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         byte[] arr = (byte[]) value;
         out.write_long(arr.length);
 
         out.write_octet_array(arr, 0, arr.length);
-
-        // for (int i = 0; i < arr.length; i++) {
-        // out.write_octet(arr[i]);
-        // }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((byte[]) value).length == 0)
             return value;
@@ -650,7 +644,8 @@ class ByteArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         byte[] arr = (byte[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -667,23 +662,26 @@ class CharArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         int len = in.read_long();
         char[] arr = new char[len];
         offsetMap.put(key, arr);
         in.read_wchar_array(arr, 0, len);
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         char[] arr = (char[]) value;
         out.write_long(arr.length);
         out.write_wchar_array(arr, 0, arr.length);
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((char[]) value).length == 0)
             return value;
@@ -693,7 +691,8 @@ class CharArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         char[] arr = (char[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -710,19 +709,21 @@ class ShortArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         short[] arr = new short[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_short();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         short[] arr = (short[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -730,6 +731,7 @@ class ShortArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((short[]) value).length == 0)
             return value;
@@ -739,7 +741,8 @@ class ShortArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         short[] arr = (short[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -756,19 +759,21 @@ class IntArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         int[] arr = new int[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_long();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         int[] arr = (int[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -776,6 +781,7 @@ class IntArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((int[]) value).length == 0)
             return value;
@@ -785,7 +791,8 @@ class IntArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         int[] arr = (int[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -802,19 +809,21 @@ class LongArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         long[] arr = new long[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_longlong();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         long[] arr = (long[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -822,6 +831,7 @@ class LongArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((long[]) value).length == 0)
             return value;
@@ -831,7 +841,8 @@ class LongArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         long[] arr = (long[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -849,19 +860,21 @@ class FloatArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         float[] arr = new float[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_float();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         float[] arr = (float[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -869,6 +882,7 @@ class FloatArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((float[]) value).length == 0)
             return value;
@@ -878,7 +892,8 @@ class FloatArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         float[] arr = (float[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {
@@ -895,19 +910,21 @@ class DoubleArrayDescriptor extends ArrayDescriptor {
         super(type, elemType, rep);
     }
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, java.util.Map offsetMap,
+    @Override
+    public Serializable readValue(
+            InputStream in, Map offsetMap,
             Integer key) {
         double[] arr = new double[in.read_long()];
         offsetMap.put(key, arr);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_double();
         }
-        return (java.io.Serializable) arr;
+        return arr;
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable value) {
+    @Override
+    public void writeValue(OutputStream out,
+            Serializable value) {
         double[] arr = (double[]) value;
         out.write_long(arr.length);
         for (int i = 0; i < arr.length; i++) {
@@ -915,6 +932,7 @@ class DoubleArrayDescriptor extends ArrayDescriptor {
         }
     }
 
+    @Override
     Object copyObject(Object value, CopyState state) {
         if (((double[]) value).length == 0)
             return value;
@@ -924,7 +942,8 @@ class DoubleArrayDescriptor extends ArrayDescriptor {
         return copy;
     }
 
-    void printFields(java.io.PrintWriter pw, java.util.Map recurse, Object val) {
+    @Override
+    void printFields(PrintWriter pw, Map recurse, Object val) {
         double[] arr = (double[]) val;
         pw.print("length=" + arr.length + "; ");
         for (int i = 0; i < arr.length; i++) {

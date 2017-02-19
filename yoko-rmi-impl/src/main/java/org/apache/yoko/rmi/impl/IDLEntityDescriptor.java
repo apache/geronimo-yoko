@@ -18,105 +18,83 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.CORBA.portable.OutputStream;
+
+import javax.rmi.CORBA.Util;
+import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.util.Map;
 
-import org.omg.CORBA.MARSHAL;
-
-public class IDLEntityDescriptor extends ValueDescriptor {
-    Method _read_method;
-
-    Method _write_method;
-
-    Method _type_method;
-
-    boolean isAbstract = false;
-
-    boolean isCorba = false; 
+class IDLEntityDescriptor extends ValueDescriptor {
+    private final boolean isCorba;
+    private final Class helperType;
 
     IDLEntityDescriptor(Class type, TypeRepository repository) {
         super(type, repository);
 
-        if (org.omg.CORBA.Object.class.isAssignableFrom(type)) {
-            isCorba = true; 
-        }
-    }
-
-    public String getIDLName() {
-        return "org_omg_boxedIDL_" + super.getIDLName();
-    }
-
-    public void initIDL() {
-        super.init();
-
+        isCorba = org.omg.CORBA.Object.class.isAssignableFrom(type);
         try {
-            final Class type = getJavaClass();
             final String helperName = type.getName() + "Helper";
-            final Class helperClass = javax.rmi.CORBA.Util.loadClass(
-                    helperName, null, type.getClassLoader());
-
-            java.security.AccessController
-                    .doPrivileged(new java.security.PrivilegedAction() {
-                        public Object run() {
-
-                            try {
-                                Method _id_method = null;
-                                Method[] methods = helperClass
-                                        .getDeclaredMethods();
-                                for (int i = 0; i < methods.length; i++) {
-                                    String name = methods[i].getName();
-
-                                    if (name.equals("id"))
-                                        _id_method = methods[i];
-
-                                    else if (name.equals("read"))
-                                        _read_method = methods[i];
-
-                                    else if (name.equals("write"))
-                                        _write_method = methods[i];
-
-                                    else if (name.equals("type"))
-                                        _type_method = methods[i];
-                                }
-
-                                // _repid = (String)
-                                _id_method.invoke(null, new Object[0]);
-
-                            } catch (InvocationTargetException ex) {
-                                throw new RuntimeException(
-                                        "cannot initialize: " + ex, ex);
-
-                            } catch (IllegalAccessException ex) {
-                                throw new RuntimeException(
-                                        "cannot initialize: " + ex, ex);
-                            }
-
-                            return null;
-                        }
-                    });
-
+            helperType = Util.loadClass(helperName, null, type.getClassLoader());
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException("cannot load IDL Helper class for "
-                    + getJavaClass(), ex);
+                    + type, ex);
         }
     }
 
-    /*
-     * public String getRepositoryID () { return _repid; }
-     */
+    @Override
+    protected final String genIDLName() {
+        return "org_omg_boxedIDL_" + super.genIDLName();
+    }
+
+    private volatile Method readMethod = null;
+    private Method getReadMethod() {
+        if (null == readMethod) readMethod = genHelperMethod("read");
+        return readMethod;
+    }
+
+    private volatile Method writeMethod = null;
+    private Method getWriteMethod() {
+        if (null == writeMethod) writeMethod = genHelperMethod("write");
+        return writeMethod;
+    }
+
+    private volatile Method typeMethod = null;
+    private Method getTypeMethod() {
+        if (null == typeMethod) typeMethod = genHelperMethod("type");
+        return typeMethod;
+    }
+
+    private Method genHelperMethod(final String name) {
+        return AccessController.doPrivileged(new PrivilegedAction<Method>() {
+            @Override
+            public Method run() {
+                for (Method m: helperType.getDeclaredMethods()) {
+                    if (m.getName().equals(name)) return m;
+                }
+                throw new RuntimeException("Unable to find " + name + " method for " + helperType.getName());
+            }
+        });
+    }
 
     /** Read an instance of this value from a CDR stream */
-    public Object read(org.omg.CORBA.portable.InputStream in) {
+    @Override
+    public Object read(InputStream in) {
         org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
         
         // there are two ways we need to deal with IDLEntity classes.  Ones that also implement 
         // the CORBA Object interface are actual corba objects, and must be handled that way. 
         // Other IDLEntity classes are just transmitted by value. 
         if (isCorba) {
-            return _in.read_Object(getJavaClass()); 
-        }
-        else {
-
+            return _in.read_Object(type);
+        } else {
             // we directly call read_value() on the stream here, with the explicitly specified
             // repository ID.  The input stream will handle validating the value tag for us, and eventually
             // will call our readValue() method to deserialize the object.
@@ -124,80 +102,57 @@ public class IDLEntityDescriptor extends ValueDescriptor {
         }
     }
 
-    public java.io.Serializable readValue(
-            final org.omg.CORBA.portable.InputStream in,
-            final java.util.Map offsetMap, final java.lang.Integer offset) {
-        final java.io.Serializable value = (java.io.Serializable) readValue(in);
-
-        offsetMap.put(offset, value);
-
-        return value;
-    }
-
-    public Object readValue(org.omg.CORBA.portable.InputStream in) {
-        if (isAbstract) {
-            throw new MARSHAL("IDL Entity " + getJavaClass().getName()
-                    + " is abstract");
-        }
-
+    @Override
+    public Serializable readValue(final InputStream in, final Map offsetMap, final Integer offset) {
         try {
-            return _read_method.invoke(null, new Object[] { in });
+            Serializable value = (Serializable) getReadMethod().invoke(null, new Object[]{in});
+            offsetMap.put(offset, value);
+            return value;
         } catch (InvocationTargetException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (MARSHAL)new MARSHAL(""+ex.getCause()).initCause(ex.getCause());
         } catch (IllegalAccessException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
     /** Write an instance of this value to a CDR stream */
-    public void write(org.omg.CORBA.portable.OutputStream out, Object val) {
+    @Override
+    public void write(OutputStream out, Object val) {
         org.omg.CORBA_2_3.portable.OutputStream _out = (org.omg.CORBA_2_3.portable.OutputStream) out;
 
         
         // there are two ways we need to deal with IDLEntity classes.  Ones that also implement 
         // the CORBA Object interface are actual corba objects, and must be handled that way. 
         // Other IDLEntity classes are just transmitted by value. 
-        if (val instanceof org.omg.CORBA.portable.ObjectImpl) {
+        if (val instanceof ObjectImpl) {
             _out.write_Object((org.omg.CORBA.Object)val); 
-        }
-        else {
+        } else {
             // we directly call write_value() on the stream here, with the explicitly specified
             // repository ID.  the output stream will handle writing the value tag for us, and eventually
             // will call our writeValue() method to serialize the object.
-            _out.write_value((java.io.Serializable)val, getRepositoryID());
+            _out.write_value((Serializable)val, getRepositoryID());
         }
-
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out, java.io.Serializable val) {
-        if (isAbstract) {
-            throw new MARSHAL("IDL Entity " + getJavaClass().getName()
-                    + " is abstract");
-        }
-
+    @Override
+    public void writeValue(OutputStream out, Serializable val) {
         try {
-            _write_method.invoke(null, new Object[] { out, val });
+            getWriteMethod().invoke(null, new Object[] { out, val });
         } catch (InvocationTargetException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (MARSHAL)new MARSHAL(""+ ex.getCause()).initCause(ex.getCause());
         } catch (IllegalAccessException ex) {
-            throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
+            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
-    org.omg.CORBA.TypeCode getTypeCode() {
-        if (_type_code == null) {
-
-            try {
-                _type_code = (org.omg.CORBA.TypeCode) _type_method.invoke(null,
-                        new Object[0]);
-            } catch (InvocationTargetException ex) {
-                throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
-            } catch (IllegalAccessException ex) {
-                throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
-            }
+    @Override
+    protected TypeCode genTypeCode() {
+        try {
+            return (TypeCode) getTypeMethod().invoke(null, new Object[0]);
+        } catch (InvocationTargetException ex) {
+            throw (MARSHAL)new MARSHAL(""+ex.getCause()).initCause(ex.getCause());
+        } catch (IllegalAccessException ex) {
+            throw (MARSHAL)new MARSHAL(ex.getMessage()).initCause(ex);
         }
-
-        return _type_code;
     }
-
 }

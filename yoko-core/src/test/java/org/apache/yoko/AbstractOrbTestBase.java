@@ -18,16 +18,19 @@
 
 package org.apache.yoko;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
 import java.io.File;
 import java.rmi.registry.Registry;
-import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import junit.framework.TestCase;
 
 import org.apache.yoko.processmanager.JavaProcess;
 import org.apache.yoko.processmanager.ProcessManager;
-
-import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
 /**
  * Superclass for ORB tests. Takes care of setting up a a server process and a client process.
@@ -61,8 +64,7 @@ public class AbstractOrbTestBase extends TestCase {
         JavaProcess[] processes = new JavaProcess[] {server, client};
         for(int i = 0; i < processes.length; i++) {
             JavaProcess process = processes[i];
-            for(Iterator it = System.getProperties().entrySet().iterator(); it.hasNext();) {
-                Entry entry = (Entry) it.next();
+            for(Entry<?, ?> entry: System.getProperties().entrySet()) {
                 String key = entry.getKey().toString();
                 if(key.startsWith(process.getName() + ":")){
                     int pos = key.indexOf(':') + 1;
@@ -82,50 +84,59 @@ public class AbstractOrbTestBase extends TestCase {
             getWaitForFile().delete();
         }
     }
+    
+    protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass, String...commonArgs) throws Exception {
+        runServerClientTest(serverClass.getName(), commonArgs, clientClass.getName(), commonArgs);
+    }
+    
     protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
         runServerClientTest(serverClass, new String[0], clientClass, new String[0]);
     }
     protected void runServerClientTest(String serverClass, String[] serverArgs, 
                                        String clientClass, String[] clientArgs) throws Exception {
         server.launch();
-        Thread serverThread = server.invokeMainAsync(serverClass, serverArgs);
+        Future<Void> serverFuture = server.invokeMainAsync(serverClass, serverArgs);
         waitForFile();
-        // TODO: Need to find a better way, this slows down testing unneccesarily,
-        // and is somewhat non-robust.
-        Thread.sleep(1000);
         client.invokeMain(clientClass, clientArgs);
-        serverThread.join(10000);
+        try {
+            serverFuture.get(2, SECONDS);
+        } catch (TimeoutException e) {
+            System.out.println("Ignoring server exception: " + e);
+        }
         server.exit(0);
-                
     }
         
-    public void setWaitForFile(File file) {
-        this.waitForFile = file;
+    public void setWaitForFile(String file) {
+        this.waitForFile = new File(file);
     }
         
-    public File getWaitForFile() {
+    public final File getWaitForFile() {
         return waitForFile;
     }
         
     protected void waitForFile() {
+        File file = getWaitForFile();
+        if(file != null) {
+            waitFor(file, waitForFileTimeout);
+        }
+    }
+
+    public static void waitFor(File file, int timeout) throws Error {
         long timeBefore = System.currentTimeMillis();
-        if(getWaitForFile() != null) {
-            while(true) {
+        do {
                 try {
-                    if(getWaitForFile().exists()) {
+                if(file.exists()) {
                         break;
                     }
                     Thread.sleep(50);
-                    if(System.currentTimeMillis() > timeBefore + waitForFileTimeout) {
-                        fail("The file " + getWaitForFile() + 
-                             "was not created within " + waitForFileTimeout + "ms");
+                if(System.currentTimeMillis() > timeBefore + timeout) {
+                    fail("The file " + file + " was not created within " + timeout + "ms");
                     }
                 }
                 catch(InterruptedException e) {
                     throw new Error(e);
                 }
-                getWaitForFile().deleteOnExit();
-            }
-        }
+        } while(true);
+        file.deleteOnExit();
     }           
 }

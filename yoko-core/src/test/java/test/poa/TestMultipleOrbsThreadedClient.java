@@ -17,6 +17,8 @@
 
 package test.poa;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.*;
 
 final public class TestMultipleOrbsThreadedClient extends test.common.TestBase {
@@ -47,7 +49,7 @@ final public class TestMultipleOrbsThreadedClient extends test.common.TestBase {
             }
 
             TestServer server = TestServerHelper.narrow(obj);
-            TEST(server != null);
+            assertTrue(server != null);
             TestInfo[] info = server.get_info();
 
             //
