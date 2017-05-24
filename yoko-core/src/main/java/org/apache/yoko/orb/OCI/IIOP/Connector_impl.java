@@ -125,7 +125,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             logger.log(FINE, "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort(), ex);
             throw (TRANSIENT)new TRANSIENT(
                     MinorCodes.describeTransient(MinorCodes.MinorConnectFailed) + "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort() + ": " + ex.getMessage(),
-                    MinorCodes.MinorConnectFailed,
+                    MinorCodes.MinorNoUsableProfileInIOR,
                     CompletionStatus.COMPLETED_NO).initCause(ex);
         } catch (IOException ex) {
             logger.log(FINE, "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort(), ex);
