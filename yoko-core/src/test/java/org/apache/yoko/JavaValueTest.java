@@ -28,11 +28,11 @@ public class JavaValueTest {
     public void marshalTwoDistinctLongs() {
         Long l1 = new Long(2);
         Long l2 = new Long(2);
-        out.write_value(l1);
-        out.write_value(l2);
+        out.write_value(l1, Long.class);
+        out.write_value(l2, Long.class);
         InputStream in = (InputStream) out.create_input_stream();
-        Long l3 = (Long) in.read_value();
-        Long l4 = (Long) in.read_value();
+        Long l3 = (Long) in.read_value(Long.class);
+        Long l4 = (Long) in.read_value(Long.class);
         assertThat(l3, equalTo(l1));
         assertThat(l4, equalTo(l2));
         assertThat(l3, not(sameInstance(l1)));
@@ -45,11 +45,11 @@ public class JavaValueTest {
     public void marshalTheSameLongTwice() {
         Long l1 = new Long(2);
         Long l2 = l1;
-        out.write_value(l1);
-        out.write_value(l2);
+        out.write_value(l1, Long.class);
+        out.write_value(l2, Long.class);
         InputStream in = (InputStream) out.create_input_stream();
-        Long l3 = (Long) in.read_value();
-        Long l4 = (Long) in.read_value();
+        Long l3 = (Long) in.read_value(Long.class);
+        Long l4 = (Long) in.read_value(Long.class);
         assertThat(l3, equalTo(l1));
         assertThat(l4, equalTo(l2));
         assertThat(l3, not(sameInstance(l1)));
