@@ -1,6 +1,6 @@
 package org.apache.yoko.util.cmsf;
 
-import java.util.ArrayList;
+import javax.rmi.CORBA.Util;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -11,15 +11,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
-import javax.rmi.CORBA.Util;
-
 public enum RepIds {
     ;
 
     public interface Query {
         public Query suffix(String suffix);
         public Query codebase(String codebase);
-        public Class<?> toClass();
+        public<T> Class<T> toClass();
         public String toClassName();
     }
 
@@ -49,8 +47,8 @@ public enum RepIds {
         }
 
         @Override
-        public Class<?> toClass() {
-            return RepIds.toClass(this);
+        public<T> Class<T> toClass() {
+            return (Class<T>)RepIds.toClass(this);
         }
 
         @Override
