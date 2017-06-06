@@ -1,0 +1,11 @@
+dependencies {
+    provided 'org.osgi:org.osgi.core:5.0.0'
+    provided 'org.osgi:org.osgi.compendium:5.0.0'
+}
+
+jar{
+  manifest {
+    instruction 'Bundle-Description' , 'Apache Yoko OSGi Utilities'
+    instruction 'Export-Package'     , 'org.apache.yoko.osgi'
+  }
+}
