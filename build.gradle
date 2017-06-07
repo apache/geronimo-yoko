@@ -61,7 +61,7 @@ subprojects {
     // generate the maven dependency metadata
     into("/META-INF/maven/$project.group/$project.name") {
       from 'build/publications/maven'
-       rename "pom-default.xml", "pom.xml"
+      rename "pom-default.xml", "pom.xml"
     }
     manifest {
       instruction 'Bundle-DocURL'          , "http://geronimo.apache.org/maven/yoko/$project.version/$project.name"
