@@ -1,0 +1,20 @@
+dependencies {
+  // endorse the Yoko spec
+  endorsed project(':yoko-rmi-spec')
+
+  // compile against Yoko implementation
+  compile project(":yoko-rmi-impl")
+
+  testCompile 'junit:junit:4.12'
+}
+
+jar {
+  manifest {
+    instruction 'Bundle-Description' , 'Apache Yoko RMI Implementation'
+    instruction 'Export-Package'     , '!*'
+  }
+}
+
+test {
+  exclude '**/Abstract*'
+}

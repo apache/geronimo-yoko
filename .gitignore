@@ -9,3 +9,7 @@ eclipse-classes
 bin
 *.log
 *~
+
+# ignore Gradle stuff
+.gradle
+build

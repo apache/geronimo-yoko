@@ -1,0 +1,23 @@
+dependencies {
+  // provided 'org.osgi:org.osgi.core:5.0.0'
+  compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.bcel:5.2_2'
+  compile project(":yoko-util")
+  compile project(":yoko-rmi-spec")
+  // N.B. The tests run against the JDK CORBA implementation classes.
+  // Yoko's CORBA implementation classes are in the yoko-core project
+  // but depending on that project would introduce a cycle.
+  testCompile 'junit:junit:4.12'
+  testCompile 'org.mockito:mockito-core:1.10.19'
+}
+
+jar {
+  manifest {
+    instruction 'Bundle-Description' , 'Apache Yoko RMI Implementation'
+    instruction 'Export-Package'     ,
+      'org.apache.yoko.rmi.api;version=1.0',
+      'org.apache.yoko.rmi.impl;version=1.0',
+      'org.apache.yoko.rmi.util;version=1.0',
+      'org.apache.yoko.rmi.util.corba;version=1.0',
+      'org.apache.yoko.rmi.util.stub;version=1.0'
+  }
+}

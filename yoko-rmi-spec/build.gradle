@@ -1,0 +1,13 @@
+dependencies {
+  compile project(":yoko-spec-corba")
+}
+
+jar {
+  manifest {
+    instruction 'Bundle-Description' , 'Apache Yoko RMI Spec'
+    instruction 'Export-Package'     ,
+      'org.omg.*;version=2.4',
+      'javax.rmi.*;version=2.4',
+      'org.apache.*;version=1.0'
+  }
+}
