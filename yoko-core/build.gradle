@@ -14,3 +14,7 @@ jar {
     instruction 'Export-Package'     , '!*'
   }
 }
+
+test {
+  exclude '**/Abstract*'
+}
