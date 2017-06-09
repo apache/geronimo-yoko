@@ -12,14 +12,17 @@ subprojects {
 
   repositories {
     mavenLocal()
-
     maven { url "http://repository.apache.org/snapshots" }
     maven { url "http://repo.maven.apache.org/maven2" }
   }
 
   configurations {
     // declare a new configuration to map to Maven's provided scope
-    provided.transitive = false
+    provided.transitive = true
+    compile.extendsFrom provided
+    // declare a new configuration to use for endorsed standards jars
+    endorsed.transitive = true
+    compile.extendsFrom endorsed
   }
 
   dependencies {}
@@ -29,27 +32,38 @@ subprojects {
   publishing {
     publications {
       maven(MavenPublication) {
-        from components.java
         artifact jar
 
         pom.withXml {
-          def root = asNode()
+          def rootNode = asNode()
 
-          // specify packaging type as bundle (default is pom)
-          root.packaging[0].setValue('bundle')
+          // // specify packaging type as bundle (default is pom)
+          // def packaging = root.packaging[0] ?:
+          //                 root.appendNode('packaging')
+          // packaging.setValue('bundle')
 
-          def deps = root.dependencies[0] ?:
-                     root.appendNode('dependencies')
+          def depsNode = rootNode.dependencies[0] ?:
+                     rootNode.appendNode('dependencies')
 
           // declare 'provided' scope dependencies in the pom.xml
           // Note: the 'provided' scope is built into Maven,
           // but it is a custom configuration in this Gradle
           configurations.provided.allDependencies.each {
-            def dep = deps.appendNode('dependency')
-            dep.appendNode('groupId', it.group)
-            dep.appendNode('artifactId', it.name)
-            dep.appendNode('version', it.version)
-            dep.appendNode('scope', 'provided')
+            def depNode = depsNode.appendNode('dependency')
+            depNode.appendNode('groupId', it.group)
+            depNode.appendNode('artifactId', it.name)
+            depNode.appendNode('version', it.version)
+            depNode.appendNode('scope', 'provided')
+          }
+
+          // declare 'endorsed' scope dependencies in the pom.xml
+          // as compile dependencies
+          configurations.compile.allDependencies.each {
+            def depNode = depsNode.appendNode('dependency')
+            depNode.appendNode('groupId', it.group)
+            depNode.appendNode('artifactId', it.name)
+            depNode.appendNode('version', it.version)
+            depNode.appendNode('scope', 'compile')
           }
         }
       }
@@ -69,5 +83,33 @@ subprojects {
       instruction 'Bundle-Vendor'          , 'The Apache Software Foundation'
       instruction 'Import-Package'         ,  '*'
     }
+  }
+
+  publish.dependsOn build
+  // generated tasks need to be expressed as strings
+  // because they don't exist yet when these lines are executed
+  publish.dependsOn "publishMavenPublicationToMavenLocal"
+  publish.dependsOn "publishToMavenLocal"
+
+  // Add a task to copy the endorsed jars into a folder
+  task stageEndorsed(type: Sync) {
+    from configurations.endorsed
+    into temporaryDir
+  }
+
+  // stageEndorsed.outputs.upToDateWhen{false}
+
+  // Make all compilation tasks use the endorsed dir
+  tasks.withType(JavaCompile) {
+    dependsOn stageEndorsed
+    options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+  }
+
+  // Make execute tasks use the endorsed dir
+  tasks.withType(Test) {
+    doFirst {println ">>>"}
+    doLast {println "<<<"}
+    dependsOn stageEndorsed
+    jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
   }
 }
