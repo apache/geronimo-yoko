@@ -108,4 +108,10 @@ subprojects {
     dependsOn stageEndorsed
     jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
   }
+
+  // ensure tests run under $buildDir somewhere
+  test {
+    workingDir = "$buildDir/testWorkingDir"
+    mkdir workingDir
+  }
 }
