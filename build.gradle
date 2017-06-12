@@ -97,8 +97,6 @@ subprojects {
     into temporaryDir
   }
 
-  // stageEndorsed.outputs.upToDateWhen{false}
-
   // Make all compilation tasks use the endorsed dir
   tasks.withType(JavaCompile) {
     dependsOn stageEndorsed
@@ -107,8 +105,6 @@ subprojects {
 
   // Make execute tasks use the endorsed dir
   tasks.withType(Test) {
-    doFirst {println ">>>"}
-    doLast {println "<<<"}
     dependsOn stageEndorsed
     jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
   }
