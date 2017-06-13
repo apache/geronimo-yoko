@@ -112,6 +112,6 @@ subprojects {
   // ensure tests run under $buildDir somewhere
   test {
     workingDir = "$buildDir/testWorkingDir"
-    mkdir workingDir
+    workingDir.mkdirs()
   }
 }
