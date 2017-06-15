@@ -14,34 +14,40 @@
 *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
-*/ 
+*/
 
 package org.apache.yoko.rmi.impl;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.rmi.CORBA.Stub;
-import javax.rmi.CORBA.ValueHandler;
 
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.PortableServer.POAPackage.ObjectNotActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.omg.SendingContext.RunTime;
 
+import javax.rmi.CORBA.Stub;
+import javax.rmi.CORBA.ValueHandler;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 public class ValueHandlerImpl implements ValueHandler {
-    static final Logger logger = Logger.getLogger(ValueHandlerImpl.class
+    private static final Logger logger = Logger.getLogger(ValueHandlerImpl.class
             .getName());
 
     private final TypeRepository repo;
 
-    RunTimeCodeBaseImpl codeBase;
+    private RunTimeCodeBaseImpl codeBase;
 
     private ValueHandlerImpl() {
         this.repo = TypeRepository.get();
     }
 
-    private static enum HandlerHolder {
+    private enum HandlerHolder {
         ;
         static final ValueHandlerImpl value = new ValueHandlerImpl();
     }
@@ -73,7 +79,7 @@ public class ValueHandlerImpl implements ValueHandler {
         desc(val.getClass()).writeValue(out, val);
     }
 
-    java.util.Map streamMap = new java.util.HashMap();
+    private final Map<InputStream, Map<Integer, Object>> streamMap = new HashMap<>();
 
     public java.io.Serializable readValue(
             org.omg.CORBA.portable.InputStream in, int offset,
@@ -81,16 +87,13 @@ public class ValueHandlerImpl implements ValueHandler {
             org.omg.SendingContext.RunTime codebase) {
         try {
             return readValue0(in, offset, clz, repid, codebase);
-        } catch (Error ex) {
-            logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
-            throw ex;
-        } catch (RuntimeException ex) {
+        } catch (Error | RuntimeException ex) {
             logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
             throw ex;
         }
     }
 
-    public java.io.Serializable readValue0(
+    private java.io.Serializable readValue0(
             org.omg.CORBA.portable.InputStream in, int offset,
             java.lang.Class clz, java.lang.String repid,
             org.omg.SendingContext.RunTime codebase) {
@@ -98,14 +101,14 @@ public class ValueHandlerImpl implements ValueHandler {
         ValueDescriptor desc = repid == null ? desc(clz) : desc(clz, repid,
                 codebase);
 
-        Integer key = new Integer(offset);
+        Integer key = offset;
         boolean remove = false;
-        java.util.Map offsetMap = null;
+        Map<Integer, Object> offsetMap = null;
         try {
             synchronized (streamMap) {
-                offsetMap = (java.util.Map) streamMap.get(in);
+                offsetMap = streamMap.get(in);
                 if (offsetMap == null) {
-                    offsetMap = new java.util.HashMap();
+                    offsetMap = new HashMap<>();
                     streamMap.put(in, offsetMap);
                     remove = true;
                 }
@@ -146,8 +149,6 @@ public class ValueHandlerImpl implements ValueHandler {
             codeBase = new RunTimeCodeBaseImpl(this);
         }
 
-        org.omg.CORBA.ORB orb = RMIState.current().getORB();
-
         org.omg.PortableServer.POA poa = RMIState.current().getPOA();
 
         try {
@@ -163,11 +164,7 @@ public class ValueHandlerImpl implements ValueHandler {
             byte[] id = poa.activate_object(codeBase);
             org.omg.CORBA.Object ref = poa.id_to_reference(id);
             return org.omg.SendingContext.CodeBaseHelper.narrow(ref);
-        } catch (org.omg.PortableServer.POAPackage.ServantAlreadyActive ex) {
-            throw (org.omg.CORBA.INTERNAL)new org.omg.CORBA.INTERNAL("should not happen").initCause(ex);
-        } catch (org.omg.PortableServer.POAPackage.ObjectNotActive ex) {
-            throw (org.omg.CORBA.INTERNAL)new org.omg.CORBA.INTERNAL("should not happen").initCause(ex);
-        } catch (org.omg.PortableServer.POAPackage.WrongPolicy ex) {
+        } catch (ServantAlreadyActive | ObjectNotActive | WrongPolicy ex) {
             throw (org.omg.CORBA.INTERNAL)new org.omg.CORBA.INTERNAL("should not happen").initCause(ex);
         }
     }
@@ -313,8 +310,8 @@ public class ValueHandlerImpl implements ValueHandler {
                 addIfRMIClass(supers, superClz);
             }
 
-            for (int i = 0; i < ifaces.length; i++) {
-                addIfRMIClass(supers, ifaces[i]);
+            for (Class iface : ifaces) {
+                addIfRMIClass(supers, iface);
             }
 
             String[] result = new String[supers.size()];
@@ -323,7 +320,7 @@ public class ValueHandlerImpl implements ValueHandler {
             }
 
             if (logger.isLoggable(Level.FINER)) {
-                logger.finer("getBases " + id + " => " + result);
+                logger.finer("getBases " + id + " => " + Arrays.toString(result));
             }
 
             return result;

@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -31,7 +31,7 @@ import java.io.Serializable;
 import java.rmi.Remote;
 import java.util.Map;
 
-public class CorbaObjectReader extends ObjectReaderBase {
+public final class CorbaObjectReader extends ObjectReaderBase {
     final org.omg.CORBA_2_3.portable.InputStream in;
 
     private final Map<Integer, Object> offsetMap;
@@ -42,60 +42,60 @@ public class CorbaObjectReader extends ObjectReaderBase {
         this.offsetMap = offsetMap;
     }
 
-    public void readFully(byte[] arr, int off, int val) throws IOException {
+    public void readFully(byte[] arr, int off, int val) {
         in.read_octet_array(arr, off, val);
     }
 
-    public int skipBytes(int len) throws IOException {
+    public int skipBytes(int len) {
         final byte[] data = new byte[len];
         readFully(data, 0, len);
         return len;
     }
 
-    public boolean readBoolean() throws IOException {
+    public boolean readBoolean() {
         return in.read_boolean();
     }
 
-    public byte readByte() throws IOException {
+    public byte readByte() {
         return in.read_octet();
     }
 
-    public int readUnsignedByte() throws IOException {
+    public int readUnsignedByte() {
         final int val = in.read_octet();
         return val & 0xff;
     }
 
-    public short readShort() throws IOException {
+    public short readShort() {
         return in.read_short();
     }
 
-    public int readUnsignedShort() throws IOException {
+    public int readUnsignedShort() {
         final int val = in.read_short();
         return val & 0xffff;
     }
 
-    public char readChar() throws IOException {
+    public char readChar() {
         return in.read_wchar();
     }
 
-    public int readInt() throws IOException {
+    public int readInt() {
         return in.read_long();
     }
 
-    public long readLong() throws IOException {
+    public long readLong() {
         return in.read_longlong();
     }
 
-    public float readFloat() throws IOException {
+    public float readFloat() {
         return in.read_float();
     }
 
-    public double readDouble() throws IOException {
+    public double readDouble() {
         return in.read_double();
     }
 
     @Deprecated
-    public String readLine() throws IOException {
+    public String readLine() {
         final StringBuilder buf = new StringBuilder();
 
         char ch;
@@ -138,11 +138,11 @@ public class CorbaObjectReader extends ObjectReaderBase {
         } while (true);
     }
 
-    public String readUTF() throws IOException {
+    public String readUTF() {
         return in.read_wstring();
     }
 
-    public Object readAbstractObject() throws IndirectionException {
+    public Object readAbstractObject() {
         try {
             return in.read_abstract_interface();
         } catch (IndirectionException ex) {
@@ -150,7 +150,7 @@ public class CorbaObjectReader extends ObjectReaderBase {
         }
     }
 
-    public Object readAny() throws IndirectionException {
+    public Object readAny() {
         try {
             return Util.readAny(in);
         } catch (IndirectionException ex) {
@@ -158,7 +158,7 @@ public class CorbaObjectReader extends ObjectReaderBase {
         }
     }
 
-    public Object readValueObject() throws IndirectionException {
+    public Object readValueObject() {
         try {
             return in.read_value();
         } catch (IndirectionException ex) {
@@ -166,8 +166,7 @@ public class CorbaObjectReader extends ObjectReaderBase {
         }
     }
 
-    public Object readValueObject(Class<?> clz)
-            throws IndirectionException {
+    public Object readValueObject(Class<?> clz) {
         try {
             return in.read_value(clz);
         } catch (IndirectionException ex) {
@@ -184,20 +183,20 @@ public class CorbaObjectReader extends ObjectReaderBase {
         return (Remote) PortableRemoteObject.narrow(objref, type);
     }
 
-    public int read() throws IOException {
+    public int read() {
         return readUnsignedByte();
     }
 
-    public int read(byte[] arr) throws IOException {
+    public int read(byte[] arr) {
         return read(arr, 0, arr.length);
     }
 
-    public int read(byte[] arr, int off, int len) throws IOException {
+    public int read(byte[] arr, int off, int len) {
         readFully(arr, off, len);
         return len;
     }
 
-    public long skip(long len) throws IOException {
+    public long skip(long len) {
         skipBytes((int) len);
         return len;
     }
