@@ -22,7 +22,6 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.DataInputStream;
 import org.omg.CORBA.MARSHAL;
@@ -49,6 +48,10 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueReader {
     private static final Logger logger = Logger.getLogger(ValueReader.class.getName());
@@ -157,8 +160,8 @@ public final class ValueReader {
                 return result;
             }
 
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + helper_.get_id(), MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + helper_.get_id(), MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
@@ -193,8 +196,8 @@ public final class ValueReader {
             } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
             }
 
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + clz_.getName(), MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + clz_.getName(), MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
@@ -262,16 +265,15 @@ public final class ValueReader {
             if (WStringValueHelper.id().equals(id))
                 return new WStringValueHelper();
 
-            final Class<BoxedValueHelper> helperClass = RepIds.query(id).suffix("Helper").toClass();
+            final Class<?> helperClass = RepIds.query(id).suffix("Helper").toClass();
 
             if (helperClass != null) {
                 try {
-                    return helperClass.newInstance();
-                } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
+                    return (BoxedValueHelper)helperClass.newInstance();
+                } catch (ClassCastException | InstantiationException | IllegalAccessException ex) {
+                    String msg = describeMarshal(MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id;
+                    throw (MARSHAL) new MARSHAL(msg, MinorNoValueFactory, COMPLETED_NO).initCause(ex);
                 }
-
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id,
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
             }
 
             return null;
@@ -334,8 +336,8 @@ public final class ValueReader {
             } else if (id_ != null) {
                 type = id_;
         }
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + type, MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + type, MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
@@ -380,14 +382,14 @@ public final class ValueReader {
             if (indTag == -1) {
                 final int offs = in_.read_long();
                 if (offs >= -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 final int tmp = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 h.codebase = in_.read_string();
                 buf_.pos_ = tmp;
@@ -424,14 +426,14 @@ public final class ValueReader {
             if (indList) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 saveList = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
             } else {
                 buf_.pos_ = saveList;
@@ -449,14 +451,14 @@ public final class ValueReader {
                 if (indTag == -1) {
                     final int offs = in_.read_long();
                     if (offs > -4) {
-                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                                CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                                COMPLETED_NO);
                     }
                     saveRep = buf_.pos_;
                     buf_.pos_ = (buf_.pos_ - 4) + offs;
                     if (buf_.pos_ < 0) {
-                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                                CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                                COMPLETED_NO);
                     }
                     h.ids[i] = in_.read_string();
                     buf_.pos_ = saveRep;
@@ -488,14 +490,14 @@ public final class ValueReader {
             if (indTag == -1) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 save = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 id = in_.read_string();
                 buf_.pos_ = save;
@@ -736,8 +738,8 @@ public final class ValueReader {
             final Header nest = headerTable_.get(posObj);
 
             if (nest == null) {
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": cannot instantiate value for indirection",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": cannot instantiate value for indirection",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             /*
@@ -1342,8 +1344,8 @@ public final class ValueReader {
             if ((h.ids.length > 0) && (id == null) && (factoryId == null)) {
                 if (logger.isLoggable(Level.FINE))
                     logger.fine(String.format("Unable to resolve a factory for type \"%s\"", tcId));
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": insufficient information to copy valuetype",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": insufficient information to copy valuetype",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             //
@@ -1351,8 +1353,8 @@ public final class ValueReader {
             // no way to remarshal the data
             //
             if ((mod == VM_CUSTOM.value) && (factoryId == null)) {
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": unable to copy custom valuetype",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": unable to copy custom valuetype",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             //
