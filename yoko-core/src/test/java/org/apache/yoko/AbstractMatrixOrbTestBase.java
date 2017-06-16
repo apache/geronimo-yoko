@@ -18,10 +18,11 @@
 
 package org.apache.yoko;
 
+import junit.framework.TestSuite;
+
 import java.io.File;
 import java.util.Arrays;
 
-import junit.framework.TestSuite;
 /**
  * 
  * Generates a test matrix of server- and client configurations. A default 
@@ -50,8 +51,9 @@ public class AbstractMatrixOrbTestBase extends AbstractOrbTestBase {
         this.clientArgs = clientArgs;
         this.waitForFile = waitForFile;
     }
-        
-    public void test() throws Exception {
+
+    @Override
+    protected void runTest() throws Throwable {
         runServerClientTest(serverClass, serverArgs, clientClass, clientArgs);
     }
                 
@@ -60,10 +62,13 @@ public class AbstractMatrixOrbTestBase extends AbstractOrbTestBase {
     }
         
     public static TestSuite generateTestSuite(String serverClass, String[][] servers, String clientClass, String[][] clients, File waitForFile) {
-        TestSuite suite = new TestSuite();
+        TestSuite suite = new TestSuite(clientClass + "->" + serverClass);
         for(String[] serverArgs: servers) {
             for(String[] clientArgs: clients) {
-                AbstractMatrixOrbTestBase test = new AbstractMatrixOrbTestBase("test"); 
+                String name = String.format("%s(%s) -> %s(%s)",
+                        clientClass, Arrays.toString(clientArgs),
+                        serverClass, Arrays.toString(serverArgs));
+                AbstractMatrixOrbTestBase test = new AbstractMatrixOrbTestBase(name);
                 test.init(serverClass, serverArgs, clientClass, clientArgs, waitForFile);
                 suite.addTest(test);
             }

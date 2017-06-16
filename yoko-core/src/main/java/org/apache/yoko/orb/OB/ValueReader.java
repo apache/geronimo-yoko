@@ -17,21 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.io.Serializable;
-import java.lang.reflect.Array;
-import java.util.Hashtable;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.rmi.CORBA.ValueHandler;
-
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.DataInputStream;
 import org.omg.CORBA.MARSHAL;
@@ -51,11 +41,21 @@ import org.omg.CORBA.portable.StreamableValue;
 import org.omg.CORBA.portable.ValueFactory;
 import org.omg.SendingContext.CodeBase;
 
+import javax.rmi.CORBA.ValueHandler;
+import java.io.Serializable;
+import java.lang.reflect.Array;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
 public final class ValueReader {
     private static final Logger logger = Logger.getLogger(ValueReader.class.getName());
-    //
-    // Chunk data
-    //
+    /** Chunk data */
     private static class ChunkState {
         boolean chunked;
 
@@ -80,9 +80,7 @@ public final class ValueReader {
         }
     }
 
-    //
-    // Valuetype header data
-    //
+    /** Valuetype header data */
     private static class Header {
         int tag;
 
@@ -143,9 +141,7 @@ public final class ValueReader {
         abstract Serializable create(Header h);
     }
 
-    //
-    // Create a valuebox using a BoxedValueHelper
-    //
+    /** Create a valuebox using a BoxedValueHelper */
     private static class BoxCreationStrategy extends CreationStrategy {
         private final BoxedValueHelper helper_;
 
@@ -164,14 +160,12 @@ public final class ValueReader {
                 return result;
             }
 
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + helper_.get_id(), MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + helper_.get_id(), MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
-    //
-    // Create a value using a class
-    //
+    /** Create a value using a class */
     private static class ClassCreationStrategy extends CreationStrategy {
         private final Class<? extends Serializable> clz_;
 
@@ -186,7 +180,7 @@ public final class ValueReader {
             Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
-                return reader_.readRMIValue(h, clz_, h.ids[0]);
+                return reader_.readRMIValue(h, h.ids[0]);
             }
 
             try {
@@ -202,14 +196,12 @@ public final class ValueReader {
             } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
             }
 
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + clz_.getName(), MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + clz_.getName(), MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
-    //
-    // Create a value using a factory
-    //
+    /** Create a value using a factory */
     private class FactoryCreationStrategy extends CreationStrategy {
         private final String id_;
 
@@ -273,16 +265,15 @@ public final class ValueReader {
             if (WStringValueHelper.id().equals(id))
                 return new WStringValueHelper();
 
-            final Class helperClass = RepIds.query(id).suffix("Helper").toClass();
+            final Class<?> helperClass = RepIds.query(id).suffix("Helper").toClass();
 
             if (helperClass != null) {
                 try {
-                    return (BoxedValueHelper) helperClass.newInstance();
-                } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
+                    return (BoxedValueHelper)helperClass.newInstance();
+                } catch (ClassCastException | InstantiationException | IllegalAccessException ex) {
+                    String msg = describeMarshal(MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id;
+                    throw (MARSHAL) new MARSHAL(msg, MinorNoValueFactory, COMPLETED_NO).initCause(ex);
                 }
-
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id,
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
             }
 
             return null;
@@ -297,7 +288,7 @@ public final class ValueReader {
             Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
-                final Serializable result = readRMIValue(h, null, h.ids[0]);
+                final Serializable result = readRMIValue(h, h.ids[0]);
                 addInstance(h.headerPos, result);
                 return result;
             }
@@ -345,8 +336,8 @@ public final class ValueReader {
             } else if (id_ != null) {
                 type = id_;
         }
-            throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": " + type, MinorCodes.MinorNoValueFactory,
-                    CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + type, MinorNoValueFactory,
+                    COMPLETED_NO);
         }
     }
 
@@ -354,7 +345,6 @@ public final class ValueReader {
     // Private and protected members
     // ------------------------------------------------------------------
 
-    // Java only
     private void addInstance(int pos, Serializable instance) {
         // only add this if we have a real value
         if (instance != null) {
@@ -362,7 +352,6 @@ public final class ValueReader {
         }
     }
 
-    // Java only
     private void removeInstance(int pos) {
         instanceTable_.remove(pos);
     }
@@ -379,11 +368,7 @@ public final class ValueReader {
         //
         // Check if the value is chunked
         //
-        if ((h.tag & 0x00000008) == 8) {
-            h.state.chunked = true;
-        } else {
-            h.state.chunked = false;
-        }
+        h.state.chunked = (h.tag & 0x00000008) == 8;
 
         //
         // Check for presence of codebase URL
@@ -397,14 +382,14 @@ public final class ValueReader {
             if (indTag == -1) {
                 final int offs = in_.read_long();
                 if (offs >= -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 final int tmp = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 h.codebase = in_.read_string();
                 buf_.pos_ = tmp;
@@ -441,14 +426,14 @@ public final class ValueReader {
             if (indList) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 saveList = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
             } else {
                 buf_.pos_ = saveList;
@@ -466,14 +451,14 @@ public final class ValueReader {
                 if (indTag == -1) {
                     final int offs = in_.read_long();
                     if (offs > -4) {
-                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                                CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                                COMPLETED_NO);
                     }
                     saveRep = buf_.pos_;
                     buf_.pos_ = (buf_.pos_ - 4) + offs;
                     if (buf_.pos_ < 0) {
-                        throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                                CompletionStatus.COMPLETED_NO);
+                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                                COMPLETED_NO);
                     }
                     h.ids[i] = in_.read_string();
                     buf_.pos_ = saveRep;
@@ -505,14 +490,14 @@ public final class ValueReader {
             if (indTag == -1) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 save = buf_.pos_;
                 buf_.pos_ = (buf_.pos_ - 4) + offs;
                 if (buf_.pos_ < 0) {
-                    throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                            COMPLETED_NO);
                 }
                 id = in_.read_string();
                 buf_.pos_ = save;
@@ -701,11 +686,7 @@ public final class ValueReader {
         }
     }
 
-    //
-    // Invoke the valuetype to unmarshal its state
-    //
-    // Java only
-    //
+    /** Invoke the valuetype to unmarshal its state */
     private void unmarshalValueState(Serializable v) {
         if (v instanceof StreamableValue) {
             ((StreamableValue) v)._read(in_);
@@ -732,7 +713,7 @@ public final class ValueReader {
         // of an enclosing value, or to a value that we could not
         // instantiate.
         //
-        Serializable v = (Serializable) instanceTable_.get(posObj);
+        Serializable v = instanceTable_.get(posObj);
 
         if (v != null) {
             return v;
@@ -757,8 +738,8 @@ public final class ValueReader {
             final Header nest = headerTable_.get(posObj);
 
             if (nest == null) {
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": cannot instantiate value for indirection",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": cannot instantiate value for indirection",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             /*
@@ -846,9 +827,7 @@ public final class ValueReader {
         return true;
     }
 
-    //
-    // Remarshal each valuetype member
-    //
+    /** Remarshal each valuetype member */
     private void copyValueState(TypeCode tc, OutputStream out) {
         try {
             if (tc.kind() == TCKind.tk_value) {
@@ -875,23 +854,21 @@ public final class ValueReader {
         }
     }
 
-    // Java only
     private void pushHeader(Header h) {
         h.next = currentHeader_;
         currentHeader_ = h;
     }
 
-    // Java only
     private void popHeader() {
         Assert._OB_assert(currentHeader_ != null);
 
         currentHeader_ = currentHeader_.next;
     }
 
-    //
-    // Search up the valuetype's inheritance hierarchy for a TypeCode
-    // with the given repository ID
-    //
+    /**
+     * Search up the valuetype's inheritance hierarchy for a TypeCode
+     * with the given repository ID
+     */
     private TypeCode findTypeCode(String id, TypeCode tc) {
         TypeCode result = null;
         TypeCode t = tc;
@@ -924,11 +901,11 @@ public final class ValueReader {
         in_ = in;
         buf_ = in._OB_buffer();
         orbInstance_ = in._OB_ORBInstance();
-        instanceTable_ = new Hashtable<Integer, Serializable>(131);
-        headerTable_ = new Hashtable<Integer, Header>(131);
+        instanceTable_ = new Hashtable<>(131);
+        headerTable_ = new Hashtable<>(131);
     }
 
-    private Serializable readRMIValue(Header h, Class<? extends Serializable> clz, String repid) {
+    private Serializable readRMIValue(Header h, String repid) {
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Reading RMI value of type \"%s\"", repid));
         if (valueHandler == null) {
@@ -991,24 +968,22 @@ public final class ValueReader {
             remoteCodeBase = ((CodeBaseProxy) remoteCodeBase).getCodeBase();
         }
 
-        Serializable serobj = null;
         try {
-            serobj = valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
+            return valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine(String.format(
                         "RuntimeException happens when reading GIOP stream coming to pos_=0x%x",
                         in_.buf_.pos_));
                 logger.fine(String.format("Wrong data section:%n%s", in_.dumpData()));
-                final int currentpos = in_.buf_.pos_;
+                final int currentPos = in_.buf_.pos_;
                 in_.buf_.pos_ = 0;
                 logger.fine(String.format("Full GIOP stream dump:%n%s", in_.dumpData()));
-                in_.buf_.pos_ = currentpos;
+                in_.buf_.pos_ = currentPos;
             }
             throw ex;
         }
 
-        return serobj;
     }
 
     private Class resolveRepoClass(String name, String codebase) {
@@ -1153,7 +1128,7 @@ public final class ValueReader {
     }
     }
 
-    public Object readAbstractInterface(Class clz) {
+    public Object readAbstractInterface(Class<? extends Serializable> clz) {
         //
         // Abstract interfaces are marshalled like a union with a
         // boolean discriminator - if true, an objref follows,
@@ -1186,7 +1161,7 @@ public final class ValueReader {
         // Create a new Hashtable for each top-level call to remarshalValue
         //
         if (positionTable_ == null) {
-            positionTable_ = new Hashtable<Integer, Integer>(131);
+            positionTable_ = new Hashtable<>(131);
         }
 
         final TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(tc);
@@ -1369,8 +1344,8 @@ public final class ValueReader {
             if ((h.ids.length > 0) && (id == null) && (factoryId == null)) {
                 if (logger.isLoggable(Level.FINE))
                     logger.fine(String.format("Unable to resolve a factory for type \"%s\"", tcId));
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": insufficient information to copy valuetype",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": insufficient information to copy valuetype",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             //
@@ -1378,8 +1353,8 @@ public final class ValueReader {
             // no way to remarshal the data
             //
             if ((mod == VM_CUSTOM.value) && (factoryId == null)) {
-                throw new MARSHAL(MinorCodes.describeMarshal(MinorCodes.MinorNoValueFactory) + ": unable to copy custom valuetype",
-                        MinorCodes.MinorNoValueFactory, CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": unable to copy custom valuetype",
+                        MinorNoValueFactory, COMPLETED_NO);
             }
 
             //
@@ -1399,7 +1374,7 @@ public final class ValueReader {
                 //
                 final int numIds = h.ids.length - idPos;
                 final String[] ids = new String[numIds];
-                System.arraycopy(h.ids, idPos, ids, idPos - idPos, h.ids.length - idPos);
+                System.arraycopy(h.ids, idPos, ids, 0, h.ids.length - idPos);
 
                 logger.fine("Copying value state of object using truncated type");
                 out._OB_beginValue(h.tag, ids, h.state.chunked);
