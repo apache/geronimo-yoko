@@ -21,6 +21,7 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
+import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IDLEntity;
@@ -161,10 +162,10 @@ final public class ValueWriter {
     }
 
     private BoxedValueHelper getHelper(java.io.Serializable value,
-            org.omg.CORBA.TypeCode type) {
+            TypeCode type) {
         BoxedValueHelper result = null;
 
-        Class<? extends BoxedValueHelper> helperClass = null;
+        Class<?> helperClass = null;
         final Class<?> valueClass = value.getClass();
 
         //Short-cuts
@@ -195,8 +196,7 @@ final public class ValueWriter {
         //
         if (helperClass == null && type != null) {
             try {
-                org.omg.CORBA.TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode
-                        ._OB_getOrigType(type);
+                TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(type);
                 String id = origType.id();
                 helperClass = RepIds.query(id).suffix("Helper").toClass();
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
@@ -209,7 +209,7 @@ final public class ValueWriter {
         //
         if (helperClass != null) {
             try {
-                result = helperClass.newInstance();
+                result = (BoxedValueHelper)helperClass.newInstance();
             } catch (ClassCastException | IllegalAccessException | InstantiationException ignored) {
             }
         }
@@ -471,7 +471,7 @@ final public class ValueWriter {
 	}
 
     public void writeValueBox(java.io.Serializable value,
-            org.omg.CORBA.TypeCode type,
+            TypeCode type,
             org.omg.CORBA.portable.BoxedValueHelper helper) {
         if (value == null)
             out_.write_long(0);
