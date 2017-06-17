@@ -112,7 +112,7 @@ subprojects {
   // ensure tests run under $buildDir somewhere
   test {
     workingDir = "$buildDir/testWorkingDir"
-    workingDir.mkdirs()
+    doFirst {workingDir.mkdirs()}
     testLogging {
       // set options for log level LIFECYCLE
       events "passed", "skipped", "failed", "standardOut"
