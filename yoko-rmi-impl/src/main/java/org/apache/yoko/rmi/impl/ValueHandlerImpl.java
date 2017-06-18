@@ -29,6 +29,7 @@ import org.omg.SendingContext.RunTime;
 
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.ValueHandler;
+import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -79,7 +80,7 @@ public class ValueHandlerImpl implements ValueHandler {
         desc(val.getClass()).writeValue(out, val);
     }
 
-    private final Map<InputStream, Map<Integer, Object>> streamMap = new HashMap<>();
+    private final Map<InputStream, Map<Integer, Serializable>> streamMap = new HashMap<>();
 
     public java.io.Serializable readValue(
             org.omg.CORBA.portable.InputStream in, int offset,
@@ -103,9 +104,11 @@ public class ValueHandlerImpl implements ValueHandler {
 
         Integer key = offset;
         boolean remove = false;
-        Map<Integer, Object> offsetMap = null;
+        Map<Integer, Serializable> offsetMap = null;
         try {
-            synchronized (streamMap) {
+            if (in instanceof InputStreamWithOffsets) {
+                offsetMap = ((InputStreamWithOffsets)in).getOffsetMap();
+            } else synchronized (streamMap) {
                 offsetMap = streamMap.get(in);
                 if (offsetMap == null) {
                     offsetMap = new HashMap<>();

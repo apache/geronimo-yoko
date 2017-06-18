@@ -245,7 +245,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -335,7 +335,7 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -418,7 +418,7 @@ class ValueArrayDescriptor extends ArrayDescriptor {
     }
 
     @Override
-    public Serializable readValue(InputStream in, Map offsetMap, Integer key) {
+    public Serializable readValue(InputStream in, Map<Integer, Serializable> offsetMap, Integer key) {
         final int length = in.read_long();
         Object[] arr = (Object[]) Array.newInstance(elementType, length);
         offsetMap.put(key, arr);
@@ -492,7 +492,7 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
@@ -564,7 +564,7 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         boolean[] arr = new boolean[in.read_long()];
         offsetMap.put(key, arr);
@@ -615,7 +615,7 @@ class ByteArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         byte[] arr = new byte[in.read_long()];
         offsetMap.put(key, arr);
@@ -664,7 +664,7 @@ class CharArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         int len = in.read_long();
         char[] arr = new char[len];
@@ -711,7 +711,7 @@ class ShortArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         short[] arr = new short[in.read_long()];
         offsetMap.put(key, arr);
@@ -761,7 +761,7 @@ class IntArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         int[] arr = new int[in.read_long()];
         offsetMap.put(key, arr);
@@ -811,7 +811,7 @@ class LongArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         long[] arr = new long[in.read_long()];
         offsetMap.put(key, arr);
@@ -862,7 +862,7 @@ class FloatArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         float[] arr = new float[in.read_long()];
         offsetMap.put(key, arr);
@@ -912,7 +912,7 @@ class DoubleArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         double[] arr = new double[in.read_long()];
         offsetMap.put(key, arr);

@@ -51,7 +51,7 @@ class EnumSubclassDescriptor extends ValueDescriptor {
     }
 
     @Override
-    final public Serializable readValue(InputStream in, Map<Integer, Object> offsetMap, Integer offset) {
+    final public Serializable readValue(InputStream in, Map<Integer, Serializable> offsetMap, Integer offset) {
         try {
             // Shortcut to reading in just the 'name' field of java.lang.Enum
             String name = null;
