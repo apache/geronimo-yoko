@@ -103,7 +103,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
     }
 
     @Override
-    public Serializable readValue(final InputStream in, final Map offsetMap, final Integer offset) {
+    public Serializable readValue(final InputStream in, final Map<Integer, Serializable> offsetMap, final Integer offset) {
         try {
             Serializable value = (Serializable) getReadMethod().invoke(null, new Object[]{in});
             offsetMap.put(offset, value);

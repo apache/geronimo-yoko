@@ -17,29 +17,26 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.SendingContext.CodeBase;
+
+import javax.rmi.CORBA.Util;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.rmi.Remote;
 import java.security.AccessController;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.rmi.CORBA.Util;
-
-import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OB.MinorCodes;
-import org.apache.yoko.orb.OB.OB_Extras;
-import org.apache.yoko.orb.OCI.GiopVersion;
-import org.omg.CORBA.CompletionStatus;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.portable.IDLEntity;
-import org.omg.CORBA.portable.ObjectImpl;
-import org.omg.CORBA.portable.ValueInputStream;
-import org.omg.SendingContext.CodeBase;
-
-final public class InputStream extends org.omg.CORBA_2_3.portable.InputStream implements ValueInputStream {
+final public class InputStream extends InputStreamWithOffsets {
     static final Logger logger = Logger.getLogger(InputStream.class.getName());
 
     org.apache.yoko.orb.OB.ORBInstance orbInstance_;

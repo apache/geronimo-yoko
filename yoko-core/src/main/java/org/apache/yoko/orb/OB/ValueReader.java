@@ -901,7 +901,7 @@ public final class ValueReader {
         in_ = in;
         buf_ = in._OB_buffer();
         orbInstance_ = in._OB_ORBInstance();
-        instanceTable_ = new Hashtable<>(131);
+        instanceTable_ = in.getOffsetMap();
         headerTable_ = new Hashtable<>(131);
     }
 
