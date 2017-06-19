@@ -7,6 +7,6 @@ dependencies {
 jar {
   manifest {
     instruction 'Bundle-Description' , 'Apache Yoko OSGi Utilities'
-    instruction 'Export-Package'     , 'org.apache.yoko.osgi'
+    instruction 'Export-Package'     , 'org.apache.yoko.osgi.*'
   }
 }
