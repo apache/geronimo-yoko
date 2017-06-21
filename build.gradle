@@ -81,7 +81,7 @@ subprojects {
       instruction 'Bundle-DocURL'          , "http://geronimo.apache.org/maven/yoko/$project.version/$project.name"
       instruction 'Bundle-License'         , 'http://www.apache.org/licenses/LICENSE-2.0.txt'
       instruction 'Bundle-Vendor'          , 'The Apache Software Foundation'
-      instruction 'Import-Package'         ,  '*'
+      instruction 'Import-Package'         , '!sun.*', '*'
     }
   }
 
