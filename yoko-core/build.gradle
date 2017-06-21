@@ -10,8 +10,8 @@ dependencies {
 
 jar {
   manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko RMI Implementation'
-    instruction 'Export-Package'     , '!*'
+    instruction 'Bundle-Description' , 'Apache Yoko Core'
+    instruction 'Export-Package'     , 'org.apache.yoko.orb.*'
   }
 }
 
