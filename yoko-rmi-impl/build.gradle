@@ -13,6 +13,7 @@ dependencies {
 jar {
   manifest {
     instruction 'Bundle-Description' , 'Apache Yoko RMI Implementation'
+    instruction 'Bundle-Activator'   , 'org.apache.yoko.rmi.osgi.activator.Activator'
     instruction 'Export-Package'     ,
       'org.apache.yoko.rmi.api;version=1.0',
       'org.apache.yoko.rmi.impl;version=1.0',
