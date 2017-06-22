@@ -11,6 +11,7 @@ dependencies {
 jar {
   manifest {
     instruction 'Bundle-Description' , 'Apache Yoko Core'
+    instruction 'Bundle-Activator'   , 'org.apache.yoko.orb.activator.Activator'
     instruction 'Export-Package'     , 'org.apache.yoko.orb.*'
   }
 }
