@@ -22,8 +22,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
 import org.apache.yoko.orb.OCI.GiopVersion;
-import org.apache.yoko.orb.util.AutoLock;
-import org.apache.yoko.orb.util.AutoReadWriteLock;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.IOP.IOR;

@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package org.apache.yoko.orb.util;
+package org.apache.yoko.util;
 
 import java.security.PrivilegedAction;
 

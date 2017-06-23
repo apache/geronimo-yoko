@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.util.AutoLock;
+import org.apache.yoko.util.concurrent.AutoLock;
 
 public class PIDowncall extends Downcall {
     //

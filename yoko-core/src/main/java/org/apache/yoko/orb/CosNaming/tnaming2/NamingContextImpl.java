@@ -6,7 +6,7 @@ import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 
 import org.apache.yoko.orb.spi.naming.RemoteAccess;
-import org.apache.yoko.orb.util.UnmodifiableEnumMap;
+import org.apache.yoko.util.UnmodifiableEnumMap;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_PERMISSION;
