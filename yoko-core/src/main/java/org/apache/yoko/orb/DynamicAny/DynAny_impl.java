@@ -21,8 +21,6 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
-import org.omg.CORBA.CustomMarshal;
-import org.omg.DynamicAny.DynAnyPackage.TypeMismatch;
 
 abstract class DynAny_impl extends org.omg.CORBA.LocalObject implements
         org.omg.DynamicAny.DynAny {
@@ -983,9 +981,7 @@ abstract class DynAny_impl extends org.omg.CORBA.LocalObject implements
         OutputStream out = new OutputStream(buf);
         out._OB_ORBInstance(orbInstance_);
         impl._OB_marshal(out);
-        InputStream in = (InputStream) out.create_input_stream();
-        // This is not necessary
-        // in._OB_ORBInstance(orbInstance_);
+        InputStream in = out.create_input_stream();
 
         return in.read_value();
     }
