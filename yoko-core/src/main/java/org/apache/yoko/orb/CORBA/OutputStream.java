@@ -17,22 +17,46 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.CodeConverterBase;
+import org.apache.yoko.orb.OB.CodeConverters;
+import org.apache.yoko.orb.OB.OB_Extras;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ValueWriter;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.omg.CORBA.BAD_TYPECODE;
+import org.omg.CORBA.DATA_CONVERSION;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.Principal;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CORBA.TypeCodePackage.Bounds;
+import org.omg.CORBA.portable.BoxedValueHelper;
+import org.omg.CORBA.portable.ValueOutputStream;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHelper;
+import org.omg.IOP.TaggedProfile;
+
+import java.io.Serializable;
+import java.util.Enumeration;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OCI.GiopVersion;
-import org.omg.CORBA.portable.ValueOutputStream;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.omg.CORBA.CompletionStatus.*;
+import static org.omg.CORBA.TCKind.*;
 
 final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
-    static final Logger LOGGER = Logger.getLogger(OutputStream.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(OutputStream.class.getName());
 
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_; // Java only
+    private ORBInstance orbInstance_; // Java only
 
-    public org.apache.yoko.orb.OCI.Buffer buf_;
+    public final org.apache.yoko.orb.OCI.Buffer buf_;
 
-    private GiopVersion giopVersion_ = org.apache.yoko.orb.OB.OB_Extras.DEFAULT_GIOP_VERSION;
+    private GiopVersion giopVersion_ = OB_Extras.DEFAULT_GIOP_VERSION;
 
-    private org.apache.yoko.orb.OB.CodeConverters codeConverters_;
+    private final CodeConverters codeConverters_;
 
     private boolean charWriterRequired_;
 
@@ -45,7 +69,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     //
     // Handles all OBV marshalling
     //
-    private org.apache.yoko.orb.OB.ValueWriter valueWriter_;
+    private ValueWriter valueWriter_;
 
     //
     // If alignNext_ > 0, the next write should be aligned on this
@@ -53,9 +77,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     //
     private int alignNext_;
 
-    private java.lang.Object invocationContext_; // Java only
+    private java.lang.Object invocationContext_;
 
-    private java.lang.Object delegateContext_; // Java only
+    private java.lang.Object delegateContext_;
 
     // ------------------------------------------------------------------
     // Private and protected functions
@@ -80,8 +104,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         buf_.data_[start] = (byte) length;
     }
 
-    public void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc,
-            java.util.Hashtable history) {
+    private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc,
+                                   java.util.Hashtable history) {
         //
         // Try casting the TypeCode to org.apache.yoko.orb.CORBA.TypeCode. This
         // could
@@ -96,11 +120,10 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (obTC != null) {
             if (obTC.recId_ != null) {
                 if (obTC.recType_ == null)
-                    throw new org.omg.CORBA.BAD_TYPECODE(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorIncompleteTypeCode),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorIncompleteTypeCode,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new BAD_TYPECODE(
+                            describeBadTypecode(MinorIncompleteTypeCode),
+                            MinorIncompleteTypeCode,
+                            COMPLETED_NO);
                 writeTypeCodeImpl(obTC.recType_, history);
                 return;
             }
@@ -112,24 +135,24 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // For performance reasons, handle the primitive TypeCodes first
         //
         switch (tc.kind().value()) {
-        case org.omg.CORBA.TCKind._tk_null:
-        case org.omg.CORBA.TCKind._tk_void:
-        case org.omg.CORBA.TCKind._tk_short:
-        case org.omg.CORBA.TCKind._tk_long:
-        case org.omg.CORBA.TCKind._tk_longlong:
-        case org.omg.CORBA.TCKind._tk_ushort:
-        case org.omg.CORBA.TCKind._tk_ulong:
-        case org.omg.CORBA.TCKind._tk_ulonglong:
-        case org.omg.CORBA.TCKind._tk_float:
-        case org.omg.CORBA.TCKind._tk_double:
-        case org.omg.CORBA.TCKind._tk_longdouble:
-        case org.omg.CORBA.TCKind._tk_boolean:
-        case org.omg.CORBA.TCKind._tk_char:
-        case org.omg.CORBA.TCKind._tk_wchar:
-        case org.omg.CORBA.TCKind._tk_octet:
-        case org.omg.CORBA.TCKind._tk_any:
-        case org.omg.CORBA.TCKind._tk_TypeCode:
-        case org.omg.CORBA.TCKind._tk_Principal:
+        case _tk_null:
+        case _tk_void:
+        case _tk_short:
+        case _tk_long:
+        case _tk_longlong:
+        case _tk_ushort:
+        case _tk_ulong:
+        case _tk_ulonglong:
+        case _tk_float:
+        case _tk_double:
+        case _tk_longdouble:
+        case _tk_boolean:
+        case _tk_char:
+        case _tk_wchar:
+        case _tk_octet:
+        case _tk_any:
+        case _tk_TypeCode:
+        case _tk_Principal:
             write_ulong(tc.kind().value());
             return;
 
@@ -140,16 +163,16 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         Integer indirectionPos = (Integer) history.get(tc);
         if (indirectionPos != null) {
             write_long(-1);
-            int offs = indirectionPos.intValue() - buf_.pos_;
+            int offs = indirectionPos - buf_.pos_;
             LOGGER.finest("Writing an indirect type code for offset " + offs);
             write_long(offs);
         } else {
             write_ulong(tc.kind().value());
-            Integer oldPos = new Integer(buf_.pos_ - 4);
+            Integer oldPos = buf_.pos_ - 4;
 
             try {
                 switch (tc.kind().value()) {
-                case org.omg.CORBA.TCKind._tk_fixed: {
+                case _tk_fixed: {
                     history.put(tc, oldPos);
 
                     write_ushort(tc.fixed_digits());
@@ -158,7 +181,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_objref: {
+                case _tk_objref: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -170,8 +193,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_struct:
-                case org.omg.CORBA.TCKind._tk_except: {
+                case _tk_struct:
+                case _tk_except: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -188,7 +211,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_union: {
+                case _tk_union: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -212,35 +235,35 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                             org.omg.CORBA.TypeCode origDiscType = TypeCode
                                     ._OB_getOrigType(discType);
                             switch (origDiscType.kind().value()) {
-                            case org.omg.CORBA.TCKind._tk_short:
+                            case _tk_short:
                                 write_short((short) 0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_ushort:
+                            case _tk_ushort:
                                 write_ushort((short) 0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_long:
+                            case _tk_long:
                                 write_long(0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_ulong:
+                            case _tk_ulong:
                                 write_ulong(0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_longlong:
+                            case _tk_longlong:
                                 write_longlong(0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_ulonglong:
+                            case _tk_ulonglong:
                                 write_ulonglong(0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_boolean:
+                            case _tk_boolean:
                                 write_boolean(false);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_char:
+                            case _tk_char:
                                 write_char((char) 0);
                                 break;
-                            case org.omg.CORBA.TCKind._tk_enum:
+                            case _tk_enum:
                                 write_ulong(0);
                                 break;
                             default:
-                                org.apache.yoko.orb.OB.Assert._OB_assert("Invalid sub-type in tk_union");
+                                _OB_assert("Invalid sub-type in tk_union");
                             }
                         } else {
                             tc.member_label(i).write_value(this);
@@ -254,7 +277,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_enum: {
+                case _tk_enum: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -269,13 +292,13 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_string:
-                case org.omg.CORBA.TCKind._tk_wstring:
+                case _tk_string:
+                case _tk_wstring:
                     write_ulong(tc.length());
                     break;
 
-                case org.omg.CORBA.TCKind._tk_sequence:
-                case org.omg.CORBA.TCKind._tk_array: {
+                case _tk_sequence:
+                case _tk_array: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -287,7 +310,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_alias: {
+                case _tk_alias: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -300,14 +323,14 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_value: {
+                case _tk_value: {
                     history.put(tc, oldPos);
 
                     org.omg.CORBA.TypeCode concreteBase = tc
                             .concrete_base_type();
                     if (concreteBase == null) {
                         concreteBase = org.apache.yoko.orb.OB.TypeCodeFactory
-                                .createPrimitiveTC(org.omg.CORBA.TCKind.tk_null);
+                                .createPrimitiveTC(tk_null);
                     }
 
                     int start = writeGap();
@@ -327,7 +350,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_value_box: {
+                case _tk_value_box: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -340,7 +363,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_abstract_interface: {
+                case _tk_abstract_interface: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -352,7 +375,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_native: {
+                case _tk_native: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -377,12 +400,10 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 }
 
                 default:
-                    org.apache.yoko.orb.OB.Assert._OB_assert("Invalid typecode");
+                    _OB_assert("Invalid typecode");
                 }
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-            } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (BadKind | Bounds ex) {
+                _OB_assert(ex);
             }
         }
     }
@@ -391,13 +412,13 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Must be called prior to any writes
     //
     private void checkBeginChunk() {
-        org.apache.yoko.orb.OB.Assert._OB_assert(valueWriter_ != null);
+        _OB_assert(valueWriter_ != null);
         valueWriter_.checkBeginChunk();
     }
 
-    private org.apache.yoko.orb.OB.ValueWriter valueWriter() {
+    private ValueWriter valueWriter() {
         if (valueWriter_ == null)
-            valueWriter_ = new org.apache.yoko.orb.OB.ValueWriter(this);
+            valueWriter_ = new ValueWriter(this);
         return valueWriter_;
     }
 
@@ -457,7 +478,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private void addCapacity(int size, int align) {
         // use addCapacity(int) if align == 0
-        org.apache.yoko.orb.OB.Assert._OB_assert(align > 0);
+        _OB_assert(align > 0);
 
         //
         // If we're at the end of the current buffer, then we are about
@@ -494,12 +515,10 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    //
-    // write wchar using old non-compliant method
-    //
+    /** write wchar using old non-compliant method */
     private void _OB_write_wchar_old(char value) {
         if (wCharConversionRequired_) {
-            final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputWcharConverter;
+            final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
             value = converter.convert(value);
 
@@ -546,11 +565,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    //
-    // write wchar using new compilant method
-    //
+    /** write wchar using new compliant method */
     private void _OB_write_wchar_new(char value, boolean partOfString) {
-        final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputWcharConverter;
+        final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
         //
         // pre-convert the character if necessary
@@ -559,7 +576,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             value = converter.convert(value);
 
         if (wCharWriterRequired_) {
-            if (partOfString == false)
+            if (!partOfString)
                 converter
                         .set_writer_flags(org.apache.yoko.orb.OB.CodeSetWriter.FIRST_CHAR);
 
@@ -574,7 +591,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 // we don't support special writers for GIOP 1.0 if
                 // conversion is required or if a writer is required
                 //
-                org.apache.yoko.orb.OB.Assert._OB_assert(false);
+                _OB_assert(false);
             }
                 break;
 
@@ -588,7 +605,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 // For GIOP 1.1 we are limited to 2-byte wchars
                 // so make sure to check for that
                 //
-                org.apache.yoko.orb.OB.Assert._OB_assert(len == 2);
+                _OB_assert(len == 2);
 
                 //
                 // allocate aligned space
@@ -672,9 +689,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    //
-    // write wstring using old non-compliant method
-    //
+    /** write wstring using old non-compliant method */
     private void _OB_write_wstring_old(String value) {
         final char[] arr = value.toCharArray();
         final int len = arr.length;
@@ -703,13 +718,13 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             int start = writeGap();
 
             if (wCharConversionRequired_) {
-                final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputWcharConverter;
+                final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
-                for (int i = 0; i < len; i++) {
-                    char v = converter.convert(arr[i]);
+                for (char anArr : arr) {
+                    char v = converter.convert(anArr);
 
                     if (v == 0)
-                        throw new org.omg.CORBA.DATA_CONVERSION(
+                        throw new DATA_CONVERSION(
                                 "illegal wchar value for wstring: " + (int) v);
 
                     addCapacity(converter.write_count_wchar(v));
@@ -722,11 +737,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             else {
                 addCapacity(2 * len);
 
-                for (int i = 0; i < len; i++) {
-                    char v = arr[i];
-
+                for (char v : arr) {
                     if (v == 0)
-                        throw new org.omg.CORBA.DATA_CONVERSION(
+                        throw new DATA_CONVERSION(
                                 "illegal wchar value for wstring: " + (int) v);
 
                     buf_.data_[buf_.pos_++] = (byte) (v >> 8);
@@ -743,9 +756,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    //
-    // write wstring using new compliant method
-    //
+    /** write wstring using new compliant method */
     private void _OB_write_wstring_new(String value) {
         final char[] arr = value.toCharArray();
         final int len = arr.length;
@@ -754,7 +765,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         //
         // get converter/writer instance
         //
-        final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputWcharConverter;
+        final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
         //
         // some writers (specially UTF-16) requires the possible BOM
@@ -781,8 +792,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // now write all the characters
                 //
-                for (int i = 0; i < len; i++)
-                    write_wchar(arr[i], true);
+                for (char anArr : arr) write_wchar(anArr, true);
 
                 //
                 // and the null terminator
@@ -802,8 +812,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // we've handled GIOP 1.0/1.1 above so this must be GIOP 1.2+
         //
         if (wCharWriterRequired_) {
-            for (int i = 0; i < len; i++) {
-                char v = arr[i];
+            for (char anArr : arr) {
+                char v = anArr;
 
                 //
                 // check if the character requires conversion
@@ -815,7 +825,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 // illegal for the string to contain nulls
                 //
                 if (v == 0)
-                    throw new org.omg.CORBA.DATA_CONVERSION(
+                    throw new DATA_CONVERSION(
                             "illegal wchar value for wstring: " + (int) v);
 
                 //
@@ -835,8 +845,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             //
             addCapacity(len << 1);
 
-            for (int i = 0; i < len; i++) {
-                char v = arr[i];
+            for (char anArr : arr) {
+                char v = anArr;
 
                 //
                 // check for conversion
@@ -876,9 +886,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         return null;
     }
 
-    public org.omg.CORBA.portable.InputStream create_input_stream() {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                buf_.len_);
+    @Override
+    public InputStream create_input_stream() {
+        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(buf_.len_);
         if (buf_.len_ > 0)
             System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.len_);
 
@@ -888,8 +898,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 //          logger.fine("new input stream created:\n" + buf.dumpData());
 //      }
 
-        InputStream in = new InputStream(buf, 0, false, codeConverters_,
-                giopVersion_);
+        InputStream in = new InputStream(buf, 0, false, codeConverters_, giopVersion_);
         in._OB_ORBInstance(orbInstance_);
         return in;
     }
@@ -907,7 +916,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
         addCapacity(1);
 
-        final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputCharConverter;
+        final CodeConverterBase converter = codeConverters_.outputCharConverter;
 
         if (charConversionRequired_)
             value = converter.convert(value);
@@ -922,8 +931,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         write_wchar(value, false);
     }
 
-    public void write_wchar(char value, boolean partOfString) {
-        if (org.apache.yoko.orb.OB.OB_Extras.COMPAT_WIDE_MARSHAL == false)
+    private void write_wchar(char value, boolean partOfString) {
+        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
             _OB_write_wchar_new(value, partOfString);
         else
             _OB_write_wchar_old(value);
@@ -990,17 +999,15 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             write_ulong(capacity);
             addCapacity(capacity);
 
-            for (int i = 0; i < len; i++) {
-                char c = arr[i];
-
+            for (char c : arr) {
                 if (c == 0 || c > 255)
-                    throw new org.omg.CORBA.DATA_CONVERSION(
+                    throw new DATA_CONVERSION(
                             "illegal char value for string: " + (int) c);
 
                 buf_.data_[buf_.pos_++] = (byte) c;
             }
         } else {
-            final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputCharConverter;
+            final CodeConverterBase converter = codeConverters_.outputCharConverter;
 
             //
             // Intermediate variable used for efficiency
@@ -1015,11 +1022,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     64);
             OutputStream tmpStream = new OutputStream(buffer);
 
-            for (int i = 0; i < len; i++) {
-                char c = arr[i];
-
+            for (char c : arr) {
                 if (c == 0 || c > 255)
-                    throw new org.omg.CORBA.DATA_CONVERSION(
+                    throw new DATA_CONVERSION(
                             "illegal char value for string: " + (int) c);
 
                 //
@@ -1053,7 +1058,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_wstring(String value) {
-        if (org.apache.yoko.orb.OB.OB_Extras.COMPAT_WIDE_MARSHAL == false)
+        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
             _OB_write_wstring_new(value);
         else
             _OB_write_wstring_old(value);
@@ -1081,7 +1086,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     buf_.data_[buf_.pos_++] = (byte) value[i];
                 }
             } else {
-                final org.apache.yoko.orb.OB.CodeConverterBase converter = codeConverters_.outputCharConverter;
+                final CodeConverterBase converter = codeConverters_.outputCharConverter;
 
                 //
                 // Intermediate variable used for efficiency
@@ -1211,20 +1216,15 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void write_Object(org.omg.CORBA.Object value) {
         if (value == null) {
             LOGGER.finest("Writing a null CORBA object value");
-            org.omg.IOP.IOR ior = new org.omg.IOP.IOR();
+            IOR ior = new IOR();
             ior.type_id = "";
-            ior.profiles = new org.omg.IOP.TaggedProfile[0];
-            org.omg.IOP.IORHelper.write(this, ior);
+            ior.profiles = new TaggedProfile[0];
+            IORHelper.write(this, ior);
         } else {
-            if (value instanceof org.omg.CORBA.LocalObject)
-                throw new org.omg.CORBA.MARSHAL(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            if (value instanceof LocalObject)
+                throw new MARSHAL(describeMarshal(MinorLocalObject), MinorLocalObject, COMPLETED_NO);
 
-            Delegate p = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) value)
-                    ._get_delegate();
+            Delegate p = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) value)._get_delegate();
 
             p._OB_marshalOrigIOR(this);
         }
@@ -1240,7 +1240,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         //
 
         if (t == null)
-            throw new org.omg.CORBA.BAD_TYPECODE("TypeCode is nil");
+            throw new BAD_TYPECODE("TypeCode is nil");
 
         java.util.Hashtable history = new java.util.Hashtable(11);
         writeTypeCodeImpl(t, history);
@@ -1252,8 +1252,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         value.write_value(this);
     }
 
-    public void write_Context(org.omg.CORBA.Context ctx,
-            org.omg.CORBA.ContextList contexts) {
+    public void write_Context(org.omg.CORBA.Context ctx, org.omg.CORBA.ContextList contexts) {
         int count = contexts.count();
         java.util.Vector v = new java.util.Vector();
         org.apache.yoko.orb.CORBA.Context ctxImpl = (org.apache.yoko.orb.CORBA.Context) ctx;
@@ -1262,20 +1261,21 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 String pattern = contexts.item(i);
                 ctxImpl._OB_getValues("", 0, pattern, v);
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                _OB_assert(ex);
             }
         }
 
         write_ulong(v.size());
 
-        java.util.Enumeration e = v.elements();
+        Enumeration e = v.elements();
         while (e.hasMoreElements())
             write_string((String) e.nextElement());
     }
 
-    public void write_Principal(org.omg.CORBA.Principal value) {
+    @SuppressWarnings("deprecation")
+    public void write_Principal(Principal value) {
         // Deprecated by CORBA 2.2
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+        throw new NO_IMPLEMENT();
     }
 
     public void write_fixed(java.math.BigDecimal value) {
@@ -1303,20 +1303,19 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    public void write_value(java.io.Serializable value) {
+    public void write_value(Serializable value) {
         valueWriter().writeValue(value, null);
     }
 
-    public void write_value(java.io.Serializable value, java.lang.String rep_id) {
+    public void write_value(Serializable value, java.lang.String rep_id) {
         valueWriter().writeValue(value, rep_id);
     }
 
-    public void write_value(java.io.Serializable value, Class clz) {
+    public void write_value(Serializable value, Class clz) {
         valueWriter().writeValue(value, null);
     }
 
-    public void write_value(java.io.Serializable value,
-            org.omg.CORBA.portable.BoxedValueHelper helper) {
+    public void write_value(Serializable value, BoxedValueHelper helper) {
         valueWriter().writeValueBox(value, null, helper);
     }
 
@@ -1328,65 +1327,57 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public void write_value(java.io.Serializable value,
-            org.omg.CORBA.TypeCode tc,
-            org.omg.CORBA.portable.BoxedValueHelper helper) {
+    public void write_value(Serializable value, org.omg.CORBA.TypeCode tc, BoxedValueHelper helper) {
         valueWriter().writeValueBox(value, tc, helper);
     }
 
-    public void write_InputStream(org.omg.CORBA.portable.InputStream in,
-            org.omg.CORBA.TypeCode tc) {
-        InputStream obin = null;
-        try {
-            obin = (InputStream) in;
-        } catch (ClassCastException ex) {
-            // InputStream may have been created by a different ORB
-        }
+    public void write_InputStream(final org.omg.CORBA.portable.InputStream in, org.omg.CORBA.TypeCode tc) {
+        final InputStream obin = in instanceof InputStream ? (InputStream) in : null;
 
         try {
             LOGGER.fine("writing a value of type " + tc.kind().value());
 
             switch (tc.kind().value()) {
-            case org.omg.CORBA.TCKind._tk_null:
-            case org.omg.CORBA.TCKind._tk_void:
+            case _tk_null:
+            case _tk_void:
                 break;
 
-            case org.omg.CORBA.TCKind._tk_short:
-            case org.omg.CORBA.TCKind._tk_ushort:
+            case _tk_short:
+            case _tk_ushort:
                 write_short(in.read_short());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_long:
-            case org.omg.CORBA.TCKind._tk_ulong:
-            case org.omg.CORBA.TCKind._tk_float:
-            case org.omg.CORBA.TCKind._tk_enum:
+            case _tk_long:
+            case _tk_ulong:
+            case _tk_float:
+            case _tk_enum:
                 write_long(in.read_long());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_double:
-            case org.omg.CORBA.TCKind._tk_longlong:
-            case org.omg.CORBA.TCKind._tk_ulonglong:
+            case _tk_double:
+            case _tk_longlong:
+            case _tk_ulonglong:
                 write_longlong(in.read_longlong());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_boolean:
-            case org.omg.CORBA.TCKind._tk_octet:
+            case _tk_boolean:
+            case _tk_octet:
                 write_octet(in.read_octet());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_char:
+            case _tk_char:
                 write_char(in.read_char());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_wchar:
+            case _tk_wchar:
                 write_wchar(in.read_wchar());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_fixed:
+            case _tk_fixed:
                 write_fixed(in.read_fixed());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_any: {
+            case _tk_any: {
                 // Don't do this: write_any(in.read_any())
                 // This is faster:
                 org.omg.CORBA.TypeCode p = in.read_TypeCode();
@@ -1395,7 +1386,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
 
-            case org.omg.CORBA.TCKind._tk_TypeCode: {
+            case _tk_TypeCode: {
                 // Don't do this: write_TypeCode(in.read_TypeCode())
                 // This is faster:
 
@@ -1405,53 +1396,52 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 // An indirection is not permitted at this level
                 //
                 if (kind == -1) {
-                    throw new org.omg.CORBA.MARSHAL(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new MARSHAL(
+                            describeMarshal(MinorReadInvTypeCodeIndirection),
+                            MinorReadInvTypeCodeIndirection,
+                            COMPLETED_NO);
                 }
 
                 write_ulong(kind);
 
                 switch (kind) {
-                case org.omg.CORBA.TCKind._tk_null:
-                case org.omg.CORBA.TCKind._tk_void:
-                case org.omg.CORBA.TCKind._tk_short:
-                case org.omg.CORBA.TCKind._tk_long:
-                case org.omg.CORBA.TCKind._tk_ushort:
-                case org.omg.CORBA.TCKind._tk_ulong:
-                case org.omg.CORBA.TCKind._tk_float:
-                case org.omg.CORBA.TCKind._tk_double:
-                case org.omg.CORBA.TCKind._tk_boolean:
-                case org.omg.CORBA.TCKind._tk_char:
-                case org.omg.CORBA.TCKind._tk_octet:
-                case org.omg.CORBA.TCKind._tk_any:
-                case org.omg.CORBA.TCKind._tk_TypeCode:
-                case org.omg.CORBA.TCKind._tk_Principal:
-                case org.omg.CORBA.TCKind._tk_longlong:
-                case org.omg.CORBA.TCKind._tk_ulonglong:
-                case org.omg.CORBA.TCKind._tk_longdouble:
-                case org.omg.CORBA.TCKind._tk_wchar:
+                case _tk_null:
+                case _tk_void:
+                case _tk_short:
+                case _tk_long:
+                case _tk_ushort:
+                case _tk_ulong:
+                case _tk_float:
+                case _tk_double:
+                case _tk_boolean:
+                case _tk_char:
+                case _tk_octet:
+                case _tk_any:
+                case _tk_TypeCode:
+                case _tk_Principal:
+                case _tk_longlong:
+                case _tk_ulonglong:
+                case _tk_longdouble:
+                case _tk_wchar:
                     break;
 
-                case org.omg.CORBA.TCKind._tk_fixed:
+                case _tk_fixed:
                     write_ushort(in.read_ushort());
                     write_short(in.read_short());
                     break;
 
-                case org.omg.CORBA.TCKind._tk_objref:
-                case org.omg.CORBA.TCKind._tk_struct:
-                case org.omg.CORBA.TCKind._tk_union:
-                case org.omg.CORBA.TCKind._tk_enum:
-                case org.omg.CORBA.TCKind._tk_sequence:
-                case org.omg.CORBA.TCKind._tk_array:
-                case org.omg.CORBA.TCKind._tk_alias:
-                case org.omg.CORBA.TCKind._tk_except:
-                case org.omg.CORBA.TCKind._tk_value:
-                case org.omg.CORBA.TCKind._tk_value_box:
-                case org.omg.CORBA.TCKind._tk_abstract_interface:
-                case org.omg.CORBA.TCKind._tk_native:
+                case _tk_objref:
+                case _tk_struct:
+                case _tk_union:
+                case _tk_enum:
+                case _tk_sequence:
+                case _tk_array:
+                case _tk_alias:
+                case _tk_except:
+                case _tk_value:
+                case _tk_value_box:
+                case _tk_abstract_interface:
+                case _tk_native:
                 case org.omg.CORBA_2_4.TCKind._tk_local_interface: {
                     final int len = in.read_ulong();
                     write_ulong(len);
@@ -1461,8 +1451,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_string:
-                case org.omg.CORBA.TCKind._tk_wstring: {
+                case _tk_string:
+                case _tk_wstring: {
                     int bound = in.read_ulong();
                     write_ulong(bound);
                     break;
@@ -1475,30 +1465,30 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
 
-            case org.omg.CORBA.TCKind._tk_Principal:
+            case _tk_Principal:
                 write_Principal(in.read_Principal());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_objref: {
+            case _tk_objref: {
                 // Don't do this: write_Object(in.read_Object())
                 // This is faster:
-                org.omg.IOP.IOR ior = org.omg.IOP.IORHelper.read(in);
-                org.omg.IOP.IORHelper.write(this, ior);
+                IOR ior = IORHelper.read(in);
+                IORHelper.write(this, ior);
                 break;
             }
 
-            case org.omg.CORBA.TCKind._tk_struct:
+            case _tk_struct:
                 for (int i = 0; i < tc.member_count(); i++)
                     write_InputStream(in, tc.member_type(i));
                 break;
 
-            case org.omg.CORBA.TCKind._tk_except:
+            case _tk_except:
                 write_string(in.read_string());
                 for (int i = 0; i < tc.member_count(); i++)
                     write_InputStream(in, tc.member_type(i));
                 break;
 
-            case org.omg.CORBA.TCKind._tk_union: {
+            case _tk_union: {
                 int defaultIndex = tc.default_index();
                 int memberIndex = -1;
 
@@ -1506,7 +1496,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         ._OB_getOrigType(tc.discriminator_type());
 
                 switch (origDiscType.kind().value()) {
-                case org.omg.CORBA.TCKind._tk_short: {
+                case _tk_short: {
                     short val = in.read_short();
                     write_short(val);
 
@@ -1521,7 +1511,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_ushort: {
+                case _tk_ushort: {
                     short val = in.read_ushort();
                     write_ushort(val);
 
@@ -1536,7 +1526,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_long: {
+                case _tk_long: {
                     int val = in.read_long();
                     write_long(val);
 
@@ -1551,7 +1541,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_ulong: {
+                case _tk_ulong: {
                     int val = in.read_ulong();
                     write_ulong(val);
 
@@ -1566,7 +1556,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_longlong: {
+                case _tk_longlong: {
                     long val = in.read_longlong();
                     write_longlong(val);
 
@@ -1581,7 +1571,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_ulonglong: {
+                case _tk_ulonglong: {
                     long val = in.read_ulonglong();
                     write_ulonglong(val);
 
@@ -1596,7 +1586,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_char: {
+                case _tk_char: {
                     char val = in.read_char();
                     write_char(val);
 
@@ -1611,7 +1601,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_boolean: {
+                case _tk_boolean: {
                     boolean val = in.read_boolean();
                     write_boolean(val);
 
@@ -1626,7 +1616,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA.TCKind._tk_enum: {
+                case _tk_enum: {
                     int val = in.read_long();
                     write_long(val);
 
@@ -1643,7 +1633,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 }
 
                 default:
-                    org.apache.yoko.orb.OB.Assert._OB_assert("Invalid typecode in tk_union");
+                    _OB_assert("Invalid typecode in tk_union");
                 }
 
                 if (memberIndex >= 0)
@@ -1654,19 +1644,19 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
 
-            case org.omg.CORBA.TCKind._tk_string:
+            case _tk_string:
                 write_string(in.read_string());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_wstring:
+            case _tk_wstring:
                 write_wstring(in.read_wstring());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_sequence:
-            case org.omg.CORBA.TCKind._tk_array: {
+            case _tk_sequence:
+            case _tk_array: {
                 int len;
 
-                if (tc.kind().value() == org.omg.CORBA.TCKind._tk_sequence) {
+                if (tc.kind().value() == _tk_sequence) {
                     len = in.read_ulong();
                     write_ulong(len);
                 } else
@@ -1677,12 +1667,12 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                             ._OB_getOrigType(tc.content_type());
 
                     switch (origContentType.kind().value()) {
-                    case org.omg.CORBA.TCKind._tk_null:
-                    case org.omg.CORBA.TCKind._tk_void:
+                    case _tk_null:
+                    case _tk_void:
                         break;
 
-                    case org.omg.CORBA.TCKind._tk_short:
-                    case org.omg.CORBA.TCKind._tk_ushort: {
+                    case _tk_short:
+                    case _tk_ushort: {
                         if (obin == null || obin.swap_) {
                             short[] s = new short[len];
                             in.read_short_array(s, 0, len);
@@ -1706,9 +1696,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         break;
                     }
 
-                    case org.omg.CORBA.TCKind._tk_long:
-                    case org.omg.CORBA.TCKind._tk_ulong:
-                    case org.omg.CORBA.TCKind._tk_float: {
+                    case _tk_long:
+                    case _tk_ulong:
+                    case _tk_float: {
                         if (obin == null || obin.swap_) {
                             int[] i = new int[len];
                             in.read_long_array(i, 0, len);
@@ -1732,9 +1722,9 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         break;
                     }
 
-                    case org.omg.CORBA.TCKind._tk_double:
-                    case org.omg.CORBA.TCKind._tk_longlong:
-                    case org.omg.CORBA.TCKind._tk_ulonglong: {
+                    case _tk_double:
+                    case _tk_longlong:
+                    case _tk_ulonglong: {
                         if (obin == null || obin.swap_) {
                             long[] l = new long[len];
                             in.read_longlong_array(l, 0, len);
@@ -1757,8 +1747,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         break;
                     }
 
-                    case org.omg.CORBA.TCKind._tk_boolean:
-                    case org.omg.CORBA.TCKind._tk_octet:
+                    case _tk_boolean:
+                    case _tk_octet:
                         if (obin == null) {
                             addCapacity(len);
                             in.read_octet_array(buf_.data_, buf_.pos_, len);
@@ -1774,7 +1764,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         }
                         break;
 
-                    case org.omg.CORBA.TCKind._tk_char:
+                    case _tk_char:
                         if (charWriterRequired_ || charConversionRequired_) {
                             char[] ch = new char[len];
                             in.read_char_array(ch, 0, len);
@@ -1786,15 +1776,15 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         }
                         break;
 
-                    case org.omg.CORBA.TCKind._tk_wchar: {
+                    case _tk_wchar: {
                         char[] wch = new char[len];
                         in.read_wchar_array(wch, 0, len);
                         write_wchar_array(wch, 0, len);
                         break;
                     }
 
-                    case org.omg.CORBA.TCKind._tk_alias:
-                        org.apache.yoko.orb.OB.Assert._OB_assert("tk_alias not supported in tk_array or tk_sequence");
+                    case _tk_alias:
+                        _OB_assert("tk_alias not supported in tk_array or tk_sequence");
                         break;
 
                     default:
@@ -1807,12 +1797,12 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
 
-            case org.omg.CORBA.TCKind._tk_alias:
+            case _tk_alias:
                 write_InputStream(in, tc.content_type());
                 break;
 
-            case org.omg.CORBA.TCKind._tk_value:
-            case org.omg.CORBA.TCKind._tk_value_box:
+            case _tk_value:
+            case _tk_value_box:
                 if (obin == null) {
                     org.omg.CORBA_2_3.portable.InputStream i = (org.omg.CORBA_2_3.portable.InputStream) in;
                     write_value(i.read_value());
@@ -1820,7 +1810,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     obin._OB_remarshalValue(tc, this);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_abstract_interface: {
+            case _tk_abstract_interface: {
                 boolean b = in.read_boolean();
                 write_boolean(b);
                 if (b) {
@@ -1843,14 +1833,14 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             }
 
             case org.omg.CORBA_2_4.TCKind._tk_local_interface:
-            case org.omg.CORBA.TCKind._tk_native:
+            case _tk_native:
             default:
-                org.apache.yoko.orb.OB.Assert._OB_assert("unsupported types");
+                _OB_assert("unsupported types");
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind ex) {
+            _OB_assert(ex);
+        } catch (Bounds ex) {
+            _OB_assert(ex);
         }
     }
 
@@ -1864,7 +1854,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public OutputStream(org.apache.yoko.orb.OCI.Buffer buf,
-            org.apache.yoko.orb.OB.CodeConverters converters, GiopVersion giopVersion) {
+            CodeConverters converters, GiopVersion giopVersion) {
         buf_ = buf;
 
         if (giopVersion != null)
@@ -1875,7 +1865,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         wCharWriterRequired_ = false;
         wCharConversionRequired_ = false;
 
-        codeConverters_ = new org.apache.yoko.orb.OB.CodeConverters(converters);
+        codeConverters_ = new CodeConverters(converters);
 
         if (converters != null) {
             if (codeConverters_.outputCharConverter != null) {
@@ -1906,11 +1896,6 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         buf_.pos_ = pos;
     }
 
-    public void _OB_align(int n) {
-        if (buf_.pos_ % n != 0)
-            addCapacity(0, n);
-    }
-
     public void _OB_alignNext(int n) {
         alignNext_ = n;
     }
@@ -1928,13 +1913,8 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     // Java only
-    public void _OB_ORBInstance(org.apache.yoko.orb.OB.ORBInstance orbInstance) {
+    public void _OB_ORBInstance(ORBInstance orbInstance) {
         orbInstance_ = orbInstance;
-    }
-
-    // Java only
-    public org.apache.yoko.orb.OB.ORBInstance _OB_ORBInstance() {
-        return orbInstance_;
     }
 
     // Java only

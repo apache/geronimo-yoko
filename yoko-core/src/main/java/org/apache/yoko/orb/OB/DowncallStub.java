@@ -689,7 +689,6 @@ public final class DowncallStub {
         //
         // setup the ORBInstance
         //
-        // poller._OB_ORBInstance(orbInstance_);
         Assert._OB_assert(out != null);
 
         //

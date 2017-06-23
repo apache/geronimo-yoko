@@ -17,12 +17,9 @@
 
 package org.apache.yoko.orb.CORBA;
  
-import java.util.logging.Logger;
-import java.util.logging.Level;
- 
-import org.apache.yoko.orb.OB.MinorCodes;
 import org.omg.CORBA.CompletionStatus;
-import org.omg.CORBA.Object;
+
+import java.util.logging.Logger;
 
 final public class Any extends org.omg.CORBA.Any {
     static final Logger logger = Logger.getLogger(Any.class.getName());
@@ -190,9 +187,7 @@ final public class Any extends org.omg.CORBA.Any {
             OutputStream out = new OutputStream(buf);
             out._OB_ORBInstance(orbInstance_);
             out.write_InputStream(in, origType_);
-            InputStream is = (InputStream) out.create_input_stream();
-            // This is not necessary
-            // in._OB_ORBInstance(orbInstance_);
+            InputStream is = out.create_input_stream();
             value_ = is;
             break;
         }
