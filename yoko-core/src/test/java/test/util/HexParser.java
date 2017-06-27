@@ -17,9 +17,9 @@ public class HexParser {
         if (text == null) return null;
         StringReader sr = new StringReader(text);
         BufferedReader br = new BufferedReader(sr);
+        int lineNo = 0;
         try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             String line = null;
-            int lineNo = 0;
             while (null != (line = br.readLine())) {
                 line = line.trim();
                 lineNo++;
@@ -39,7 +39,7 @@ public class HexParser {
         } catch (IOException e) {
             throw new Error(e);
         } catch (ParseException e) {
-            throw new IllegalArgumentException("Invalid string: " + text, e);
+            throw new IllegalArgumentException("Could not parse line " + lineNo + " of text:\n" + text, e);
         }
     }
 
@@ -66,7 +66,7 @@ public class HexParser {
 
         private boolean hasAnyBytesLeft() {
             // skip any spaces in the hex
-            for( int h = byteIndex * 2 + byteIndex / 4; chars[h] == ' ' && byteIndex <= 16; byteIndex++);
+            for (int h = byteIndex * 2 + byteIndex / 4; chars[h] == ' ' && byteIndex <= 16; byteIndex++);
             return byteIndex < 16;
         }
 
@@ -82,7 +82,10 @@ public class HexParser {
             // sanity check ascii string
             if (c != '.')   // '.' is a wildcard
                 if (c != b) // any other char is literal
-                    throw new ParseException(new String(chars), charOffset);
+                    throw new ParseException(
+                            String.format("Invalid ascii character '%s' when parsing byte %02x at index %d",
+                                    c, b, byteIndex),
+                            charOffset);
 
             out.write(b);
             byteIndex++;
