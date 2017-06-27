@@ -187,5 +187,61 @@ public class JavaValueTest {
         NameComponents.assertEquals(expected, actual);
     }
 
+    @Test
+    public void unmarshalNameComponentChunkedValue() {
+        writeHex("" +
+                "    7fffff0a 00000046 524d493a 6f72672e  \".......FRMI:org.\"\n" +
+                "    6f6d672e 436f734e 616d696e 672e4e61  \"omg.CosNaming.Na\"\n" +
+                "    6d65436f 6d706f6e 656e743a 45303638  \"meComponent:E068\"\n" +
+                "    41373543 39383933 30443636 3a463136  \"A75C98930D66:F16\"\n" +
+                "    34413231 39344136 36323832 4100bdbd  \"4A2194A66282A...\"\n" +
+                "    00000016 00000006 68656c6c 6f00bdbd  \"........hello...\"\n" +
+                "    00000006 776f726c 64000000 ffffffff  \"....world.......\"");
+        NameComponent actual = (NameComponent)in.read_value(NameComponent.class);
+        NameComponent expected = NameComponents.stringToName("hello.world");
+        NameComponents.assertEquals(expected, actual);
+    }
 
+    @Test
+    public void unmarshalNameComponentArray() {
+        writeHex("" +
+                "7fffff02 00000049 524d493a 5b4c6f72  \".......IRMI:[Lor\"\n" +
+                "672e6f6d 672e436f 734e616d 696e672e  \"g.omg.CosNaming.\"\n" +
+                "4e616d65 436f6d70 6f6e656e 743b3a45  \"NameComponent;:E\"\n" +
+                "30363841 37354339 38393330 4436363a  \"068A75C98930D66:\"\n" +
+                "46313634 41323139 34413636 32383241  \"F164A2194A66282A\"\n" +
+                "00000000 00000001 7fffff0a 00000046  \"...............F\"\n" +
+                "524d493a 6f72672e 6f6d672e 436f734e  \"RMI:org.omg.CosN\"\n" +
+                "616d696e 672e4e61 6d65436f 6d706f6e  \"aming.NameCompon\"\n" +
+                "656e743a 45303638 41373543 39383933  \"ent:E068A75C9893\"\n" +
+                "30443636 3a463136 34413231 39344136  \"0D66:F164A2194A6\"\n" +
+                "36323832 41000000 00000016 00000006  \"6282A...........\"\n" +
+                "68656c6c 6f00bdbd 00000006 776f726c  \"hello.......worl\"\n" +
+                "64000000 ffffffff                    \"d.......\"");
+        NameComponent[] actual = (NameComponent[])in.read_value(NameComponent[].class);
+        NameComponent[] expected = NameComponents.stringToPath("hello.world");
+        NameComponents.assertEquals(expected, actual);
+    }
+
+    @Test
+    public void unmarshalNameComponentArrayFromNeo() {
+        writeHex("" +
+                "7fffff02 00000049 524d493a 5b4c6f72  \".......IRMI:[Lor\"\n" +
+                "672e6f6d 672e436f 734e616d 696e672e  \"g.omg.CosNaming.\"\n" +
+                "4e616d65 436f6d70 6f6e656e 743b3a45  \"NameComponent;:E\"\n" +
+                "30363841 37354339 38393330 4436363a  \"068A75C98930D66:\"\n" +
+                "46313634 41323139 34413636 32383241  \"F164A2194A66282A\"\n" +
+                "00000000 00000001 7fffff0a 00000046  \"...............F\"\n" +
+                "524d493a 6f72672e 6f6d672e 436f734e  \"RMI:org.omg.CosN\"\n" +
+                "616d696e 672e4e61 6d65436f 6d706f6e  \"aming.NameCompon\"\n" +
+                "656e743a 45303638 41373543 39383933  \"ent:E068A75C9893\"\n" +
+                "30443636 3a463136 34413231 39344136  \"0D66:F164A2194A6\"\n" +
+                "36323832 41000000 00000025 0000001b  \"6282A......%....\"\n" +
+                "5265736f 6c766162 6c65436f 734e616d  \"ResolvableCosNam\"\n" +
+                "696e6743 6865636b 65720000 00000001  \"ingChecker......\"\n" +
+                "00000000 ffffffff                    \"........\"");
+        NameComponent[] actual = (NameComponent[])in.read_value(NameComponent[].class);
+        NameComponent[] expected = NameComponents.stringToPath("ResolvableCosNamingChecker");
+        NameComponents.assertEquals(expected, actual);
+    }
 }
