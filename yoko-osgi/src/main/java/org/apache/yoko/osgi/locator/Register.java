@@ -17,14 +17,9 @@
  * under the License.
  */
 
-
 package org.apache.yoko.osgi.locator;
 
-/**
- * @version $Rev$ $Date$
- */
 public interface Register {
-
     void registerProvider(BundleProviderLoader provider);
 
     void unregisterProvider(BundleProviderLoader provider);
@@ -33,4 +28,7 @@ public interface Register {
 
     void unregisterService(BundleProviderLoader provider);
 
+    void registerPackages(PackageProvider packageProvider);
+
+    void unregisterPackages(PackageProvider packageProvider);
 }

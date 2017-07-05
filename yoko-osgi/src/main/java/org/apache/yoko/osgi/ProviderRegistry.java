@@ -33,19 +33,7 @@ public interface ProviderRegistry {
      *         loaded.
      */
     public Class<?> locate(String factoryId);
-
-    /**
-     * Locate all class files that match a given factory id.
-     *
-     * @param factoryId The target factory identifier.
-     *
-     * @return A List containing the class objects corresponding to the
-     *         factory identifier.  Returns an empty list if no
-     *         matching classes can be located.
-     */
-    public List<Class<?>> locateAll(String factoryId);
-
-
+    
     /**
      * Locate and instantiate an instance of a service provider
      * defined in the META-INF/services directory of tracked bundles.

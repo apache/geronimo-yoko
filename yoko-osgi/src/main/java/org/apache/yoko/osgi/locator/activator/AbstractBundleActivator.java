@@ -1,6 +1,7 @@
 package org.apache.yoko.osgi.locator.activator;
 
 import org.apache.yoko.osgi.locator.BundleProviderLoader;
+import org.apache.yoko.osgi.locator.PackageProvider;
 import org.apache.yoko.osgi.locator.Register;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleActivator;
@@ -13,7 +14,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractBundleActivator implements BundleActivator {
-
     public static class Info {
         final String id;
         final String className;
@@ -27,17 +27,26 @@ public abstract class AbstractBundleActivator implements BundleActivator {
         }
 
     }
+    private static final Info[] NO_INFO = {};
+
     private final Info[] providerInfo;
     private final Info[] serviceInfo;
+    private final String[] providedPackages;
     private ServiceTracker<Register, Register> tracker;
     private BundleContext context;
     private boolean registered;
     private final List<BundleProviderLoader> providerLoaders = new ArrayList<>();
     private final List<BundleProviderLoader> serviceLoaders = new ArrayList<>();
+    private PackageProvider packageProvider;
 
-    public AbstractBundleActivator(Info[] providerInfo, Info[] serviceInfo) {
+    protected AbstractBundleActivator(Info[] providerInfo, Info[] serviceInfo, String...providedPackages) {
         this.providerInfo = providerInfo;
         this.serviceInfo = serviceInfo;
+        this.providedPackages = providedPackages;
+    }
+
+    protected AbstractBundleActivator(String...providedPackages) {
+        this(NO_INFO, NO_INFO, providedPackages);
     }
 
     public void start(final BundleContext context) throws Exception {
@@ -50,17 +59,9 @@ public abstract class AbstractBundleActivator implements BundleActivator {
                 return register;
             }
 
-            public void modifiedService(ServiceReference<Register> reference,
-                                        Register service) {
-                // TODO Auto-generated method stub
+            public void modifiedService(ServiceReference<Register> reference, Register service) {}
 
-            }
-
-            public void removedService(ServiceReference<Register> reference,
-                                       Register service) {
-                // TODO Auto-generated method stub
-
-            }
+            public void removedService(ServiceReference<Register> reference, Register service) {}
 
         });
         tracker.open();
@@ -85,6 +86,10 @@ public abstract class AbstractBundleActivator implements BundleActivator {
                 serviceLoaders.add(loader);
                 register.registerService(loader);
             }
+            if (providedPackages.length > 0) {
+                packageProvider = new PackageProvider(bundle, providedPackages);
+                register.registerPackages(packageProvider);
+            }
         }
     }
 
@@ -99,9 +104,9 @@ public abstract class AbstractBundleActivator implements BundleActivator {
                 for (BundleProviderLoader loader: serviceLoaders) {
                     register.unregisterService(loader);
                 }
+                if (packageProvider != null)
+                    register.unregisterPackages(packageProvider);
             }
         }
-
     }
-
 }
