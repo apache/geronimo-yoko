@@ -16,16 +16,17 @@
  */
 package org.apache.yoko.osgi.locator;
 
+import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.osgi.ProviderRegistry;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.osgi.ProviderRegistry;
 
 /**
  * The implementation of the provider registry used to store
@@ -40,6 +41,8 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
     // our mapping between an interface name and a META-INF/services SPI implementation.  There
     // might be a one-to-many relationship between the ids and implementing classes.
     private SPIRegistry serviceProviders = new SPIRegistry();
+
+    private final ConcurrentHashMap<String, PackageProvider> packageProviders = new ConcurrentHashMap<>();
 
     public void start() {
         ProviderLocator.setRegistry(this);
@@ -73,7 +76,7 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
 
 
     /**
-     * Register an individual provivider item by its provider identifier.
+     * Register an individual provider item by its provider identifier.
      *
      * @param provider The loader used to resolve the provider class.
      */
@@ -92,6 +95,24 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
         if (log.isLoggable(Level.FINE))
             log.log(Level.FINE, "unregistering service " + provider);
         serviceProviders.unregister(provider);
+    }
+
+    @Override
+    public void registerPackages(PackageProvider provider) {
+        if (log.isLoggable(Level.FINEST))
+            log.finest("registering package provider: " + provider);
+        for (String name : provider.getRegisteredPackageNames()) {
+            PackageProvider oldProvider = this.packageProviders.put(name, provider);
+            // we should never overwrite another provider for any given package
+            if (oldProvider != null)
+                log.warning(String.format("Replaced provider for package %s: was %s, but now %s", name, oldProvider, provider));
+        }
+    }
+
+    @Override
+    public void unregisterPackages(PackageProvider provider) {
+        for (String name : provider.getRegisteredPackageNames())
+            this.packageProviders.remove(name, provider);
     }
 
     /**
@@ -116,34 +137,12 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
                 // been logged.
             }
         }
-        // no match to return
-        return null;
-    }
 
-    /**
-     * Locate all class files that match a given provider id.
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the class objects corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located.
-     */
-    public List<Class<?>> locateAll(String providerId) {
-        List<Class<?>> classes = new ArrayList<Class<?>>();
-        List<BundleProviderLoader> l = providers.getLoaders(providerId);
-        // this returns null if nothing is found.
-        if (l != null) {
-            for (BundleProviderLoader c : l) {
-                try {
-                    classes.add(c.loadClass());
-                } catch (Exception e) {
-                    // just swallow this and proceed to the next.  The exception has
-                    // already been logged.
-                }
-            }
-        }
-        return classes;
+        String packageName = PackageProvider.packageName(providerId);
+        PackageProvider provider = packageProviders.get(packageName);
+        if (provider == null) return null;
+
+        return provider.loadClass(providerId);
     }
 
     /**
@@ -152,7 +151,7 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      *
      * @param providerId The name of the target interface class.
      *
-     * @return The service instance.  Returns null if no service defintions
+     * @return The service instance.  Returns null if no service definitions
      *         can be located.
      * @exception Exception Any classloading or other exceptions thrown during
      *                      the process of creating this service instance.
@@ -256,7 +255,7 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
 
 
         /**
-         * Register an individual provivider item by its provider identifier.
+         * Register an individual provider item by its provider identifier.
          *
          * @param provider The loader used to resolve the provider class.
          */

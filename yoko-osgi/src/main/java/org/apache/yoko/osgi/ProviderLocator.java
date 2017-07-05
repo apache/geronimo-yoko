@@ -72,30 +72,6 @@ public class ProviderLocator {
     }
 
     /**
-     * Locate all class files that match a given factory id.
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the class objects corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located.
-     */
-    static public List<Class<?>> locateAll(String providerId) {
-        Object registry = getRegistry();
-
-        // if no registry service available, this is a failure
-        if (registry == null) {
-            return new ArrayList<Class<?>>();
-        }
-        // get the service, if it exists.  NB, if there is a service object,
-        // then the extender and the interface class are available, so this cast should be
-        // safe now.
-
-        // the rest of the work is done by the registry
-        return ((ProviderRegistry)registry).locateAll(providerId);
-    }
-
-    /**
      * Utility class for locating a class with OSGi registry
      * support.  Uses the thread context classloader as part of
      * the search order.
