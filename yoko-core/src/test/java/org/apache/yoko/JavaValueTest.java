@@ -2,16 +2,16 @@ package org.apache.yoko;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.GiopVersion;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.omg.CORBA_2_3.ORB;
 import org.omg.CosNaming.NameComponent;
 import test.util.HexParser;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.is;
@@ -79,8 +79,7 @@ public class JavaValueTest {
 
     @Before
     public void setupStreams() {
-        ORB orb = (ORB) ORB.init((String[]) null, (Properties) null);
-        out = (OutputStream) orb.create_output_stream();
+        out = new OutputStream(new Buffer(), null, GiopVersion.GIOP1_2);
     }
 
     @Test
@@ -132,6 +131,28 @@ public class JavaValueTest {
         finishWriting();
         NameComponent[] expected = (NameComponent[]) in.read_value(NameComponent[].class);
         NameComponents.assertEquals(actual, expected);
+    }
+
+    @Test
+    public void marshalWstringWithNulls() {
+        String expected = "Hello\0world";
+        out.write_wstring(expected);
+        finishWriting();
+        String actual = in.read_wstring();
+        assertNotNull(actual);
+        assertEquals(expected, actual);
+        assertNotSame(expected, actual);
+    }
+
+    @Test
+    public void marshalWstringWithSurrogates() {
+        String expected = new String(Character.toChars(Character.MIN_SURROGATE)) + new String(Character.toChars(Character.MAX_CODE_POINT));
+        out.write_wstring(expected);
+        finishWriting();
+        String actual = in.read_wstring();
+        assertNotNull(actual);
+        assertEquals(expected, actual);
+        assertNotSame(expected, actual);
     }
 
     public static final HexParser HEX_PARSER = new HexParser();

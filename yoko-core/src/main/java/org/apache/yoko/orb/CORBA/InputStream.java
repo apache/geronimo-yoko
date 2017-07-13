@@ -1084,12 +1084,6 @@ final public class InputStream extends InputStreamWithOffsets {
                             c = converter.convert(c);
 
                         //
-                        // check for invalid null character
-                        //
-                        if (c == 0)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringNullWChar), MinorReadWStringNullWChar, COMPLETED_NO);
-
-                        //
                         // append to the string buffer
                         //
                         stringBuffer.append(c);
