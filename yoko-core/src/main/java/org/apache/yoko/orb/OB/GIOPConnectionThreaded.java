@@ -17,17 +17,30 @@
 
 package org.apache.yoko.orb.OB;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.Transport;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.CORBA.IMP_LIMIT;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
+import org.omg.GIOP.MsgType_1_1;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.*;
+import static org.omg.CORBA.CompletionStatus.*;
+
 public final class GIOPConnectionThreaded extends GIOPConnection {
-    static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
+    private static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
     
     // ----------------------------------------------------------------
     // Inner helper classes
@@ -40,7 +53,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 execShutdown();
             } catch (RuntimeException ex) {
-                Assert._OB_assert(ex);
+                _OB_assert(ex);
             }
         }
     }
@@ -54,7 +67,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 execReceive();
             } catch (RuntimeException ex) {
-                Assert._OB_assert(ex);
+                _OB_assert(ex);
             } finally {
                 receiverLock.readLock().unlock();
             }
@@ -68,17 +81,17 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // the holding monitor to pause the receiver threads
     //
-    protected java.lang.Object holdingMonitor_ = new java.lang.Object();
+    private final Object holdingMonitor_ = new Object();
 
     //
     // are we holding or not
     //
-    protected boolean holding_ = true;
+    private boolean holding_ = true;
 
     //
     // sending mutex to prevent multiple threads from sending at once
     //
-    protected java.lang.Object sendMutex_ = new java.lang.Object();
+    private final Object sendMutex_ = new Object();
     
     private boolean shuttingDown;
     private final ReentrantReadWriteLock receiverLock = new ReentrantReadWriteLock(true);
@@ -91,7 +104,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // add a new receiver thread
     // Assumes 'this' is synchronized on entry
     //
-    protected void addReceiverThread() {
+    private void addReceiverThread() {
         getExecutor().submit(new Receiver());
     }
 
@@ -99,7 +112,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // pause a thread on a holding monitor if turned on
     //
-    protected void pauseThread() {
+    private void pauseThread() {
         synchronized (holdingMonitor_) {
             while (holding_) {
                 try {
@@ -126,35 +139,31 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // The transport must be able to send in order to send the error
         // message...
         // 
-        if (transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly) {
+        if (transport_.mode() != ReceiveOnly) {
             try {
                 //
                 // Send a MessageError message
                 //
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                        12);
-                org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                        buf);
+                Buffer buf = new Buffer(12);
+                OutputStream out = new OutputStream(buf);
 
-                org.apache.yoko.orb.OCI.ProfileInfo profileInfo = new org.apache.yoko.orb.OCI.ProfileInfo();
+                ProfileInfo profileInfo = new ProfileInfo();
 
                 synchronized (this) {
                     profileInfo.major = giopVersion_.major;
                     profileInfo.minor = giopVersion_.minor;
                 }
 
-                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(
-                        orbInstance_, out, profileInfo);
+                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
 
-                outgoing.writeMessageHeader(
-                        org.omg.GIOP.MsgType_1_1.MessageError, false, 0);
+                outgoing.writeMessageHeader(MsgType_1_1.MessageError, false, 0);
                 out._OB_pos(0);
 
                 synchronized (sendMutex_) {
                     transport_.send(out._OB_buffer(), true);
                 }
-                Assert._OB_assert(out._OB_buffer().is_full());
-            } catch (org.omg.CORBA.SystemException ex) {
+                _OB_assert(out._OB_buffer().is_full());
+            } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 return;
             }
@@ -166,10 +175,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // closes. Instead, we just close the connection, meaning that we
         // can't be 100% sure that the peer gets the last message.
         //
-        processException(State.Closed, new org.omg.CORBA.TRANSIENT(org.apache.yoko.orb.OB.MinorCodes
-                .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown),
-                org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown,
-                org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE), false);
+        processException(State.Closed, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         arrive();
 
     }
@@ -196,19 +202,15 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // send a CloseConnection if we can
         //
         if (canSendCloseConnection()) {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    12);
-            org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                    buf);
+            Buffer buf = new Buffer(12);
+            OutputStream out = new OutputStream(buf);
 
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo = new org.apache.yoko.orb.OCI.ProfileInfo();
+            ProfileInfo profileInfo = new ProfileInfo();
             profileInfo.major = giopVersion_.major;
             profileInfo.minor = giopVersion_.minor;
 
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(
-                    orbInstance_, out, profileInfo);
-            outgoing.writeMessageHeader(
-                    org.omg.GIOP.MsgType_1_1.CloseConnection, false, 0);
+            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+            outgoing.writeMessageHeader(MsgType_1_1.CloseConnection, false, 0);
 
             messageQueue_.add(orbInstance_, out._OB_buffer());
         } else {
@@ -232,10 +234,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 logger.log(Level.WARNING, "Could not submit shutdown task", ree);
             }
         } catch (OutOfMemoryError ex) {
-            processException(State.Closed, new org.omg.CORBA.IMP_LIMIT(
-                    org.apache.yoko.orb.OB.MinorCodes.describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO), false);
+            processException(State.Closed, new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO), false);
         } finally {
             arrive();
         }
@@ -256,8 +255,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // client-side constructor
     //
-    public GIOPConnectionThreaded(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.Transport transport, GIOPClient client) {
+    public GIOPConnectionThreaded(ORBInstance orbInstance, Transport transport, GIOPClient client) {
         super(orbInstance, transport, client);
         orbInstance.getClientPhaser().register();
         start();
@@ -266,8 +264,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // server-side constructor
     //
-    public GIOPConnectionThreaded(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.Transport transport, OAInterface oa) {
+    public GIOPConnectionThreaded(ORBInstance orbInstance, Transport transport, OAInterface oa) {
         super(orbInstance, transport, oa);
         orbInstance.getServerPhaser().register();
     }
@@ -282,9 +279,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // called from the shutdown thread to initiate shutdown
     // 
-    public void execShutdown() {
-        if (canSendCloseConnection()
-                && transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly) {
+    private void execShutdown() {
+        if (canSendCloseConnection() && transport_.mode() != ReceiveOnly) {
             try {
                 synchronized (this) {
                     while (messageQueue_.hasUnsent()) {
@@ -292,8 +288,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         // Its possible the CloseConnection message got sent
                         // via another means.
                         //
-                        org.apache.yoko.orb.OCI.Buffer buf = messageQueue_
-                                .getFirstUnsentBuffer();
+                        Buffer buf = messageQueue_.getFirstUnsentBuffer();
                         if (buf != null) {
                             synchronized (sendMutex_) {
                                 transport_.send(buf, true);
@@ -303,7 +298,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         }
                     }
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 return;
             }
@@ -324,7 +319,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         try {
             receiverLock.writeLock().tryLock(shutdownTimeout_, SECONDS);
-        } catch (InterruptedException e) {
+        } catch (InterruptedException ignored) {
         }
 
         try {
@@ -334,10 +329,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // thread may not have terminated yet or the receive thread might
             // set the state to GIOPState::Error before termination.
             //
-            processException(State.Closed, new org.omg.CORBA.TRANSIENT(org.apache.yoko.orb.OB.MinorCodes
-                    .describeTransient(org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE), false);
+            processException(State.Closed, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         } finally {
             if (receiverLock.isWriteLockedByCurrentThread()) {
                 receiverLock.writeLock().unlock();
@@ -348,18 +340,18 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     //
     // called from a receiver thread to perform a reception
     //
-    public void execReceive() {
+    private void execReceive() {
         
         logger.fine("Receiving incoming message " + this); 
         GIOPIncomingMessage inMsg = new GIOPIncomingMessage(orbInstance_);
-        org.apache.yoko.orb.OCI.Buffer buf = null;
+        Buffer buf = null;
 
         while (true) {
             //
             // Setup the incoming message buffer
             //
-            Assert._OB_assert(buf == null);
-            buf = new org.apache.yoko.orb.OCI.Buffer(12);
+            _OB_assert(buf == null);
+            buf = new Buffer(12);
 
             //
             // Receive header, blocking, detect connection loss
@@ -367,8 +359,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 logger.fine("Reading message header"); 
                 transport_.receive(buf, true);
-                Assert._OB_assert(buf.is_full());
-            } catch (org.omg.CORBA.SystemException ex) {
+                _OB_assert(buf.is_full());
+            } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 break;
             }
@@ -380,7 +372,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 inMsg.extractHeader(buf);
                 logger.fine("Header received for message of size " + inMsg.size());
                 buf.realloc(12 + inMsg.size());
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
             }
@@ -392,8 +384,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 try {
                     logger.fine("Receiving message body of size " + inMsg.size()); 
                     transport_.receive(buf, true);
-                    Assert._OB_assert(buf.is_full());
-                } catch (org.omg.CORBA.SystemException ex) {
+                    _OB_assert(buf.is_full());
+                } catch (SystemException ex) {
                     processException(State.Closed, ex, false);
                     break;
                 }
@@ -420,8 +412,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // messages from the peer are processed.
             //
             synchronized (this) {
-                if ((enabledOps_ & AccessOp.Read) == 0) 
-                {
+                if ((enabledOps_ & AccessOp.Read) == 0) {
                     break;
                 }
             }
@@ -432,12 +423,12 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             Upcall upcall = null;
 
             try {
-                org.apache.yoko.orb.OCI.Buffer bufCopy = buf;
+                Buffer bufCopy = buf;
                 buf = null;
-                if (inMsg.consumeBuffer(bufCopy) == true) {
+                if (inMsg.consumeBuffer(bufCopy)) {
                     upcall = processMessage(inMsg);
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
             }
@@ -513,8 +504,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // client-side send method (from DowncallEmitter)
     //
     public boolean send(Downcall down, boolean block) {
-        Assert._OB_assert(transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly);
-        Assert._OB_assert(down.unsent() == true);
+        _OB_assert(transport_.mode() != ReceiveOnly);
+        _OB_assert(down.unsent());
         
         logger.fine("Sending a request with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " on transport " + transport_); 
 
@@ -531,7 +522,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         synchronized (this) {
             if ((enabledOps_ & AccessOp.Write) == 0) {
                 logger.fine("writing not enabled for this connection"); 
-                down.setFailureException(new org.omg.CORBA.TRANSIENT());
+                down.setFailureException(new TRANSIENT());
                 return true;
             }
 
@@ -573,7 +564,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 //
                 // Get a message to send from the unsent queue
                 //
-                org.apache.yoko.orb.OCI.Buffer buf;
+                Buffer buf;
                 Downcall nextDown;
 
                 synchronized (this) {
@@ -581,7 +572,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         break;
                     }
 
-                    Assert._OB_assert(messageQueue_.hasUnsent());
+                    _OB_assert(messageQueue_.hasUnsent());
 
                     buf = messageQueue_.getFirstUnsentBuffer();
                     nextDown = messageQueue_.moveFirstUnsentToPending();
@@ -597,7 +588,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                             // Send buffer, blocking
                             //
                             transport_.send(buf, true);
-                            Assert._OB_assert(buf.is_full());
+                            _OB_assert(buf.is_full());
                         } else {
                             //
                             // Send buffer, with timeout
@@ -612,7 +603,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                             }
                         }
                     }
-                } catch (org.omg.CORBA.SystemException ex) {
+                } catch (SystemException ex) {
                     processException(State.Closed, ex, false);
                     return true;
                 }
@@ -621,37 +612,34 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // a message should be sent by now so we have to
                 // mark it as sent for the GIOPClient
                 //
-                if (!msgSentMarked && (nextDown != null)
-                        && !nextDown.operation().equals("_locate")) {
+                if (!(msgSentMarked || nextDown == null || nextDown.operation().equals("_locate"))) {
                     msgSentMarked = true;
                     properties_ |= Property.RequestSent;
                     // debug
                     if (logger.isLoggable(Level.FINE)) {
                         int currentpos = buf.pos_;
                         buf.pos_ = 0;
-                        logger.fine("Sent message in blocking at msgcount="
-                                + msgcount + ", size=" + buf.len_
-                                + ", the message piece is: \n" + buf.dumpData());
+                        logger.fine(String.format(
+                                "Sent message in blocking at msgcount=%d, size=%d, the message piece is: %n%s",
+                                msgcount, buf.len_, buf.dumpData()));
                         buf.pos_ = currentpos;
                         msgcount++;
                     }
                 }
             }
-        } else // Non blocking
-        {
+        } else { // Non blocking
             synchronized (this) {
             	int msgcount = 0;
                 while (true) {
                     if (!down.unsent())
                         break;
 
-                    Assert._OB_assert(messageQueue_.hasUnsent());
+                    _OB_assert(messageQueue_.hasUnsent());
 
                     //
                     // get the first message to send
                     //
-                    org.apache.yoko.orb.OCI.Buffer buf = messageQueue_
-                            .getFirstUnsentBuffer();
+                    Buffer buf = messageQueue_.getFirstUnsentBuffer();
 
                     //
                     // send this buffer, non-blocking
@@ -660,7 +648,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         synchronized (sendMutex_) {
                             transport_.send(buf, false);
                         }
-                    } catch (org.omg.CORBA.SystemException ex) {
+                    } catch (SystemException ex) {
                         processException(State.Closed, ex, false);
                         return true;
                     }
@@ -681,20 +669,16 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     // update the message sent property
                     //
                     if (!msgSentMarked && dummy != null) {
-                        if (dummy.responseExpected()
-                                && dummy.operation().equals("_locate")) {
+                        if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
                             properties_ |= Property.RequestSent;
                             // debug
                             if (logger.isLoggable(Level.FINE)) {
                                 int currentpos = buf.pos_;
                                 buf.pos_ = 0;
-                                logger.fine("Sent message in non-blocking at msgcount="
-                                        + msgcount
-                                        + ", size="
-                                        + buf.len_
-                                        + ", the message piece is: \n"
-                                        + buf.dumpData());
+                                logger.fine(String.format(
+                                        "Sent message in non-blocking at msgcount=%d, size=%d, the message piece is: %n%s",
+                                        msgcount, buf.len_, buf.dumpData()));
                                 buf.pos_ = currentpos;
                                 msgcount++;
                             }
@@ -720,7 +704,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             boolean result = down.waitUntilCompleted(block);
             logger.fine("Completed receiving response with Downcall of type " + down.getClass().getName());
             return result; 
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             processException(State.Closed, ex, false);
             return true;
         }
@@ -733,10 +717,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         ACM_disableIdleMonitor();
 
         try {
-            if (send(down, true)) {
-                return true;
-            }
-            return receive(down, true);
+            return send(down, true) || receive(down, true);
         } finally {
             ACM_enableIdleMonitor();
         }
@@ -759,7 +740,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         // check if we need to add a receiver thread
         //
-        if (transport_.mode() != org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly) {
+        if (transport_.mode() != SendOnly) {
             try {
                 // If the write lock is obtainable there are no receivers outstanding.
                 // We can then add a receiver, which implicitly obtains a read lock.
@@ -775,10 +756,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 synchronized (this) {
                     transport_.close();
                     state_ = State.Closed;
-                    throw new org.omg.CORBA.IMP_LIMIT(org.apache.yoko.orb.OB.MinorCodes
-                            .describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO);
                 }
             }
         }
@@ -818,14 +796,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         // another check if we can write or not
         // 
-        if (transport_.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly)
+        if (transport_.mode() == ReceiveOnly)
             return;
 
         //
         // now send off any queued messages
         // 
         while (true) {
-            org.apache.yoko.orb.OCI.Buffer buf;
+            Buffer buf;
             Downcall dummy;
 
             try {
@@ -855,24 +833,20 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // send fails
                 //
                 if (!buf.is_full())
-                    throw new org.omg.CORBA.COMM_FAILURE(org.apache.yoko.orb.OB.MinorCodes
-                            .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSend),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorSend,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new COMM_FAILURE(describeCommFailure(MinorSend), MinorSend, COMPLETED_NO);
 
                 //
                 // mark the message sent flag
                 //
                 if (!msgSentMarked && (dummy != null)) {
-                    if (dummy.responseExpected()
-                            && dummy.operation().equals("_locate")) {
+                    if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                         synchronized (this) {
                             msgSentMarked = true;
                             properties_ |= Property.RequestSent;
                         }
                     }
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 return;
             }
