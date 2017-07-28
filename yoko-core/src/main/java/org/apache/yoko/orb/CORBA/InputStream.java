@@ -78,7 +78,6 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorReadStringOverflow;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadStringZeroLength;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWCharOverflow;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringNoTerminator;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringNullWChar;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringOverflow;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringZeroLength;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadTypecode;
@@ -921,12 +920,6 @@ final public class InputStream extends InputStreamWithOffsets {
 
                         c = converter.convert(c);
 
-                        //
-                        // String must not contain null characters
-                        //
-                        if (c == 0)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringNullWChar), MinorReadWStringNullWChar, COMPLETED_NO);
-
                         stringBuffer.append(c);
                     }
                 }
@@ -941,12 +934,6 @@ final public class InputStream extends InputStreamWithOffsets {
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         char c = (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
-
-                        //
-                        // String must not contain null characters
-                        //
-                        if (c == 0)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringNullWChar), MinorReadWStringNullWChar, COMPLETED_NO);
 
                         stringBuffer.append(c);
                     }
@@ -1047,12 +1034,6 @@ final public class InputStream extends InputStreamWithOffsets {
                             c = converter.convert(c);
 
                         //
-                        // check for invalid null character
-                        //
-                        if (c == 0)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringNullWChar), MinorReadWStringNullWChar, COMPLETED_NO);
-
-                        // 
                         // append to the string buffer
                         //
                         stringBuffer.append(c);
