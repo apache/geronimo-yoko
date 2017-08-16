@@ -11,7 +11,7 @@ def getGitHash(length) {
 allprojects  {
   apply plugin: 'maven-publish'
   group = 'org.apache.yoko'
-  version = '1.5-' + getGitHash(10)
+  version = '1.5.0.' + getGitHash(10)
 }
 
 subprojects {
