@@ -1,7 +1,17 @@
+
+def getGitHash(length) {
+    def stdout = new ByteArrayOutputStream()
+    exec {
+        commandLine 'git', 'rev-parse', "--short=$length", 'HEAD'
+        standardOutput = stdout
+    }
+    return stdout.toString().trim()
+}
+
 allprojects  {
   apply plugin: 'maven-publish'
   group = 'org.apache.yoko'
-  version = '1.5-SNAPSHOT'
+  version = '1.5-' + getGitHash(10)
 }
 
 subprojects {
