@@ -114,7 +114,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         TypeCode obTC = null;
         try {
             obTC = (TypeCode) tc;
-        } catch (ClassCastException ex) {
+        } catch (ClassCastException ignored) {
         }
 
         if (obTC != null) {
@@ -723,10 +723,6 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 for (char anArr : arr) {
                     char v = converter.convert(anArr);
 
-                    if (v == 0)
-                        throw new DATA_CONVERSION(
-                                "illegal wchar value for wstring: " + (int) v);
-
                     addCapacity(converter.write_count_wchar(v));
                     converter.write_wchar(this, v);
                 }
@@ -738,10 +734,6 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 addCapacity(2 * len);
 
                 for (char v : arr) {
-                    if (v == 0)
-                        throw new DATA_CONVERSION(
-                                "illegal wchar value for wstring: " + (int) v);
-
                     buf_.data_[buf_.pos_++] = (byte) (v >> 8);
                     buf_.data_[buf_.pos_++] = (byte) v;
                 }
@@ -820,13 +812,6 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 if (wCharConversionRequired_)
                     v = converter.convert(v);
-
-                //
-                // illegal for the string to contain nulls
-                //
-                if (v == 0)
-                    throw new DATA_CONVERSION(
-                            "illegal wchar value for wstring: " + (int) v);
 
                 //
                 // add capacity for the character
@@ -1000,7 +985,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(capacity);
 
             for (char c : arr) {
-                if (c == 0 || c > 255)
+                if (c > 255)
                     throw new DATA_CONVERSION(
                             "illegal char value for string: " + (int) c);
 
@@ -1023,7 +1008,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             OutputStream tmpStream = new OutputStream(buffer);
 
             for (char c : arr) {
-                if (c == 0 || c > 255)
+                if (c > 255)
                     throw new DATA_CONVERSION(
                             "illegal char value for string: " + (int) c);
 
@@ -1837,9 +1822,7 @@ final public class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             default:
                 _OB_assert("unsupported types");
             }
-        } catch (BadKind ex) {
-            _OB_assert(ex);
-        } catch (Bounds ex) {
+        } catch (BadKind | Bounds ex) {
             _OB_assert(ex);
         }
     }
