@@ -57,7 +57,9 @@ public class JavaProcess {
     }
 
     public void addSystemProperty(String key) {
-        systemProperties.put(key, System.getProperty(key));
+    	String val = System.getProperty(key);
+    	if(val != null)
+    		systemProperties.put(key, val);
     }
 
     /**

@@ -97,13 +97,6 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             java.util.Properties properties,
             org.apache.yoko.orb.OB.Logger logger, int nativeCs, int nativeWcs,
             int defaultWcs) {
-        String javaVersion = getSystemProperty("java.version");
-        float version = Float.parseFloat(javaVersion.substring(0, 3));
-        if (version < 1.3f) {
-            throw new org.omg.CORBA.INITIALIZE("Unsupported Java version: "
-                    + version);
-        }
-
         try (AutoLock writeLock = destroyLock_.getWriteLock()) {
             destroy_ = false;
 
@@ -1600,13 +1593,6 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
     public static org.omg.CORBA.ORB init(java.applet.Applet app,
             java.util.Properties props, org.apache.yoko.orb.OB.Logger logger) {
-        String javaVersion = getSystemProperty("java.vm.version");
-        float version = Float.parseFloat(javaVersion);
-        if (version < 1.5) {
-            throw new org.omg.CORBA.INITIALIZE("Unsupported Java version: "
-                    + version);
-        }
-
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
         ORB_impl orb;
