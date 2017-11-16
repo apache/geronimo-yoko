@@ -17,14 +17,14 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.concurrent.WeakCountedCache;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
-
-import org.apache.yoko.orb.OCI.ConnectorInfo;
-import org.apache.yoko.util.Cache;
-import org.apache.yoko.util.concurrent.ReferenceCountedCache;
-import org.apache.yoko.util.concurrent.WeakCountedCache;
+import java.util.concurrent.ThreadFactory;
 
 public final class ORBInstance {
     private boolean destroy_; // True if destroy() was called
@@ -185,8 +185,26 @@ public final class ORBInstance {
         // Create the server and client executors
         // TODO why are these separate?
         //
-        clientExecutor_ = Executors.newCachedThreadPool();
-        serverExecutor_ = Executors.newCachedThreadPool();
+        clientExecutor_ = Executors.newCachedThreadPool(
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread result = new Thread(r);
+                        result.setDaemon(true);
+                        return result;
+                    }
+                }
+        );
+        serverExecutor_ = Executors.newCachedThreadPool(
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread result = new Thread(r);
+                        result.setDaemon(true);
+                        return result;
+                    }
+                }
+        );
 
         //
         // Use the TypeCode cache?
