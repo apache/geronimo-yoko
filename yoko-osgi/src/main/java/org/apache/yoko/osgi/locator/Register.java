@@ -20,13 +20,13 @@
 package org.apache.yoko.osgi.locator;
 
 public interface Register {
-    void registerProvider(BundleProviderLoader provider);
+    void registerProvider(ServiceProvider provider);
 
-    void unregisterProvider(BundleProviderLoader provider);
+    void unregisterProvider(ServiceProvider provider);
 
-    void registerService(BundleProviderLoader provider);
+    void registerService(ServiceProvider provider);
 
-    void unregisterService(BundleProviderLoader provider);
+    void unregisterService(ServiceProvider provider);
 
     void registerPackages(PackageProvider packageProvider);
 

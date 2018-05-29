@@ -1,11 +1,24 @@
 package org.apache.yoko;
 
+import org.apache.yoko.osgi.locator.LocalFactory;
 import org.apache.yoko.osgi.locator.activator.AbstractBundleActivator;
 
-public class Activator extends AbstractBundleActivator {
+public final class Activator extends AbstractBundleActivator {
+    private enum MyLocalFactory implements LocalFactory {
+        INSTANCE;
+        @Override
+        public Class<?> forName(String clsName) throws ClassNotFoundException {
+            return Class.forName(clsName);
+        }
+
+        @Override
+        public Object newInstance(Class cls) throws InstantiationException, IllegalAccessException {
+            return cls.newInstance();
+        }
+    }
 
     public Activator() {
-        super(
+        super(MyLocalFactory.INSTANCE,
                 "org.omg.BiDirPolicy",
                 "org.omg.CONV_FRAME",
                 "org.omg.CORBA",
@@ -57,5 +70,4 @@ public class Activator extends AbstractBundleActivator {
                 "org.omg.SendingContext.CodeBasePackage",
                 "org.omg.TimeBase");
     }
-
 }
