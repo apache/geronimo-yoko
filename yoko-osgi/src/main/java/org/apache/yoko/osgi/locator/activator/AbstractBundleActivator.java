@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public abstract class AbstractBundleActivator implements BundleActivator {
-    public static class Info {
+    public static final class Info {
         final String id;
         final String className;
         final int priority;
@@ -25,6 +25,35 @@ public abstract class AbstractBundleActivator implements BundleActivator {
             this.className = className;
             this.priority = priority;
         }
+
+        public Info(String id, String className) {
+            this(id, className, ServiceProvider.DEFAULT_PRIORITY);
+        }
+
+        public Info(String id, Class<?> implClass, int priority) {
+            this(id, implClass.getName(), priority);
+        }
+
+        public Info(String id, Class<?> implClass) {
+            this(id, implClass.getName());
+        }
+
+        public <T, U extends T> Info(Class<T> idClass, Class<U> implClass, int priority) {
+            this(idClass.getName(), implClass.getName(), priority);
+        }
+
+        public <T, U extends T> Info(Class<T> idClass, Class<U> implClass) {
+            this(idClass.getName(), implClass.getName());
+        }
+
+        public <T> Info(Class<T> svcClass, int priority) {
+            this(svcClass, svcClass, priority);
+        }
+
+        public <T> Info(Class<T> svcClass) {
+            this(svcClass, svcClass);
+        }
+
     }
     private static final Info[] NO_INFO = {};
 

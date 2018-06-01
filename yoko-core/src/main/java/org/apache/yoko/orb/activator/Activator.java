@@ -20,12 +20,12 @@ public final class Activator extends AbstractBundleActivator {
     public Activator() {
         super(MyLocalFactory.INSTANCE,
                 new Info[] {
-                    new Info("org.apache.yoko.orb.CORBA.ORB", "org.apache.yoko.orb.CORBA.ORB", 1),
-                    new Info("org.apache.yoko.orb.CORBA.ORBSingleton", "org.apache.yoko.orb.CORBA.ORBSingleton", 1)
+                    new Info(org.apache.yoko.orb.CORBA.ORB.class),
+                    new Info(org.apache.yoko.orb.CORBA.ORBSingleton.class)
                 },
                 new Info[] {
-                    new Info("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB", 1),
-                    new Info("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton", 1)
+                    new Info("org.omg.CORBA.ORBClass", org.apache.yoko.orb.CORBA.ORB.class),
+                    new Info("org.omg.CORBA.ORBSingletonClass", org.apache.yoko.orb.CORBA.ORBSingleton.class)
                 }
         );
     }

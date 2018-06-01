@@ -3,6 +3,7 @@ package org.apache.yoko.osgi.locator;
 import java.util.Objects;
 
 public final class ServiceProvider implements Comparable<ServiceProvider> {
+    public final static int DEFAULT_PRIORITY = 1;
     private final LocalFactory localFactory;
     private final String id;
     private final String className;
@@ -13,6 +14,34 @@ public final class ServiceProvider implements Comparable<ServiceProvider> {
         this.id = id;
         this.className = className;
         this.priority = priority;
+    }
+
+    public ServiceProvider(LocalFactory localFactory, String id, String className) {
+        this(localFactory, id, className, ServiceProvider.DEFAULT_PRIORITY);
+    }
+
+    public ServiceProvider(LocalFactory localFactory, String id, Class<?> implClass, int priority) {
+        this(localFactory, id, implClass.getName(), priority);
+    }
+
+    public ServiceProvider(LocalFactory localFactory, String id, Class<?> implClass) {
+        this(localFactory, id, implClass.getName());
+    }
+
+    public <T, U extends T> ServiceProvider(LocalFactory localFactory, Class<T> idClass, Class<U> implClass, int priority) {
+        this(localFactory, idClass.getName(), implClass.getName(), priority);
+    }
+
+    public <T, U extends T> ServiceProvider(LocalFactory localFactory, Class<T> idClass, Class<U> implClass) {
+        this(localFactory, idClass.getName(), implClass.getName());
+    }
+
+    public <T> ServiceProvider(LocalFactory localFactory, Class<T> svcClass, int priority) {
+        this(localFactory, svcClass, svcClass, priority);
+    }
+
+    public <T> ServiceProvider(LocalFactory localFactory, Class<T> svcClass) {
+        this(localFactory, svcClass, svcClass);
     }
 
     public final String getId() {

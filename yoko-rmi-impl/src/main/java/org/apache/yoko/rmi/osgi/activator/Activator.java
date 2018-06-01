@@ -27,15 +27,15 @@ public final class Activator extends AbstractBundleActivator {
     public Activator() {
         super(MyLocalFactory.INSTANCE,
                 new Info[] {
-                        new Info("org.omg.stub.java.rmi._Remote_Stub", "org.omg.stub.java.rmi._Remote_Stub", 1),
-                        new Info("javax.rmi.CORBA.Stub", "javax.rmi.CORBA.Stub", 1)
+                        new Info(org.omg.stub.java.rmi._Remote_Stub.class),
+                        new Info(javax.rmi.CORBA.Stub.class)
                 },
                 new Info[] {
-                        new Info("javax.rmi.CORBA.PortableRemoteObjectClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectImpl", 1),
-                        new Info("javax.rmi.CORBA.UtilClass", "org.apache.yoko.rmi.impl.UtilImpl", 1),
-                        new Info("org.apache.yoko.rmi.PortableRemoteObjectExtClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl", 1),
-                        new Info("org.apache.yoko.rmi.RMIStubInitializerClass", "org.apache.yoko.rmi.impl.RMIStubInitializer", 1),
-                        new Info("javax.rmi.CORBA.StubClass", "org.apache.yoko.rmi.impl.StubImpl", 1)
+                        new Info("javax.rmi.CORBA.PortableRemoteObjectClass",           org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.class),
+                        new Info("javax.rmi.CORBA.UtilClass",                           org.apache.yoko.rmi.impl.UtilImpl.class),
+                        new Info("javax.rmi.CORBA.StubClass",                           org.apache.yoko.rmi.impl.StubImpl.class),
+                        new Info("org.apache.yoko.rmi.PortableRemoteObjectExtClass",    org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl.class),
+                        new Info("org.apache.yoko.rmi.RMIStubInitializerClass",         org.apache.yoko.rmi.impl.RMIStubInitializer.class)
                 });
     }
 
