@@ -1,14 +1,17 @@
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.MARSHAL;
+
 import java.io.IOException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.omg.CORBA.INTERNAL;
-import org.omg.CORBA.MARSHAL;
 
 public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
     private enum State {
@@ -44,6 +47,23 @@ public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
     private final ObjectReader objectReader;
     private State state = State.UNINITIALISED;
 
+    public static ObjectReader wrap(final ObjectReader delegate) throws IOException {
+        try {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<ObjectReader>() {
+                public ObjectReader run() throws IOException {
+                    return new CustomMarshaledObjectReader(delegate);
+                }
+            });
+        } catch (PrivilegedActionException pae) {
+            throw (IOException) pae.getCause();
+        }
+    }
+
+    private CustomMarshaledObjectReader(ObjectReader delegate) throws IOException {
+        this.objectReader = delegate;
+        setState(State.BEFORE_CUSTOM_DATA);
+    }
+
     private State setState(final State newState) throws IOException {
         state.checkStateTransition(newState);
         try {
@@ -54,7 +74,7 @@ public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
                 case UNINITIALISED:
                     throw new IllegalStateException();
                 case BEFORE_CUSTOM_DATA:
-                    delegateTo(new DefaultWriteObjectReader(objectReader));
+                    delegateTo(getDefaultWriteObjectReader(objectReader));
                     break;
                 case IN_CUSTOM_DATA:
                     delegateTo(objectReader);
@@ -66,14 +86,21 @@ public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
         }
     }
 
+    private ObjectReader getDefaultWriteObjectReader(final ObjectReader delegate) throws IOException {
+        try {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<ObjectReader>() {
+                public ObjectReader run() throws IOException {
+                    return new DefaultWriteObjectReader(delegate);
+                }
+            });
+        } catch (PrivilegedActionException pae) {
+            throw (IOException) pae.getCause();
+        }
+    }
+
     private void readCustomRMIValue() throws IOException {
         setState(State.IN_CUSTOM_DATA);
         objectReader._startValue();
-    }
-
-    public CustomMarshaledObjectReader(ObjectReader delegate) throws IOException {
-        this.objectReader = delegate;
-        setState(State.BEFORE_CUSTOM_DATA);
     }
 
     public void close() throws IOException {
@@ -106,7 +133,7 @@ public final class CustomMarshaledObjectReader extends DelegatingObjectReader {
 
         private boolean allowDefaultRead = true;
 
-        public DefaultWriteObjectReader(ObjectReader delegate) throws IOException {
+        private DefaultWriteObjectReader(ObjectReader delegate) throws IOException {
             super(delegate);
         }
 

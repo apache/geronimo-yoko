@@ -721,7 +721,7 @@ class ValueDescriptor extends TypeDescriptor {
 
             if (cmsfVersion == 2) {
                 // use a wrapped reader to open the secondary custom valuetype
-                ObjectReader wrapper = new CustomMarshaledObjectReader(reader);
+                ObjectReader wrapper = CustomMarshaledObjectReader.wrap(reader);
                 readSerializable(_read_object_method == null ? reader : wrapper, value);
                 // invoke close to skip to the end of the secondary custom valuetype
                 wrapper.close();
