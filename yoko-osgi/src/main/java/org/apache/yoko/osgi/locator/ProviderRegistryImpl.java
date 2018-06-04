@@ -278,4 +278,28 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
             return Collections.unmodifiableCollection(q);
         }
     }
+
+    @Override
+    @Deprecated
+    public void registerProvider(final BundleProviderLoader bundleProviderLoader) {
+        registerProvider(bundleProviderLoader.wrapAsServiceProvider());
+    }
+
+    @Override
+    @Deprecated
+    public void unregisterProvider(BundleProviderLoader bundleProviderLoader) {
+        unregisterProvider(bundleProviderLoader.wrapAsServiceProvider());
+    }
+
+    @Override
+    @Deprecated
+    public void registerService(final BundleProviderLoader bundleProviderLoader) {
+        registerService(bundleProviderLoader.wrapAsServiceProvider());
+    }
+
+    @Override
+    @Deprecated
+    public void unregisterService(BundleProviderLoader bundleProviderLoader) {
+        unregisterService(bundleProviderLoader.wrapAsServiceProvider());
+    }
 }

@@ -24,9 +24,21 @@ public interface Register {
 
     void unregisterProvider(ServiceProvider provider);
 
+    @Deprecated
+    void registerProvider(BundleProviderLoader bundleProviderLoader);
+
+    @Deprecated
+    void unregisterProvider(BundleProviderLoader bundleProviderLoader);
+
     void registerService(ServiceProvider provider);
 
     void unregisterService(ServiceProvider provider);
+
+    @Deprecated
+    void registerService(BundleProviderLoader bundleProviderLoader);
+
+    @Deprecated
+    void unregisterService(BundleProviderLoader bundleProviderLoader);
 
     void registerPackages(PackageProvider packageProvider);
 
