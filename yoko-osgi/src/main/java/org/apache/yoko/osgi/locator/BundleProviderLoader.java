@@ -25,6 +25,7 @@ import org.osgi.framework.Bundle;
 /**
  * Holder class for located services information.
  */
+@Deprecated
 public class BundleProviderLoader implements Comparable<BundleProviderLoader> {
     // the class name for this provider
     private final String providerId;
@@ -115,5 +116,23 @@ public class BundleProviderLoader implements Comparable<BundleProviderLoader> {
 
     public int compareTo(BundleProviderLoader other) {
         return other.priority - priority;
+    }
+
+    ServiceProvider wrapAsServiceProvider() {
+        return new ServiceProvider(
+                new LocalFactory() {
+                    @Override
+                    public Class<?> forName(String clsName) throws ClassNotFoundException {
+                        return BundleProviderLoader.this.loadClass();
+                    }
+
+                    @Override
+                    public Object newInstance(Class cls) throws InstantiationException, IllegalAccessException {
+                        return cls.newInstance();
+                    }
+                },
+                providerId,
+                providerClass,
+                priority);
     }
 }

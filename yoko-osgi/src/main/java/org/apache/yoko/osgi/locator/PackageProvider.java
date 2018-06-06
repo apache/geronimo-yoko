@@ -18,8 +18,6 @@
  */
 package org.apache.yoko.osgi.locator;
 
-import org.osgi.framework.Bundle;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
@@ -29,11 +27,11 @@ import java.util.logging.Logger;
 
 public class PackageProvider {
     private static final Logger log = Logger.getLogger(PackageProvider.class.getName());
-    final Bundle bundle;
-    final Set<String> packages;
+    private final LocalFactory localFactory;
+    private final Set<String> packages;
 
-    public PackageProvider(Bundle bundle, String... pkgs) {
-        this.bundle = bundle;
+    public PackageProvider(LocalFactory localFactory, String... pkgs) {
+        this.localFactory = localFactory;
         this.packages = Collections.unmodifiableSet(new TreeSet<>(Arrays.asList(pkgs)));
     }
 
@@ -43,7 +41,7 @@ public class PackageProvider {
             return null;
         }
         try {
-            return bundle.loadClass(className);
+            return localFactory.forName(className);
         } catch (ClassNotFoundException e) {
             if (log.isLoggable(Level.FINE)) log.fine("CAN NOT LOAD class " + className + " from registered package");
         }
@@ -64,6 +62,6 @@ public class PackageProvider {
 
     @Override
     public String toString() {
-        return "PackageProvider for bundle " + bundle.getSymbolicName() + ": " + packages;
+        return "PackageProvider for " + packages;
     }
 }

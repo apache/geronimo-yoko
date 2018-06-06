@@ -20,13 +20,25 @@
 package org.apache.yoko.osgi.locator;
 
 public interface Register {
-    void registerProvider(BundleProviderLoader provider);
+    void registerProvider(ServiceProvider provider);
 
-    void unregisterProvider(BundleProviderLoader provider);
+    void unregisterProvider(ServiceProvider provider);
 
-    void registerService(BundleProviderLoader provider);
+    @Deprecated
+    void registerProvider(BundleProviderLoader bundleProviderLoader);
 
-    void unregisterService(BundleProviderLoader provider);
+    @Deprecated
+    void unregisterProvider(BundleProviderLoader bundleProviderLoader);
+
+    void registerService(ServiceProvider provider);
+
+    void unregisterService(ServiceProvider provider);
+
+    @Deprecated
+    void registerService(BundleProviderLoader bundleProviderLoader);
+
+    @Deprecated
+    void unregisterService(BundleProviderLoader bundleProviderLoader);
 
     void registerPackages(PackageProvider packageProvider);
 
