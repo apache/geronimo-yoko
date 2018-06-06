@@ -1,0 +1,27 @@
+configurations {
+  // declare a configuration to use for bundling
+  bundled.transitive = true
+}
+
+dependencies {
+  provided "org.eclipse.platform:org.eclipse.osgi:3.12.100"
+
+  // test dependencies
+  testCompile 'junit:junit:4.12'
+
+  // the bundles we will need should all be transitive dependencies of yoko-core
+  bundled project(':yoko-core')
+  bundled project(':test-bundle')
+}
+
+// Add a task to copy the needed bundles into a folder
+task gatherBundles(type: Sync) {
+  from configurations.bundled
+  into temporaryDir
+}
+
+test {
+  exclude '**/Abstract*'
+}
+
+test.dependsOn gatherBundles
