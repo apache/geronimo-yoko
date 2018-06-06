@@ -114,8 +114,16 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
     public Class<?> locate(String providerId) {
         // see if we have a registered match for this...getting just the first instance
         ServiceProvider loader = providers.getProvider(providerId);
-        if (loader == null)
-            return null;
+        if (loader != null) {
+            try {
+                return loader.getServiceClass();
+            } catch (ClassNotFoundException cnfe) {
+                // ServiceProvider, you had one job...*facepalm*
+                // There should never be a case where the provider cannot load the class it is meant to provide
+                // so treat this as a serious error.
+                throw (Error)new NoClassDefFoundError().initCause(cnfe);
+            }
+        }
         String packageName = PackageProvider.packageName(providerId);
         PackageProvider provider = packageProviders.get(packageName);
         if (provider == null)
