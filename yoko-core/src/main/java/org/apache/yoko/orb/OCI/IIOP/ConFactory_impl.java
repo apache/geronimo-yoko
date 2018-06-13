@@ -144,10 +144,12 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             }
         }
 
+        List<Connector> iiopProfileConnectors = new ArrayList<>();    // the main host and port from each profile
+        List<Connector> alternateIIOPConnectors = new ArrayList<>();  // hardly ever see these
+        List<Connector> otherComponentConnectors = new ArrayList<>(); // used for CSIv2
         //
         // Create Connectors from profiles
         //
-        final List<Connector> connectors = new ArrayList<>();
         for (TaggedProfile profile: ior.profiles) {
             if (profile.tag != tag()) continue;
 
@@ -186,7 +188,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
                 final int port = ((char)body.port);
                 logger.fine("Creating connector to host=" + body.host + ", port=" + port);
                 ConnectCB[] cbs = info_._OB_getConnectCBSeq();
-                connectors.add(createConnector(ior, policies, body.host, port, cbs, codec));
+                iiopProfileConnectors.add(createConnector(ior, policies, body.host, port, cbs, codec));
             }
             //
             // If this is a 1.1 profile, check for
@@ -219,12 +221,12 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
 
                     if (logger.isLoggable(Level.FINE)) logger.fine("Creating alternate connector to host=" + host + ", port=" + cport);
                     Connector newConnector = createConnector(ior, policies, host, cport, ccbs, codec);
-                    connectors.add(newConnector);
+                    alternateIIOPConnectors.add(newConnector);
                 } else if (helperComponentTags.contains(tc.tag)) {
                     for (TransportAddress endpoint : extendedConnectionHelper_.getEndpoints(tc, policies)) {
                         if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + endpoint.host_name + ", port=" + endpoint.port);
                         Connector newConnector = createConnector(ior, policies, endpoint.host_name, endpoint.port, ccbs, codec);
-                        connectors.add(newConnector);
+                        otherComponentConnectors.add(newConnector);
                         recordPortZero = false;
                     }
                 }
@@ -236,10 +238,14 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             if (recordPortZero) {
                 logger.fine("Creating connector with port=0 to host=" + body.host);
                 ConnectCB[] cbs = info_._OB_getConnectCBSeq();
-                connectors.add(createConnector(ior, policies, body.host, 0, cbs, codec));
+                iiopProfileConnectors.add(createConnector(ior, policies, body.host, 0, cbs, codec));
 
             }
         }
+        final List<Connector> connectors = new ArrayList<>();
+        connectors.addAll(otherComponentConnectors); // favour endpoints from other components (e.g. CSIv2)
+        connectors.addAll(iiopProfileConnectors);    // over the standard iiop profile endpoint
+        connectors.addAll(alternateIIOPConnectors);  // and the alternate iiop endpoints
         return connectors.toArray(EMPTY_CONNECTORS);
     }
 
