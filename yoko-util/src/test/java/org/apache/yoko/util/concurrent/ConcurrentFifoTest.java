@@ -1,7 +1,8 @@
 package org.apache.yoko.util.concurrent;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import org.apache.yoko.util.Sequential;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -19,18 +20,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.apache.yoko.util.Sequential;
-import org.junit.Before;
-import org.junit.Test;
+import static java.util.Collections.sort;
+import static java.util.Collections.unmodifiableList;
+import static org.junit.Assert.*;
 
 @SuppressWarnings("unused")
 public class ConcurrentFifoTest {
-    private static final List<String> ELEMS = new ArrayList<>();
+    private static final List<String> ELEMS;
 
     static {
-        for (char c1 = 'A'; c1 <= 'Z'; c1++)
-            for (char c2 = 'a'; c2 <= 'z'; c2++)
-                ELEMS.add("" + c1 + c2);
+        List<String> elems = new ArrayList<>();
+        for (char c1 : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray())
+            for (char c2 : "abcdefghijklmnopqrstuvwxyz".toCharArray())
+                elems.add("" + c1 + c2);
+        sort(elems);
+        ELEMS = unmodifiableList(elems);
     }
 
     ConcurrentFifo<String> fifo;
@@ -112,7 +116,7 @@ public class ConcurrentFifoTest {
 
         // check everything was removed exactly once
         List<String> checkedRemovals = concatenate(removalLists);
-        Collections.sort(checkedRemovals);
+        sort(checkedRemovals);
         assertEquals(ELEMS, checkedRemovals);
     }
 
@@ -137,9 +141,16 @@ public class ConcurrentFifoTest {
         // check for the right number of entries
         assertEquals(Collections.emptyList(), remainingElements);
 
+        // check no threads retrieved elements out of order
+        for (List<String> actual : removalLists) {
+            List<String> expected = new ArrayList<>(actual);
+            sort(expected);
+            assertEquals("Thread should retrieve results in order of enqueueing", expected, actual);
+        }
+
         // check everything was removed exactly once
         List<String> checkedRemovals = concatenate(removalLists);
-        Collections.sort(checkedRemovals);
+        sort(checkedRemovals);
         assertEquals(ELEMS, checkedRemovals);
 
         // check no-one removed anything out of order
@@ -178,10 +189,10 @@ public class ConcurrentFifoTest {
         for (List<String> results : runConcurrently(tasks))
             (iterator.next() instanceof Adder ? added : removed).addAll(results);
         added.addAll(ELEMS); // these were added up front
-        Collections.sort(added);
+        sort(added);
         List<String> remainder = drainFifo();
         removed.addAll(remainder);
-        Collections.sort(removed);
+        sort(removed);
 
         assertEquals(added, removed);
 
