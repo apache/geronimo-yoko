@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.OB.HexConverter;
+import org.apache.yoko.util.HexConverter;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;

@@ -1,4 +1,4 @@
-package org.apache.yoko.orb.util;
+package org.apache.yoko.util.concurrent;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;

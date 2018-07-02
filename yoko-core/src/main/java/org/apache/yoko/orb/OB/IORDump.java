@@ -17,8 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import org.apache.yoko.util.HexConverter;
+
 import java.io.PrintWriter;
 import java.util.Properties;
 

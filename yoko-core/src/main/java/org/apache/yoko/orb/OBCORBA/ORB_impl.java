@@ -23,13 +23,14 @@ import java.util.Properties;
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
-import org.apache.yoko.orb.util.AutoLock;
-import org.apache.yoko.orb.util.AutoReadWriteLock;
-import org.apache.yoko.orb.util.GetSystemPropertyAction;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.apache.yoko.util.concurrent.AutoReadWriteLock;
+import org.apache.yoko.util.GetSystemPropertyAction;
 import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.HexConverter;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 
 // This class must be public and not final
@@ -1169,7 +1170,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             out._OB_writeEndian();
             org.omg.IOP.IORHelper.write(out, ior);
 
-            String str = org.apache.yoko.orb.OB.HexConverter.octetsToAscii(buf
+            String str = HexConverter.octetsToAscii(buf
                     .data(), buf.length());
             return "IOR:" + str;
         }

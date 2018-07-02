@@ -1,4 +1,4 @@
-package org.apache.yoko.orb.util;
+package org.apache.yoko.util;
 
 import java.util.Collection;
 import java.util.Collections;

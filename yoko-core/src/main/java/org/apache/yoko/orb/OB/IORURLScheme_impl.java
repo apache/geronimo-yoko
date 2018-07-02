@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.URLScheme;
+import org.apache.yoko.util.HexConverter;
 
 public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
         URLScheme {
