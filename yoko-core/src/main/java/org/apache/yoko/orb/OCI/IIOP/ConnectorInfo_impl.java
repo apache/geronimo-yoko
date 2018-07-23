@@ -81,7 +81,7 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
         if (addr == null) synchronized (this) {
             if (addr == null) try {
                 String h = Util.decodeHost(this.host);
-                addr = InetAddress.getByName(h);
+                addr = Util.getInetAddress(h);
             } catch (UnknownHostException ex) {
                 throw asCommFailure(ex);
             }

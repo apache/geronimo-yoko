@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
@@ -39,6 +40,10 @@ import org.omg.IOP.CodecPackage.FormatMismatch;
 import org.omg.IOP.CodecPackage.TypeMismatch;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -131,43 +136,7 @@ final public class Util {
     }
 
     static public boolean hostMatch(String host1, String host2, boolean matchLoopback) {
-        //
-        // Direct host name comparison
-        //
-        if (!host1.equals(host2)) {
-            //
-            //
-            // Direct host name comparision failed - must look up
-            // addresses to be really sure if the hosts differ
-            //
-            try {
-                InetAddress addr1 = InetAddress.getByName(host1);
-
-                InetAddress addr2 = InetAddress.getByName(host2);
-
-                if (!addr1.equals(addr2)) {
-                    //
-                    // Address comparison failed - shall I extract
-                    // the key if the profile body contains the
-                    // loopback address?
-                    //
-                    if (matchLoopback) {
-                        InetAddress loopback = InetAddress.getByName("127.0.0.1");
-
-                        if (!addr2.equals(loopback))
-                            return false;
-                    } else
-                        return false;
-                }
-            } catch (java.net.UnknownHostException ex) {
-                //
-                // Continue on hostname lookup failure
-                //
-                return false;
-            }
-        }
-
-        return true;
+        return Net.CompareHosts(host1, host2, matchLoopback);
     }
 
     static public void extractAllProfileInfos(IOR ior, ProfileInfoSeqHolder profileInfoSeq,
@@ -399,34 +368,9 @@ final public class Util {
                 return false;
 
         //
-        // Direct host name comparison
+        // Direct host comparison
         //
-        if (!body1.host.equals(body2.host)) {
-            //
-            // Direct host name comparision failed - must look up
-            // addresses to be really sure if the hosts differ
-            //
-            try {
-                InetAddress addr1 = InetAddress
-                        .getByName(body1.host);
-
-                InetAddress addr2 = InetAddress
-                        .getByName(body2.host);
-
-                if (!addr1.equals(addr2))
-                    return false;
-            } catch (java.net.UnknownHostException ex) {
-                //
-                // Return false on hostname lookup failure
-                //
-                return false;
-            }
-        }
-
-        //
-        // OK, found a match
-        //
-        return true;
+        return Net.CompareHosts(body1.host, body2.host);
     }
 
     //
@@ -485,5 +429,24 @@ final public class Util {
         int end = host.lastIndexOf("].");
         if (start < 0 || end < 0 || end <= start) return null;
         return host.substring(start + 1, end);
+    }
+
+    static InetAddress getInetAddress(final String host) throws UnknownHostException {
+        try {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<InetAddress>() {
+                @Override
+                public InetAddress run() throws Exception {
+                    return InetAddress.getByName(host);
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            try {
+                throw e.getException();
+            } catch (RuntimeException | UnknownHostException e2) {
+                throw e2;
+            } catch (Exception e2) {
+                throw new RuntimeException("Unexpected excecption", e2);
+            }
+        }
     }
 }

@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.util.HexConverter;
 import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;
 import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
@@ -114,8 +115,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
         try {
             logger.fine("Connecting to host=" + info_.getHost() + ", port=" + info_.getPort());
             if (connectionHelper_ != null) {
-                InetAddress address;
-                address = InetAddress.getByName(info_.getHost());
+                InetAddress address = Util.getInetAddress(info_.getHost());
                 socket_ = connectionHelper_.createSocket(ior_, policies_, address, info_.getPort());
             } else {
                 socket_ = extendedConnectionHelper_.createSocket(info_.getHost(), info_.getPort());
@@ -268,7 +268,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
         //
         InetAddress address = null;
         try {
-            address = InetAddress.getByName(this.info_.getHost());
+            address = Util.getInetAddress(this.info_.getHost());
         } catch (UnknownHostException ex) {
             logger.log(FINE, "Host resolution error", ex);
             throw asCommFailure(ex);
@@ -392,41 +392,13 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
     }
 
     public boolean equal(org.apache.yoko.orb.OCI.Connector con) {
-        Connector_impl impl = null;
-        try {
-            impl = (Connector_impl) con;
-        } catch (ClassCastException ex) {
-            return false;
-        }
+        return (con instanceof Connector_impl) && equal0((Connector_impl)con);
+    }
 
-        //
-        // Compare ports
-        //
-        if (this.info_.getPort() != impl.info_.getPort())
-            return false;
-
-        //
-        // Direct host name comparison
-        //
-        if (!this.info_.getHost().equals(impl.info_.getHost())) {
-            //
-            // Direct host name comparision failed - must look up
-            // addresses to be really sure if the hosts differ
-            //
-            try {
-                InetAddress addr1 = InetAddress.getByName(this.info_.getHost());
-                InetAddress addr2 = InetAddress.getByName(impl.info_.getHost());
-                if (!addr1.equals(addr2))
-                    return false;
-            } catch (UnknownHostException ex) {
-                //
-                // Return false on hostname lookup failure
-                //
-                return false;
-            }
-        }
-
-        return Arrays.equals(transportInfo, impl.transportInfo);
+    private boolean equal0(Connector_impl that) {
+        if (this.info_.getPort() != that.info_.getPort()) return false;
+        return (Net.CompareHosts(this.info_.getHost(), that.info_.getHost()) ?
+                Arrays.equals(transportInfo, that.transportInfo) : false);
     }
 
     private byte[] extractTransportInfo(IOR ior) {

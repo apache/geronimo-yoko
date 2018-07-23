@@ -17,20 +17,21 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OCI.Transport;
+import org.omg.IOP.Codec;
+import org.omg.IOP.TAG_INTERNET_IOP;
 
-import java.io.InterruptedIOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OB.MinorCodes;
-import org.apache.yoko.orb.OCI.Transport;
-import org.omg.CORBA.COMM_FAILURE;
-import org.omg.IOP.Codec;
-import org.omg.IOP.TAG_INTERNET_IOP;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorAccept;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asTransient;
 
 final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Acceptor {
@@ -429,7 +430,7 @@ final class Acceptor_impl extends org.omg.CORBA.LocalObject implements
                 // address.
                 localAddress_ = java.net.InetAddress.getLocalHost();                
             } else {
-                localAddress_ = java.net.InetAddress.getByName(address);
+                localAddress_ = Util.getInetAddress(address);
             }
         } catch (java.net.UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution failure", ex); 

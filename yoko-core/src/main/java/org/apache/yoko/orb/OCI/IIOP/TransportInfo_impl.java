@@ -17,18 +17,17 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.net.Socket;
-import java.util.Objects;
-
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Net;
-import org.apache.yoko.orb.OCI.*;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.CLIENT_SIDE;
+import org.apache.yoko.orb.OCI.SERVER_SIDE;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.BiDirPolicy.BidirectionalPolicy;
 import org.omg.BiDirPolicy.BidirectionalPolicyHelper;
 import org.omg.CORBA.LocalObject;
-import org.omg.CORBA.NO_RESOURCES;
 import org.omg.CORBA.Policy;
 import org.omg.IIOP.BiDirIIOPServiceContext;
 import org.omg.IIOP.BiDirIIOPServiceContextHelper;
@@ -36,6 +35,8 @@ import org.omg.IIOP.ListenPoint;
 import org.omg.IOP.BI_DIR_IIOP;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TAG_INTERNET_IOP;
+
+import java.net.Socket;
 
 public final class TransportInfo_impl extends LocalObject implements TransportInfo {
     private enum Origin{CLIENT(CLIENT_SIDE.value), SERVER(SERVER_SIDE.value); final short value; Origin(int v) {value = (short)v;}}
@@ -191,10 +192,8 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         String host = infoImpl.remote_addr();
 
         for (ListenPoint aListenPoints_ : listenPoints_) {
-            if ((aListenPoints_.port == port)
-                    && Net.CompareHosts(
-                    aListenPoints_.host, host))
-                return true;
+            if (aListenPoints_.port != port) continue;
+            if (Net.CompareHosts(aListenPoints_.host, host)) return true;
         }
 
         return false;
