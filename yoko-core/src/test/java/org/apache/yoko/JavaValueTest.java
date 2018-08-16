@@ -8,7 +8,6 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.omg.CosNaming.NameComponent;
-import test.util.HexParser;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +18,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.CoreMatchers.theInstance;
 import static org.junit.Assert.*;
+import static test.util.HexParser.HEX_DUMP;
 
 /**
  * Test writing Java values directly to and reading them back from CDR streams.
@@ -155,8 +155,6 @@ public class JavaValueTest {
         assertNotSame(expected, actual);
     }
 
-    public static final HexParser HEX_PARSER = new HexParser();
-
     @Test
     public void unmarshalTwoLongValues() {
         writeHex("" +
@@ -188,7 +186,7 @@ public class JavaValueTest {
     }
 
     private void writeHex(String hex) {
-        byte[] bytes = HEX_PARSER.parse(hex);
+        byte[] bytes = HEX_DUMP.parse(hex);
         out.write_octet_array(bytes, 0, bytes.length);
         finishWriting();
     }
