@@ -6,9 +6,6 @@ configurations {
 dependencies {
   provided "org.eclipse.platform:org.eclipse.osgi:3.12.100"
 
-  // test dependencies
-  testCompile 'junit:junit:4.12'
-
   // the bundles we will need should all be transitive dependencies of yoko-core
   bundled project(':yoko-core')
   bundled project(':test-bundle')

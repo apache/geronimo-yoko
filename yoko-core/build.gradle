@@ -4,9 +4,6 @@ dependencies {
 
   // compile against Yoko implementation
   compile project(":yoko-rmi-impl")
-
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.hamcrest:hamcrest-all:1.3'
 }
 
 jar {

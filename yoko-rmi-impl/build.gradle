@@ -6,8 +6,6 @@ dependencies {
   // N.B. The tests run against the JDK CORBA implementation classes.
   // Yoko's CORBA implementation classes are in the yoko-core project
   // but depending on that project would introduce a cycle.
-  testCompile 'junit:junit:4.12'
-  testCompile 'org.mockito:mockito-core:2.7.22'
 }
 
 jar {
