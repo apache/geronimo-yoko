@@ -45,10 +45,12 @@ public class ConFactoryTest {
 
     private ConFactory impl;
     private Connector[] connectors;
+    private String connectorsDesc;
 
     @Before
     public void setup() throws Exception{
         this.connectors = null;
+        this.connectorsDesc = null;
         this.impl = new ConFactory_impl(orb, true, lm, mockHelper);
         when(mockHelper.tags()).thenReturn(new int[]{TAG_CSI_SEC_MECH_LIST.value});
     }
@@ -57,6 +59,12 @@ public class ConFactoryTest {
         IOR ior = ior(profiles);
         Policy[] policies = {};
         this.connectors = impl.create_connectors(ior, policies);
+        // now summarize them into a handy string form
+        String s = "";
+        for (Connector conn: connectors) {
+            s += conn.get_info().toString() + " ";
+        }
+        this.connectorsDesc = s.replaceFirst(" $", "");
     }
 
     @Test
@@ -74,6 +82,6 @@ public class ConFactoryTest {
     @Test
     public void testIOP_1_0_Profile(){
         create_connectors(IOP_1_0_PROFILE);
-        assertThat(connectors, is(arrayWithSize(1)));
+        assertThat(connectorsDesc, is("[localhost:2809]"));
     }
 }
