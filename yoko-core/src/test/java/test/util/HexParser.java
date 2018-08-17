@@ -96,6 +96,7 @@ public enum HexParser {
         @Override
         public byte[] parse(String text) {
             if (text == null) return null;
+            text = text.replaceAll("\\s", ""); // remove all whitespace
             if (text.isEmpty()) return new byte[]{};
             if (text.length() % 2 != 0) throw new IllegalArgumentException("Odd number of characters in hex string: " + text);
             int expectedLength = text.length() / 2;

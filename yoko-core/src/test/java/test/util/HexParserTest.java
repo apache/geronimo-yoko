@@ -144,9 +144,7 @@ public class HexParserTest {
                 "34413231 39344136 36323832 4100bdbd" +
                 "00000006 68656c6c 6f00bdbd 00000006" +
                 "776f726c 6400";
-        hex = hex.replace(" ", "");
         byte[] actual = HEX_STRING.parse(hex);
         assertThat(actual, matchesHex(hex));
     }
-
 }

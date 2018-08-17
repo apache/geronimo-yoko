@@ -9,6 +9,7 @@ import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
 import org.omg.IOP.TAG_CSI_SEC_MECH_LIST;
+import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedProfile;
 import test.util.HexParser;
 
@@ -21,31 +22,58 @@ import static org.mockito.Mockito.withSettings;
 
 
 public class ConFactoryTest {
-    public static final int TAG_UNKNOWN = -1;
+    private static final int TAG_UNKNOWN = -1;
+    private static final int TAG_IOP = TAG_INTERNET_IOP.value;
     private static final HexParser HEX = HexParser.HEX_STRING;
-    public static final TaggedProfile UNKNOWN_PROFILE = new TaggedProfile(TAG_UNKNOWN, HEX.parse("cafebabedeadbeef"));
-    public final ListenerMap lm = new ListenerMap();
+    private static final TaggedProfile
+            UNKNOWN_PROFILE = new TaggedProfile(TAG_UNKNOWN, HEX.parse("cafebabedeadbeef")),
+            IOP_1_0_PROFILE = new TaggedProfile(TAG_IOP, HEX.parse(""+
+                    "000100BD"+ // BOM, major, minor, PAD
+                    "0000000a 6c6f6361 6c686f73 74000af9"+ // localhost:2809
+                    "00000000"  // empty object key
+            ));
+    private final ListenerMap lm = new ListenerMap();
 
-    public static final IOR EMPTY_IOR = new IOR("IDL:Location_Service:1.0", array());
+    private static IOR ior(TaggedProfile...profiles) {
+        return new IOR("IDL:Location_Service:1.0", profiles);
+    }
 
-    private static TaggedProfile[] array(TaggedProfile...profiles) { return profiles; }
+    public ORB orb = ORB.init((String[]) null, null);
 
-    @Mock
-    public ORB mockOrb = mock(ORB.class, withSettings().verboseLogging());
     @Mock
     public ExtendedConnectionHelper mockHelper = mock(ExtendedConnectionHelper.class, withSettings().verboseLogging());
 
-    ConFactory impl;
+    private ConFactory impl;
+    private Connector[] connectors;
 
     @Before
-    public void setup() {
-        impl = new ConFactory_impl(mockOrb, true, lm, mockHelper);
+    public void setup() throws Exception{
+        this.connectors = null;
+        this.impl = new ConFactory_impl(orb, true, lm, mockHelper);
         when(mockHelper.tags()).thenReturn(new int[]{TAG_CSI_SEC_MECH_LIST.value});
+    }
+
+    private void create_connectors(TaggedProfile...profiles) {
+        IOR ior = ior(profiles);
+        Policy[] policies = {};
+        this.connectors = impl.create_connectors(ior, policies);
     }
 
     @Test
     public void testEmptyIOR(){
-        Connector[] connectors = impl.create_connectors(EMPTY_IOR, new Policy[]{});
+        create_connectors();
         assertThat(connectors, is(arrayWithSize(0)));
+    }
+
+    @Test
+    public void testUnknownProfile(){
+        create_connectors(UNKNOWN_PROFILE);
+        assertThat(connectors, is(arrayWithSize(0)));
+    }
+
+    @Test
+    public void testIOP_1_0_Profile(){
+        create_connectors(IOP_1_0_PROFILE);
+        assertThat(connectors, is(arrayWithSize(1)));
     }
 }
