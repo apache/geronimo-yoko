@@ -26,13 +26,16 @@ public class ConFactoryTest {
     private static final int TAG_IOP = TAG_INTERNET_IOP.value;
     private static final HexParser HEX = HexParser.HEX_STRING;
     private static final TaggedProfile
-            UNKNOWN_PROFILE = new TaggedProfile(TAG_UNKNOWN, HEX.parse("cafebabedeadbeef")),
-            IOP_1_0_PROFILE = new TaggedProfile(TAG_IOP, HEX.parse(""+
+            UNKNOWN_PROFILE = profile(TAG_UNKNOWN, "cafebabedeadbeef"),
+            IOP_1_0_PROFILE = profile(TAG_IOP, ""+
                     "000100BD"+ // BOM, major, minor, PAD
                     "0000000a 6c6f6361 6c686f73 74000af9"+ // localhost:2809
-                    "00000000"  // empty object key
-            ));
+                    "00000000");  // empty object key
     private final ListenerMap lm = new ListenerMap();
+
+    private static TaggedProfile profile(int tag, String hex) {
+        return new TaggedProfile(tag, HEX.parse(hex));
+    }
 
     private static IOR ior(TaggedProfile...profiles) {
         return new IOR("IDL:Location_Service:1.0", profiles);
