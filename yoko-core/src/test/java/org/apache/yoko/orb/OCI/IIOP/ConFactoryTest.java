@@ -8,6 +8,7 @@ import org.mockito.Mock;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
+import org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS;
 import org.omg.IOP.TAG_CSI_SEC_MECH_LIST;
 import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedProfile;
@@ -27,11 +28,17 @@ public class ConFactoryTest {
 
     private static final String
             ANYDATA = "DEADC0DE",
-            IOP_1_0 = buildHex().oct(0,1,0).str("HAL").u_s(9000).seq("DABBAD00").hex();
+            IOP_1_0 = buildHex().oct(0,1,0).str("HAL").u_s(9000).seq("DABBAD00").hex(),
+            IOP_1_1 = buildHex().oct(0,1,1).str("deepthought").u_s(42).seq("DABBAD00").u_l(0).hex(),
+            ALT_ADR = buildHex().oct(0,1,1).str("holly").u_s(1988).seq("DABBAD00").u_l(1)
+                    .u_l(TAG_ALTERNATE_IIOP_ADDRESS.value).cdr().str("holly").u_s(1999).end().hex();
 
     private static final TaggedProfile
             UNKNOWN_PROFILE = profile(TAG_UNKNOWN, ANYDATA),
-            IOP_1_0_PROFILE = profile(TAG_INTERNET_IOP.value, IOP_1_0);
+            IOP_1_0_PROFILE = profile(TAG_INTERNET_IOP.value, IOP_1_0),
+            IOP_1_1_PROFILE = profile(TAG_INTERNET_IOP.value, IOP_1_1),
+            ALT_ADR_PROFILE = profile(TAG_INTERNET_IOP.value, ALT_ADR);
+
     private final ListenerMap lm = new ListenerMap();
 
     private static TaggedProfile profile(int tag, String hex) {
@@ -88,4 +95,17 @@ public class ConFactoryTest {
         create_connectors(IOP_1_0_PROFILE);
         assertThat(connectorsDesc, is("[HAL:9000]"));
     }
+
+    @Test
+    public void testIOP_1_1_Profile(){
+        create_connectors(IOP_1_1_PROFILE);
+        assertThat(connectorsDesc, is("[deepthought:42]"));
+    }
+
+    @Test
+    public void testAlternate_IIOP_ADDRESS_Profile(){
+        create_connectors(ALT_ADR_PROFILE);
+        assertThat(connectorsDesc, is("[holly:1988] [holly:1999]"));
+    }
+
 }
