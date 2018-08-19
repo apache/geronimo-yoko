@@ -108,4 +108,9 @@ public class ConFactoryTest {
         assertThat(connectorsDesc, is("[holly:1988] [holly:1999]"));
     }
 
+    @Test
+    public void testMultipleProfiles(){
+        create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE);
+        assertThat(connectorsDesc, is("[HAL:9000] [deepthought:42] [holly:1988] [holly:1999]"));
+    }
 }
