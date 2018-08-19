@@ -27,10 +27,10 @@ public class ConFactoryTest {
     private static final int TAG_UNKNOWN = -1;
 
     private static final String
-            ANYDATA = "DEADC0DE",
-            IOP_1_0 = buildHex().oct(0,1,0).str("HAL").u_s(9000).seq("DABBAD00").hex(),
-            IOP_1_1 = buildHex().oct(0,1,1).str("deepthought").u_s(42).seq("DABBAD00").u_l(0).hex(),
-            ALT_ADR = buildHex().oct(0,1,1).str("holly").u_s(1988).seq("DABBAD00").u_l(1)
+            ANYDATA = "DEADC0DE", // we will use this wherever the content doesn't matter
+            IOP_1_0 = buildHex().oct(0,1,0).str("HAL").u_s(9000).seq(ANYDATA).hex(),
+            IOP_1_1 = buildHex().oct(0,1,1).str("deepthought").u_s(42).seq(ANYDATA).u_l(0).hex(),
+            ALT_ADR = buildHex().oct(0,1,1).str("holly").u_s(1988).seq(ANYDATA).u_l(1)
                     .u_l(TAG_ALTERNATE_IIOP_ADDRESS.value).cdr().str("holly").u_s(1999).end().hex();
 
     private static final TaggedProfile
