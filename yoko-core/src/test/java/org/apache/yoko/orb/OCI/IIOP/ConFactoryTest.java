@@ -13,6 +13,7 @@ import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedProfile;
 import test.util.HexParser;
 
+import static test.util.HexBuilder.buildHex;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.junit.Assert.*;
@@ -23,18 +24,18 @@ import static org.mockito.Mockito.withSettings;
 
 public class ConFactoryTest {
     private static final int TAG_UNKNOWN = -1;
-    private static final int TAG_IOP = TAG_INTERNET_IOP.value;
-    private static final HexParser HEX = HexParser.HEX_STRING;
+
+    private static final String
+            ANYDATA = "DEADC0DE",
+            IOP_1_0 = buildHex().oct(0,1,0).str("HAL").u_s(9000).seq("DABBAD00").hex();
+
     private static final TaggedProfile
-            UNKNOWN_PROFILE = profile(TAG_UNKNOWN, "cafebabedeadbeef"),
-            IOP_1_0_PROFILE = profile(TAG_IOP, ""+
-                    "000100BD"+ // BOM, major, minor, PAD
-                    "0000000a 6c6f6361 6c686f73 74000af9"+ // localhost:2809
-                    "00000000");  // empty object key
+            UNKNOWN_PROFILE = profile(TAG_UNKNOWN, ANYDATA),
+            IOP_1_0_PROFILE = profile(TAG_INTERNET_IOP.value, IOP_1_0);
     private final ListenerMap lm = new ListenerMap();
 
     private static TaggedProfile profile(int tag, String hex) {
-        return new TaggedProfile(tag, HEX.parse(hex));
+        return new TaggedProfile(tag, HexParser.HEX_STRING.parse(hex));
     }
 
     private static IOR ior(TaggedProfile...profiles) {
@@ -85,6 +86,6 @@ public class ConFactoryTest {
     @Test
     public void testIOP_1_0_Profile(){
         create_connectors(IOP_1_0_PROFILE);
-        assertThat(connectorsDesc, is("[localhost:2809]"));
+        assertThat(connectorsDesc, is("[HAL:9000]"));
     }
 }
