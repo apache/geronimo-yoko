@@ -1002,11 +1002,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 if (c > 255)
                     throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
 
-                //
-                // Expand the temporary buffer, if necessary
-                //
-                if (buffer.length() - buffer.pos() <= 4)
-                    buffer.realloc(buffer.length() * 2);
+                // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
+                if (buffer.length() - buffer.pos() < 4)
+                    buffer.realloc(buffer.length() + 4);
 
                 if (bothRequired)
                     converter.write_char(tmpStream, converter.convert(c));

@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OCI;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.omg.CORBA.NO_MEMORY;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
@@ -104,7 +106,11 @@ public final class Buffer {
             if (len <= max_)
                 len_ = len;
             else {
-                int newMax = len > 2 * max_ ? len : 2 * max_;
+                final int MAX_OVERALLOC = 4 * 1024 * 1024; // 4 megabytes!
+                // we will look for double the existing capacity, or a smaller increment if it is over a threshold
+                final int minAlloc = min(max_ * 2, max_ + MAX_OVERALLOC);
+                // we might need more if the new length is greater than this minimum new allocation
+                final int newMax = max(len, minAlloc);
                 byte[] newData = null;
                 try {
                     newData = new byte[newMax];
