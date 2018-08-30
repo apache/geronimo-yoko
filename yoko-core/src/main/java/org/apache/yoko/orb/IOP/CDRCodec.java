@@ -16,7 +16,7 @@
  */
 
 package org.apache.yoko.orb.IOP;
-import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.apache.yoko.orb.OCI.Buffer;
 
 final class CDRCodec extends org.omg.CORBA.LocalObject implements
         org.omg.IOP.Codec {
@@ -27,7 +27,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
     // ------------------------------------------------------------------
 
     public byte[] encode(org.omg.CORBA.Any data) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+        Buffer buf = new Buffer();
         org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                 buf);
         out._OB_ORBInstance(orbInstance_);
@@ -42,8 +42,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
     public org.omg.CORBA.Any decode(byte[] data)
             throws org.omg.IOP.CodecPackage.FormatMismatch {
         try {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(data, data.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_ORBInstance(orbInstance_);
@@ -57,7 +56,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
     }
 
     public byte[] encode_value(org.omg.CORBA.Any data) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+        Buffer buf = new Buffer();
         org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                 buf);
         out._OB_ORBInstance(orbInstance_);
@@ -76,8 +75,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
             throw new org.omg.IOP.CodecPackage.TypeMismatch();
 
         try {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(data, data.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_ORBInstance(orbInstance_);

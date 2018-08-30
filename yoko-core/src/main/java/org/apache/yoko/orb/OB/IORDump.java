@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.HexConverter;
 
 import java.io.PrintWriter;
@@ -52,9 +53,7 @@ public class IORDump {
             if (ior.profiles[i].tag == org.omg.IOP.TAG_MULTIPLE_COMPONENTS.value) {
                 sb.append("multiple components");
 
-                byte[] data = ior.profiles[i].profile_data;
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                        data, data.length);
+                Buffer buf = new Buffer(ior.profiles[i].profile_data, ior.profiles[i].profile_data.length);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                         buf);
                 in._OB_readEndian();
@@ -114,8 +113,7 @@ public class IORDump {
         }
 
         byte[] data = HexConverter.asciiToOctets(ref, 4);
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                data, data.length);
+        Buffer buf = new Buffer(data, data.length);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf);
 

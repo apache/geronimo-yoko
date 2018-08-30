@@ -107,9 +107,7 @@ final public class Util {
         // TODO: Internal error?
         org.apache.yoko.orb.OB.Assert._OB_assert(profile < ior.profiles.length);
 
-        Buffer buf = new Buffer(
-                ior.profiles[profile].profile_data,
-                ior.profiles[profile].profile_data.length);
+        Buffer buf = new Buffer(ior.profiles[profile].profile_data, ior.profiles[profile].profile_data.length);
         InputStream in = new InputStream(buf, 0, false, null, null);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper
@@ -150,8 +148,7 @@ final public class Util {
             //
             // Get the IIOP profile body
             //
-            byte[] data = ior.profiles[i].profile_data;
-            Buffer buf = new Buffer(data, data.length);
+            Buffer buf = new Buffer(ior.profiles[i].profile_data, ior.profiles[i].profile_data.length);
             InputStream in = new InputStream(buf, 0, false, null, null);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
@@ -202,8 +199,7 @@ final public class Util {
     private static boolean taggedComponentsMatch(TaggedComponent[] components, String host, short port, Codec codec, boolean matchLoopback) {
         for (final TaggedComponent component : components) {
             if (component.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                byte[] d = component.component_data;
-                Buffer b = new Buffer(d, d.length);
+                Buffer b = new Buffer(component.component_data, component.component_data.length);
                 InputStream s = new InputStream(b, 0, false, null, null);
                 s._OB_readEndian();
                 String altHost = s.read_string();
@@ -277,9 +273,7 @@ final public class Util {
         bodies1 = new ProfileBody_1_0[cnt1];
         for (p1 = 0, b1 = 0; p1 < ior1.profiles.length; p1++)
             if (ior1.profiles[p1].tag == TAG_INTERNET_IOP.value) {
-                byte[] data = ior1.profiles[p1].profile_data;
-                Buffer buf = new Buffer(
-                        data, data.length);
+                Buffer buf = new Buffer(ior1.profiles[p1].profile_data, ior1.profiles[p1].profile_data.length);
                 InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 bodies1[b1++] = ProfileBody_1_0Helper.read(in);
@@ -294,9 +288,7 @@ final public class Util {
         bodies2 = new ProfileBody_1_0[cnt2];
         for (p2 = 0, b2 = 0; p2 < ior2.profiles.length; p2++)
             if (ior2.profiles[p2].tag == TAG_INTERNET_IOP.value) {
-                byte[] data = ior2.profiles[p2].profile_data;
-                Buffer buf = new Buffer(
-                        data, data.length);
+                Buffer buf = new Buffer(ior2.profiles[p2].profile_data, ior2.profiles[p2].profile_data.length);
                 InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
                 bodies2[b2++] = ProfileBody_1_0Helper.read(in);
@@ -384,8 +376,7 @@ final public class Util {
             //
             // Get the first IIOP profile body
             //
-            byte[] data = profile.profile_data;
-            Buffer buf = new Buffer(data, data.length);
+            Buffer buf = new Buffer(profile.profile_data, profile.profile_data.length);
             InputStream in = new InputStream(buf, 0, false, null, null);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);

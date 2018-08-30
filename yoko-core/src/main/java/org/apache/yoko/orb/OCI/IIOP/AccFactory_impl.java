@@ -17,17 +17,16 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OCI.IIOP.PLUGIN_ID;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.IOP.Codec;
 import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
 import org.omg.IOP.ENCODING_CDR_ENCAPS;
 import org.omg.IOP.Encoding;
-import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
+
+import java.util.logging.Logger;
 
 final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.AccFactory {
@@ -186,9 +185,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 //
                 // Extract the 1_0 profile body
                 //
-                byte[] data = ior.value.profiles[profile].profile_data;
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                        data, data.length);
+                Buffer buf = new Buffer(ior.value.profiles[profile].profile_data, ior.value.profiles[profile].profile_data.length);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                         buf, 0, false, null, null);
                 in._OB_readEndian();
@@ -216,7 +213,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 //
                 // Remarshal the new body
                 //
-                org.apache.yoko.orb.OCI.Buffer buf2 = new org.apache.yoko.orb.OCI.Buffer();
+                Buffer buf2 = new Buffer();
                 org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                         buf2);
                 out._OB_writeEndian();

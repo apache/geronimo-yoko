@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.Buffer;
+
 final public class MessageRoutingUtil {
     public static void getRouterListFromConfig(
             org.apache.yoko.orb.OB.ORBInstance orbInstance,
@@ -184,9 +186,7 @@ final public class MessageRoutingUtil {
 
         for (int i = 0; i < info.components.length; ++i) {
             if (info.components[i].tag == org.omg.MessageRouting.TAG_MESSAGE_ROUTERS.value) {
-                byte[] data = info.components[i].component_data;
-                org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                        data, data.length);
+                Buffer buf = new Buffer(info.components[i].component_data, info.components[i].component_data.length);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                         buf);
                 in._OB_readEndian();
@@ -234,7 +234,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REBIND_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -253,7 +253,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REQUEST_PRIORITY_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -271,7 +271,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REPLY_PRIORITY_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -289,7 +289,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REQUEST_START_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -307,7 +307,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REQUEST_END_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -325,7 +325,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REPLY_START_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -343,7 +343,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REPLY_END_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -363,7 +363,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REQUEST_END_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -383,7 +383,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.REPLY_END_TIME_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -401,7 +401,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.ROUTING_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -419,7 +419,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.MAX_HOPS_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -437,7 +437,7 @@ final public class MessageRoutingUtil {
 
             value.ptype = org.omg.Messaging.QUEUE_ORDER_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -659,7 +659,7 @@ final public class MessageRoutingUtil {
 
             val.ptype = org.omg.Messaging.REBIND_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -685,7 +685,7 @@ final public class MessageRoutingUtil {
 
             val.ptype = org.omg.Messaging.QUEUE_ORDER_POLICY_TYPE.value;
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
+            Buffer buf = new Buffer();
             org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
                     buf);
             out._OB_writeEndian();
@@ -742,9 +742,7 @@ final public class MessageRoutingUtil {
         //
         switch (policyValue.ptype) {
         case org.omg.Messaging.REBIND_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -753,9 +751,7 @@ final public class MessageRoutingUtil {
             return new org.apache.yoko.orb.Messaging.RebindPolicy_impl(mode);
         }
         case org.omg.Messaging.REQUEST_PRIORITY_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -766,9 +762,7 @@ final public class MessageRoutingUtil {
                     range);
         }
         case org.omg.Messaging.REPLY_PRIORITY_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -779,9 +773,7 @@ final public class MessageRoutingUtil {
                     range);
         }
         case org.omg.Messaging.REQUEST_START_TIME_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -791,9 +783,7 @@ final public class MessageRoutingUtil {
                     time);
         }
         case org.omg.Messaging.REQUEST_END_TIME_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -803,9 +793,7 @@ final public class MessageRoutingUtil {
                     time);
         }
         case org.omg.Messaging.REPLY_START_TIME_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -815,9 +803,7 @@ final public class MessageRoutingUtil {
                     time);
         }
         case org.omg.Messaging.REPLY_END_TIME_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -827,9 +813,7 @@ final public class MessageRoutingUtil {
                     time);
         }
         case org.omg.Messaging.ROUTING_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -839,9 +823,7 @@ final public class MessageRoutingUtil {
             return new org.apache.yoko.orb.Messaging.RoutingPolicy_impl(range);
         }
         case org.omg.Messaging.MAX_HOPS_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
@@ -850,9 +832,7 @@ final public class MessageRoutingUtil {
             return new org.apache.yoko.orb.Messaging.MaxHopsPolicy_impl(hops);
         }
         case org.omg.Messaging.QUEUE_ORDER_POLICY_TYPE.value: {
-            byte[] data = policyValue.pvalue;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(policyValue.pvalue, policyValue.pvalue.length);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf);
             in._OB_readEndian();
