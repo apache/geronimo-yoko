@@ -18,6 +18,11 @@
 package org.apache.yoko.orb.OCI;
 
 import org.apache.yoko.orb.OB.IORUtil;
+import org.omg.CORBA.NO_MEMORY;
+
+import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
+import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 public final class Buffer {
     private int max_; // The maximum size of the buffer
@@ -71,7 +76,7 @@ public final class Buffer {
         StringBuilder dump = new StringBuilder(); 
         dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_)); 
         
-        org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length(), dump); 
+        IORUtil.dump_octets(data_, pos_, rest_length(), dump);
         return dump.toString(); 
     }
 
@@ -85,11 +90,7 @@ public final class Buffer {
         try {
             data_ = new byte[max_];
         } catch (OutOfMemoryError ex) {
-            throw new org.omg.CORBA.NO_MEMORY(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeNoMemory(org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
         pos_ = 0;
     }
@@ -107,11 +108,7 @@ public final class Buffer {
                 try {
                     newData = new byte[newMax];
                 } catch (OutOfMemoryError ex) {
-                    throw new org.omg.CORBA.NO_MEMORY(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeNoMemory(org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+                    throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
                 }
                 System.arraycopy(data_, 0, newData, 0, len_);
                 data_ = newData;
