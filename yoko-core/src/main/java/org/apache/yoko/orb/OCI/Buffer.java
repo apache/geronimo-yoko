@@ -144,10 +144,10 @@ public final class Buffer {
 
     public Buffer() {}
 
-    public Buffer(byte[] data, int len) {
+    public Buffer(byte[] data) {
         data_ = data;
-        len_ = len;
-        max_ = len;
+        len_ = data.length;
+        max_ = data.length;
         pos_ = 0;
     }
 

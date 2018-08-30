@@ -185,7 +185,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 //
                 // Extract the 1_0 profile body
                 //
-                Buffer buf = new Buffer(ior.value.profiles[profile].profile_data, ior.value.profiles[profile].profile_data.length);
+                Buffer buf = new Buffer(ior.value.profiles[profile].profile_data);
                 org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                         buf, 0, false, null, null);
                 in._OB_readEndian();

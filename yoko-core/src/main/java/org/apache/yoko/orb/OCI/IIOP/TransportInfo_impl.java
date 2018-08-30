@@ -143,7 +143,7 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     public void handle_service_contexts(org.omg.IOP.ServiceContext[] contexts) {
         for (ServiceContext context : contexts) {
             if (context.context_id == BI_DIR_IIOP.value) {
-                Buffer buf = new Buffer(context.context_data, context.context_data.length);
+                Buffer buf = new Buffer(context.context_data);
                 InputStream in = new InputStream(buf, 0, false);
                 in._OB_readEndian();
 

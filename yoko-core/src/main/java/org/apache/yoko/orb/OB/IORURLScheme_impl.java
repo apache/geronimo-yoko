@@ -59,7 +59,7 @@ public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
             if (data == null)
                 throw new org.omg.CORBA.MARSHAL();
 
-            Buffer buf = new Buffer(data, data.length);
+            Buffer buf = new Buffer(data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();

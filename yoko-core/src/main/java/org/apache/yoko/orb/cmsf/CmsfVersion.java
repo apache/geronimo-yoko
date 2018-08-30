@@ -58,7 +58,7 @@ public enum CmsfVersion {
     static CmsfVersion readData(byte[] data) {
         if (data == null) return CMSFv1;
         int cmsf = 1;
-        Buffer buf = new Buffer(data, data.length);
+        Buffer buf = new Buffer(data);
         try (org.apache.yoko.orb.CORBA.InputStream in = 
                 new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false)) {
             in._OB_readEndian();

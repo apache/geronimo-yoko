@@ -162,7 +162,7 @@ final public class CodeSetUtil {
     static boolean checkForCodeSetInfo(org.omg.IOP.TaggedComponent comp,
             org.omg.CONV_FRAME.CodeSetComponentInfoHolder info) {
         if (comp.tag == org.omg.IOP.TAG_CODE_SETS.value) {
-            Buffer buf = new Buffer(comp.component_data, comp.component_data.length);
+            Buffer buf = new Buffer(comp.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();
@@ -178,7 +178,7 @@ final public class CodeSetUtil {
     //
     static void extractCodeSetContext(org.omg.IOP.ServiceContext context,
             org.omg.CONV_FRAME.CodeSetContextHolder ctx) {
-        Buffer buf = new Buffer(context.context_data, context.context_data.length);
+        Buffer buf = new Buffer(context.context_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();

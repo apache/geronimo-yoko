@@ -38,7 +38,7 @@ public final class IORUtil {
     }
     
     private static void describeCSISecMechList(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data, component.component_data.length);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -152,7 +152,7 @@ public final class IORUtil {
     }
     
     private static void describeTLS_SEC_TRANS(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data, component.component_data.length);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -170,7 +170,7 @@ public final class IORUtil {
     }
     
     private static void describeSECIOP_SEC_TRANS(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data, component.component_data.length);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -192,7 +192,7 @@ public final class IORUtil {
     
     
     private static void describeCodeSets(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data, component.component_data.length);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -419,7 +419,7 @@ public final class IORUtil {
 
         switch (component.tag) {
         case org.omg.IOP.TAG_ORB_TYPE.value: {
-            Buffer buf = new Buffer(component.component_data, component.component_data.length);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();
@@ -440,7 +440,7 @@ public final class IORUtil {
             break;
 
         case org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS.value: {
-            Buffer buf = new Buffer(component.component_data, component.component_data.length);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();
@@ -531,7 +531,7 @@ public final class IORUtil {
             break;
 
         case org.omg.IOP.TAG_JAVA_CODEBASE.value: {
-            Buffer buf = new Buffer(component.component_data, component.component_data.length);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();

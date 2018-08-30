@@ -304,7 +304,7 @@ public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
     // is used for unmarshalling the exception.
     //
     public org.apache.yoko.orb.CORBA.InputStream _OB_inputStream() {
-        Buffer buf = new Buffer(marshaled_exception, marshaled_exception.length);
+        Buffer buf = new Buffer(marshaled_exception);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false, null, GIOP1_2);
 

@@ -42,7 +42,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
     public org.omg.CORBA.Any decode(byte[] data)
             throws org.omg.IOP.CodecPackage.FormatMismatch {
         try {
-            Buffer buf = new Buffer(data, data.length);
+            Buffer buf = new Buffer(data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_ORBInstance(orbInstance_);
@@ -75,7 +75,7 @@ final class CDRCodec extends org.omg.CORBA.LocalObject implements
             throw new org.omg.IOP.CodecPackage.TypeMismatch();
 
         try {
-            Buffer buf = new Buffer(data, data.length);
+            Buffer buf = new Buffer(data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_ORBInstance(orbInstance_);

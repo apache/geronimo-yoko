@@ -97,7 +97,7 @@ public class CodeBaseProxy extends LocalObject implements CodeBase {
         
         if (codebase == null || getorb(codebase) != orb.getORB()) {
 
-            Buffer buf = new Buffer(ctx.context_data, ctx.context_data.length);
+            Buffer buf = new Buffer(ctx.context_data);
             InputStream in = new InputStream(buf);
             in._OB_ORBInstance(orb);
             in._OB_readEndian();
