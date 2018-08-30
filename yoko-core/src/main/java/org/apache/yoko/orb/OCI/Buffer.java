@@ -20,6 +20,7 @@ package org.apache.yoko.orb.OCI;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.omg.CORBA.NO_MEMORY;
 
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
@@ -84,7 +85,7 @@ public final class Buffer {
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public void alloc(int len) {
+    private void alloc(int len) {
         max_ = len;
         len_ = len;
         try {
@@ -99,7 +100,7 @@ public final class Buffer {
         if (data_ == null)
             alloc(len);
         else {
-            org.apache.yoko.orb.OB.Assert._OB_assert(len >= len_);
+            _OB_assert(len >= len_);
             if (len <= max_)
                 len_ = len;
             else {
@@ -141,13 +142,12 @@ public final class Buffer {
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Buffer() {
-    }
+    public Buffer() {}
 
-    public Buffer(byte[] data, int len) {
+    public Buffer(byte[] data) {
         data_ = data;
-        len_ = len;
-        max_ = len;
+        len_ = data.length;
+        max_ = data.length;
         pos_ = 0;
     }
 

@@ -91,8 +91,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         //
         // Get the IIOP profile body
         //
-        byte[] data = profile.profile_data;
-        Buffer buf = new Buffer(data, data.length);
+        Buffer buf = new Buffer(profile.profile_data);
         InputStream in = new InputStream(buf);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
@@ -155,8 +154,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             //
             // Get the IIOP profile body
             //
-            final byte[] data = profile.profile_data;
-            final Buffer buf = new Buffer(data, data.length);
+            final Buffer buf = new Buffer(profile.profile_data);
             final InputStream in = new InputStream(buf, 0, false);
             in._OB_readEndian();
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
@@ -211,7 +209,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             final ConnectCB[] ccbs = info_._OB_getConnectCBSeq();
             for (TaggedComponent tc: components) {
                 if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                    final Buffer cbuf = new Buffer(tc.component_data, tc.component_data.length);
+                    final Buffer cbuf = new Buffer(tc.component_data);
                     final InputStream cin = new InputStream(cbuf, 0, false);
                     cin._OB_readEndian();
                     final String host = cin.read_string();

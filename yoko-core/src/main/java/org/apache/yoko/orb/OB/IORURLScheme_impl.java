@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.HexConverter;
 
 public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
@@ -58,8 +59,7 @@ public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
             if (data == null)
                 throw new org.omg.CORBA.MARSHAL();
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
+            Buffer buf = new Buffer(data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();

@@ -38,7 +38,7 @@ public class UnresolvedException extends UnknownException {
     }
 
     public SystemException resolve() {
-        Buffer buf = new Buffer(data, data.length);
+        Buffer buf = new Buffer(data);
         try (org.apache.yoko.orb.CORBA.InputStream in =
                 new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false, converters, GIOP1_2)) {
             if (LOGGER.isLoggable(Level.FINE))

@@ -16,8 +16,8 @@
  */
 
 package org.apache.yoko.orb.OB;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CSIIOP.TransportAddress;
-import org.omg.IOP.TaggedComponent;
 
 public final class IORUtil {
     public static void main(String...args) {
@@ -38,10 +38,7 @@ public final class IORUtil {
     }
     
     private static void describeCSISecMechList(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        byte[] coct = component.component_data;
-        int len = component.component_data.length;
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                coct, len);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -155,10 +152,7 @@ public final class IORUtil {
     }
     
     private static void describeTLS_SEC_TRANS(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        byte[] coct = component.component_data;
-        int len = component.component_data.length;
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                coct, len);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -176,10 +170,7 @@ public final class IORUtil {
     }
     
     private static void describeSECIOP_SEC_TRANS(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        byte[] coct = component.component_data;
-        int len = component.component_data.length;
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                coct, len);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -201,10 +192,7 @@ public final class IORUtil {
     
     
     private static void describeCodeSets(org.omg.IOP.TaggedComponent component, StringBuilder sb) {
-        byte[] coct = component.component_data;
-        int len = component.component_data.length;
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                coct, len);
+        Buffer buf = new Buffer(component.component_data);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false);
         in._OB_readEndian();
@@ -431,10 +419,7 @@ public final class IORUtil {
 
         switch (component.tag) {
         case org.omg.IOP.TAG_ORB_TYPE.value: {
-            byte[] coct = component.component_data;
-            int len = component.component_data.length;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    coct, len);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();
@@ -455,10 +440,7 @@ public final class IORUtil {
             break;
 
         case org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS.value: {
-            byte[] coct = component.component_data;
-            int len = component.component_data.length;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    coct, len);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();
@@ -549,10 +531,7 @@ public final class IORUtil {
             break;
 
         case org.omg.IOP.TAG_JAVA_CODEBASE.value: {
-            byte[] coct = component.component_data;
-            int len = component.component_data.length;
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    coct, len);
+            Buffer buf = new Buffer(component.component_data);
             org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                     buf, 0, false);
             in._OB_readEndian();

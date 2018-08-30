@@ -1869,7 +1869,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         byte[] data = new byte[buf_.len_];
         System.arraycopy(buf_.data_, 0, data, 0, buf_.len_);
-        Buffer buf = new Buffer(data, data.length);
+        Buffer buf = new Buffer(data);
         result = new InputStream(buf, origPos_, origSwap_, codeConverters_, giopVersion_);
         result.orbInstance_ = orbInstance_;
 

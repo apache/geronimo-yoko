@@ -16,9 +16,10 @@
  */
 
 package org.apache.yoko.orb.OBMessaging;
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.osgi.ProviderLocator;
+
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
     //
@@ -290,7 +291,7 @@ public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
     //
     // Copy the contents of the stream into the internal octet sequence
     //
-    public void _OB_extractSequence(org.apache.yoko.orb.OCI.Buffer buf) {
+    public void _OB_extractSequence(Buffer buf) {
         org.apache.yoko.orb.OB.Assert._OB_assert(buf != null);
 
         marshaled_exception = new byte[buf.rest_length()];
@@ -303,8 +304,7 @@ public class ExceptionHolder_impl extends org.omg.Messaging._ExceptionHolder {
     // is used for unmarshalling the exception.
     //
     public org.apache.yoko.orb.CORBA.InputStream _OB_inputStream() {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                marshaled_exception, marshaled_exception.length);
+        Buffer buf = new Buffer(marshaled_exception);
         org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
                 buf, 0, false, null, GIOP1_2);
 
