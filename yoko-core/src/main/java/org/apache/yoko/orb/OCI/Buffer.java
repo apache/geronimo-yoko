@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OCI;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.omg.CORBA.NO_MEMORY;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
@@ -65,20 +67,20 @@ public final class Buffer {
     public boolean is_full() {
         return pos_ >= len_;
     }
-    
+
     /**
-     * Return the data in the buffer as a formatted string suitable for 
-     * logging. 
-     * 
-     * @return The string value of the data. 
+     * Return the data in the buffer as a formatted string suitable for
+     * logging.
+     *
+     * @return The string value of the data.
      */
-    public String dumpData() 
+    public String dumpData()
     {
-        StringBuilder dump = new StringBuilder(); 
-        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_)); 
-        
+        StringBuilder dump = new StringBuilder();
+        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
+
         IORUtil.dump_octets(data_, pos_, rest_length(), dump);
-        return dump.toString(); 
+        return dump.toString();
     }
 
     // ------------------------------------------------------------------
@@ -104,7 +106,11 @@ public final class Buffer {
             if (len <= max_)
                 len_ = len;
             else {
-                int newMax = len > 2 * max_ ? len : 2 * max_;
+                final int MAX_OVERALLOC = 4 * 1024 * 1024; // 4 megabytes!
+                // we will look for double the existing capacity, or a smaller increment if it is over a threshold
+                final int minAlloc = min(max_ * 2, max_ + MAX_OVERALLOC);
+                // we might need more if the new length is greater than this minimum new allocation
+                final int newMax = max(len, minAlloc);
                 byte[] newData = null;
                 try {
                     newData = new byte[newMax];
