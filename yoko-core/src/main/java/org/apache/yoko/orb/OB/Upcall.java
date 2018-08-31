@@ -17,8 +17,18 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.util.Timeout;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.portable.UnknownException;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.UnknownExceptionInfo;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,16 +36,8 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.GiopVersion;
-import org.apache.yoko.util.cmsf.CmsfThreadLocal;
-import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
-import org.omg.CORBA.INTERNAL;
-import org.omg.CORBA.portable.UnknownException;
-import org.omg.IOP.ExceptionDetailMessage;
-import org.omg.IOP.ServiceContext;
-import org.omg.IOP.UnknownExceptionInfo;
+import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class Upcall {
     static final Logger logger = Logger.getLogger(Upcall.class.getName());
@@ -133,6 +135,7 @@ public class Upcall {
     protected org.omg.IOP.ServiceContext codeSetSC_;
 
     protected org.omg.IOP.ServiceContext codeBaseSC_;
+    private final Timeout timeout;
 
     // ----------------------------------------------------------------------
     // Upcall public member implementations
@@ -159,6 +162,12 @@ public class Upcall {
 
         logger.fine("Creating upcall request for operation " + op + " and request id " + requestId); 
         in._OB_ORBInstance(orbInstance_);
+
+        // get the reply timeout
+        PolicyManager pm = orbInstance.getPolicyManager();
+        final Policy[] policy_overrides = pm.get_policy_overrides(new int[0]);
+        RefCountPolicyList policies = new RefCountPolicyList(policy_overrides);
+        timeout = Timeout.in(policies.replyTimeout);
     }
 
     public ORBInstance orbInstance() {
@@ -318,6 +327,7 @@ public class Upcall {
                     ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
         out_._OB_ORBInstance(this.orbInstance());
+        if (out_ != null) out_.setTimeout(timeout);
         return out_;
     }
 
@@ -364,6 +374,7 @@ public class Upcall {
     public void postMarshal() throws LocationForward {
         if (upcallReturn_ != null)
             upcallReturn_.upcallEndReply(this);
+        out_.setTimeout(Timeout.NEVER);
     }
 
     //
@@ -376,6 +387,7 @@ public class Upcall {
             replySCL_.copyInto(scl);
             upcallReturn_.upcallUserException(this, ex, scl);
         }
+        if (out_ != null) out_.setTimeout(Timeout.NEVER);
     }
 
     public void setUserException(org.omg.CORBA.Any any) {
@@ -398,6 +410,7 @@ public class Upcall {
             //
             // upcallReturn_.upcallEndUserException(this);
             userEx_ = true;
+            if (out_ != null) out_.setTimeout(Timeout.NEVER);
         }
     }
 

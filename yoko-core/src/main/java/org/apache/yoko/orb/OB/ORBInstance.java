@@ -20,6 +20,10 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.concurrent.WeakCountedCache;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.PolicyManagerHelper;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -389,6 +393,14 @@ public final class ORBInstance {
 
     public PolicyFactoryManager getPolicyFactoryManager() {
         return policyFactoryManager_;
+    }
+
+    public PolicyManager getPolicyManager() {
+        try {
+            return PolicyManagerHelper.narrow(orb_.resolve_initial_references("ORBPolicyManager"));
+        } catch (InvalidName invalidName) {
+            throw new INTERNAL("Could not find PolicyManager");
+        }
     }
 
     public PIManager getPIManager() {

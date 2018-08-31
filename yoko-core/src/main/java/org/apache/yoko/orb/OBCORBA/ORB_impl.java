@@ -17,21 +17,21 @@
 
 package org.apache.yoko.orb.OBCORBA;
 
-import java.security.AccessController;
-import java.util.Properties;
-
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
-import org.apache.yoko.util.concurrent.AutoLock;
-import org.apache.yoko.util.concurrent.AutoReadWriteLock;
-import org.apache.yoko.util.GetSystemPropertyAction;
 import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.GetSystemPropertyAction;
 import org.apache.yoko.util.HexConverter;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
+
+import java.security.AccessController;
+import java.util.Properties;
 
 // This class must be public and not final
 public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
@@ -577,6 +577,20 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
                     org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl p = new org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl(
+                            val);
+                    policies_.addElement(p);
+                }
+            } else if (key.equals("yoko.orb.policy.request_timeout")) {
+                int val = Integer.parseInt(value);
+                if (val != -1) {
+                    org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl p = new org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl(
+                            val);
+                    policies_.addElement(p);
+                }
+            } else if (key.equals("yoko.orb.policy.reply_timeout")) {
+                int val = Integer.parseInt(value);
+                if (val != -1) {
+                    org.apache.yoko.orb.OB.ReplyTimeoutPolicy_impl p = new org.apache.yoko.orb.OB.ReplyTimeoutPolicy_impl(
                             val);
                     policies_.addElement(p);
                 }
