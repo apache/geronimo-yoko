@@ -1,4 +1,5 @@
 dependencies {
+  compile project(":yoko-spec-corba")
   provided 'org.osgi:org.osgi.core:5.0.0'
   provided 'org.osgi:org.osgi.compendium:5.0.0'
 }
