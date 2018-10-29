@@ -1,6 +1,6 @@
 dependencies {
-  // endorse the Yoko spec
-  endorsed project(':yoko-rmi-spec')
+  // depend on the Yoko spec jars
+  spec project(':yoko-rmi-spec')
 
   // compile against Yoko implementation
   compile project(":yoko-rmi-impl")

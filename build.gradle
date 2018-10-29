@@ -33,14 +33,14 @@ subprojects {
     // declare a new configuration to map to Maven's provided scope
     provided.transitive = true
     compile.extendsFrom provided
-    // declare a new configuration to use for endorsed standards jars
-    endorsed.transitive = true
-    compile.extendsFrom endorsed
+    // declare a new configuration to use for spec API jars
+    spec.transitive = true
+    compile.extendsFrom spec
   }
 
   // Not all sub projects have tests,
   // but it is cleaner and simpler to
-  // standardise the test deps here. 
+  // standardise the test deps here.
   dependencies {
     testCompile 'junit:junit:4.12'
     testCompile 'org.hamcrest:hamcrest-all:1.3'
@@ -80,7 +80,7 @@ configure(yokoBundleProjects) {
             depNode.appendNode('scope', 'provided')
           }
 
-          // declare 'endorsed' scope dependencies in the pom.xml
+          // declare compile scope dependencies in the pom.xml
           // as compile dependencies
           configurations.compile.allDependencies.each {
             def depNode = depsNode.appendNode('dependency')
@@ -115,22 +115,25 @@ configure(yokoBundleProjects) {
   publish.dependsOn "publishMavenPublicationToMavenLocal"
   publish.dependsOn "publishToMavenLocal"
 
-  // Add a task to copy the endorsed jars into a folder
-  task stageEndorsed(type: Sync) {
-    from configurations.endorsed
-    into temporaryDir
-  }
+  if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
+    // Add a task to copy the spec jars into a folder
+    // to use with the endorsed standards mechanism
+    task stageEndorsed(type: Sync) {
+      from configurations.spec
+      into temporaryDir
+    }
 
-  // Make all compilation tasks use the endorsed dir
-  tasks.withType(JavaCompile) {
-    dependsOn stageEndorsed
-    options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
-  }
+    // Make all compilation tasks use the endorsed dir
+    tasks.withType(JavaCompile) {
+      dependsOn stageEndorsed
+      options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+    }
 
-  // Make execute tasks use the endorsed dir
-  tasks.withType(Test) {
-    dependsOn stageEndorsed
-    jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+    // Make execute tasks use the endorsed dir
+    tasks.withType(Test) {
+      dependsOn stageEndorsed
+      jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+    }
   }
 }
 
