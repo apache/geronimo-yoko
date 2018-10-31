@@ -6,6 +6,7 @@ dependencies {
   // N.B. The tests run against the JDK CORBA implementation classes.
   // Yoko's CORBA implementation classes are in the yoko-core project
   // but depending on that project would introduce a cycle.
+  testRuntime project(":yoko-core")
 }
 
 jar {
