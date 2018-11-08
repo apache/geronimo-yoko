@@ -3,9 +3,9 @@ dependencies {
   compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.bcel:5.2_2'
   compile project(":yoko-util")
   compile project(":yoko-rmi-spec")
-  // N.B. The tests run against the JDK CORBA implementation classes.
-  // Yoko's CORBA implementation classes are in the yoko-core project
-  // but depending on that project would introduce a cycle.
+  // In Java <11 the tests run against the JDK ORB implementation classes.
+  // We add the following dependency to allow the tests to run against the
+  // yoko-core impl classes in Java 11 onwards (which has no ORB).
   testRuntime project(":yoko-core")
 }
 

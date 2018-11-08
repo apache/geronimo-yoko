@@ -1,3 +1,12 @@
+buildscript {
+  repositories {
+    mavenCentral()
+  }
+  dependencies {
+    classpath 'biz.aQute.bnd:biz.aQute.bnd.gradle:4.1.0'
+  }
+}
+
 def getGitHash(length) {
     def stdout = new ByteArrayOutputStream()
     exec {
@@ -48,11 +57,12 @@ subprojects {
   }
 }
 
-configure(allBundleProjects) {
-  apply plugin: 'osgi'
+configure(testBundleProjects) {
+  apply plugin: 'biz.aQute.bnd.builder'
 }
 
 configure(yokoBundleProjects) {
+  apply plugin: 'osgi'
   publishing {
     publications {
       maven(MavenPublication) {

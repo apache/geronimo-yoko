@@ -6,7 +6,20 @@ dependencies {
 
 jar {
   manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko Test bundle'
-    instruction 'Bundle-Activator'   , 'test.osgi.OrbInitializer'
+    attributes(
+      /* The java plugin creates the jar exactly as specified,
+       * but the bnd builder plugin transforms that jar into a
+       * proper bundle by processing these attributes.
+       *
+       * For more details:
+       * https://github.com/bndtools/bnd/blob/master/biz.aQute.bnd.gradle/README.md
+       * https://bnd.bndtools.org/chapters/800-headers.html
+       */
+      'Bundle-Description': 'Apache Yoko Test bundle',
+      'Bundle-Name': project.name,
+      'Bundle-SymbolicName': project.group + '.' + project.name,
+      'Import-Package': '!sun.*,*',
+      'Bundle-Activator': 'test.osgi.OrbInitializer',
+    )
   }
 }
