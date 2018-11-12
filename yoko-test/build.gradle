@@ -1,0 +1,44 @@
+repositories {
+    mavenCentral()
+}
+
+apply plugin: "biz.aQute.bnd.builder"
+
+dependencies {
+  compile 'org.osgi:osgi.enroute.junit.wrapper:4.12.0'
+  compile 'org.osgi:osgi.enroute.hamcrest.wrapper:1.3.0'
+  runtime 'org.apache.felix:org.apache.felix.framework:6.0.1'
+  // runtime 'org.eclipse.platform:org.eclipse.osgi:3.13.0'
+  // the bundles we will need should all be transitive dependencies of yoko-core
+  compile project(':yoko-core')
+}
+
+jar {
+  manifest {
+    attributes(
+      /* The java plugin creates the jar exactly as specified,
+       * but the bnd builder plugin transforms that jar into a
+       * proper bundle by processing these attributes.
+       *
+       * For more details:
+       * https://github.com/bndtools/bnd/blob/master/biz.aQute.bnd.gradle/README.md
+       * https://bnd.bndtools.org/chapters/800-headers.html
+       */
+      'Bundle-Description': 'TestOSGi',
+      'Bundle-Name': project.name,
+      'Import-Package': '*',
+      'Test-Cases': '${classes;CONCRETE;PUBLIC;NAMED;*Test}'
+    )
+  }
+}
+
+import aQute.bnd.gradle.TestOSGi
+
+task testOSGi(type: TestOSGi) {
+  configurations.compile
+  description "OSGi Test ${name}.bndrun"
+  group 'test'
+  bndrun 'test.bndrun'
+}
+
+test.dependsOn testOSGi
