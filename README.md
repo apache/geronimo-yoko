@@ -13,18 +13,12 @@
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
 
-                          Instructions to build Apache Yoko
-                          ===================================
+# Instructions to build Apache Yoko
 
-Build Requirements
-------------------
+## Build Requirements
 
-1. maven 2.2.1 or above
-2. JDK1.5 or above
+1. JDK 8 or above (Note: the build will produce Java 7 compatible output, but the build process requires Java 8)
 
-Steps to build Yoko
--------------------
+## Steps to build Yoko
 
-1. Configure maven so it works in your system.
-
-2. Run the command 'mvn install' or 'mvn clean install'.
+1. From the root of the project, run `./gradlew build`
