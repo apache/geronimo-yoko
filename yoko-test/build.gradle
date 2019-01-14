@@ -26,6 +26,8 @@ jar {
        */
       'Bundle-Description': 'TestOSGi',
       'Bundle-Name': project.name,
+      // replace "yoko-" prefix in project name with full group name
+      'Bundle-SymbolicName': project.name.replaceFirst("^yoko-", project.group.toString() + "."),
       'Import-Package': '*',
       'Test-Cases': '${classes;CONCRETE;PUBLIC;NAMED;*Test}'
     )
