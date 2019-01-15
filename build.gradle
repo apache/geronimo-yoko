@@ -1,3 +1,4 @@
+/* Configure classpath to find 3rd party plugins */
 buildscript {
   repositories {
     mavenCentral()
@@ -7,6 +8,11 @@ buildscript {
   }
 }
 
+/**
+ * Compute a hash no longer than <code>length</code> for the git repository.
+ * @param length
+ * @return the hash as a string
+ */
 def getGitHash(length) {
     def stdout = new ByteArrayOutputStream()
     exec {
@@ -16,17 +22,17 @@ def getGitHash(length) {
     return stdout.toString().trim()
 }
 
-def yokoProjects = allprojects.findAll{it.name.startsWith("yoko")}
-def yokoBundleProjects = subprojects.findAll{it.name.startsWith("yoko")}
-def testBundleProjects = subprojects.findAll{it.name.endsWith("bundle")}
-def allBundleProjects = yokoBundleProjects + testBundleProjects
+def testProjects = "osgi util rmi-impl core test".split(" ").collect{s->project(":yoko-" + s)}
+def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core".split(" ").collect{s->project(":yoko-" + s)}
 
+/* Configuration for all projects (including this parent) */
 allprojects  {
   apply plugin: 'maven-publish'
   group = 'org.apache.yoko'
   version = '1.5.0.' + getGitHash(10)
 }
 
+/* Standard configuration for each subproject */
 subprojects {
   apply plugin: 'java'
   sourceCompatibility = 1.7
@@ -47,6 +53,11 @@ subprojects {
     compile.extendsFrom spec
   }
 
+  sourceSets.main.compileClasspath += configurations.provided
+}
+
+/* Standard configuration for subprojects with tests */
+configure(testProjects) {
   // Not all sub projects have tests,
   // but it is cleaner and simpler to
   // standardise the test deps here.
@@ -55,13 +66,64 @@ subprojects {
     testCompile 'org.hamcrest:hamcrest-all:1.3'
     testCompile 'org.mockito:mockito-core:2.22.0'
   }
+
+  if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
+    // Add a task to copy the spec jars into a folder
+    // to use with the endorsed standards mechanism
+    task stageEndorsed(type: Sync) {
+      from configurations.spec
+      into temporaryDir
+    }
+
+    // Make all compilation tasks use the endorsed dir
+    tasks.withType(JavaCompile) {
+      dependsOn stageEndorsed
+      options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+    }
+
+    // Make execute tasks use the endorsed dir
+    tasks.withType(Test) {
+      dependsOn stageEndorsed
+      jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
+    }
+  }
+
+  // ensure tests run under $buildDir somewhere
+  test {
+    workingDir = "$buildDir/testWorkingDir"
+    doFirst {workingDir.mkdirs()}
+    testLogging {
+      // set options for log level LIFECYCLE
+      events "passed", "skipped", "failed", "standardOut"
+      showExceptions true
+      exceptionFormat "full"
+      showCauses true
+      showStackTraces true
+
+      // set options for log level DEBUG and INFO
+      debug {
+        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+        exceptionFormat "full"
+      }
+      info.events = debug.events
+      info.exceptionFormat = debug.exceptionFormat
+
+      afterSuite { desc, result ->
+        if (!desc.parent) { // will match the outermost suite
+          def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
+          def startItem = '|  ', endItem = '  |'
+          def repeatLength = startItem.length() + output.length() + endItem.length()
+          println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+        }
+      }
+    }
+  }
+
 }
 
-configure(testBundleProjects) {
-  apply plugin: 'biz.aQute.bnd.builder'
-}
 
-configure(yokoBundleProjects) {
+/* Standard configuration for subprojects with shippable outputs */
+configure(shipProjects) {
   apply plugin: 'osgi'
   publishing {
     publications {
@@ -124,63 +186,4 @@ configure(yokoBundleProjects) {
   // because they don't exist yet when these lines are executed
   publish.dependsOn "publishMavenPublicationToMavenLocal"
   publish.dependsOn "publishToMavenLocal"
-
-  if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
-    // Add a task to copy the spec jars into a folder
-    // to use with the endorsed standards mechanism
-    task stageEndorsed(type: Sync) {
-      from configurations.spec
-      into temporaryDir
-    }
-
-    // Make all compilation tasks use the endorsed dir
-    tasks.withType(JavaCompile) {
-      dependsOn stageEndorsed
-      options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
-    }
-
-    // Make execute tasks use the endorsed dir
-    tasks.withType(Test) {
-      dependsOn stageEndorsed
-      jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
-    }
-  }
-}
-
-subprojects {
-  dependencies {}
-
-  sourceSets.main.compileClasspath += configurations.provided
-
-
-  // ensure tests run under $buildDir somewhere
-  test {
-    workingDir = "$buildDir/testWorkingDir"
-    doFirst {workingDir.mkdirs()}
-    testLogging {
-      // set options for log level LIFECYCLE
-      events "passed", "skipped", "failed", "standardOut"
-      showExceptions true
-      exceptionFormat "full"
-      showCauses true
-      showStackTraces true
-
-      // set options for log level DEBUG and INFO
-      debug {
-        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
-        exceptionFormat "full"
-      }
-      info.events = debug.events
-      info.exceptionFormat = debug.exceptionFormat
-
-      afterSuite { desc, result ->
-        if (!desc.parent) { // will match the outermost suite
-          def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
-          def startItem = '|  ', endItem = '  |'
-          def repeatLength = startItem.length() + output.length() + endItem.length()
-          println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
-        }
-      }
-    }
-  }
 }
