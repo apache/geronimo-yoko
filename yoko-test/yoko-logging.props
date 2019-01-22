@@ -1,0 +1,10 @@
+# These properties enable trace for the Yoko ORB
+# Pass them to JUL using the following property
+# -Djava.util.logging.config.file=<path to this file>
+handlers = java.util.logging.ConsoleHandler, java.util.logging.FileHandler
+java.util.logging.ConsoleHandler.formatter=java.util.logging.SimpleFormatter
+java.util.logging.ConsoleHandler.level = ALL
+org.apache.yoko.level=FINEST
+java.util.logging.FileHandler.pattern=yoko%u.log
+java.util.logging.FileHandler.formatter=java.util.logging.SimpleFormatter
+java.util.logging.FileHandler.level = ALL
