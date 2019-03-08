@@ -17,15 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
-//
-// IDL:orb.yoko.apache.org/OB/RETRY_POLICY_ID:1.0
-//
 /**
- *
  * This policy type identifies the retry policy.
- *
- **/
-
+ */
 public interface RETRY_POLICY_ID
 {
     int value = 0x4F4F0004;

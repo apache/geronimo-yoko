@@ -17,15 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
-//
-// IDL:orb.yoko.apache.org/OB/CONNECT_TIMEOUT_POLICY_ID:1.0
-//
 /**
- *
  * This policy type identifies the connect timeout policy.
- *
- **/
-
+ */
 public interface CONNECT_TIMEOUT_POLICY_ID
 {
     int value = 0x4F4F0008;
