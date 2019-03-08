@@ -17,17 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
-//
-// IDL:orb.yoko.apache.org/OB/ZERO_PORT_POLICY_ID:1.0
-//
 /**
- *
  * This policy type identifies the zero port policy.
- *
- **/
-
+ */
 public interface ZERO_PORT_POLICY_ID
 {
-    int value = (int)(1330577419L);
+    int value = 0x4F4F000B;
 }
 

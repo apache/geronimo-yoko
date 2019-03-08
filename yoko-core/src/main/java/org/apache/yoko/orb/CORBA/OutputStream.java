@@ -19,18 +19,21 @@ package org.apache.yoko.orb.CORBA;
 
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
+import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.OB_Extras;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.util.Timeout;
 import org.omg.CORBA.BAD_TYPECODE;
 import org.omg.CORBA.DATA_CONVERSION;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.Principal;
+import org.omg.CORBA.TIMEOUT;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.TypeCodePackage.Bounds;
 import org.omg.CORBA.ValueBaseHelper;
@@ -47,9 +50,47 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
-import static org.apache.yoko.orb.OB.MinorCodes.*;
-import static org.omg.CORBA.CompletionStatus.*;
-import static org.omg.CORBA.TCKind.*;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorIncompleteTypeCode;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadTypecode;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
+import static org.omg.CORBA.TCKind._tk_Principal;
+import static org.omg.CORBA.TCKind._tk_TypeCode;
+import static org.omg.CORBA.TCKind._tk_abstract_interface;
+import static org.omg.CORBA.TCKind._tk_alias;
+import static org.omg.CORBA.TCKind._tk_any;
+import static org.omg.CORBA.TCKind._tk_array;
+import static org.omg.CORBA.TCKind._tk_boolean;
+import static org.omg.CORBA.TCKind._tk_char;
+import static org.omg.CORBA.TCKind._tk_double;
+import static org.omg.CORBA.TCKind._tk_enum;
+import static org.omg.CORBA.TCKind._tk_except;
+import static org.omg.CORBA.TCKind._tk_fixed;
+import static org.omg.CORBA.TCKind._tk_float;
+import static org.omg.CORBA.TCKind._tk_long;
+import static org.omg.CORBA.TCKind._tk_longdouble;
+import static org.omg.CORBA.TCKind._tk_longlong;
+import static org.omg.CORBA.TCKind._tk_native;
+import static org.omg.CORBA.TCKind._tk_null;
+import static org.omg.CORBA.TCKind._tk_objref;
+import static org.omg.CORBA.TCKind._tk_octet;
+import static org.omg.CORBA.TCKind._tk_sequence;
+import static org.omg.CORBA.TCKind._tk_short;
+import static org.omg.CORBA.TCKind._tk_string;
+import static org.omg.CORBA.TCKind._tk_struct;
+import static org.omg.CORBA.TCKind._tk_ulong;
+import static org.omg.CORBA.TCKind._tk_ulonglong;
+import static org.omg.CORBA.TCKind._tk_union;
+import static org.omg.CORBA.TCKind._tk_ushort;
+import static org.omg.CORBA.TCKind._tk_value;
+import static org.omg.CORBA.TCKind._tk_value_box;
+import static org.omg.CORBA.TCKind._tk_void;
+import static org.omg.CORBA.TCKind._tk_wchar;
+import static org.omg.CORBA.TCKind._tk_wstring;
+import static org.omg.CORBA.TCKind.tk_null;
 
 public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
     private static final Logger LOGGER = Logger.getLogger(OutputStream.class.getName());
@@ -84,6 +125,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     private Object invocationContext_;
 
     private Object delegateContext_;
+    private Timeout timeout = Timeout.NEVER;
 
     // ------------------------------------------------------------------
     // Private and protected functions
@@ -455,6 +497,14 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
+    private void checkTimeout() {
+        if (timeout.isExpired()) {
+            // we only ever want to throw the exception once
+            timeout = Timeout.NEVER;
+            throw new TIMEOUT("Reply timed out on server", MinorCodes.MinorOther, COMPLETED_YES);
+        }
+    }
+
     private int roundUp(final int i, final int align) {
         switch (align) {
             case 0x00: return i;
@@ -502,6 +552,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         final int len = newPos + size;
         if (len > buf_.len_) {
             buf_.realloc(len);
+            checkTimeout();
         }
 
         //
@@ -1274,23 +1325,34 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_value(Serializable value) {
+        checkTimeout();
         valueWriter().writeValue(value, null);
+        checkTimeout();
     }
 
     public void write_value(Serializable value, String rep_id) {
+        checkTimeout();
         valueWriter().writeValue(value, rep_id);
+        checkTimeout();
     }
 
     public void write_value(Serializable value, Class clz) {
+        checkTimeout();
         valueWriter().writeValue(value, null);
+        checkTimeout();
+
     }
 
     public void write_value(Serializable value, BoxedValueHelper helper) {
+        checkTimeout();
         valueWriter().writeValueBox(value, null, helper);
+        checkTimeout();
     }
 
     public void write_abstract_interface(Object obj) {
+        checkTimeout();
         valueWriter().writeAbstractInterface(obj);
+        checkTimeout();
     }
 
     // ------------------------------------------------------------------
@@ -1298,7 +1360,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // ------------------------------------------------------------------
 
     public void write_value(Serializable value, org.omg.CORBA.TypeCode tc, BoxedValueHelper helper) {
+        checkTimeout();
         valueWriter().writeValueBox(value, tc, helper);
+        checkTimeout();
     }
 
     public void write_InputStream(final org.omg.CORBA.portable.InputStream in, org.omg.CORBA.TypeCode tc) {
@@ -1898,5 +1962,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         final int tag = 0x7fffff02;
         final String[] ids = { rep_id };
         _OB_beginValue(tag, ids, true);
+    }
+
+    public void setTimeout(Timeout timeout) {
+        this.timeout = timeout;
     }
 }

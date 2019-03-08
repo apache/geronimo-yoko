@@ -18,9 +18,8 @@
 package org.apache.yoko.orb.OB;
 
 /**
- * This policy type identifies the protocol policy.
+ * This policy type identifies the reply timeout policy.
  */
-public interface PROTOCOL_POLICY_ID
-{
-    int value = 0x4F4F0002;
+public interface REPLY_TIMEOUT_POLICY_ID {
+    int value = 0x4F4F000C;
 }

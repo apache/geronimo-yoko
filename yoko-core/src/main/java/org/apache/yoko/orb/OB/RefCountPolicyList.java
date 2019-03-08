@@ -17,24 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.CONNECT_TIMEOUT_POLICY_ID;
-import org.apache.yoko.orb.OB.ConnectTimeoutPolicy;
-import org.apache.yoko.orb.OB.INTERCEPTOR_POLICY_ID;
-import org.apache.yoko.orb.OB.InterceptorPolicy;
-import org.apache.yoko.orb.OB.LOCATE_REQUEST_POLICY_ID;
-import org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_POLICY_ID;
-import org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_RELAXED;
-import org.apache.yoko.orb.OB.LocateRequestPolicy;
-import org.apache.yoko.orb.OB.LocationTransparencyPolicy;
-import org.apache.yoko.orb.OB.REQUEST_TIMEOUT_POLICY_ID;
-import org.apache.yoko.orb.OB.RETRY_POLICY_ID;
-import org.apache.yoko.orb.OB.RETRY_STRICT;
-import org.apache.yoko.orb.OB.RequestTimeoutPolicy;
-import org.apache.yoko.orb.OB.RetryAttributes;
-import org.apache.yoko.orb.OB.RetryPolicy;
-import org.apache.yoko.orb.OB.TIMEOUT_POLICY_ID;
-import org.apache.yoko.orb.OB.TimeoutPolicy;
-
 final public class RefCountPolicyList {
     //
     // The immutable PolicyList
@@ -55,6 +37,8 @@ final public class RefCountPolicyList {
     // The immutable value of the request timeout policy
     //
     public int requestTimeout;
+
+    public int replyTimeout;
 
     //
     // The immutable value of the request start time policy
@@ -198,6 +182,27 @@ final public class RefCountPolicyList {
         for (int i = 0; i < policies.length; i++) {
             if (policies[i].policy_type() == REQUEST_TIMEOUT_POLICY_ID.value) {
                 RequestTimeoutPolicy policy = (RequestTimeoutPolicy) policies[i];
+                return policy.value();
+            }
+        }
+
+        //
+        // Fall back to TimeoutPolicy
+        //
+        for (int i = 0; i < policies.length; i++) {
+            if (policies[i].policy_type() == TIMEOUT_POLICY_ID.value) {
+                TimeoutPolicy policy = (TimeoutPolicy) policies[i];
+                return policy.value();
+            }
+        }
+
+        return -1;
+    }
+
+    private static int getReplyTimeout(org.omg.CORBA.Policy[] policies) {
+        for (int i = 0; i < policies.length; i++) {
+            if (policies[i].policy_type() == REPLY_TIMEOUT_POLICY_ID.value) {
+                ReplyTimeoutPolicy policy = (ReplyTimeoutPolicy) policies[i];
                 return policy.value();
             }
         }
@@ -433,6 +438,7 @@ final public class RefCountPolicyList {
         requestTimeout = getRequestTimeout(v);
         requestStartTime = getRequestStartTime(v);
         requestEndTime = getRequestEndTime(v);
+        replyTimeout = getReplyTimeout(v);
         replyStartTime = getReplyStartTime(v);
         replyEndTime = getReplyEndTime(v);
         relativeRequestTimeout = getRelativeRequestTimeout(v);
