@@ -22,5 +22,5 @@ package org.apache.yoko.orb.OBPortableServer;
  */
 public interface ENDPOINT_CONFIGURATION_POLICY_ID
 {
-    int value = (int)(1330577669L);
+    int value = 0x4F4F0105;
 }

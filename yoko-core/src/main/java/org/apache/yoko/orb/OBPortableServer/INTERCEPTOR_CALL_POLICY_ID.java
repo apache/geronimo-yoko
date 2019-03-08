@@ -22,5 +22,5 @@ package org.apache.yoko.orb.OBPortableServer;
  */
 public interface INTERCEPTOR_CALL_POLICY_ID
 {
-    int value = (int)(1330577667L);
+    int value = 0x4F4F0103;
 }

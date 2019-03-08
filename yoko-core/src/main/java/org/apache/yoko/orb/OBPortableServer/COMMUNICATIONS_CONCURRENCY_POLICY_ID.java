@@ -22,5 +22,5 @@ package org.apache.yoko.orb.OBPortableServer;
  */
 public interface COMMUNICATIONS_CONCURRENCY_POLICY_ID
 {
-    int value = (int)(1330577668L);
+    int value = 0x4F4F0104;
 }
