@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface CONNECTION_REUSE_POLICY_ID
 {
-    int value = (int)(1330577411L);
+    int value = 0x4F4F0003;
 }

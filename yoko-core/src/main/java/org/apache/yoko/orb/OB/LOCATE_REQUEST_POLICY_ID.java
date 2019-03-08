@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface LOCATE_REQUEST_POLICY_ID
 {
-    int value = (int)(1330577418L);
+    int value = 0x4F4F000A;
 }

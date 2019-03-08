@@ -28,6 +28,6 @@ package org.apache.yoko.orb.OB;
 
 public interface ZERO_PORT_POLICY_ID
 {
-    int value = (int)(1330577419L);
+    int value = 0x4F4F000B;
 }
 

@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface LOCATION_TRANSPARENCY_POLICY_ID
 {
-    int value = (int)(1330577414L);
+    int value = 0x4F4F0006;
 }

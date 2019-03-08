@@ -21,5 +21,5 @@ package org.apache.yoko.orb.OB;
  * This policy type identifies the reply timeout policy.
  */
 public interface REPLY_TIMEOUT_POLICY_ID {
-    int value = (int)(1330577420L);
+    int value = 0x4F4F000C;
 }

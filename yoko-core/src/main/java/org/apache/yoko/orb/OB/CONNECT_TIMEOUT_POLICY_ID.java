@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface CONNECT_TIMEOUT_POLICY_ID
 {
-    int value = (int)(1330577416L);
+    int value = 0x4F4F0008;
 }

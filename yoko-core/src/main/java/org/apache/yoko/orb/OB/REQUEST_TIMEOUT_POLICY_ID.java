@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface REQUEST_TIMEOUT_POLICY_ID
 {
-    int value = (int)(1330577417L);
+    int value = 0x4F4F0009;
 }

@@ -28,5 +28,5 @@ package org.apache.yoko.orb.OB;
 
 public interface RETRY_POLICY_ID
 {
-    int value = (int)(1330577412L);
+    int value = 0x4F4F0004;
 }
