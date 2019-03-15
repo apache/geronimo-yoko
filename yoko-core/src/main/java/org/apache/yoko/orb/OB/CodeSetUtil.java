@@ -17,15 +17,29 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.omg.CONV_FRAME.CodeSetComponent;
+import org.omg.CONV_FRAME.CodeSetComponentInfo;
+import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
+import org.omg.CONV_FRAME.CodeSetComponentInfoHolder;
+import org.omg.CONV_FRAME.CodeSetContextHelper;
+import org.omg.CONV_FRAME.CodeSetContextHolder;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.TAG_CODE_SETS;
+import org.omg.IOP.TaggedComponent;
+
+import java.util.Enumeration;
+import java.util.Vector;
 
 final public class CodeSetUtil {
     //
     // The supported codesets in the preferred order
     //
-    private static java.util.Vector supportedCharCodeSets_ = new java.util.Vector();
+    private static Vector supportedCharCodeSets_ = new Vector();
 
-    private static java.util.Vector supportedWcharCodeSets_ = new java.util.Vector();
+    private static Vector supportedWcharCodeSets_ = new Vector();
 
     static void addCharCodeSet(int id) {
         supportedCharCodeSets_.addElement(new Integer(id));
@@ -35,20 +49,20 @@ final public class CodeSetUtil {
         supportedWcharCodeSets_.addElement(new Integer(id));
     }
 
-    static org.omg.CONV_FRAME.CodeSetComponent createCodeSetComponent(int id,
+    static CodeSetComponent createCodeSetComponent(int id,
             boolean wChar) {
         CodeSetDatabase.instance();
 
-        org.omg.CONV_FRAME.CodeSetComponent codeSetComponent = new org.omg.CONV_FRAME.CodeSetComponent();
+        CodeSetComponent codeSetComponent = new CodeSetComponent();
 
         codeSetComponent.native_code_set = id;
 
-        java.util.Vector conversion_code_sets = new java.util.Vector();
+        Vector conversion_code_sets = new Vector();
 
         //
         // Add conversion codesets, filter native codeset
         //
-        java.util.Enumeration e = wChar ? supportedWcharCodeSets_.elements()
+        Enumeration e = wChar ? supportedWcharCodeSets_.elements()
                 : supportedCharCodeSets_.elements();
         while (e.hasMoreElements()) {
             Integer cs = (Integer) e.nextElement();
@@ -71,8 +85,8 @@ final public class CodeSetUtil {
     // Extract codeset information
     //
     static boolean getCodeSetInfoFromComponents(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CONV_FRAME.CodeSetComponentInfoHolder info) {
+            ProfileInfo profileInfo,
+            CodeSetComponentInfoHolder info) {
         //
         // Only IIOP 1.1 or newer has codeset information
         //
@@ -88,10 +102,10 @@ final public class CodeSetUtil {
         //
         else {
             if (orbInstance.extendedWchar()) {
-                info.value = new org.omg.CONV_FRAME.CodeSetComponentInfo(
-                        new org.omg.CONV_FRAME.CodeSetComponent(
+                info.value = new CodeSetComponentInfo(
+                        new CodeSetComponent(
                                 CodeSetDatabase.ISOLATIN1, new int[0]),
-                        new org.omg.CONV_FRAME.CodeSetComponent(
+                        new CodeSetComponent(
                                 CodeSetDatabase.UCS2, new int[0]));
 
                 return true;
@@ -105,30 +119,29 @@ final public class CodeSetUtil {
     // Get code converters from ProfileInfo and/or IOR
     //
     static CodeConverters getCodeConverters(ORBInstance orbInstance,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo) {
+            ProfileInfo profileInfo) {
         //
         // Set codeset defaults: ISO 8859-1 for char, no default for wchar
         // (13.7.2.4) but ORBacus uses default_wcs, which is initially 0
         //
-        org.omg.CONV_FRAME.CodeSetComponentInfoHolder serverInfo = new org.omg.CONV_FRAME.CodeSetComponentInfoHolder();
-        serverInfo.value = new org.omg.CONV_FRAME.CodeSetComponentInfo();
-        serverInfo.value.ForCharData = new org.omg.CONV_FRAME.CodeSetComponent();
-        serverInfo.value.ForWcharData = new org.omg.CONV_FRAME.CodeSetComponent();
+        CodeSetComponentInfoHolder serverInfo = new CodeSetComponentInfoHolder();
+        serverInfo.value = new CodeSetComponentInfo();
+        serverInfo.value.ForCharData = new CodeSetComponent();
+        serverInfo.value.ForWcharData = new CodeSetComponent();
         serverInfo.value.ForCharData.native_code_set = CodeSetDatabase.ISOLATIN1;
         serverInfo.value.ForCharData.conversion_code_sets = new int[0];
-        serverInfo.value.ForWcharData.native_code_set = orbInstance
-                .getDefaultWcs();
+        serverInfo.value.ForWcharData.native_code_set = orbInstance.getDefaultWcs();
         serverInfo.value.ForWcharData.conversion_code_sets = new int[0];
 
         //
         // Set up code converters
         //
         int nativeCs = orbInstance.getNativeCs();
-        org.omg.CONV_FRAME.CodeSetComponent client_cs = createCodeSetComponent(
+        CodeSetComponent client_cs = createCodeSetComponent(
                 nativeCs, false);
         int tcs_c = CodeSetDatabase.ISOLATIN1;
         int nativeWcs = orbInstance.getNativeWcs();
-        org.omg.CONV_FRAME.CodeSetComponent client_wcs = createCodeSetComponent(
+        CodeSetComponent client_wcs = createCodeSetComponent(
                 nativeWcs, true);
         int tcs_wc = orbInstance.getDefaultWcs();
 
@@ -159,14 +172,14 @@ final public class CodeSetUtil {
     //
     // Check for codeset information in a tagged component
     //
-    static boolean checkForCodeSetInfo(org.omg.IOP.TaggedComponent comp,
-            org.omg.CONV_FRAME.CodeSetComponentInfoHolder info) {
-        if (comp.tag == org.omg.IOP.TAG_CODE_SETS.value) {
+    static boolean checkForCodeSetInfo(TaggedComponent comp,
+                                       CodeSetComponentInfoHolder info) {
+        if (comp.tag == TAG_CODE_SETS.value) {
             Buffer buf = new Buffer(comp.component_data);
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
+            InputStream in = new InputStream(
                     buf, 0, false);
             in._OB_readEndian();
-            info.value = org.omg.CONV_FRAME.CodeSetComponentInfoHelper.read(in);
+            info.value = CodeSetComponentInfoHelper.read(in);
             return true;
         }
 
@@ -176,12 +189,12 @@ final public class CodeSetUtil {
     //
     // Extract codeset context from service context
     //
-    static void extractCodeSetContext(org.omg.IOP.ServiceContext context,
-            org.omg.CONV_FRAME.CodeSetContextHolder ctx) {
+    static void extractCodeSetContext(ServiceContext context,
+                                      CodeSetContextHolder ctx) {
         Buffer buf = new Buffer(context.context_data);
-        org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
+        InputStream in = new InputStream(
                 buf, 0, false);
         in._OB_readEndian();
-        ctx.value = org.omg.CONV_FRAME.CodeSetContextHelper.read(in);
+        ctx.value = CodeSetContextHelper.read(in);
     }
 }

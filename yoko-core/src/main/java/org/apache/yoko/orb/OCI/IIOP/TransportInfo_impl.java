@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Buffer;
@@ -110,24 +111,24 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
             BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
             biDirCtxt.listen_points = listenMap_.getListenPoints();
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
+            Buffer buf = new Buffer();
+            OutputStream out = new OutputStream(
                     buf);
 
             out._OB_writeEndian();
-            org.omg.IIOP.BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+            BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
 
             //
             // Fill in the bidir service context
             //
-            org.omg.IOP.ServiceContext context = new org.omg.IOP.ServiceContext();
-            context.context_id = org.omg.IOP.BI_DIR_IIOP.value;
+            ServiceContext context = new ServiceContext();
+            context.context_id = BI_DIR_IIOP.value;
             context.context_data = buf.data();
 
             //
             // Create and fill the return context list
             //
-            scl = new org.omg.IOP.ServiceContext[1];
+            scl = new ServiceContext[1];
             scl[0] = context;
             return scl;
         }
@@ -136,11 +137,11 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         // we don't have a bidir service context so return an array of
         // length 0
         //
-        scl = new org.omg.IOP.ServiceContext[0];
+        scl = new ServiceContext[0];
         return scl;
     }
 
-    public void handle_service_contexts(org.omg.IOP.ServiceContext[] contexts) {
+    public void handle_service_contexts(ServiceContext[] contexts) {
         for (ServiceContext context : contexts) {
             if (context.context_id == BI_DIR_IIOP.value) {
                 Buffer buf = new Buffer(context.context_data);
@@ -171,9 +172,9 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         // we only deal with Connectors that are of our specific type,
         // namely IIOP connectors (and ConnectorInfos)
         //
-        org.apache.yoko.orb.OCI.IIOP.ConnectorInfo_impl infoImpl;
+        ConnectorInfo_impl infoImpl;
         try {
-            infoImpl = (org.apache.yoko.orb.OCI.IIOP.ConnectorInfo_impl) connInfo;
+            infoImpl = (ConnectorInfo_impl) connInfo;
         } catch (ClassCastException ex) {
             return false;
         }
@@ -196,11 +197,11 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         return false;
     }
 
-    public synchronized org.omg.IIOP.ListenPoint[] _OB_getListenPoints() {
+    public synchronized ListenPoint[] _OB_getListenPoints() {
         return listenPoints_;
     }
 
-    public synchronized void _OB_setListenPoints(org.omg.IIOP.ListenPoint[] lp) {
+    public synchronized void _OB_setListenPoints(ListenPoint[] lp) {
         listenPoints_ = lp;
     }
 

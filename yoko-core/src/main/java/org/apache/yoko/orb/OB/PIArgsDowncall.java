@@ -17,6 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.omg.CORBA.TypeCode;
+import org.omg.IOP.IOR;
+
 public class PIArgsDowncall extends PIDowncall {
     //
     // Argument, result and exception list description provided by the
@@ -26,7 +31,7 @@ public class PIArgsDowncall extends PIDowncall {
 
     protected ParameterDesc retDesc_;
 
-    protected org.omg.CORBA.TypeCode[] exceptionTC_;
+    protected TypeCode[] exceptionTC_;
 
     // ----------------------------------------------------------------------
     // PIArgsDowncall private and protected member implementations
@@ -37,11 +42,11 @@ public class PIArgsDowncall extends PIDowncall {
     // ----------------------------------------------------------------------
 
     public PIArgsDowncall(ORBInstance orbInstance, Client client,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
+            ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp,
-            org.omg.IOP.IOR IOR, org.omg.IOP.IOR origIOR,
+            IOR IOR, IOR origIOR,
             /**/PIManager piManager, ParameterDesc[] argDesc,
-            ParameterDesc retDesc, org.omg.CORBA.TypeCode[] exceptionTC) {
+            ParameterDesc retDesc, TypeCode[] exceptionTC) {
         super(orbInstance, client, profileInfo, policies, op, resp, IOR,
                 origIOR, piManager);
         argDesc_ = argDesc;
@@ -49,7 +54,7 @@ public class PIArgsDowncall extends PIDowncall {
         exceptionTC_ = exceptionTC;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
+    public OutputStream preMarshal()
             throws LocationForward, FailureException {
         requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
                 IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,

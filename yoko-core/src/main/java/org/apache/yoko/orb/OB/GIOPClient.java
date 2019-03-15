@@ -25,18 +25,23 @@ import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
+import org.omg.BiDirPolicy.BOTH;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHelper;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
+import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
@@ -251,7 +256,7 @@ final class GIOPClient extends Client {
             CodeBaseHelper.write(outCBC, codeBase);
 
             codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
+            codeBaseSC_.context_id = SendingContextRunTime.value;
 
             int len = buf.length();
             byte[] data = buf.data();
@@ -331,12 +336,12 @@ final class GIOPClient extends Client {
     }
 
     /** Get the OCI Connector info */
-    public org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo() {
+    public ConnectorInfo connectorInfo() {
         return connector_.get_info();
     }
 
     /** Get the OCI Transport info */
-    public org.apache.yoko.orb.OCI.TransportInfo transportInfo() {
+    public TransportInfo transportInfo() {
         //
         // Get the connection, but do not create a new one if there is none
         // available
@@ -362,7 +367,7 @@ final class GIOPClient extends Client {
             // available
             //
             connection = getWorker(true, down.policies().connectTimeout);
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             Assert
                     ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
             down.setFailureException(ex);
@@ -418,7 +423,7 @@ final class GIOPClient extends Client {
                 validGIOPVersion = true;
 
             if (validGIOPVersion
-                    && (down.policies().biDirMode == org.omg.BiDirPolicy.BOTH.value)) {
+                    && (down.policies().biDirMode == BOTH.value)) {
                 Transport t = connection.transport();
 
                 ServiceContext contexts[] = t.get_info()
@@ -451,7 +456,7 @@ final class GIOPClient extends Client {
                         down.responseExpected(), down.getRequestSCL());
 
             return connection.emitterInterface();
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             Assert
                     ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
             down.setFailureException(ex);
@@ -484,7 +489,7 @@ final class GIOPClient extends Client {
         GIOPConnection connection = getWorker(false, -1);
         Assert._OB_assert(connection != null);
         Transport transport = connection.transport();
-        return transport.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
+        return transport.mode() == SendReceiveMode.SendReceive;
     }
 
     @Override

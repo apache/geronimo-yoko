@@ -16,16 +16,21 @@
  */
 
 package org.apache.yoko.orb.OB;
+
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.omg.CORBA.DATA_CONVERSION;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow;
+import static org.apache.yoko.orb.OB.MinorCodes.describeDataConversion;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
 final class UTF8Reader extends CodeSetReader {
-    public char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_char(InputStream in) throws DATA_CONVERSION {
         return utf8ToUnicode(in);
     }
 
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_wchar(InputStream in, int len) throws DATA_CONVERSION {
         return utf8ToUnicode(in);
     }
 
@@ -37,15 +42,10 @@ final class UTF8Reader extends CodeSetReader {
         else if ((first & 0xf8) == 0xe0)
             return 3;
 
-        throw new org.omg.CORBA.DATA_CONVERSION(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow),
-                org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Overflow), MinorUTF8Overflow, COMPLETED_NO);
     }
 
-    private char utf8ToUnicode(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    private char utf8ToUnicode(InputStream in) throws DATA_CONVERSION {
         byte first = in.buf_.data_[in.buf_.pos_++];
 
         //
@@ -64,11 +64,7 @@ final class UTF8Reader extends CodeSetReader {
             value = (char) (first & 0x0f);
 
             if ((in.buf_.data_[in.buf_.pos_] & 0xc0) != 0x80) {
-                throw new org.omg.CORBA.DATA_CONVERSION(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
             }
 
             value <<= 6;
@@ -78,19 +74,11 @@ final class UTF8Reader extends CodeSetReader {
         // 16 bit overflow
         //
         else {
-            throw new org.omg.CORBA.DATA_CONVERSION(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Overflow), MinorUTF8Overflow, COMPLETED_NO);
         }
 
         if ((in.buf_.data_[in.buf_.pos_] & 0xc0) != 0x80) {
-            throw new org.omg.CORBA.DATA_CONVERSION(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
         }
 
         value <<= 6;

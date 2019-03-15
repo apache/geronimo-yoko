@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
+import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.TRANSIENT;
 import org.omg.GIOP.MsgType_1_1;
@@ -599,7 +600,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                             // Timeout?
                             // 
                             if (!buf.is_full()) {
-                                throw new org.omg.CORBA.NO_RESPONSE();
+                                throw new NO_RESPONSE();
                             }
                         }
                     }

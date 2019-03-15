@@ -17,15 +17,23 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.omg.CORBA.Policy;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHolder;
+import org.omg.IOP.ServiceContext;
+
 public interface OAInterface {
     //
     // Create new Upcall object
     //
     Upcall createUpcall(UpcallReturn upcallReturn,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo, int requestId,
-            String op, org.apache.yoko.orb.CORBA.InputStream in,
-            org.omg.IOP.ServiceContext[] requestSCL);
+            ProfileInfo profileInfo,
+            TransportInfo transportInfo, int requestId,
+            String op, InputStream in,
+            ServiceContext[] requestSCL);
 
     //
     // Determine if an object with the provided object key exists
@@ -40,13 +48,13 @@ public interface OAInterface {
 
     int OBJECT_FORWARD_PERM = 3;
 
-    int findByKey(byte[] key, org.omg.IOP.IORHolder ior);
+    int findByKey(byte[] key, IORHolder ior);
 
     //
     // Get all profiles that are usable with this OAInterface
     //
-    org.apache.yoko.orb.OCI.ProfileInfo[] getUsableProfiles(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies);
+    ProfileInfo[] getUsableProfiles(
+            IOR ior, Policy[] policies);
 
     //
     // Discard all incoming requests with a TRANSIENT exception

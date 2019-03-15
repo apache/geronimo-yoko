@@ -17,21 +17,24 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
 final class UTF16Reader extends CodeSetReader {
     private int Flags_ = 0;
 
-    public char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_char(InputStream in)
+            throws DATA_CONVERSION {
         return (char) (in.buf_.data_[in.buf_.pos_++] & 0xff);
     }
 
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_wchar(InputStream in, int len)
+            throws DATA_CONVERSION {
         if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
             if (len == 2) {
                 return (char) ((in.buf_.data_[in.buf_.pos_++] << 8) | (in.buf_.data_[in.buf_.pos_++] & 0xff));
             } else
-                throw new org.omg.CORBA.DATA_CONVERSION();
+                throw new DATA_CONVERSION();
         } else {
             //
             // read the first wchar assuming big endian
@@ -75,7 +78,7 @@ final class UTF16Reader extends CodeSetReader {
                 //
                 // it was a surrogate paired character that we don't support
                 // 
-                org.apache.yoko.orb.OB.Assert._OB_assert(false);
+                Assert._OB_assert(false);
             }
 
             //

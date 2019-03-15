@@ -29,6 +29,7 @@ import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
 import org.omg.CORBA.BAD_TYPECODE;
+import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.Principal;
@@ -41,6 +42,7 @@ import org.omg.IOP.IORHelper;
 import org.omg.SendingContext.CodeBase;
 
 import javax.rmi.CORBA.Util;
+import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -1083,13 +1085,13 @@ final public class InputStream extends InputStreamWithOffsets {
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
-    public int available() throws java.io.IOException {
+    public int available() throws IOException {
         _OB_assert(buf_.len_ >= buf_.pos_);
 
         return buf_.len_ - buf_.pos_;
     }
 
-    public int read() throws java.io.IOException {
+    public int read() throws IOException {
         checkChunk();
         if (buf_.pos_ + 1 > buf_.len_)
             return -1;
@@ -1582,7 +1584,7 @@ final public class InputStream extends InputStreamWithOffsets {
             return null;
 
         if (orbInstance_ == null)
-            throw new org.omg.CORBA.INITIALIZE("InputStream must be created " + "by a full ORB");
+            throw new INITIALIZE("InputStream must be created " + "by a full ORB");
 
         ObjectFactory objectFactory = orbInstance_.getObjectFactory();
         return objectFactory.createObject(ior);
@@ -1622,7 +1624,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
             return createStub(getRMIStubClass(codebase, expectedType), impl._get_delegate());
         } catch (IllegalAccessException | ClassNotFoundException | ClassCastException | PrivilegedActionException | InvocationTargetException ex) {
-            logger.log(java.util.logging.Level.FINE, "Exception creating object stub", ex);
+            logger.log(Level.FINE, "Exception creating object stub", ex);
             MARSHAL m = new MARSHAL("Unable to create stub for class " + expectedType.getName(), MinorLoadStub, COMPLETED_NO);
             m.initCause(ex);
             throw m;
@@ -1780,11 +1782,11 @@ final public class InputStream extends InputStreamWithOffsets {
         return value;
     }
 
-    public java.lang.Object read_abstract_interface() {
+    public Object read_abstract_interface() {
         return valueReader().readAbstractInterface();
     }
 
-    public java.lang.Object read_abstract_interface(java.lang.Class clz) {
+    public Object read_abstract_interface(Class clz) {
         return valueReader().readAbstractInterface(clz);
     }
 
@@ -1956,11 +1958,11 @@ final public class InputStream extends InputStreamWithOffsets {
         valueReader().remarshalValue(tc, out);
     }
 
-    public void __setSendingContextRuntime(org.omg.SendingContext.CodeBase runtime) {
+    public void __setSendingContextRuntime(CodeBase runtime) {
         sendingContextRuntime_ = runtime;
     }
 
-    public org.omg.SendingContext.CodeBase __getSendingContextRuntime() {
+    public CodeBase __getSendingContextRuntime() {
         return sendingContextRuntime_;
     }
 

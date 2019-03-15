@@ -19,6 +19,7 @@ package org.apache.yoko.orb.CORBA;
 
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
+import org.apache.yoko.orb.OB.CodeSetWriter;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.OB_Extras;
 import org.apache.yoko.orb.OB.ORBInstance;
@@ -39,13 +40,16 @@ import org.omg.CORBA.TypeCodePackage.Bounds;
 import org.omg.CORBA.ValueBaseHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.ValueOutputStream;
+import org.omg.CORBA_2_4.TCKind;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 import org.omg.IOP.TaggedProfile;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -426,7 +430,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case org.omg.CORBA_2_4.TCKind._tk_local_interface: {
+                case TCKind._tk_local_interface: {
                     history.put(tc, oldPos);
 
                     int start = writeGap();
@@ -625,7 +629,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
         if (wCharWriterRequired_) {
             if (!partOfString)
-                converter.set_writer_flags(org.apache.yoko.orb.OB.CodeSetWriter.FIRST_CHAR);
+                converter.set_writer_flags(CodeSetWriter.FIRST_CHAR);
 
             //
             // For GIOP 1.1 non byte-oriented wide characters are written
@@ -812,7 +816,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // indicate that we are at the start of the first character
         // of the string to the writer
         if (wCharWriterRequired_)
-            converter.set_writer_flags(org.apache.yoko.orb.OB.CodeSetWriter.FIRST_CHAR);
+            converter.set_writer_flags(CodeSetWriter.FIRST_CHAR);
 
         //
         // for GIOP 1.0/1.1 we don't need to differentiate between
@@ -1275,8 +1279,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_Context(org.omg.CORBA.Context ctx, org.omg.CORBA.ContextList contexts) {
         int count = contexts.count();
-        java.util.Vector v = new java.util.Vector();
-        org.apache.yoko.orb.CORBA.Context ctxImpl = (org.apache.yoko.orb.CORBA.Context) ctx;
+        Vector v = new Vector();
+        Context ctxImpl = (Context) ctx;
         for (int i = 0; i < count; i++) {
             try {
                 String pattern = contexts.item(i);
@@ -1299,7 +1303,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         throw new NO_IMPLEMENT();
     }
 
-    public void write_fixed(java.math.BigDecimal value) {
+    public void write_fixed(BigDecimal value) {
         String v = value.abs().toString();
 
         //
@@ -1476,7 +1480,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_value_box:
                 case _tk_abstract_interface:
                 case _tk_native:
-                case org.omg.CORBA_2_4.TCKind._tk_local_interface: {
+                case TCKind._tk_local_interface: {
                     final int len = in.read_ulong();
                     write_ulong(len);
                     addCapacity(len);
@@ -1854,7 +1858,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
             }
 
-            case org.omg.CORBA_2_4.TCKind._tk_local_interface:
+            case TCKind._tk_local_interface:
             case _tk_native:
             default:
                 _OB_assert("unsupported types");

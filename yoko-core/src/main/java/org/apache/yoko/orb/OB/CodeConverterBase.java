@@ -17,6 +17,10 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
 abstract public class CodeConverterBase
 // implements CodeSetReader, CodeSetWriter
 {
@@ -76,7 +80,7 @@ abstract public class CodeConverterBase
         }
     }
 
-    final public boolean equals(java.lang.Object obj) {
+    final public boolean equals(Object obj) {
         if (obj == null)
             return false;
         if (obj == this)
@@ -91,23 +95,23 @@ abstract public class CodeConverterBase
         return from_.rgy_value + 29 * to_.rgy_value;
     }
 
-    final public char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    final public char read_char(InputStream in)
+            throws DATA_CONVERSION {
         return reader_.read_char(in);
     }
 
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_wchar(InputStream in, int len)
+            throws DATA_CONVERSION {
         return reader_.read_wchar(in, len);
     }
 
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_char(OutputStream out, char v)
+            throws DATA_CONVERSION {
         writer_.write_char(out, v);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_wchar(OutputStream out, char v)
+            throws DATA_CONVERSION {
         writer_.write_wchar(out, v);
     }
 

@@ -17,9 +17,11 @@
 
 package org.apache.yoko.orb.OCI;
 
-//
-// IDL:orb.yoko.apache.org/OCI/TransportInfo:1.0
-//
+import org.omg.CORBA.Policy;
+import org.omg.IOP.ServiceContext;
+
+import java.util.List;
+
 /**
  *
  * Information on an OCI Transport object. Objects of this type must
@@ -32,35 +34,13 @@ package org.apache.yoko.orb.OCI;
  *
  **/
 
-public interface TransportInfoOperations
-{
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/id:1.0
-    //
+public interface TransportInfoOperations {
     /** The plugin id. */
+    String id();
 
-    String
-    id();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/tag:1.0
-    //
     /** The profile id tag. */
+    int tag();
 
-    int
-    tag();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/connector_info:1.0
-    //
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/acceptor_info:1.0
-    //
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/origin:1.0
-    //
     /**
      *
      * The origin indicates whether the transport was originally
@@ -75,13 +55,8 @@ public interface TransportInfoOperations
      * if transport was initially created to handle incoming requests.
      *
      **/
+    short origin();
 
-    short
-    origin();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/describe:1.0
-    //
     /**
      *
      * Returns a human readable description of the transport.
@@ -90,20 +65,8 @@ public interface TransportInfoOperations
      *
      **/
 
-    String
-    describe();
+    String describe();
 
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/add_close_cb:1.0
-    //
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/remove_close_cb:1.0
-    //
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/get_service_contexts:1.0
-    //
     /**
      *
      * Returns a sequence of service contexts for this transport based
@@ -115,13 +78,8 @@ public interface TransportInfoOperations
      * @return The service contexts for the given polices.
      *
      **/
+    ServiceContext[] get_service_contexts(Policy[] policies);
 
-    org.omg.IOP.ServiceContext[]
-    get_service_contexts(org.omg.CORBA.Policy[] policies);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/handle_service_contexts:1.0
-    //
     /**
      *
      * Handles service contexts that might be received during a
@@ -131,26 +89,16 @@ public interface TransportInfoOperations
      * @param contexts The service context list
      *
      **/
+    void handle_service_contexts(ServiceContext[] scl);
 
-    void
-    handle_service_contexts(org.omg.IOP.ServiceContext[] contexts);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/received_bidir_SCL:1.0
-    //
     /**
      *
      * Queries whether this' transport has received a BiDir SCL in a
      * request.
      *
      **/
+    boolean received_bidir_SCL();
 
-    boolean
-    received_bidir_SCL();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/TransportInfo/endpoint_alias_match:1.0
-    //
     /**
      *
      * Uses the BiDir SCL information in this TransportInfo to check
@@ -159,7 +107,5 @@ public interface TransportInfoOperations
      * ConnectorInfo paramater
      *
      **/
-
-    boolean
-    endpoint_alias_match(ConnectorInfo connInfo);
+    boolean endpoint_alias_match(ConnectorInfo connInfo);
 }

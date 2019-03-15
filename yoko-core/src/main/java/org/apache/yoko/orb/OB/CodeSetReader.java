@@ -17,16 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
 public abstract class CodeSetReader {
     public final static int L_ENDIAN = 1;
 
     public final static int FIRST_CHAR = 2;
 
-    abstract char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION;
+    abstract char read_char(InputStream in) throws DATA_CONVERSION;
 
-    abstract char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION;
+    abstract char read_wchar(InputStream in, int len) throws DATA_CONVERSION;
 
     abstract int count_wchar(char value);
 

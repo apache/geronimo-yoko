@@ -17,16 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
 final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;
 
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
         out.buf_.data_[out.buf_.pos_++] = (byte) (v & 0xff);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
         if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
             out.buf_.data_[out.buf_.pos_] = (byte) (v >> 8);
             out.buf_.data_[out.buf_.pos_ + 1] = (byte) v;
@@ -34,14 +35,13 @@ final class UTF16Writer extends CodeSetWriter {
             //
             // we don't support surrogate paired characters
             //
-            org.apache.yoko.orb.OB.Assert._OB_assert(v < 0xD800 || v > 0xDFFF);
+            Assert._OB_assert(v < 0xD800 || v > 0xDFFF);
 
             //
             // if this character is the same character as the BOM, then we
             // need to escape it with the Big Endian BOM
             //
-            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0)
-                    && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
+            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
                 out.buf_.data_[out.buf_.pos_++] = (byte) 0xFE;
                 out.buf_.data_[out.buf_.pos_++] = (byte) 0xFF;
             }
@@ -64,14 +64,12 @@ final class UTF16Writer extends CodeSetWriter {
             //
             // we don't support surrogate paired characters
             //
-            org.apache.yoko.orb.OB.Assert._OB_assert(v < (char) 0xD800
-                    || v > (char) 0xDFFF);
+            Assert._OB_assert(v < (char) 0xD800 || v > (char) 0xDFFF);
 
             //
             // we need to escape the first character if its a BOM
             //
-            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0)
-                    && (v == 0xFEFF || v == 0xFFFE))
+            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == 0xFEFF || v == 0xFFFE))
                 return 4;
         }
 

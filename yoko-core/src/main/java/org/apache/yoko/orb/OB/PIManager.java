@@ -17,11 +17,53 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl;
+import org.apache.yoko.orb.PortableInterceptor.Current_impl;
+import org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.ExceptionList;
+import org.omg.CORBA.InvalidPolicies;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.NamedValue;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.PolicyManagerHelper;
+import org.omg.CORBA.SetOverrideType;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TypeCode;
+import org.omg.IOP.IOR;
+import org.omg.PortableInterceptor.ClientRequestInfo;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
+import org.omg.PortableInterceptor.IORInfo;
+import org.omg.PortableInterceptor.IORInterceptor;
+import org.omg.PortableInterceptor.IORInterceptor_3_0;
+import org.omg.PortableInterceptor.IORInterceptor_3_0Helper;
+import org.omg.PortableInterceptor.Interceptor;
+import org.omg.PortableInterceptor.LOCATION_FORWARD;
+import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+import org.omg.PortableInterceptor.PolicyFactory;
+import org.omg.PortableInterceptor.SUCCESSFUL;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import org.omg.PortableInterceptor.ServerRequestInfo;
+import org.omg.PortableInterceptor.ServerRequestInterceptor;
+import org.omg.PortableInterceptor.USER_EXCEPTION;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.Servant;
+
+import java.util.Enumeration;
+import java.util.Vector;
+
 final public class PIManager {
     //
     // The ORB (Java only)
     //
-    private org.omg.CORBA.ORB orb_;
+    private ORB orb_;
 
     //
     // The ORB Instance
@@ -33,27 +75,27 @@ final public class PIManager {
     //
     private int id_;
 
-    private java.lang.Object idMut_ = new java.lang.Object();
+    private Object idMut_ = new Object();
 
     //
     // The PortableInterceptor::Current implementation
     //
-    private org.apache.yoko.orb.PortableInterceptor.Current_impl current_;
+    private Current_impl current_;
 
     //
     // The registered ClientRequestInterceptors
     //
-    private java.util.Vector clientReqInterceptors_ = new java.util.Vector();
+    private Vector clientReqInterceptors_ = new Vector();
 
     //
     // The registered ServerRequestInterceptors
     //
-    private java.util.Vector serverReqInterceptors_ = new java.util.Vector();
+    private Vector serverReqInterceptors_ = new Vector();
 
     //
     // The registered IORInterceptors
     //
-    private java.util.Vector iorInterceptors_ = new java.util.Vector();
+    private Vector iorInterceptors_ = new Vector();
 
     //
     // The number of state slots
@@ -79,7 +121,7 @@ final public class PIManager {
     // PIManager public member implementation
     // ----------------------------------------------------------------------
 
-    public PIManager(org.omg.CORBA.ORB orb) {
+    public PIManager(ORB orb) {
         orb_ = orb;
         id_ = 0;
         current_ = null;
@@ -88,63 +130,53 @@ final public class PIManager {
     }
 
     void destroy() {
-        java.util.Enumeration e;
+        Enumeration e;
 
         e = clientReqInterceptors_.elements();
         while (e.hasMoreElements()) {
-            org.omg.PortableInterceptor.Interceptor interceptor = (org.omg.PortableInterceptor.Interceptor) e
-                    .nextElement();
+            Interceptor interceptor = (Interceptor) e.nextElement();
             try {
                 interceptor.destroy();
-            } catch (RuntimeException ex) {
-                // ignore
+            } catch (RuntimeException ignored) {
             }
         }
 
         e = serverReqInterceptors_.elements();
         while (e.hasMoreElements()) {
-            org.omg.PortableInterceptor.Interceptor interceptor = (org.omg.PortableInterceptor.Interceptor) e
-                    .nextElement();
+            Interceptor interceptor = (Interceptor) e.nextElement();
             try {
                 interceptor.destroy();
-            } catch (RuntimeException ex) {
-                // ignore
+            } catch (RuntimeException ignored) {
             }
         }
 
         e = iorInterceptors_.elements();
         while (e.hasMoreElements()) {
-            org.omg.PortableInterceptor.Interceptor interceptor = (org.omg.PortableInterceptor.Interceptor) e
+            Interceptor interceptor = (Interceptor) e
                     .nextElement();
             try {
                 interceptor.destroy();
-            } catch (RuntimeException ex) {
-                // ignore
+            } catch (RuntimeException ignored) {
             }
         }
 
         orbInstance_ = null;
     }
 
-    public void addIORInterceptor(
-            org.omg.PortableInterceptor.IORInterceptor interceptor,
-            boolean insertAtHead)
-            throws org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName {
+    public void addIORInterceptor(IORInterceptor interceptor, boolean insertAtHead) throws DuplicateName {
         //
         // Ensure that this interceptor isn't already registered. Ignore
         // anonymous interceptors (that is interceptors with no name).
         //
         String name = interceptor.name();
         if (name.length() != 0) {
-            java.util.Enumeration e = iorInterceptors_.elements();
+            Enumeration e = iorInterceptors_.elements();
             while (e.hasMoreElements()) {
-                String curr = ((org.omg.PortableInterceptor.IORInterceptor) e
-                        .nextElement()).name();
+                String curr = ((IORInterceptor) e.nextElement()).name();
                 if (curr.length() == 0)
                     continue;
                 if (curr.equals(name))
-                    throw new org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName(
-                            name);
+                    throw new DuplicateName(name);
             }
         }
 
@@ -154,48 +186,40 @@ final public class PIManager {
             iorInterceptors_.addElement(interceptor);
     }
 
-    public void addClientRequestInterceptor(
-            org.omg.PortableInterceptor.ClientRequestInterceptor interceptor)
-            throws org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName {
+    public void addClientRequestInterceptor(ClientRequestInterceptor interceptor) throws DuplicateName {
         //
         // Ensure that this interceptor isn't already registered. Ignore
         // anonymous interceptors (that is interceptors with no name).
         //
         String name = interceptor.name();
         if (name.length() != 0) {
-            java.util.Enumeration e = clientReqInterceptors_.elements();
+            Enumeration e = clientReqInterceptors_.elements();
             while (e.hasMoreElements()) {
-                String curr = ((org.omg.PortableInterceptor.ClientRequestInterceptor) e
-                        .nextElement()).name();
+                String curr = ((ClientRequestInterceptor) e.nextElement()).name();
                 if (curr.length() == 0)
                     continue;
                 if (curr.equals(name))
-                    throw new org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName(
-                            name);
+                    throw new DuplicateName(name);
             }
         }
 
         clientReqInterceptors_.addElement(interceptor);
     }
 
-    public void addServerRequestInterceptor(
-            org.omg.PortableInterceptor.ServerRequestInterceptor interceptor)
-            throws org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName {
+    public void addServerRequestInterceptor(ServerRequestInterceptor interceptor) throws DuplicateName {
         //
         // Ensure that this interceptor isn't already registered. Ignore
         // anonymous interceptors (that is interceptors with no name).
         //
         String name = interceptor.name();
         if (name.length() != 0) {
-            java.util.Enumeration e = serverReqInterceptors_.elements();
+            Enumeration e = serverReqInterceptors_.elements();
             while (e.hasMoreElements()) {
-                String curr = ((org.omg.PortableInterceptor.ServerRequestInterceptor) e
-                        .nextElement()).name();
+                String curr = ((ServerRequestInterceptor) e.nextElement()).name();
                 if (curr.length() == 0)
                     continue;
                 if (curr.equals(name))
-                    throw new org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName(
-                            name);
+                    throw new DuplicateName(name);
             }
         }
 
@@ -206,11 +230,9 @@ final public class PIManager {
         return maxSlots_++;
     }
 
-    public void registerPolicyFactory(int type,
-            org.omg.PortableInterceptor.PolicyFactory factory) {
+    public void registerPolicyFactory(int type, PolicyFactory factory) {
         Assert._OB_assert(orbInstance_ != null);
-        orbInstance_.getPolicyFactoryManager().registerPolicyFactory(type,
-                factory, false);
+        orbInstance_.getPolicyFactoryManager().registerPolicyFactory(type, factory, false);
     }
 
     public void setORBInstance(ORBInstance orbInstance) {
@@ -220,7 +242,7 @@ final public class PIManager {
         // Allocate the PICurrent object
         //
         Assert._OB_assert(current_ == null);
-        current_ = new org.apache.yoko.orb.PortableInterceptor.Current_impl(
+        current_ = new Current_impl(
                 orb_);
 
         //
@@ -229,7 +251,7 @@ final public class PIManager {
         InitialServiceManager ism = orbInstance_.getInitialServiceManager();
         try {
             ism.addInitialReference("PICurrent", current_);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+        } catch (InvalidName ex) {
             Assert._OB_assert(ex);
         }
     }
@@ -249,16 +271,13 @@ final public class PIManager {
         if (clientReqInterceptors_.isEmpty()) {
             InitialServiceManager ism = orbInstance_.getInitialServiceManager();
             try {
-                org.omg.CORBA.PolicyManager pm = org.omg.CORBA.PolicyManagerHelper
-                        .narrow(ism
-                                .resolveInitialReferences("ORBPolicyManager"));
-                org.omg.CORBA.Policy[] pl = new org.omg.CORBA.Policy[1];
+                PolicyManager pm = PolicyManagerHelper.narrow(ism.resolveInitialReferences("ORBPolicyManager"));
+                Policy[] pl = new Policy[1];
                 pl[0] = new InterceptorPolicy_impl(false);
-                pm.set_policy_overrides(pl,
-                        org.omg.CORBA.SetOverrideType.ADD_OVERRIDE);
-            } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+                pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
+            } catch (InvalidName ex) {
                 Assert._OB_assert(ex);
-            } catch (org.omg.CORBA.InvalidPolicies ex) {
+            } catch (InvalidPolicies ex) {
                 Assert._OB_assert(ex);
             }
         }
@@ -269,14 +288,14 @@ final public class PIManager {
     //
     // No argument information available
     //
-    org.omg.PortableInterceptor.ClientRequestInfo clientSendRequest(String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL) throws LocationForward {
+    ClientRequestInfo clientSendRequest(String op,
+            boolean responseExpected, IOR IOR,
+            IOR origIOR,
+            ProfileInfo profileInfo,
+            Policy[] policies, Vector requestSCL,
+            Vector replySCL) throws LocationForward {
         Assert._OB_assert(current_ != null);
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl info = new org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl(
+        ClientRequestInfo_impl info = new ClientRequestInfo_impl(
                 orb_, nextID(), op, responseExpected, IOR, origIOR,
                 profileInfo, policies, requestSCL, replySCL, orbInstance_,
                 current_);
@@ -289,16 +308,16 @@ final public class PIManager {
     //
     // DII style
     //
-    org.omg.PortableInterceptor.ClientRequestInfo clientSendRequest(String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL, org.omg.CORBA.NVList args,
-            org.omg.CORBA.NamedValue result,
-            org.omg.CORBA.ExceptionList exceptions) throws LocationForward {
+    ClientRequestInfo clientSendRequest(String op,
+            boolean responseExpected, IOR IOR,
+            IOR origIOR,
+            ProfileInfo profileInfo,
+            Policy[] policies, Vector requestSCL,
+            Vector replySCL, NVList args,
+            NamedValue result,
+            ExceptionList exceptions) throws LocationForward {
         Assert._OB_assert(current_ != null);
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl info = new org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl(
+        ClientRequestInfo_impl info = new ClientRequestInfo_impl(
                 orb_, nextID(), op, responseExpected, IOR, origIOR,
                 profileInfo, policies, requestSCL, replySCL, orbInstance_,
                 current_, args, result, exceptions);
@@ -311,16 +330,16 @@ final public class PIManager {
     //
     // SII style
     //
-    org.omg.PortableInterceptor.ClientRequestInfo clientSendRequest(String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL, ParameterDesc argDesc[],
-            ParameterDesc retDesc, org.omg.CORBA.TypeCode[] exceptionTC)
+    ClientRequestInfo clientSendRequest(String op,
+            boolean responseExpected, IOR IOR,
+            IOR origIOR,
+            ProfileInfo profileInfo,
+            Policy[] policies, Vector requestSCL,
+            Vector replySCL, ParameterDesc argDesc[],
+            ParameterDesc retDesc, TypeCode[] exceptionTC)
             throws LocationForward {
         Assert._OB_assert(current_ != null);
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl info = new org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl(
+        ClientRequestInfo_impl info = new ClientRequestInfo_impl(
                 orb_, nextID(), op, responseExpected, IOR, origIOR,
                 profileInfo, policies, requestSCL, replySCL, orbInstance_,
                 current_, argDesc, retDesc, exceptionTC);
@@ -330,45 +349,42 @@ final public class PIManager {
         return info;
     }
 
-    void clientReceiveReply(org.omg.PortableInterceptor.ClientRequestInfo info)
+    void clientReceiveReply(ClientRequestInfo info)
             throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl) info;
-        impl._OB_setReplyStatus(org.omg.PortableInterceptor.SUCCESSFUL.value);
+        ClientRequestInfo_impl impl = (ClientRequestInfo_impl) info;
+        impl._OB_setReplyStatus(SUCCESSFUL.value);
         impl._OB_reply();
     }
 
     void clientReceiveException(
-            org.omg.PortableInterceptor.ClientRequestInfo info,
+            ClientRequestInfo info,
             boolean wasSystem, Exception ex, String exId)
             throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl) info;
-        impl
-                ._OB_setReplyStatus(wasSystem ? org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                        : org.omg.PortableInterceptor.USER_EXCEPTION.value);
+        ClientRequestInfo_impl impl = (ClientRequestInfo_impl) info;
+        impl._OB_setReplyStatus(wasSystem ? SYSTEM_EXCEPTION.value : USER_EXCEPTION.value);
         impl._OB_setReceivedException(ex, exId);
         impl._OB_reply();
     }
 
     void clientReceiveLocationForward(
-            org.omg.PortableInterceptor.ClientRequestInfo info,
-            org.omg.IOP.IOR ior) throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl) info;
-        impl
-                ._OB_setReplyStatus(org.omg.PortableInterceptor.LOCATION_FORWARD.value);
+            ClientRequestInfo info,
+            IOR ior) throws LocationForward {
+        ClientRequestInfo_impl impl = (ClientRequestInfo_impl) info;
+        impl._OB_setReplyStatus(LOCATION_FORWARD.value);
         impl._OB_setForwardReference(ior);
         impl._OB_reply();
     }
 
-    org.omg.PortableInterceptor.ServerRequestInfo serverCreateRequestInfo(
+    ServerRequestInfo serverCreateRequestInfo(
             String op,
             boolean responseExpected,
-            org.omg.CORBA.Policy[] policies,
+            Policy[] policies,
             byte[] adapterId,
             byte[] objectId,
-            org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate,
-            java.util.Vector in, java.util.Vector out, org.apache.yoko.orb.OCI.TransportInfo transportInfo) throws LocationForward {
+            ObjectReferenceTemplate adapterTemplate,
+            Vector in, Vector out, TransportInfo transportInfo) throws LocationForward {
         Assert._OB_assert(current_ != null);
-        return new org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl(
+        return new ServerRequestInfo_impl(
                 orb_, nextID(), op, responseExpected, policies, adapterId,
                 objectId, adapterTemplate, in, out, orbInstance_, current_, transportInfo);
     }
@@ -376,18 +392,18 @@ final public class PIManager {
     //
     // Setup the servant and POA information
     //
-    void serverSetupServant(org.omg.PortableInterceptor.ServerRequestInfo info,
-            org.omg.PortableServer.Servant servant,
-            org.omg.PortableServer.POA poa) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverSetupServant(ServerRequestInfo info,
+                            Servant servant,
+                            POA poa) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_servant(servant, poa);
     }
 
     //
     // Notify the ServerRequestInfo about a context switch
     //
-    void serverContextSwitch(org.omg.PortableInterceptor.ServerRequestInfo info) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverContextSwitch(ServerRequestInfo info) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_contextSwitch();
     }
 
@@ -395,56 +411,51 @@ final public class PIManager {
     // Set the parameter information (SSI case)
     //
     void serverParameterDesc(
-            org.omg.PortableInterceptor.ServerRequestInfo info,
+            ServerRequestInfo info,
             ParameterDesc[] argDesc, ParameterDesc retDesc,
-            org.omg.CORBA.TypeCode[] exceptionTC) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+            TypeCode[] exceptionTC) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_parameterDesc(argDesc, retDesc, exceptionTC);
     }
 
     //
     // Set the arguments (DSI case)
     //
-    void serverArguments(org.omg.PortableInterceptor.ServerRequestInfo info,
-            org.omg.CORBA.NVList args) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverArguments(ServerRequestInfo info, NVList args) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_arguments(args);
     }
 
     //
     // Set the result (DSI case)
     //
-    void serverResult(org.omg.PortableInterceptor.ServerRequestInfo info,
-            org.omg.CORBA.Any result) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverResult(ServerRequestInfo info, Any result) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_result(result);
     }
 
     //
     // Call the receive_request_service_contexts interception point
     //
-    void serverReceiveRequestServiceContexts(
-            org.omg.PortableInterceptor.ServerRequestInfo info)
-            throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverReceiveRequestServiceContexts(ServerRequestInfo info) throws LocationForward {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_requestServiceContext(serverReqInterceptors_);
     }
 
     //
     // Call the receive_request interception point
     //
-    void serverReceiveRequest(org.omg.PortableInterceptor.ServerRequestInfo info)
-            throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+    void serverReceiveRequest(ServerRequestInfo info) throws LocationForward {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl._OB_request();
     }
 
     //
     // Call the send_reply interception point
     //
-    void serverSendReply(org.omg.PortableInterceptor.ServerRequestInfo info) {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
-        impl._OB_setReplyStatus(org.omg.PortableInterceptor.SUCCESSFUL.value);
+    void serverSendReply(ServerRequestInfo info) {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
+        impl._OB_setReplyStatus(SUCCESSFUL.value);
         impl._OB_sendReply();
     }
 
@@ -452,11 +463,11 @@ final public class PIManager {
     // Call the send_location_forward interception point
     //
     void serverSendLocationForward(
-            org.omg.PortableInterceptor.ServerRequestInfo info,
-            org.omg.IOP.IOR ior) throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
+            ServerRequestInfo info,
+            IOR ior) throws LocationForward {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
         impl
-                ._OB_setReplyStatus(org.omg.PortableInterceptor.LOCATION_FORWARD.value);
+                ._OB_setReplyStatus(LOCATION_FORWARD.value);
         impl._OB_setForwardReference(ior);
         impl._OB_sendOther();
     }
@@ -464,13 +475,9 @@ final public class PIManager {
     //
     // Call the send_exception interception point
     //
-    void serverSendException(
-            org.omg.PortableInterceptor.ServerRequestInfo info,
-            boolean wasSystem, Exception ex) throws LocationForward {
-        org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl impl = (org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl) info;
-        impl
-                ._OB_setReplyStatus(wasSystem ? org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                        : org.omg.PortableInterceptor.USER_EXCEPTION.value);
+    void serverSendException(ServerRequestInfo info, boolean wasSystem, Exception ex) throws LocationForward {
+        ServerRequestInfo_impl impl = (ServerRequestInfo_impl) info;
+        impl._OB_setReplyStatus(wasSystem ? SYSTEM_EXCEPTION.value : USER_EXCEPTION.value);
         impl._OB_setReceivedException(ex, null);
         impl._OB_sendException();
     }
@@ -478,43 +485,38 @@ final public class PIManager {
     //
     // For IORInterceptors
     //
-    public void establishComponents(org.omg.PortableInterceptor.IORInfo info) {
-        java.util.Enumeration e = iorInterceptors_.elements();
+    public void establishComponents(IORInfo info) {
+        Enumeration e = iorInterceptors_.elements();
         while (e.hasMoreElements()) {
             try {
-                ((org.omg.PortableInterceptor.IORInterceptor) e.nextElement())
-                        .establish_components(info);
-            } catch (org.omg.CORBA.SystemException ex) {
+                ((IORInterceptor) e.nextElement()).establish_components(info);
+            } catch (SystemException ex) {
             }
         }
     }
 
-    public void componentsEstablished(org.omg.PortableInterceptor.IORInfo info) {
-        java.util.Enumeration e = iorInterceptors_.elements();
+    public void componentsEstablished(IORInfo info) {
+        Enumeration e = iorInterceptors_.elements();
         while (e.hasMoreElements()) {
             try {
-                org.omg.PortableInterceptor.IORInterceptor_3_0 ir = org.omg.PortableInterceptor.IORInterceptor_3_0Helper
-                        .narrow((org.omg.CORBA.Object) e.nextElement());
+                IORInterceptor_3_0 ir = IORInterceptor_3_0Helper.narrow((org.omg.CORBA.Object) e.nextElement());
                 if (ir != null) {
                     ir.components_established(info);
                 }
-            } catch (org.omg.CORBA.BAD_PARAM ex) {
+            } catch (BAD_PARAM ex) {
             }
         }
     }
 
-    public void adapterStateChange(
-            org.omg.PortableInterceptor.ObjectReferenceTemplate[] templates,
-            short state) {
-        java.util.Enumeration e = iorInterceptors_.elements();
+    public void adapterStateChange(ObjectReferenceTemplate[] templates, short state) {
+        Enumeration e = iorInterceptors_.elements();
         while (e.hasMoreElements()) {
             try {
-                org.omg.PortableInterceptor.IORInterceptor_3_0 ir = org.omg.PortableInterceptor.IORInterceptor_3_0Helper
-                        .narrow((org.omg.CORBA.Object) e.nextElement());
+                IORInterceptor_3_0 ir = IORInterceptor_3_0Helper.narrow((org.omg.CORBA.Object) e.nextElement());
                 if (ir != null) {
                     ir.adapter_state_changed(templates, state);
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
 
             }
 
@@ -523,15 +525,15 @@ final public class PIManager {
     }
 
     public void adapterManagerStateChange(String id, short state) {
-        java.util.Enumeration e = iorInterceptors_.elements();
+        Enumeration e = iorInterceptors_.elements();
         while (e.hasMoreElements()) {
             try {
-                org.omg.PortableInterceptor.IORInterceptor_3_0 ir = org.omg.PortableInterceptor.IORInterceptor_3_0Helper
+                IORInterceptor_3_0 ir = IORInterceptor_3_0Helper
                         .narrow((org.omg.CORBA.Object) e.nextElement());
                 if (ir != null) {
                     ir.adapter_manager_state_changed(id, state);
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
 
             }
 

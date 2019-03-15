@@ -16,6 +16,11 @@
  */
 package org.apache.yoko.orb.OB;
 
+import org.omg.CONV_FRAME.CodeSetComponent;
+import org.omg.CORBA.CODESET_INCOMPATIBLE;
+
+import java.util.Locale;
+
 final public class CodeSetDatabase {
     //
     // The codeset registry IDs for the supported codesets
@@ -63,60 +68,68 @@ final public class CodeSetDatabase {
             //
             // Add locale specific char codesets
             //
-            String locale = java.util.Locale.getDefault().getLanguage();
+            String locale = Locale.getDefault().getLanguage();
 
             if (locale.equals("C") || locale.equals("POSIX")) {
                 CodeSetUtil.addCharCodeSet(ISOLATIN1);
             } else {
-                String loc = locale.substring(0, 2);
 
+                switch (locale.substring(0, 2)) {
                 //
                 // West European (C, POSIX, Germany, England, France,
                 // Netherlands, Portugal)
                 //
-                if (loc.equals("de") || loc.equals("en") || loc.equals("fr")
-                        || loc.equals("nl") || loc.equals("pt")) {
+                case "de":
+                case "en":
+                case "fr":
+                case "nl":
+                case "pt":
                     CodeSetUtil.addCharCodeSet(ISOLATIN1);
-                }
+                    break;
                 //
                 // North European (Denmark, Finland, Island, Norway, Sweden)
                 //
-                else if (loc.equals("da") || loc.equals("fi")
-                        || loc.equals("is") || loc.equals("no")
-                        || loc.equals("sv")) {
+                case "da":
+                case "fi":
+                case "is":
+                case "no":
+                case "sv":
                     CodeSetUtil.addCharCodeSet(ISOLATIN4);
-                }
+                    break;
                 //
                 // South European (Italy)
                 //
-                else if (loc.equals("it")) {
+                case "it":
                     CodeSetUtil.addCharCodeSet(ISOLATIN3);
-                }
+                    break;
                 //
                 // East European (Czek, Hungary, Poland, Slovakia, Slovenia)
                 //
-                else if (loc.equals("cs") || loc.equals("hu")
-                        || loc.equals("pl") || loc.equals("sk")
-                        || loc.equals("sl")) {
+                case "cs":
+                case "hu":
+                case "pl":
+                case "sk":
+                case "sl":
                     CodeSetUtil.addCharCodeSet(ISOLATIN2);
-                }
+                    break;
                 //
                 // Greek (Greece)
                 //
-                else if (loc.equals("el")) {
+                case "el":
                     CodeSetUtil.addCharCodeSet(ISOLATIN7);
-                }
+                    break;
                 //
                 // Cyrillic (Russia)
                 //
-                else if (loc.equals("ru")) {
+                case "ru":
                     CodeSetUtil.addCharCodeSet(ISOLATIN5);
-                }
+                    break;
                 //
                 // Turkish (Turkey)
                 //
-                else if (loc.equals("tr")) {
+                case "tr":
                     CodeSetUtil.addCharCodeSet(ISOLATIN9);
+                    break;
                 }
             }
 
@@ -214,8 +227,7 @@ final public class CodeSetDatabase {
         return null;
     }
 
-    int determineTCS(org.omg.CONV_FRAME.CodeSetComponent clientCS,
-            org.omg.CONV_FRAME.CodeSetComponent serverCS, int fallback) {
+    int determineTCS(CodeSetComponent clientCS, CodeSetComponent serverCS, int fallback) {
         //
         // Check if native codesets are present
         //
@@ -258,7 +270,7 @@ final public class CodeSetDatabase {
                 return fallback;
         }
 
-        throw new org.omg.CORBA.CODESET_INCOMPATIBLE();
+        throw new CODESET_INCOMPATIBLE();
     }
 
     private boolean isCompatible(int id1, int id2) {
@@ -282,8 +294,8 @@ final public class CodeSetDatabase {
         return false;
     }
 
-    private boolean checkCodeSetId(org.omg.CONV_FRAME.CodeSetComponent cs,
-            int id) {
+    private boolean checkCodeSetId(CodeSetComponent cs,
+                                   int id) {
         for (int i = 0; i < cs.conversion_code_sets.length; i++) {
             if (cs.conversion_code_sets[i] == id)
                 return true;
@@ -296,7 +308,7 @@ final public class CodeSetDatabase {
     }
 
     public int nameToId(String name) {
-        org.apache.yoko.orb.OB.Assert._OB_assert(name != null);
+        Assert._OB_assert(name != null);
 
         //
         // Check if codeset name is listed in registry
