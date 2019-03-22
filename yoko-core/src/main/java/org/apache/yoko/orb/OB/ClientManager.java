@@ -215,7 +215,7 @@ public final class ClientManager {
                     // both the list of all clients, and the list of clients
                     // that is returned
                     //
-                    CodeConverters conv = new CodeConverters();
+                    CodeConverters conv = new CodeConverters(null, null, null, null); // no conversion required?
                     Client client = new CollocatedClient(collocatedServer, concModel_, conv);
                     allClients_.addElement(client);
 

@@ -1888,7 +1888,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         wCharWriterRequired_ = false;
         wCharConversionRequired_ = false;
 
-        codeConverters_ = new CodeConverters(converters);
+        codeConverters_ = CodeConverters.createCopy(converters);
 
         if (converters != null) {
             if (codeConverters_.outputCharConverter != null) {

@@ -249,15 +249,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
                 CodeSetDatabase db = CodeSetDatabase.instance();
 
-                codeConverters_ = new CodeConverters();
-                codeConverters_.inputCharConverter = db.getConverter(
-                        orbInstance_.getNativeCs(), codeSetContext.char_data);
-                codeConverters_.outputCharConverter = db.getConverter(
-                        codeSetContext.char_data, orbInstance_.getNativeCs());
-                codeConverters_.inputWcharConverter = db.getConverter(
-                        orbInstance_.getNativeWcs(), codeSetContext.wchar_data);
-                codeConverters_.outputWcharConverter = db.getConverter(
-                        codeSetContext.wchar_data, orbInstance_.getNativeWcs());
+                final int nativeCs = orbInstance_.getNativeCs();
+                final int alienCs = codeSetContext.char_data;
+                final int nativeWcs = orbInstance_.getNativeWcs();
+                final int alienWcs = codeSetContext.wchar_data;
+                final CodeConverterBase inputCharConverter = db.getConverter(nativeCs, alienCs);
+                final CodeConverterBase outputCharConverter = db.getConverter(alienCs, nativeCs);
+                final CodeConverterBase inputWcharConverter = db.getConverter(nativeWcs, alienWcs);
+                final CodeConverterBase outputWcharConverter = db.getConverter(alienWcs, nativeWcs);
+                codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
 
                 CoreTraceLevels coreTraceLevels = orbInstance_
                         .getCoreTraceLevels();
@@ -267,11 +267,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     if (codeConverters_.inputCharConverter != null)
                         msg += codeConverters_.inputCharConverter.getFrom().description;
                     else {
-                        if (codeSetContext.char_data == 0)
+                        if (alienCs == 0)
                             msg += "none";
                         else {
-                            CodeSetInfo info = db.getCodeSetInfo(orbInstance_
-                                    .getNativeCs());
+                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeCs);
                             msg += info != null ? info.description : null;
                         }
                     }
@@ -279,11 +278,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     if (codeConverters_.inputWcharConverter != null)
                         msg += codeConverters_.inputWcharConverter.getFrom().description;
                     else {
-                        if (codeSetContext.wchar_data == 0)
+                        if (alienWcs == 0)
                             msg += "none";
                         else {
-                            CodeSetInfo info = db.getCodeSetInfo(orbInstance_
-                                    .getNativeWcs());
+                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeWcs);
                             msg += info != null ? info.description : null;
                         }
                     }

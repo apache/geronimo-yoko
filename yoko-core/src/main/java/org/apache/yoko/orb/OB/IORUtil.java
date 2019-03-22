@@ -263,7 +263,7 @@ public final class IORUtil {
         // Print char codeset information
         //
         sb.append("Native char codeset: \n");
-        charInfo = db.getCodeSetInfo(info.ForCharData.native_code_set);
+        charInfo = CodeSetInfo.forRegistryId(info.ForCharData.native_code_set);
         if (charInfo != null) {
             sb.append("  \"");
             sb.append(charInfo.description);
@@ -280,8 +280,8 @@ public final class IORUtil {
             if (i == 0)
                 sb.append("Char conversion codesets:\n");
 
-            charInfo = db
-                    .getCodeSetInfo(info.ForCharData.conversion_code_sets[i]);
+            charInfo = CodeSetInfo
+                    .forRegistryId(info.ForCharData.conversion_code_sets[i]);
             if (charInfo != null) {
                 sb.append("  \"");
                 sb.append(charInfo.description);
@@ -297,7 +297,7 @@ public final class IORUtil {
         // Print wchar codeset information
         //
         sb.append("Native wchar codeset: \n");
-        charInfo = db.getCodeSetInfo(info.ForWcharData.native_code_set);
+        charInfo = CodeSetInfo.forRegistryId(info.ForWcharData.native_code_set);
         if (charInfo != null) {
             sb.append("  \"");
             sb.append(charInfo.description);
@@ -314,8 +314,8 @@ public final class IORUtil {
             if (i == 0)
                 sb.append("Wchar conversion codesets:\n");
 
-            charInfo = db
-                    .getCodeSetInfo(info.ForWcharData.conversion_code_sets[i]);
+            charInfo = CodeSetInfo
+                    .forRegistryId(info.ForWcharData.conversion_code_sets[i]);
             if (charInfo != null) {
                 sb.append("  \"");
                 sb.append(charInfo.description);

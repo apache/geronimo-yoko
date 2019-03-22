@@ -160,13 +160,12 @@ final public class CodeSetUtil {
                     CodeSetDatabase.UTF16);
         }
 
-        CodeConverters conv = new CodeConverters();
-        conv.inputCharConverter = db.getConverter(nativeCs, tcs_c);
-        conv.outputCharConverter = db.getConverter(tcs_c, nativeCs);
-        conv.inputWcharConverter = db.getConverter(nativeWcs, tcs_wc);
-        conv.outputWcharConverter = db.getConverter(tcs_wc, nativeWcs);
+        final CodeConverterBase inputCharConverter = db.getConverter(nativeCs, tcs_c);
+        final CodeConverterBase outputCharConverter = db.getConverter(tcs_c, nativeCs);
+        final CodeConverterBase inputWcharConverter = db.getConverter(nativeWcs, tcs_wc);
+        final CodeConverterBase outputWcharConverter = db.getConverter(tcs_wc, nativeWcs);
 
-        return conv;
+        return new CodeConverters(inputCharConverter, outputCharConverter, inputWcharConverter, outputWcharConverter);
     }
 
     //

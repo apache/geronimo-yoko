@@ -357,7 +357,7 @@ public class Upcall {
 //                        msg += conv.outputCharConverter.getTo().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
-//                                .getCodeSetInfo(orbInstance_.getNativeCs());
+//                                .forRegistryId(orbInstance_.getNativeCs());
 //                        msg += info.description;
 //                    }
 //                    msg += "\nwchar code set: ";
@@ -365,7 +365,7 @@ public class Upcall {
 //                        msg += conv.outputWcharConverter.getTo().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
-//                                .getCodeSetInfo(orbInstance_.getNativeWcs());
+//                                .forRegistryId(orbInstance_.getNativeWcs());
 //                        msg += info.description;
 //                    }
 //                    orbInstance_.getLogger().trace("outgoing", msg);
@@ -480,8 +480,8 @@ public class Upcall {
     private static void createUnknownExceptionServiceContexts(UnknownException ex, Vector<ServiceContext> scl) {
         final Throwable t = ex.originalEx;
         try (CmsfOverride o = CmsfThreadLocal.override()) {
-            CodeConverters codeConverters = new CodeConverters();
-            codeConverters.outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
+            final CodeConverterBase outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
+            CodeConverters codeConverters = new CodeConverters(null, null, null, outputWcharConverter);
             Buffer buf = new Buffer();
             try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();

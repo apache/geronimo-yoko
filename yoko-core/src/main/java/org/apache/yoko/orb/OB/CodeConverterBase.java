@@ -27,28 +27,22 @@ abstract public class CodeConverterBase
     //
     // Source and destination code set
     //
-    protected CodeSetInfo from_;
+    protected final CodeSetInfo from_;
 
-    protected CodeSetInfo to_;
+    protected final CodeSetInfo to_;
 
     //
     // The UTF-8 or fixed width reader/writer
     //
-    private CodeSetReader reader_;
+    private final CodeSetReader reader_;
 
-    private CodeSetWriter writer_;
-
-    private static CodeSetInfo noneInstance_;
+    private final CodeSetWriter writer_;
 
     CodeConverterBase(CodeSetInfo from, CodeSetInfo to) {
-        if ((from == null || to == null) && noneInstance_ == null) {
-            noneInstance_ = new CodeSetInfo("none", 0, 0, null, (short) 2);
-        }
-
         if (from == null)
-            from = noneInstance_;
+            from = CodeSetInfo.NONE;
         if (to == null)
-            to = noneInstance_;
+            to = CodeSetInfo.NONE;
 
         from_ = from;
         to_ = to;
@@ -64,6 +58,7 @@ abstract public class CodeConverterBase
             // Java doesn't support wide characters larger than 16 bit
             //
             Assert._OB_assert(false);
+            throw new Error("unreachable");
         }
 
         if (to.rgy_value == CodeSetDatabase.UTF8)
@@ -77,6 +72,7 @@ abstract public class CodeConverterBase
             // Java doesn't support wide characters larger than 16 bit
             //
             Assert._OB_assert(false);
+            throw new Error("unreachable");
         }
     }
 

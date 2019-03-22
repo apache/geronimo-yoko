@@ -38,6 +38,7 @@ import org.apache.yoko.orb.OB.Client;
 import org.apache.yoko.orb.OB.ClientManager;
 import org.apache.yoko.orb.OB.CodeSetDatabase;
 import org.apache.yoko.orb.OB.CodeSetIORInterceptor_impl;
+import org.apache.yoko.orb.OB.CodeSetInfo;
 import org.apache.yoko.orb.OB.ConnectTimeoutPolicy_impl;
 import org.apache.yoko.orb.OB.ConnectionReusePolicy_impl;
 import org.apache.yoko.orb.OB.CorbalocURLScheme_impl;
@@ -1165,8 +1166,8 @@ public class ORB_impl extends ORBSingleton {
                 else
                     raiseDIIExceptions_ = false;
             } else if (key.equals("yoko.orb.native_cs")) {
-                int csid = CodeSetDatabase.instance()
-                        .nameToId(value);
+                int csid = CodeSetInfo
+                        .getRegistryIdForName(value);
                 if (csid != 0
                         && csid != CodeSetDatabase.UTF8)
                     nativeCs = csid;
@@ -1177,8 +1178,8 @@ public class ORB_impl extends ORBSingleton {
                     throw new INITIALIZE(err);
                 }
             } else if (key.equals("yoko.orb.native_wcs")) {
-                int csid = CodeSetDatabase.instance()
-                        .nameToId(value);
+                int csid = CodeSetInfo
+                        .getRegistryIdForName(value);
                 if (csid != 0
                         && csid != CodeSetDatabase.UTF8)
                     nativeWcs = csid;
@@ -1189,8 +1190,8 @@ public class ORB_impl extends ORBSingleton {
                     throw new INITIALIZE(err);
                 }
             } else if (key.equals("yoko.orb.default_wcs")) {
-                int csid = CodeSetDatabase.instance()
-                        .nameToId(value);
+                int csid = CodeSetInfo
+                        .getRegistryIdForName(value);
                 if (csid != 0
                         && csid != CodeSetDatabase.UTF8)
                     defaultWcs = csid;

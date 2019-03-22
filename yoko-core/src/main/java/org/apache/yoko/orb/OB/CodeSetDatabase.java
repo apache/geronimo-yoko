@@ -153,8 +153,8 @@ final public class CodeSetDatabase {
     }
 
     synchronized public CodeConverterBase getConverter(int to, int from) {
-        CodeSetInfo toSet = getCodeSetInfo(to);
-        CodeSetInfo fromSet = getCodeSetInfo(from);
+        CodeSetInfo toSet = CodeSetInfo.forRegistryId(to);
+        CodeSetInfo fromSet = CodeSetInfo.forRegistryId(from);
 
         if (toSet != null && fromSet != null) {
             if (toSet.max_bytes == 1) {
@@ -216,17 +216,6 @@ final public class CodeSetDatabase {
         return converter;
     }
 
-    public CodeSetInfo getCodeSetInfo(int rgy_value) {
-        //
-        // Check if codeset id is listed in registry
-        //
-        for (int i = 0; i < CodeSetDatabaseInit.codeSetInfoArraySize_; i++)
-            if (CodeSetDatabaseInit.codeSetInfoArray_[i].rgy_value == rgy_value)
-                return CodeSetDatabaseInit.codeSetInfoArray_[i];
-
-        return null;
-    }
-
     int determineTCS(CodeSetComponent clientCS, CodeSetComponent serverCS, int fallback) {
         //
         // Check if native codesets are present
@@ -274,24 +263,12 @@ final public class CodeSetDatabase {
     }
 
     private boolean isCompatible(int id1, int id2) {
-        CodeSetInfo cs1 = getCodeSetInfo(id1);
-        CodeSetInfo cs2 = getCodeSetInfo(id2);
+        CodeSetInfo cs1 = CodeSetInfo.forRegistryId(id1);
+        if (cs1 == null) return false;
 
-        if (cs1 == null || cs2 == null)
-            return false;
+        CodeSetInfo cs2 = CodeSetInfo.forRegistryId(id2);
 
-        for (int i = 0; i < cs1.char_values_size; i++) {
-            for (int j = 0; j < cs2.char_values_size; j++) {
-                //
-                // In order to be compatible in OSF terms, two codesets
-                // must have a common character set
-                //
-                if (cs1.char_values[i] == cs2.char_values[j])
-                    return true;
-            }
-        }
-
-        return false;
+        return cs1.isCompatibleWith(cs2);
     }
 
     private boolean checkCodeSetId(CodeSetComponent cs,
@@ -305,25 +282,6 @@ final public class CodeSetDatabase {
         // ID not found
         //
         return false;
-    }
-
-    public int nameToId(String name) {
-        Assert._OB_assert(name != null);
-
-        //
-        // Check if codeset name is listed in registry
-        // Return first match so that shortcuts can be used
-        //
-        for (int i = 0; i < CodeSetDatabaseInit.codeSetInfoArraySize_; i++) {
-            String s = CodeSetDatabaseInit.codeSetInfoArray_[i].description;
-            if (s.indexOf(name) != -1)
-                return CodeSetDatabaseInit.codeSetInfoArray_[i].rgy_value;
-        }
-
-        //
-        // Name not found
-        //
-        return 0;
     }
 
     private CharMapInfo getCharMapInfo(int rgy_value) {

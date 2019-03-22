@@ -392,15 +392,15 @@ final class GIOPClient extends Client {
                     if (conv.outputCharConverter != null) {
                         msg += conv.outputCharConverter.getTo().description;
                     } else {
-                        CodeSetInfo info = CodeSetDatabase.instance().getCodeSetInfo(orbInstance_.getNativeCs());
+                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeCs());
                         msg += info != null ? info.description : null;
                     }
                     msg += "\nwchar code set: ";
                     if (conv.outputWcharConverter != null)
                         msg += conv.outputWcharConverter.getTo().description;
                     else {
-                        CodeSetInfo info = CodeSetDatabase.instance()
-                                .getCodeSetInfo(orbInstance_.getNativeWcs());
+                        CodeSetInfo info = CodeSetInfo
+                                .forRegistryId(orbInstance_.getNativeWcs());
                         msg += info != null ? info.description : null;
                     }
                     orbInstance_.getLogger().trace("outgoing", msg);

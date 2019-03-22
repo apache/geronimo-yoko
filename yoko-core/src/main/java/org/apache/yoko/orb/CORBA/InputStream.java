@@ -1831,7 +1831,7 @@ final public class InputStream extends InputStreamWithOffsets {
         wCharReaderRequired_ = false;
         wCharConversionRequired_ = false;
 
-        codeConverters_ = new CodeConverters(converters);
+        codeConverters_ = CodeConverters.createCopy(converters);
 
         if (converters != null) {
             if (codeConverters_.inputCharConverter != null) {
