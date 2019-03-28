@@ -52,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static javax.rmi.CORBA.Util.*;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.MinorCodes.*;
 
 final class GIOPClient extends Client {
@@ -218,15 +219,8 @@ final class GIOPClient extends Client {
             CodeSetContext ctx = new CodeSetContext();
             CodeConverters conv = codeConverters();
 
-            if (conv.outputCharConverter != null)
-                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
-            else
-                ctx.char_data = CodeSetDatabase.ISOLATIN1;
-
-            if (conv.outputWcharConverter != null)
-                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
-            else
-                ctx.wchar_data = orbInstance_.getNativeWcs();
+            ctx.char_data = conv.outputCharConverter == null ? ISO_LATIN_1.id : conv.outputCharConverter.getTo().id;
+            ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getTo().id;
 
             // Create encapsulation for CONV_FRAME::CodeSetContext
             Buffer buf = new Buffer();

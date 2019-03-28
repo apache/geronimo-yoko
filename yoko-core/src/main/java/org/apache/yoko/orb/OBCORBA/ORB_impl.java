@@ -36,7 +36,6 @@ import org.apache.yoko.orb.OB.CONNECTION_REUSE_POLICY_ID;
 import org.apache.yoko.orb.OB.CONNECT_TIMEOUT_POLICY_ID;
 import org.apache.yoko.orb.OB.Client;
 import org.apache.yoko.orb.OB.ClientManager;
-import org.apache.yoko.orb.OB.CodeSetDatabase;
 import org.apache.yoko.orb.OB.CodeSetIORInterceptor_impl;
 import org.apache.yoko.orb.OB.CodeSetInfo;
 import org.apache.yoko.orb.OB.ConnectTimeoutPolicy_impl;
@@ -201,6 +200,10 @@ import java.util.Hashtable;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
+
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
 
 // This class must be public and not final
 public class ORB_impl extends ORBSingleton {
@@ -1118,8 +1121,8 @@ public class ORB_impl extends ORBSingleton {
         String serverId = "";
         String serverInstance = "";
         int concModel = Client.Blocking;
-        int nativeCs = CodeSetDatabase.ISOLATIN1;
-        int nativeWcs = CodeSetDatabase.UTF16;
+        int nativeCs = ISO_LATIN_1.id;
+        int nativeWcs = UTF_16.id;
         int defaultWcs = 0;
 
         Enumeration keys = properties.keys();
@@ -1150,12 +1153,9 @@ public class ORB_impl extends ORBSingleton {
                 // The server name must begin with an alpha-numeric
                 // character
                 //
-                if (value.length() == 0
-                        || !Character.isLetterOrDigit(value.charAt(0))) {
-                    String err = "ORB.init: illegal value for "
-                            + "yoko.orb.server_name: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                if (value.length() == 0 || !Character.isLetterOrDigit(value.charAt(0))) {
+                    logger.error("ORB.init: illegal value for yoko.orb.server_name: " + value);
+                    throw new INITIALIZE("ORB.init: illegal value for yoko.orb.server_name: " + value);
                 }
                 serverId = value;
             } else if (key.equals("yoko.orb.server_instance")) {
@@ -1168,55 +1168,40 @@ public class ORB_impl extends ORBSingleton {
             } else if (key.equals("yoko.orb.native_cs")) {
                 int csid = CodeSetInfo
                         .getRegistryIdForName(value);
-                if (csid != 0
-                        && csid != CodeSetDatabase.UTF8)
+                if (csid != 0 && csid != UTF_8.id)
                     nativeCs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.native_cs: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.native_cs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_cs: " + value);
                 }
             } else if (key.equals("yoko.orb.native_wcs")) {
-                int csid = CodeSetInfo
-                        .getRegistryIdForName(value);
-                if (csid != 0
-                        && csid != CodeSetDatabase.UTF8)
+                int csid = CodeSetInfo.getRegistryIdForName(value);
+                if (csid != 0 && csid != UTF_8.id)
                     nativeWcs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.native_wcs: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.default_wcs")) {
                 int csid = CodeSetInfo
                         .getRegistryIdForName(value);
-                if (csid != 0
-                        && csid != CodeSetDatabase.UTF8)
+                if (csid != 0 && csid != UTF_8.id)
                     defaultWcs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.default_wcs: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.extended_wchar")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.extended_wchar: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
                 }
             } else if (key.equals("yoko.orb.default_init_ref")) {
                 if (value.length() == 0)
-                    logger.warning("ORB.init: invalid value for "
-                            + "yoko.orb.default_init_ref");
-            } else if (key.equals("yoko.orb.server_timeout")
-                    || key.equals("yoko.orb.server_shutdown_timeout")) {
+                    logger.warning("ORB.init: invalid value for yoko.orb.default_init_ref");
+            } else if (key.equals("yoko.orb.server_timeout") || key.equals("yoko.orb.server_shutdown_timeout")) {
                 // Used by GIOPServerWorker
-            } else if (key.equals("yoko.orb.client_timeout")
-                    || key.equals("yoko.orb.client_shutdown_timeout")) {
+            } else if (key.equals("yoko.orb.client_timeout") || key.equals("yoko.orb.client_shutdown_timeout")) {
                 // Used by GIOPClientWorker
             } else if (key.startsWith("yoko.orb.service.")) {
                 // Ignore
@@ -1228,23 +1213,17 @@ public class ORB_impl extends ORBSingleton {
                 // Ignore
             } else if (key.equals("yoko.orb.use_type_code_cache")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.use_type_code_cache: " + value;
-                    logger.error(err);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
                 }
             } else if (key.equals("yoko.orb.giop.max_message_size")) {
                 try {
                     int max = Integer.valueOf(value).intValue();
-                    GIOPIncomingMessage
-                    .setMaxMessageSize(max);
-                    GIOPOutgoingMessage
-                    .setMaxMessageSize(max);
+                    GIOPIncomingMessage.setMaxMessageSize(max);
+                    GIOPOutgoingMessage.setMaxMessageSize(max);
                 } catch (NumberFormatException ex) {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.giop.max_message_size: " + value;
-                    logger.error(err, ex);
-                    throw new INITIALIZE(err);
+                    logger.error("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value, ex);
+                    throw new INITIALIZE("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value);
                 }
             } else if (key.equals("yoko.orb.ami_workers")) {
                 // ignore

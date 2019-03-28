@@ -28,8 +28,7 @@ import org.omg.IOP.ServiceContext;
 public abstract class Client {
     private int usage_; // The usage counter
 
-    private CodeConverters codeConverters_; // The code
-                                                                    // converters
+    private CodeConverters codeConverters_; // The code converters
 
     //
     // The concurrency model for this Client

@@ -62,6 +62,7 @@ import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
@@ -247,20 +248,17 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 CodeSetUtil.extractCodeSetContext(aScl, codeSetContextH);
                 CodeSetContext codeSetContext = codeSetContextH.value;
 
-                CodeSetDatabase db = CodeSetDatabase.instance();
-
                 final int nativeCs = orbInstance_.getNativeCs();
                 final int alienCs = codeSetContext.char_data;
                 final int nativeWcs = orbInstance_.getNativeWcs();
                 final int alienWcs = codeSetContext.wchar_data;
-                final CodeConverterBase inputCharConverter = db.getConverter(nativeCs, alienCs);
-                final CodeConverterBase outputCharConverter = db.getConverter(alienCs, nativeCs);
-                final CodeConverterBase inputWcharConverter = db.getConverter(nativeWcs, alienWcs);
-                final CodeConverterBase outputWcharConverter = db.getConverter(alienWcs, nativeWcs);
+                final CodeConverterBase inputCharConverter = getConverter(nativeCs, alienCs);
+                final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
+                final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
+                final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
                 codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
 
-                CoreTraceLevels coreTraceLevels = orbInstance_
-                        .getCoreTraceLevels();
+                CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
                 if (coreTraceLevels.traceConnections() >= 2) {
                     String msg = "receiving transmission code sets";
                     msg += "\nchar code set: ";

@@ -256,7 +256,6 @@ public final class IORUtil {
         CodeSetComponentInfo info = CodeSetComponentInfoHelper
                 .read(in);
 
-        CodeSetDatabase db = CodeSetDatabase.instance();
         CodeSetInfo charInfo;
 
         //
@@ -280,8 +279,7 @@ public final class IORUtil {
             if (i == 0)
                 sb.append("Char conversion codesets:\n");
 
-            charInfo = CodeSetInfo
-                    .forRegistryId(info.ForCharData.conversion_code_sets[i]);
+            charInfo = CodeSetInfo.forRegistryId(info.ForCharData.conversion_code_sets[i]);
             if (charInfo != null) {
                 sb.append("  \"");
                 sb.append(charInfo.description);

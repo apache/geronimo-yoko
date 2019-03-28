@@ -17,36 +17,41 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 
 import static java.util.Collections.unmodifiableSet;
 import static java.util.EnumSet.complementOf;
+import static org.apache.yoko.orb.OB.CharMapInfo.IDENTITY;
+import static org.apache.yoko.orb.OB.CharMapInfo.LATIN_2;
+import static org.apache.yoko.orb.OB.CharMapInfo.LATIN_3;
+import static org.apache.yoko.orb.OB.CharMapInfo.LATIN_4;
+import static org.apache.yoko.orb.OB.CharMapInfo.LATIN_5;
+import static org.apache.yoko.orb.OB.CharMapInfo.LATIN_9;
 
 public enum CodeSetInfo {
     NONE("none", 0x00000000, 2, new short[0]),
-    ISO_8859_1_1987("ISO 8859-1:1987; Latin Alphabet No. 1", 0x00010001, 1, new short[]{0x0011}),
-    ISO_8859_2_1987("ISO 8859-2:1987; Latin Alphabet No. 2", 0x00010002, 1, new short[]{0x0012}),
-    ISO_8859_3_1988("ISO 8859-3:1988; Latin Alphabet No. 3", 0x00010003, 1, new short[]{0x0013}),
-    ISO_8859_4_1988("ISO 8859-4:1988; Latin Alphabet No. 4", 0x00010004, 1, new short[]{0x0014}),
-    ISO_IEC_8859_5_1988("ISO/IEC 8859-5:1988; Latin-Cyrillic Alphabet", 0x00010005, 1, new short[]{0x0015}),
+    ISO_LATIN_1("ISO 8859-1:1987; Latin Alphabet No. 1", 0x00010001, 1, new short[]{0x0011}, IDENTITY),
+    ISO_LATIN_2("ISO 8859-2:1987; Latin Alphabet No. 2", 0x00010002, 1, new short[]{0x0012}, LATIN_2),
+    ISO_LATIN_3("ISO 8859-3:1988; Latin Alphabet No. 3", 0x00010003, 1, new short[]{0x0013}, LATIN_3),
+    ISO_LATIN_4("ISO 8859-4:1988; Latin Alphabet No. 4", 0x00010004, 1, new short[]{0x0014}, LATIN_4),
+    ISO_LATIN_5("ISO/IEC 8859-5:1988; Latin-Cyrillic Alphabet", 0x00010005, 1, new short[]{0x0015}, LATIN_5),
     ISO_8859_6_1987("ISO 8859-6:1987; Latin-Arabic Alphabet", 0x00010006, 1, new short[]{0x0016}),
-    ISO_8859_7_1987("ISO 8859-7:1987; Latin-Greek Alphabet", 0x00010007, 1, new short[]{0x0017}),
+    ISO_LATIN_7("ISO 8859-7:1987; Latin-Greek Alphabet", 0x00010007, 1, new short[]{0x0017}, LATIN_9),
     ISO_8859_8_1988("ISO 8859-8:1988; Latin-Hebrew Alphabet", 0x00010008, 1, new short[]{0x0018}),
-    ISO_IEC_8859_9_1989("ISO/IEC 8859-9:1989; Latin Alphabet No. 5", 0x00010009, 1, new short[]{0x0019}),
+    ISO_LATIN_9("ISO/IEC 8859-9:1989; Latin Alphabet No. 5", 0x00010009, 1, new short[]{0x0019}, LATIN_9),
     ISO_IEC_8859_10_1992("ISO/IEC 8859-10:1992; Latin Alphabet No. 6", 0x0001000a, 1, new short[]{0x001a}),
     ISO_IEC_8859_15_1999("ISO/IEC 8859-15:1999; Latin Alphabet No. 9", 0x0001000f, 1, new short[]{0x0011}),
-    ISO_646_1991_IRV("ISO 646:1991 IRV (International Reference Version)", 0x00010020, 1, new short[]{0x0001}),
-    ISO_IEC_10646_1_1993__UCS2_L1("ISO/IEC 10646-1:1993; UCS-2, Level 1", 0x00010100, 2, new short[]{0x1000}),
+    ISO_646_IRV("ISO 646:1991 IRV (International Reference Version)", 0x00010020, 1, new short[]{0x0001}, IDENTITY),
+    UCS_2("ISO/IEC 10646-1:1993; UCS-2, Level 1", 0x00010100, 2, new short[]{0x1000}, IDENTITY),
     ISO_IEC_10646_1_1993__UCS2_L2("ISO/IEC 10646-1:1993; UCS-2, Level 2", 0x00010101, 2, new short[]{0x1000}),
     ISO_IEC_10646_1_1993__UCS2_L3("ISO/IEC 10646-1:1993; UCS-2, Level 3", 0x00010102, 2, new short[]{0x1000}),
     ISO_IEC_10646_1_1993__USC4_L1("ISO/IEC 10646-1:1993; UCS-4, Level 1", 0x00010104, 4, new short[]{0x1000}),
     ISO_IEC_10646_1_1993__USC4_L2("ISO/IEC 10646-1:1993; UCS-4, Level 2", 0x00010105, 4, new short[]{0x1000}),
     ISO_IEC_10646_1_1993__USC4_L3("ISO/IEC 10646-1:1993; UCS-4, Level 3", 0x00010106, 4, new short[]{0x1000}),
     ISO_IEC_10646_1_1993__UTF1("ISO/IEC 10646-1:1993; UTF-1, UCS Transformation Format 1", 0x00010108, 5, new short[]{0x1000}),
-    ISO_IEC_10646_1_1993__UTF16("ISO/IEC 10646-1:1993; UTF-16, UCS Transformation Format 16-bit form", 0x00010109, 2, new short[]{0x1000}),
+    UTF_16("ISO/IEC 10646-1:1993; UTF-16, UCS Transformation Format 16-bit form", 0x00010109, 2, new short[]{0x1000}, IDENTITY),
     JIS_X0201_1976("JIS X0201:1976; Japanese phonetic characters", 0x00030001, 1, new short[]{0x0080}),
     JIS_X0208_1978("JIS X0208:1978 Japanese Kanji Graphic Characters", 0x00030004, 2, new short[]{0x0081}),
     JIS_X0208_1983("JIS X0208:1983 Japanese Kanji Graphic Characters", 0x00030005, 2, new short[]{0x0081}),
@@ -65,7 +70,7 @@ public enum CodeSetInfo {
     OSF_Japanese_UJIS("OSF Japanese UJIS", 0x05000010, 2, new short[]{0x0001, 0x0080, 0x0081}),
     OSF_Japanese_SJIS_1("OSF Japanese SJIS-1", 0x05000011, 2, new short[]{0x0001, 0x0080, 0x0081}),
     OSF_Japanese_SJIS_2("OSF Japanese SJIS-2", 0x05000012, 2, new short[]{0x0001, 0x0080, 0x0081}),
-    X_Open_UTF_8("X/Open UTF-8; UCS Transformation Format 8 (UTF-8)", 0x05010001, 6, new short[]{0x1000}),
+    UTF_8("X/Open UTF-8; UCS Transformation Format 8 (UTF-8)", 0x05010001, 6, new short[]{0x1000}),
     JVC_eucJP("JVC_eucJP", 0x05020001, 3, new short[]{0x0001, 0x0080, 0x0081, 0x0082}),
     JVC_SJIS("JVC_SJIS", 0x05020002, 2, new short[]{0x0001, 0x0080, 0x0081}),
     DEC_Kanji("DEC Kanji", 0x10000001, 2, new short[]{0x0011, 0x0080, 0x0081}),
@@ -226,15 +231,21 @@ public enum CodeSetInfo {
     public final short max_bytes;
 
     final String description;
-    final int rgy_value;
+    public final int id;
+    final CharMapInfo charMap;
 
     private final short[] charsets;
 
-    CodeSetInfo(String desc, int reg_id, int max_width, short[] charsets) {
+    CodeSetInfo(String desc, int reg_id, int max_width, short[] charsets, CharMapInfo charMap) {
         this.description = desc;
-        this.rgy_value = reg_id;
+        this.id = reg_id;
         this.max_bytes = (short)max_width;
         this.charsets = charsets;
+        this.charMap = charMap;
+    }
+
+    CodeSetInfo(String desc, int reg_id, int max_width, short[] charsets) {
+        this(desc, reg_id, max_width, charsets, null);
     }
 
     public static int getRegistryIdForName(String name) {
@@ -245,13 +256,13 @@ public enum CodeSetInfo {
         // Return first match so that shortcuts can be used
         //
         for (final CodeSetInfo value: REGISTRY) {
-            if (value.description.contains(name)) return value.rgy_value;
+            if (value.description.contains(name)) return value.id;
         }
 
         //
         // Name not found
         //
-        return NONE.rgy_value;
+        return NONE.id;
     }
 
     public static CodeSetInfo forRegistryId(int rgy_value) {
@@ -259,7 +270,7 @@ public enum CodeSetInfo {
         // Check if codeset id is listed in registry
         //
         for (final CodeSetInfo value: REGISTRY) {
-            if (value.rgy_value == rgy_value) return value;
+            if (value.id == rgy_value) return value;
         }
 
         return null;
@@ -278,4 +289,5 @@ public enum CodeSetInfo {
 
         return false;
     }
+
 }
