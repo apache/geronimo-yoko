@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import java.util.Objects;
 
-import static org.apache.yoko.orb.OB.CharMapInfo.IDENTITY;
+import static org.apache.yoko.orb.OB.CharMapInfo.CM_IDENTITY;
 
 final class CodeConverterImpl extends CodeConverterBase {
     private final CharMapInfo fromMap;
@@ -32,7 +32,7 @@ final class CodeConverterImpl extends CodeConverterBase {
         toMap = toSet.charMap;
         Objects.requireNonNull(fromMap);
         Objects.requireNonNull(toMap);
-        conversionRequired = (fromMap == IDENTITY) && (toMap == IDENTITY);
+        conversionRequired = (fromMap == CM_IDENTITY) && (toMap == CM_IDENTITY);
     }
 
     public boolean conversionRequired() {

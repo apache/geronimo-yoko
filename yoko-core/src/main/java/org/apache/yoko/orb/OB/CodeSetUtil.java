@@ -44,9 +44,9 @@ import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_2;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_3;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_4;
-import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_5;
-import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_7;
-import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_9;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_8859_5;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_8859_7;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_8859_9;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UCS_2;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
@@ -88,11 +88,11 @@ final public class CodeSetUtil {
         case "sl": // Slovenia
             return asList(ISO_LATIN_2);
         case "el": // Greek
-            return asList(ISO_LATIN_7);
+            return asList(ISO_8859_7);
         case "ru": // Russian
-            return asList(ISO_LATIN_5);
+            return asList(ISO_8859_5);
         case "tr": // Turkish
-            return asList(ISO_LATIN_9);
+            return asList(ISO_8859_9);
         default: // unsupported locale
             return emptyList();
         }

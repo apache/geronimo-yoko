@@ -19,7 +19,8 @@ package org.apache.yoko.orb.OB;
 import org.omg.CONV_FRAME.CodeSetComponent;
 import org.omg.CORBA.CODESET_INCOMPATIBLE;
 
-final public class CodeSetDatabase {
+enum CodeSetDatabase {
+    ;
 
     static CodeConverterBase getConverter(int to, int from) {
         CodeSetInfo toSet = CodeSetInfo.forRegistryId(to);
