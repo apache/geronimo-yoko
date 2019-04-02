@@ -17,52 +17,55 @@
 
 package org.apache.yoko.orb.OB;
 
-final public class CodeSetIORInterceptor_impl extends org.omg.CORBA.LocalObject
-        implements org.omg.PortableInterceptor.IORInterceptor_3_0 {
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CONV_FRAME.CodeSetComponent;
+import org.omg.CONV_FRAME.CodeSetComponentInfo;
+import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.LocalObject;
+import org.omg.IOP.TAG_CODE_SETS;
+import org.omg.IOP.TaggedComponent;
+import org.omg.PortableInterceptor.IORInfo;
+import org.omg.PortableInterceptor.IORInterceptor_3_0;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+
+public final class CodeSetIORInterceptor_impl extends LocalObject implements IORInterceptor_3_0 {
     //
     // The native codesets
     //
-    private int nativeCs_;
+    private final int nativeCs_;
 
-    private int nativeWcs_;
+    private final int nativeWcs_;
 
     public CodeSetIORInterceptor_impl(int nativeCs, int nativeWcs) {
         nativeCs_ = nativeCs;
         nativeWcs_ = nativeWcs;
     }
 
-    //
-    // IDL to Java Mapping
-    //
-
     public String name() {
         return "";
     }
 
-    public void destroy() {
-    }
+    public void destroy() {}
 
-    public void establish_components(org.omg.PortableInterceptor.IORInfo info) {
-        org.omg.CONV_FRAME.CodeSetComponent c = CodeSetUtil
-                .createCodeSetComponent(nativeCs_, false);
-        org.omg.CONV_FRAME.CodeSetComponent wc = CodeSetUtil
-                .createCodeSetComponent(nativeWcs_, true);
-        org.omg.CONV_FRAME.CodeSetComponentInfo codeSetInfo = new org.omg.CONV_FRAME.CodeSetComponentInfo(
-                c, wc);
+    public void establish_components(IORInfo info) {
+        CodeSetComponent c = CodeSetUtil.createCodeSetComponent(nativeCs_, false);
+        CodeSetComponent wc = CodeSetUtil.createCodeSetComponent(nativeWcs_, true);
+        CodeSetComponentInfo codeSetInfo = new CodeSetComponentInfo(c, wc);
 
-        org.omg.IOP.TaggedComponent component = new org.omg.IOP.TaggedComponent();
-        component.tag = org.omg.IOP.TAG_CODE_SETS.value;
+        TaggedComponent component = new TaggedComponent();
+        component.tag = TAG_CODE_SETS.value;
 
         //
         // The Codec could be used here -- but that means that the
         // Any insertion/extraction operators would have to be
         // generated unnecessarily
         //
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                buf);
+        Buffer buf = new Buffer();
+        OutputStream out = new OutputStream(buf);
         out._OB_writeEndian();
-        org.omg.CONV_FRAME.CodeSetComponentInfoHelper.write(out, codeSetInfo);
+        CodeSetComponentInfoHelper.write(out, codeSetInfo);
 
         component.component_data = new byte[out._OB_pos()];
         System.arraycopy(buf.data(), 0, component.component_data, 0, buf
@@ -70,19 +73,14 @@ final public class CodeSetIORInterceptor_impl extends org.omg.CORBA.LocalObject
 
         try {
             info.add_ior_component(component);
-        } catch (org.omg.CORBA.BAD_PARAM ex) {
+        } catch (BAD_PARAM ex) {
             // Ignore - profile may not be supported
         }
     }
 
-    public void components_established(org.omg.PortableInterceptor.IORInfo info) {
-    }
+    public void components_established(IORInfo info) {}
 
-    public void adapter_manager_state_changed(String id, short state) {
-    }
+    public void adapter_manager_state_changed(String id, short state) {}
 
-    public void adapter_state_changed(
-            org.omg.PortableInterceptor.ObjectReferenceTemplate[] templates,
-            short state) {
-    }
+    public void adapter_state_changed(ObjectReferenceTemplate[] templates, short state) {}
 }

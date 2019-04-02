@@ -22,28 +22,35 @@ import static org.apache.yoko.orb.OB.MinorCodes.*;
 
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
+import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.IOP.TAG_INTERNET_IOP;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OCI.SendReceiveMode.*;
 
-final public class Transport_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.Transport {
+final public class Transport_impl extends LocalObject implements
+        Transport {
     // This data member must not be private because the info object
     // must be able to access it
-    public final java.net.Socket socket_; // The socket
+    public final Socket socket_; // The socket
 
-    private java.io.InputStream in_; // The socket's input stream
+    private InputStream in_; // The socket's input stream
 
-    private java.io.OutputStream out_; // The socket's output stream
+    private OutputStream out_; // The socket's output stream
 
     private volatile boolean shutdown_; // True if shutdown() was called
 
@@ -52,7 +59,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     private TransportInfo_impl info_; // Transport information
     
     // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.Transport.class.getName());
+    static final Logger logger = Logger.getLogger(Transport.class.getName());
 
     // ------------------------------------------------------------------
     // Private and protected member implementations
@@ -64,25 +71,23 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
 
             try {
                 socket_.setSoTimeout(soTimeout_);
-            } catch (java.net.SocketException ex) {
+            } catch (SocketException ex) {
                 logger.log(Level.FINE, "Socket setup error", ex); 
                 
                 throw (COMM_FAILURE)new COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout)
+                        describeCommFailure(MinorSetSoTimeout)
                                 + ": socket error during setSoTimeout: "
                                 + ex.getMessage(),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex);
-            } catch (java.lang.NullPointerException ex) {
+                        MinorSetSoTimeout,
+                        CompletionStatus.COMPLETED_NO).initCause(ex);
+            } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket setup error", ex); 
                 throw (COMM_FAILURE)new COMM_FAILURE(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeCommFailure(org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout)
+                        describeCommFailure(MinorSetSoTimeout)
                                 + ": NullPointerException error during setSoTimeout: "
                                 + ex.getMessage(), 
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO).initCause(ex); 
+                        MinorSetSoTimeout,
+                        CompletionStatus.COMPLETED_NO).initCause(ex);
             }
         }
     }
@@ -113,7 +118,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 // if we're using an SSL connection, this is an unsupported operation.
                 // just ignore the error and proceed to the close.
                 }
-        } catch (java.net.SocketException ex) {
+        } catch (SocketException ex) {
             //
             // Some VMs (namely JRockit) raise a SocketException if
             // the socket has already been closed.
@@ -134,7 +139,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
+        return TAG_INTERNET_IOP.value;
     }
 
     public SendReceiveMode mode() {
@@ -173,7 +178,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         }
     }
 
-    public void receive(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
+    public void receive(Buffer buf, boolean block) {
         setBlock(block);
 
         logger.fine("receiving a buffer of " + buf.rest_length() + " from " + socket_ + " using transport " + this); 
@@ -191,20 +196,20 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 if (!block)
                     return;
                 if (shutdown_)
-                    throw asCommFailure(ex, MinorCodes.MinorRecv, "Interrupted I/O exception during shutdown");
-            } catch (java.io.IOException ex) {
+                    throw asCommFailure(ex, MinorRecv, "Interrupted I/O exception during shutdown");
+            } catch (IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
-                throw asCommFailure(ex, MinorCodes.MinorRecv, "I/O error during read");
-            } catch (java.lang.NullPointerException ex) {
+                throw asCommFailure(ex, MinorRecv, "I/O error during read");
+            } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket read error", ex);
-                throw asCommFailure(ex, MinorCodes.MinorRecv, "NullPointerException during read");
+                throw asCommFailure(ex, MinorRecv, "NullPointerException during read");
             }
         }
     }
 
 
-    public boolean receive_detect(org.apache.yoko.orb.OCI.Buffer buf,
-            boolean block) {
+    public boolean receive_detect(Buffer buf,
+                                  boolean block) {
         setBlock(block);
 
         while (!buf.is_full()) {
@@ -213,14 +218,14 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 if (result <= 0)
                     return false;
                 buf.advance(result);
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
 
                 if (!block)
                     return true;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 return false;
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 return false;
             }
         }
@@ -228,7 +233,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         return true;
     }
 
-    public void receive_timeout(org.apache.yoko.orb.OCI.Buffer buf, int t) {
+    public void receive_timeout(Buffer buf, int t) {
         if (t < 0)
             throw new InternalError();
 
@@ -246,21 +251,21 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                     throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
                 }
                 buf.advance(result);
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
                 return;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
                 throw asCommFailure(ex, MinorRecv, "I/O error during read");
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
                 throw asCommFailure(ex, MinorRecv, "NullPointerException during read");
             }
         }
     }
 
-    public boolean receive_timeout_detect(org.apache.yoko.orb.OCI.Buffer buf,
-            int t) {
+    public boolean receive_timeout_detect(Buffer buf,
+                                          int t) {
         if (t < 0)
             throw new InternalError();
 
@@ -275,12 +280,12 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 if (result <= 0)
                     return false;
                 buf.advance(result);
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
                 return true;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 return false;
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 return false;
             }
         }
@@ -288,7 +293,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         return true;
     }
 
-    public void send(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
+    public void send(Buffer buf, boolean block) {
         setBlock(block);
         
         logger.fine("Sending buffer of size " + buf.rest_length() + " to " + socket_); 
@@ -298,22 +303,22 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 out_.write(buf.data(), buf.pos(), buf.rest_length());
                 out_.flush();
                 buf.pos(buf.length());
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
 
                 if (!block)
                     return;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 logger.log(Level.FINE, "Socket write error", ex);
                 throw asCommFailure(ex, MinorSend, "I/O error during write");
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket write error", ex);
                 throw asCommFailure(ex, MinorSend, "NullPointerException during write");
             }
         }
     }
 
-    public boolean send_detect(org.apache.yoko.orb.OCI.Buffer buf, boolean block) {
+    public boolean send_detect(Buffer buf, boolean block) {
         setBlock(block);
 
         while (!buf.is_full()) {
@@ -321,14 +326,14 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 out_.write(buf.data(), buf.pos(), buf.rest_length());
                 out_.flush();
                 buf.pos(buf.length());
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
 
                 if (!block)
                     return true;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 return false;
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 return false;
             }
         }
@@ -336,7 +341,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         return true;
     }
 
-    public void send_timeout(org.apache.yoko.orb.OCI.Buffer buf, int t) {
+    public void send_timeout(Buffer buf, int t) {
         if (t < 0)
             throw new InternalError();
 
@@ -352,20 +357,20 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 out_.write(buf.data(), buf.pos(), buf.rest_length());
                 out_.flush();
                 buf.pos(buf.length());
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
                 return;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 logger.log(Level.FINE,  "Socket write error", ex);
                 throw asCommFailure(ex, MinorSend, "I/O error during write");
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket write error", ex);
                 throw asCommFailure(ex, MinorSend, "NullPointerException during write");
             }
         }
     }
 
-    public boolean send_timeout_detect(org.apache.yoko.orb.OCI.Buffer buf, int t) {
+    public boolean send_timeout_detect(Buffer buf, int t) {
         if (t < 0)
             throw new InternalError();
 
@@ -379,12 +384,12 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
                 out_.write(buf.data(), buf.pos(), buf.rest_length());
                 out_.flush();
                 buf.pos(buf.length());
-            } catch (java.io.InterruptedIOException ex) {
+            } catch (InterruptedIOException ex) {
                 buf.advance(ex.bytesTransferred);
                 return true;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 return false;
-            } catch (java.lang.NullPointerException ex) {
+            } catch (NullPointerException ex) {
                 return false;
             }
         }
@@ -401,7 +406,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Transport_impl(java.net.Socket socket, ListenerMap lm) {
+    public Transport_impl(Socket socket, ListenerMap lm) {
         socket_ = socket;
         shutdown_ = false;
 
@@ -412,7 +417,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         try {
             in_ = socket_.getInputStream();
             out_ = socket_.getOutputStream();
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             logger.log(Level.FINE, "Socket setup error", ex);
             throw asCommFailure(ex, MinorSocket, "unable to obtain socket InputStream");
         }
@@ -437,7 +442,7 @@ final public class Transport_impl extends org.omg.CORBA.LocalObject implements
         try {
             in_ = socket_.getInputStream();
             out_ = socket_.getOutputStream();
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             logger.log(Level.FINE, "Socket setup error", ex);
             throw asCommFailure(ex, MinorSocket, "unable to obtain socket InputStream");
         }

@@ -75,6 +75,14 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD;
+import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD_PERM;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_NEEDS_ADDRESSING_MODE;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_SYSTEM_EXCEPTION;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD_PERM;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_HERE;
+import static org.omg.GIOP.LocateStatusType_1_2._UNKNOWN_OBJECT;
 import static org.omg.GIOP.MsgType_1_1.LocateReply;
 import static org.omg.GIOP.MsgType_1_1.Reply;
 import static org.omg.GIOP.MsgType_1_1._CancelRequest;
@@ -668,10 +676,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             IORHolder ior = new IORHolder();
             int val = oaInterface_.findByKey(key, ior);
-            LocateStatusType_1_2 status = LocateStatusType_1_2
-                    .from_int(val);
+            LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
 
-            //
             // Send back locate reply message
             //
             Buffer buf = new Buffer(
@@ -682,17 +688,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             ProfileInfo profileInfo = new ProfileInfo();
             profileInfo.major = msg.version().major;
             profileInfo.minor = msg.version().minor;
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(
-                    orbInstance_, out, profileInfo);
+            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
             outgoing.writeLocateReplyHeader(reqId, status);
 
-            //
-            // If the reply status is OBJECT_FORWARD or
-            // OBJECT_FORWARD_PERM the IOR is appended to the end of the
-            // LocateReply.
-            //
-            if (status == LocateStatusType_1_2.OBJECT_FORWARD || status == LocateStatusType_1_2.OBJECT_FORWARD_PERM)
-                IORHelper.write(out, ior.value);
+            // If the reply status is OBJECT_FORWARD or OBJECT_FORWARD_PERM
+            // the IOR is appended to the end of the LocateReply.
+            if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
 
             //
             // TODO:
@@ -757,15 +758,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         Logger logger = orbInstance_.getLogger();
 
         switch (status.value.value()) {
-            case LocateStatusType_1_2._UNKNOWN_OBJECT:
+            case _UNKNOWN_OBJECT:
                 down.setSystemException(new OBJECT_NOT_EXIST());
                 break;
 
-            case LocateStatusType_1_2._OBJECT_HERE:
+            case _OBJECT_HERE:
                 down.setNoException(in);
                 break;
 
-            case LocateStatusType_1_2._OBJECT_FORWARD:
+            case _OBJECT_FORWARD:
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, false);
@@ -783,7 +784,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 }
                 break;
 
-            case LocateStatusType_1_2._OBJECT_FORWARD_PERM:
+            case _OBJECT_FORWARD_PERM:
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, true);
@@ -802,7 +803,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
                 break;
 
-            case LocateStatusType_1_2._LOC_SYSTEM_EXCEPTION:
+            case _LOC_SYSTEM_EXCEPTION:
                 try {
                     SystemException ex = SystemExceptionHelper.read(in);
                     down.setSystemException(ex);
@@ -813,7 +814,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
                 break;
 
-            case LocateStatusType_1_2._LOC_NEEDS_ADDRESSING_MODE:
+            case _LOC_NEEDS_ADDRESSING_MODE:
                 // TODO: implement
                 processException(State.Error, new NO_IMPLEMENT(), false);
                 break;

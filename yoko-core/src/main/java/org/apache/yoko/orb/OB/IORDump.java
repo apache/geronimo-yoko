@@ -17,55 +17,63 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ConFactory;
+import org.apache.yoko.orb.OCI.ConFactoryRegistry;
+import org.apache.yoko.orb.OCI.ConFactoryRegistryHelper;
 import org.apache.yoko.util.HexConverter;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHelper;
+import org.omg.IOP.TAG_MULTIPLE_COMPONENTS;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedComponentHelper;
 
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Properties;
 
 public class IORDump {
 
-    public static String PrintObjref(org.omg.CORBA.ORB orb,
-            org.omg.IOP.IOR ior) {
+    public static String PrintObjref(ORB orb, IOR ior) {
         StringBuilder sb = new StringBuilder();
         PrintObjref(orb, sb, ior);
         return sb.toString();
     }
 
-    static public void PrintObjref(org.omg.CORBA.ORB orb, StringBuilder sb,
-            org.omg.IOP.IOR ior) {
+    static public void PrintObjref(ORB orb, StringBuilder sb, IOR ior) {
         sb.append("type_id: ").append(ior.type_id).append('\n');
 
-        org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = null;
+        ConFactoryRegistry conFactoryRegistry = null;
         try {
-            org.omg.CORBA.Object obj = orb
-                    .resolve_initial_references("OCIConFactoryRegistry");
-            conFactoryRegistry = org.apache.yoko.orb.OCI.ConFactoryRegistryHelper
-                    .narrow(obj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            org.omg.CORBA.Object obj = orb.resolve_initial_references("OCIConFactoryRegistry");
+            conFactoryRegistry = ConFactoryRegistryHelper.narrow(obj);
+        } catch (InvalidName ex) {
             Assert._OB_assert(ex);
         }
-        org.apache.yoko.orb.OCI.ConFactory[] factories = conFactoryRegistry
-                .get_factories();
+        ConFactory[] factories = conFactoryRegistry.get_factories();
 
         for (int i = 0; i < ior.profiles.length; i++) {
             sb.append("Profile #" + (i + 1) + ": ");
-            if (ior.profiles[i].tag == org.omg.IOP.TAG_MULTIPLE_COMPONENTS.value) {
+            if (ior.profiles[i].tag == TAG_MULTIPLE_COMPONENTS.value) {
                 sb.append("multiple components");
 
                 Buffer buf = new Buffer(ior.profiles[i].profile_data);
-                org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                        buf);
+                InputStream in = new InputStream(buf);
                 in._OB_readEndian();
 
                 int cnt = in.read_ulong();
-                if (cnt == 0)
-                    sb.append('\n');
+                if (cnt == 0) sb.append('\n');
                 else {
                     for (int j = 0; j < cnt; j++) {
-                        org.omg.IOP.TaggedComponent comp = org.omg.IOP.TaggedComponentHelper
-                                .read(in);
-
+                        TaggedComponent comp = TaggedComponentHelper.read(in);
                         IORUtil.describe_component(comp, sb);
                     }
                 }
@@ -74,8 +82,7 @@ public class IORDump {
                 for (j = 0; j < factories.length; j++) {
                     if (factories[j].tag() == ior.profiles[i].tag) {
                         sb.append(factories[j].id()).append('\n');
-                        String desc = factories[j]
-                                .describe_profile(ior.profiles[i]);
+                        String desc = factories[j].describe_profile(ior.profiles[i]);
                         sb.append(desc);
                         break;
                     }
@@ -83,16 +90,14 @@ public class IORDump {
 
                 if (j >= factories.length) {
                     sb.append("unknown profile tag ").append(ior.profiles[i].tag).append('\n');
-                    sb.append("profile_data: (")
-                            .append(ior.profiles[i].profile_data.length ).append(")\n");
-                    IORUtil.dump_octets(
-                            ior.profiles[i].profile_data, sb);
+                    sb.append("profile_data: (").append(ior.profiles[i].profile_data.length ).append(")\n");
+                    IORUtil.dump_octets(ior.profiles[i].profile_data, sb);
                 }
             }
         }
     }
 
-    static public void DumpIOR(org.omg.CORBA.ORB orb, String ref, boolean hasEndian) {
+    static public void DumpIOR(ORB orb, String ref, boolean hasEndian) {
         StringBuilder sb = new StringBuilder();
         DumpIOR(orb, ref, hasEndian, sb);
         PrintWriter pw = new PrintWriter(System.out);
@@ -100,13 +105,13 @@ public class IORDump {
         pw.flush();
     }
 
-    static public String DumpIORToString(org.omg.CORBA.ORB orb, String ref, boolean hasEndian) {
+    static public String DumpIORToString(ORB orb, String ref, boolean hasEndian) {
         StringBuilder sb = new StringBuilder();
         DumpIOR(orb, ref, hasEndian, sb);
         return sb.toString();
     }
 
-    static public void DumpIOR(org.omg.CORBA.ORB orb, String ref, boolean hasEndian, StringBuilder sb) {
+    static public void DumpIOR(ORB orb, String ref, boolean hasEndian, StringBuilder sb) {
         if (!ref.startsWith("IOR:")) {
             sb.append("IOR is invalid\n");
             return;
@@ -114,19 +119,16 @@ public class IORDump {
 
         byte[] data = HexConverter.asciiToOctets(ref, 4);
         Buffer buf = new Buffer(data);
-        org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                buf);
+        InputStream in = new InputStream(buf);
 
         boolean endian = in.read_boolean();
         in._OB_swap(endian);
 
-        org.omg.IOP.IOR ior = org.omg.IOP.IORHelper.read(in);
+        IOR ior = IORHelper.read(in);
 
         sb.append("byteorder: ");
-        if (hasEndian)
-            sb.append((endian ? "little" : "big") + " endian\n");
-        else
-            sb.append("n/a\n");
+        if (hasEndian) sb.append((endian ? "little" : "big") + " endian\n");
+        else sb.append("n/a\n");
 
         PrintObjref(orb, sb, ior);
 
@@ -134,8 +136,7 @@ public class IORDump {
 
     static void usage() {
         System.err.println("Usage:");
-        System.err
-                .println("org.apache.yoko.orb.OB.IORDump [options] [-f FILE ... | IOR ...]\n"
+        System.err.println("org.apache.yoko.orb.OB.IORDump [options] [-f FILE ... | IOR ...]\n"
                         + "\n"
                         + "Options:\n"
                         + "-h, --help          Show this message.\n"
@@ -144,11 +145,8 @@ public class IORDump {
                         + "                    command line.");
     }
 
-    public static int run(org.omg.CORBA.ORB orb, String[] args)
-            throws org.omg.CORBA.UserException {
-        //
+    public static int run(ORB orb, String[] args) throws UserException {
         // Get options
-        //
         boolean files = false;
         int i;
         for (i = 0; i < args.length && args[i].charAt(0) == '-'; i++) {
@@ -186,9 +184,7 @@ public class IORDump {
         }
 
         if (!files) {
-            //
             // Dump all IORs given as arguments
-            //
             int count = 0;
             for (; i < args.length; i++) {
                 if (count > 0)
@@ -196,62 +192,49 @@ public class IORDump {
                 System.out.println("IOR #" + (++count) + ':');
 
                 try {
-                    //
                     // The byte order can only be preserved for IOR: URLs
-                    //
                     if (args[i].startsWith("IOR:"))
                         DumpIOR(orb, args[i], true);
                     else {
-                        //
                         // Let string_to_object do the dirty work
-                        //
-                        org.omg.CORBA.Object obj = orb
-                                .string_to_object(args[i]);
+                        org.omg.CORBA.Object obj = orb.string_to_object(args[i]);
                         String s = orb.object_to_string(obj);
                         DumpIOR(orb, s, false);
                     }
-                } catch (org.omg.CORBA.BAD_PARAM ex) {
+                } catch (BAD_PARAM ex) {
                     System.err.println("IOR is invalid");
                 }
             }
         } else {
-            //
             // Dump all IORs from the specified files
-            //
             int count = 0;
             for (; i < args.length; i++) {
                 try {
-                    java.io.FileReader fin = new java.io.FileReader(args[i]);
-                    java.io.BufferedReader in = new java.io.BufferedReader(fin);
+                    FileReader fin = new FileReader(args[i]);
+                    BufferedReader in = new BufferedReader(fin);
                     String line;
                     while ((line = in.readLine()) != null) {
                         if (line.length() > 0) {
                             if (count > 0)
                                 System.out.println();
                             System.out.println("IOR #" + (++count) + ':');
-
-                            //
                             // The byte order can only be preserved for
                             // IOR: URLs
-                            //
                             if (line.startsWith("IOR:"))
                                 DumpIOR(orb, line, true);
                             else {
-                                //
                                 // Let string_to_object do the dirty work
-                                //
-                                org.omg.CORBA.Object obj = orb
-                                        .string_to_object(line);
+                                org.omg.CORBA.Object obj = orb.string_to_object(line);
                                 String s = orb.object_to_string(obj);
                                 DumpIOR(orb, s, false);
                             }
                         }
                     }
-                } catch (java.io.FileNotFoundException ex) {
+                } catch (FileNotFoundException ex) {
                     System.err.println("IORDump: can't open `" + args[i]
                             + "': " + ex);
                     return 1;
-                } catch (java.io.IOException ex) {
+                } catch (IOException ex) {
                     System.err.println("IORDump: can't read `" + args[i]
                             + "': " + ex);
                     return 1;
@@ -263,18 +246,17 @@ public class IORDump {
     }
 
     public static void main(String[] args) {
-        java.util.Properties props = new Properties();
+        Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
+        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
 
         int status;
-        org.omg.CORBA.ORB orb = null;
+        ORB orb = null;
 
         try {
             args = org.apache.yoko.orb.CORBA.ORB.ParseArgs(args, props, null);
-            orb = org.omg.CORBA.ORB.init(args, props);
+            orb = ORB.init(args, props);
             status = run(orb, args);
         } catch (Exception ex) {
             ex.printStackTrace();

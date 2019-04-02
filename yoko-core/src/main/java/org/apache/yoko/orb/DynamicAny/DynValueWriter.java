@@ -18,33 +18,31 @@
 package org.apache.yoko.orb.DynamicAny;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+
+import java.util.Hashtable;
 
 final public class DynValueWriter {
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
 
-    private org.omg.DynamicAny.DynAnyFactory factory_;
+    private final DynValueReader dynValueReader_;
 
-    private DynValueReader dynValueReader_;
+    private final Hashtable instanceTable_;
 
-    private java.util.Hashtable instanceTable_;
-
-    public DynValueWriter(org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.DynamicAny.DynAnyFactory factory) {
-        orbInstance_ = orbInstance;
-        factory_ = factory;
-        instanceTable_ = new java.util.Hashtable(131);
-        dynValueReader_ = new DynValueReader(orbInstance_, factory_, false);
+    public DynValueWriter(ORBInstance orbInstance, DynAnyFactory factory) {
+        instanceTable_ = new Hashtable(131);
+        dynValueReader_ = new DynValueReader(orbInstance, factory, false);
     }
 
-    public boolean writeIndirection(org.omg.DynamicAny.DynAny dv,
-            OutputStream out) {
+    public boolean writeIndirection(DynAny dv, OutputStream out) {
         Integer pos = (Integer) instanceTable_.get(dv);
 
         if (pos != null) {
-            org.apache.yoko.orb.OCI.Buffer buf = out._OB_buffer();
+            Buffer buf = out._OB_buffer();
             out.write_long(-1);
-            int off = pos.intValue() - buf.pos_;
+            int off = pos - buf.pos_;
             out.write_long(off);
 
             return true;
@@ -53,8 +51,8 @@ final public class DynValueWriter {
         return false;
     }
 
-    public void indexValue(org.omg.DynamicAny.DynAny dv, int startPos) {
-        instanceTable_.put(dv, new Integer(startPos));
+    public void indexValue(DynAny dv, int startPos) {
+        instanceTable_.put(dv, startPos);
         dynValueReader_.indexValue(startPos, dv);
     }
 

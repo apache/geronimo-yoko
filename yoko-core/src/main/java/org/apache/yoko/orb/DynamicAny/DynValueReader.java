@@ -18,42 +18,53 @@
 package org.apache.yoko.orb.DynamicAny;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.TypeCode;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
+
+import java.util.Hashtable;
 
 final public class DynValueReader {
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    private ORBInstance orbInstance_;
 
-    private org.omg.DynamicAny.DynAnyFactory factory_;
+    private DynAnyFactory factory_;
 
-    private java.util.Hashtable instanceTable_;
+    private Hashtable instanceTable_;
 
     private boolean truncateOK_;
 
     public boolean mustTruncate;
 
-    public DynValueReader(org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.DynamicAny.DynAnyFactory factory, boolean truncateOK) {
+    public DynValueReader(ORBInstance orbInstance,
+                          DynAnyFactory factory, boolean truncateOK) {
         orbInstance_ = orbInstance;
         factory_ = factory;
         truncateOK_ = truncateOK;
         mustTruncate = false;
-        instanceTable_ = new java.util.Hashtable(131);
+        instanceTable_ = new Hashtable(131);
     }
 
-    public org.omg.DynamicAny.DynAny readValue(InputStream in,
-            org.omg.CORBA.TypeCode tc)
-            throws org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode {
+    public DynAny readValue(InputStream in,
+            TypeCode tc)
+            throws InconsistentTypeCode {
         //
         // See if we already have a DynValue for this position
         //
-        org.omg.DynamicAny.DynAny result = getValue(in, tc);
+        DynAny result = getValue(in, tc);
         if (result != null)
             return result;
 
         //
         // Read the tag and attempt to process an indirection.
         //
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
+        Buffer buf = in.getBuffer();
         int save = buf.pos_;
         int tag = in.read_long();
         int curPos = save; // buf.cur_ - 4;
@@ -61,8 +72,8 @@ final public class DynValueReader {
         try {
             if (tag == -1)
                 return readIndirection(in);
-        } catch (org.omg.CORBA.MARSHAL ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (MARSHAL ex) {
+            Assert._OB_assert(ex);
             return null;
         }
 
@@ -92,41 +103,41 @@ final public class DynValueReader {
         return result;
     }
 
-    protected void indexValue(int startPos, org.omg.DynamicAny.DynAny dv) {
+    protected void indexValue(int startPos, DynAny dv) {
         instanceTable_.put(new Integer(startPos), dv);
     }
 
-    private org.omg.DynamicAny.DynAny readIndirection(InputStream in)
-            throws org.omg.CORBA.MARSHAL {
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
+    private DynAny readIndirection(InputStream in)
+            throws MARSHAL {
+        Buffer buf = in.getBuffer();
         int offs = in.read_long();
         int startPos = buf.pos_ - 4 + offs;
 
-        org.omg.DynamicAny.DynAny result = (org.omg.DynamicAny.DynAny) instanceTable_
+        DynAny result = (DynAny) instanceTable_
                 .get(new Integer(startPos));
 
         if (result == null) {
-            throw new org.omg.CORBA.MARSHAL(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection, 
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new MARSHAL(
+                MinorCodes
+                    .describeMarshal(MinorCodes.MinorReadInvalidIndirection),
+                MinorCodes.MinorReadInvalidIndirection,
+                CompletionStatus.COMPLETED_NO);
         }
 
         return result;
     }
 
-    private org.omg.DynamicAny.DynAny getValue(InputStream in,
-            org.omg.CORBA.TypeCode tc) {
+    private DynAny getValue(InputStream in,
+            TypeCode tc) {
         //
         // See if we already have a reference for the DynValue marshalled
         // at the current position of the stream (the record would have
         // been created earlier by DynValueWriter).
         //
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
+        Buffer buf = in.getBuffer();
         int startPos = buf.pos_;
 
-        org.omg.DynamicAny.DynAny orig = (org.omg.DynamicAny.DynAny) instanceTable_
+        DynAny orig = (DynAny) instanceTable_
                 .get(new Integer(startPos));
 
         if (orig == null)
@@ -137,12 +148,12 @@ final public class DynValueReader {
         // Input Stream by unmarshalling a temporary copy of the DynValue.
         //
         DynAnyFactory_impl factory_impl = (DynAnyFactory_impl) factory_;
-        org.omg.DynamicAny.DynAny copy = null;
+        DynAny copy = null;
 
         try {
             copy = factory_impl.prepare_dyn_any_from_type_code(tc, this);
-        } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InconsistentTypeCode ex) {
+            Assert._OB_assert(ex);
         }
 
         DynAny_impl impl = (DynAny_impl) copy;

@@ -17,29 +17,44 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.Net;
+import org.apache.yoko.orb.OCI.AccFactory;
+import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.InvalidParam;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IIOP.ProfileBody_1_0;
+import org.omg.IIOP.ProfileBody_1_0Helper;
 import org.omg.IOP.Codec;
 import org.omg.IOP.CodecFactory;
 import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
 import org.omg.IOP.ENCODING_CDR_ENCAPS;
 import org.omg.IOP.Encoding;
+import org.omg.IOP.IORHolder;
+import org.omg.IOP.TAG_INTERNET_IOP;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedComponentHelper;
 
+import java.util.Vector;
 import java.util.logging.Logger;
 
-final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.AccFactory {
+final class AccFactory_impl extends LocalObject implements
+        AccFactory {
 
     // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.AccFactory.class.getName());
+    static final Logger logger = Logger.getLogger(AccFactory.class.getName());
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
     //
     // AccFactory information
     //
     private AccFactoryInfo_impl info_;
     
-    private org.omg.CORBA.ORB orb_; // The ORB
+    private ORB orb_; // The ORB
 
     private ConnectionHelper connectionHelper_;   // client connection helper
 
@@ -55,15 +70,14 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
+        return TAG_INTERNET_IOP.value;
     }
 
     public org.apache.yoko.orb.OCI.AccFactoryInfo get_info() {
         return info_;
     }
 
-    public org.apache.yoko.orb.OCI.Acceptor create_acceptor(String[] params)
-            throws org.apache.yoko.orb.OCI.InvalidParam {
+    public Acceptor create_acceptor(String[] params) throws InvalidParam {
         String bind = null;
         String[] hosts = null;
         boolean keepAlive = true;
@@ -76,30 +90,30 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         while (i < params.length) {
             if (params[i].equals("--backlog")) {
                 if (i + 1 >= params.length)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "argument expected " + "for --backlog");
                 String arg = params[i + 1];
                 try {
                     backlog = Integer.valueOf(arg).intValue();
                 } catch (NumberFormatException ex) {
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "invalid argument " + "for backlog");
                 }
                 if (backlog < 1 || backlog > 65535)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "invalid backlog");
                 i += 2;
             } else if (params[i].equals("--bind")) {
                 if (i + 1 >= params.length)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "argument expected " + "for --bind");
                 bind = params[i + 1];
                 i += 2;
             } else if (params[i].equals("--host")) {
                 if (i + 1 >= params.length)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "argument expected " + "for --host");
-                java.util.Vector vec = new java.util.Vector();
+                Vector vec = new Vector();
                 int start = 0;
                 String str = params[i + 1];
                 while (true) {
@@ -121,7 +135,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                     }
                 }
                 if (vec.size() == 0)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "invalid argument " + "for --host");
                 hosts = new String[vec.size()];
                 vec.copyInto(hosts);
@@ -137,21 +151,21 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 i++;
             } else if (params[i].equals("--port")) {
                 if (i + 1 >= params.length)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "argument expected " + "for --port");
                 String arg = params[i + 1];
                 try {
                     port = Integer.valueOf(arg).intValue();
                 } catch (NumberFormatException ex) {
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "invalid argument " + "for port");
                 }
                 if (port < 1 || port > 65535)
-                    throw new org.apache.yoko.orb.OCI.InvalidParam(
+                    throw new InvalidParam(
                             "invalid port");
                 i += 2;
             } else  if (connectionHelper_ != null){
-                throw new org.apache.yoko.orb.OCI.InvalidParam(
+                throw new InvalidParam(
                         "unknown parameter: " + params[i]);
             } else {
                 i++;
@@ -160,7 +174,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
 
         if (hosts == null) {
             hosts = new String[1];
-            hosts[0] = org.apache.yoko.orb.OB.Net.getCanonicalHostname(numeric);
+            hosts[0] = Net.getCanonicalHostname(numeric);
         }
 
         logger.fine("Creating acceptor for port=" + port);
@@ -168,42 +182,40 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
         try {
                 codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
         } catch (InvalidName e) {
-            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
+            throw new InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
         } catch (UnknownEncoding e) {
-            throw new org.apache.yoko.orb.OCI.InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
+            throw new InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
         }
 
         return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 
-    public void change_key(org.omg.IOP.IORHolder ior, byte[] key) {
+    public void change_key(IORHolder ior, byte[] key) {
         //
         // Extract the IIOP profile information from the provided IOR
         //
         for (int profile = 0; profile < ior.value.profiles.length; profile++) {
-            if (ior.value.profiles[profile].tag == org.omg.IOP.TAG_INTERNET_IOP.value) {
+            if (ior.value.profiles[profile].tag == TAG_INTERNET_IOP.value) {
                 //
                 // Extract the 1_0 profile body
                 //
                 Buffer buf = new Buffer(ior.value.profiles[profile].profile_data);
-                org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                        buf, 0, false, null, null);
+                InputStream in = new InputStream(buf, 0, false, null, null);
                 in._OB_readEndian();
-                org.omg.IIOP.ProfileBody_1_0 body = org.omg.IIOP.ProfileBody_1_0Helper
-                        .read(in);
+                ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
                 //
                 // Read components if the IIOP version is > 1.0
                 //
-                org.omg.IOP.TaggedComponent[] components;
+                TaggedComponent[] components;
                 if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                     int len = in.read_ulong();
-                    components = new org.omg.IOP.TaggedComponent[len];
+                    components = new TaggedComponent[len];
                     for (int j = 0; j < len; j++)
-                        components[j] = org.omg.IOP.TaggedComponentHelper
+                        components[j] = TaggedComponentHelper
                                 .read(in);
                 } else
-                    components = new org.omg.IOP.TaggedComponent[0];
+                    components = new TaggedComponent[0];
 
                 //
                 // Fill in the new object-key
@@ -214,25 +226,22 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
                 // Remarshal the new body
                 //
                 Buffer buf2 = new Buffer();
-                org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
+                OutputStream out = new OutputStream(
                         buf2);
                 out._OB_writeEndian();
-                org.omg.IIOP.ProfileBody_1_0Helper.write(out, body);
+                ProfileBody_1_0Helper.write(out, body);
 
                 //
                 // Remarshal the components if the IIOP version is > 1.0
                 //
                 if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                     out.write_ulong(components.length);
-                    for (int i = 0; i < components.length; i++)
-                        org.omg.IOP.TaggedComponentHelper.write(out,
-                                components[i]);
+                    for (int i = 0; i < components.length; i++) {
+                        TaggedComponentHelper.write(out, components[i]);
+                    }
                 }
-                ior.value.profiles[profile].profile_data = new byte[buf2
-                        .length()];
-                System.arraycopy(buf2.data(), 0,
-                        ior.value.profiles[profile].profile_data, 0, buf2
-                                .length());
+                ior.value.profiles[profile].profile_data = new byte[buf2.length()];
+                System.arraycopy(buf2.data(), 0, ior.value.profiles[profile].profile_data, 0, buf2.length());
             }
         }
     }
@@ -242,7 +251,7 @@ final class AccFactory_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public AccFactory_impl(org.omg.CORBA.ORB orb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper extendedHelper) {
+    public AccFactory_impl(ORB orb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper extendedHelper) {
         Assert._OB_assert((helper == null) ^ (extendedHelper == null));
         orb_ = orb;
         info_ = new AccFactoryInfo_impl();

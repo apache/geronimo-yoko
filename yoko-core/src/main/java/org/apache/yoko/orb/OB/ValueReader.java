@@ -775,7 +775,7 @@ public final class ValueReader {
         }
     }
 
-    private java.io.Serializable read(CreationStrategy strategy) {
+    private Serializable read(CreationStrategy strategy) {
         Header h = new Header();
         h.tag = in_.read_long();
 
@@ -785,7 +785,7 @@ public final class ValueReader {
         } else if (h.tag == -1) {
             return readIndirection(strategy);
         } else if (h.tag < 0x7fffff00) {
-            throw new org.omg.CORBA.MARSHAL(String.format(
+            throw new MARSHAL(String.format(
                     "Illegal valuetype tag 0x%08x",
                     h.tag));
         } else {

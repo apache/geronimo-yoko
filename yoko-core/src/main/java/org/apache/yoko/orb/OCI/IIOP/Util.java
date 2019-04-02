@@ -19,8 +19,8 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Net;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
@@ -35,6 +35,9 @@ import org.omg.CSIIOP.TLS_SEC_TRANSHelper;
 import org.omg.CSIIOP.TransportAddress;
 import org.omg.IIOP.ProfileBody_1_0;
 import org.omg.IIOP.ProfileBody_1_0Helper;
+import org.omg.IIOP.ProfileBody_1_1;
+import org.omg.IIOP.ProfileBody_1_1Helper;
+import org.omg.IIOP.Version;
 import org.omg.IOP.*;
 import org.omg.IOP.CodecPackage.FormatMismatch;
 import org.omg.IOP.CodecPackage.TypeMismatch;
@@ -52,13 +55,13 @@ final public class Util {
     static public IOR createIOR(String host, int port, String id, ProfileInfo profileInfo) {
         IOR ior = new IOR();
         ior.type_id = id;
-        ior.profiles = new org.omg.IOP.TaggedProfile[1];
-        ior.profiles[0] = new org.omg.IOP.TaggedProfile();
+        ior.profiles = new TaggedProfile[1];
+        ior.profiles[0] = new TaggedProfile();
         ior.profiles[0].tag = TAG_INTERNET_IOP.value;
 
         if (profileInfo.major == 1 && profileInfo.minor == 0) {
             ProfileBody_1_0 body = new ProfileBody_1_0();
-            body.iiop_version = new org.omg.IIOP.Version((byte) 1, (byte) 0);
+            body.iiop_version = new Version((byte) 1, (byte) 0);
             body.host = host;
             if (port >= 0x8000)
                 body.port = (short) (port - 0xffff - 1);
@@ -73,8 +76,8 @@ final public class Util {
             System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
                     buf.length());
         } else {
-            org.omg.IIOP.ProfileBody_1_1 body = new org.omg.IIOP.ProfileBody_1_1();
-            body.iiop_version = new org.omg.IIOP.Version(profileInfo.major,
+            ProfileBody_1_1 body = new ProfileBody_1_1();
+            body.iiop_version = new Version(profileInfo.major,
                     profileInfo.minor);
             body.host = host;
             if (port >= 0x8000)
@@ -86,7 +89,7 @@ final public class Util {
             Buffer buf = new Buffer();
             OutputStream out = new OutputStream(buf);
             out._OB_writeEndian();
-            org.omg.IIOP.ProfileBody_1_1Helper.write(out, body);
+            ProfileBody_1_1Helper.write(out, body);
             ior.profiles[0].profile_data = new byte[buf.length()];
             System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
                     buf.length());
@@ -105,7 +108,7 @@ final public class Util {
                 break;
 
         // TODO: Internal error?
-        org.apache.yoko.orb.OB.Assert._OB_assert(profile < ior.profiles.length);
+        Assert._OB_assert(profile < ior.profiles.length);
 
         Buffer buf = new Buffer(ior.profiles[profile].profile_data);
         InputStream in = new InputStream(buf, 0, false, null, null);

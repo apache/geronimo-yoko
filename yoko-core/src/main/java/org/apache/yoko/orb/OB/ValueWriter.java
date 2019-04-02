@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,14 +17,21 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.DataOutputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.CustomMarshal;
+import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CORBA.portable.StreamableValue;
+import org.omg.CORBA.portable.ValueBase;
 
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
@@ -72,7 +79,7 @@ final public class ValueWriter {
 
     private final Hashtable<String, Integer> codebaseTable_;
 
-	private ValueHandler valueHandler;
+    private ValueHandler valueHandler;
 
     /** Helper class for using a String array as the key in a Hashtable */
     private final class StringSeqHasher {
@@ -103,7 +110,7 @@ final public class ValueWriter {
     // Private and protected methods
     // ------------------------------------------------------------------
 
-    private boolean checkIndirection(java.io.Serializable value) {
+    private boolean checkIndirection(Serializable value) {
         Integer pos = instanceTable_.get(value);
         if (pos != null) {
             //
@@ -161,8 +168,7 @@ final public class ValueWriter {
         }
     }
 
-    private BoxedValueHelper getHelper(java.io.Serializable value,
-            TypeCode type) {
+    private BoxedValueHelper getHelper(Serializable value, TypeCode type) {
         BoxedValueHelper result = null;
 
         Class<?> helperClass = null;
@@ -185,8 +191,7 @@ final public class ValueWriter {
             String name = value.getClass().getName() + "Helper";
             // get the appropriate class for the loading.
             Class<?> c = ProviderLocator.loadClass(name, value.getClass(), Thread.currentThread().getContextClassLoader());
-            if (BoxedValueHelper.class.isAssignableFrom(c))
-                helperClass = BoxedValueHelper.class.getClass().cast(c);
+            if (BoxedValueHelper.class.isAssignableFrom(c)) helperClass = c;
         } catch (ClassNotFoundException ignored) {
         }
 
@@ -199,7 +204,7 @@ final public class ValueWriter {
                 TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(type);
                 String id = origType.id();
                 helperClass = RepIds.query(id).suffix("Helper").toClass();
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+            } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
         }
@@ -235,12 +240,12 @@ final public class ValueWriter {
         codebaseTable_ = new Hashtable<>(3);
     }
 
-    public void writeValue(java.io.Serializable value, String id) {
+    public void writeValue(Serializable value, String id) {
         if (value == null)
             out_.write_long(0);
         else if (!checkIndirection(value)) {
-            boolean isStreamable = (value instanceof org.omg.CORBA.portable.StreamableValue);
-            boolean isCustom = (value instanceof org.omg.CORBA.CustomMarshal);
+            boolean isStreamable = (value instanceof StreamableValue);
+            boolean isCustom = (value instanceof CustomMarshal);
 
             //
             // if the repositoryId begins with "RMI:" we force the
@@ -270,7 +275,7 @@ final public class ValueWriter {
                 return;
             }
 
-            org.omg.CORBA.portable.ValueBase vb = (org.omg.CORBA.portable.ValueBase) value;
+            ValueBase vb = (ValueBase) value;
             String[] truncIds = vb._truncatable_ids();
             String valueId = truncIds[0];
             boolean isTruncatable = (truncIds.length > 1);
@@ -357,12 +362,12 @@ final public class ValueWriter {
             // Marshal the value data
             //
             if (isStreamable) {
-                ((org.omg.CORBA.portable.StreamableValue) value)._write(out_);
+                ((StreamableValue) value)._write(out_);
             } else // must be custom
             {
-                org.omg.CORBA.DataOutputStream out = new org.apache.yoko.orb.CORBA.DataOutputStream(
+                org.omg.CORBA.DataOutputStream out = new DataOutputStream(
                         out_);
-                ((org.omg.CORBA.CustomMarshal) value).marshal(out);
+                ((CustomMarshal) value).marshal(out);
             }
 
             endValue();
@@ -371,38 +376,38 @@ final public class ValueWriter {
 
     private void writeRMIValue(Serializable value) {
 
-    		// check if it is the null object
-    		if (value == null) {
-    			out_.write_long(0);
-    			return;
-    		}
+        // check if it is the null object
+        if (value == null) {
+            out_.write_long(0);
+            return;
+        }
 
-    		// check if this value has already been written
-    		if (checkIndirection(value)) {
-    			return;
-    		}
+        // check if this value has already been written
+        if (checkIndirection(value)) {
+            return;
+        }
 
-    		// special-case string
-    		if (value instanceof java.lang.String) {
-    			//out_._OB_align(4);
-    			int pos = out_._OB_pos();
-    			org.omg.CORBA.WStringValueHelper.write (out_, (String)value);
-    	        instanceTable_.put (value, pos);
-    			return;
-    		}
+        // special-case string
+        if (value instanceof String) {
+            //out_._OB_align(4);
+            int pos = out_._OB_pos();
+            WStringValueHelper.write (out_, (String)value);
+            instanceTable_.put (value, pos);
+            return;
+        }
 
-    		// get hold of the value handler
-    		if (valueHandler == null) {
-    	        valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
-    	    }
+        // get hold of the value handler
+        if (valueHandler == null) {
+            valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
+        }
 
         //
         // Needs writeReplace?
         //
-        java.io.Serializable repValue
-            = valueHandler.writeReplace (value);
-        
-        java.io.Serializable originalValue = null; 
+        Serializable repValue
+                = valueHandler.writeReplace (value);
+
+        Serializable originalValue = null;
 
         //
         // Repeat base checks if value was replaced
@@ -418,20 +423,20 @@ final public class ValueWriter {
                 return;
             }
 
-            if (repValue instanceof java.lang.String) {
-    			int pos = out_._OB_pos();
-       			org.omg.CORBA.WStringValueHelper.write (out_, (String)repValue);
+            if (repValue instanceof String) {
+                int pos = out_._OB_pos();
+                WStringValueHelper.write (out_, (String)repValue);
                 instanceTable_.put (repValue, pos);
                 // we record the original value position so that another attempt to write out 
                 // the original object will resolve to the same object. 
                 instanceTable_.put (value, pos);
-       			return;
+                return;
             }
             // save the original value because we want to record that object in the 
             // indirection table also, once we've established the offset position. 
-            originalValue = value; 
+            originalValue = value;
             value = repValue;
-            
+
         }
 
         //
@@ -468,11 +473,11 @@ final public class ValueWriter {
         }
         valueHandler.writeValue (out_, value);
         endValue ();
-	}
+    }
 
-    public void writeValueBox(java.io.Serializable value,
-            TypeCode type,
-            org.omg.CORBA.portable.BoxedValueHelper helper) {
+    public void writeValueBox(Serializable value,
+                              TypeCode type,
+                              BoxedValueHelper helper) {
         if (value == null)
             out_.write_long(0);
         else if (!checkIndirection(value)) {
@@ -486,11 +491,11 @@ final public class ValueWriter {
             // Raise MARSHAL if no Helper was found
             //
             if (helper == null)
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
+                throw new MARSHAL(MinorCodes
+                        .describeMarshal(MinorCodes.MinorNoValueFactory)
                         + ": no helper for valuebox",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorNoValueFactory,
+                        CompletionStatus.COMPLETED_NO);
 
             //
             // Setup header
@@ -509,16 +514,16 @@ final public class ValueWriter {
         }
     }
 
-    public void writeAbstractInterface(java.lang.Object obj) {
+    public void writeAbstractInterface(Object obj) {
         if (obj != null) {
             if (obj instanceof org.omg.CORBA.Object) {
                 out_.write_boolean(true); // discriminator for objref
                 out_.write_Object((org.omg.CORBA.Object) obj);
-            } else if (obj instanceof java.io.Serializable) {
+            } else if (obj instanceof Serializable) {
                 out_.write_boolean(false); // discriminator for valuetype
-                writeValue((java.io.Serializable) obj, null);
+                writeValue((Serializable) obj, null);
             } else
-                throw new org.omg.CORBA.MARSHAL("Object of class " + obj.getClass().getName() 
+                throw new MARSHAL("Object of class " + obj.getClass().getName()
                         + " is not an object reference or valuetype");
         } else {
             //
@@ -557,16 +562,16 @@ final public class ValueWriter {
         // write codebase if present
         if ((tag & 0x00000001) == 1) {
 
-        		// check for indirection of codebase
-        		Integer pos = codebaseTable_.get(codebase);
-        		if (pos != null) {
-        			out_.write_long(-1);
-        			int off = pos - buf_.pos_;
-        			out_.write_long(off);
-        		} else {
-        			codebaseTable_.put(codebase, buf_.pos_);
-        			out_.write_string(codebase);
-        		}
+            // check for indirection of codebase
+            Integer pos = codebaseTable_.get(codebase);
+            if (pos != null) {
+                out_.write_long(-1);
+                int off = pos - buf_.pos_;
+                out_.write_long(off);
+            } else {
+                codebaseTable_.put(codebase, buf_.pos_);
+                out_.write_string(codebase);
+            }
         }
 
         if ((tag & 0x00000006) == 6) {

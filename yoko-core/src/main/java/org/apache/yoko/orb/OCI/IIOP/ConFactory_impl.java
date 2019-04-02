@@ -25,8 +25,10 @@ import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;
 import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
@@ -53,10 +55,10 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.ConFactory {
+final class ConFactory_impl extends LocalObject implements
+        ConFactory {
     // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.ConFactory.class.getName());
+    static final Logger logger = Logger.getLogger(ConFactory.class.getName());
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
 
     private final boolean keepAlive_; // The keepalive flag

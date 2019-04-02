@@ -17,24 +17,26 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.HexConverter;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.MARSHAL;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHelper;
 
-public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
-        URLScheme {
+import static org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+public class IORURLScheme_impl extends LocalObject implements URLScheme {
     private ORBInstance orbInstance_;
-
-    // ------------------------------------------------------------------
-    // IORURLScheme_impl constructor
-    // ------------------------------------------------------------------
 
     public IORURLScheme_impl(ORBInstance orbInstance) {
         orbInstance_ = orbInstance;
     }
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public String name() {
         return "ior";
@@ -44,11 +46,7 @@ public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
         int len = url.length() - 4; // skip "IOR:"
 
         if ((len % 2) != 0)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                    + ": invalid length",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(describeBadParam(MinorBadSchemeSpecificPart) + ": invalid length", MinorBadSchemeSpecificPart, COMPLETED_NO);
 
         byte[] data = HexConverter.asciiToOctets(url, 4);
 
@@ -57,23 +55,19 @@ public class IORURLScheme_impl extends org.omg.CORBA.LocalObject implements
             // Error in conversion
             //
             if (data == null)
-                throw new org.omg.CORBA.MARSHAL();
+                throw new MARSHAL();
 
             Buffer buf = new Buffer(data);
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(buf, 0, false);
             in._OB_readEndian();
-            org.omg.IOP.IOR ior = org.omg.IOP.IORHelper.read(in);
+            IOR ior = IORHelper.read(in);
             ObjectFactory objectFactory = orbInstance_.getObjectFactory();
             return objectFactory.createObject(ior);
-        } catch (org.omg.CORBA.MARSHAL ex) {
+        } catch (MARSHAL ex) {
             //
             // In this case, a marshal error is really a bad "IOR:..." string
             // 
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                    + ": invalid IOR \"" + url + "\"", org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(describeBadParam(MinorBadSchemeSpecificPart) + ": invalid IOR \"" + url + "\"", MinorBadSchemeSpecificPart, COMPLETED_NO);
         }
     }
 

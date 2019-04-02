@@ -1,6 +1,11 @@
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.portable.UnknownException;
+import org.omg.SendingContext.CodeBase;
 
 import java.io.IOException;
 import java.io.NotSerializableException;
@@ -11,12 +16,7 @@ import java.io.StringWriter;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
-import org.omg.CORBA.SystemException;
-import org.omg.CORBA.UNKNOWN;
-import org.omg.CORBA.portable.UnknownException;
-import org.omg.SendingContext.CodeBase;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class UnresolvedException extends UnknownException {
     private static final Logger LOGGER = Logger.getLogger(UnresolvedException.class.getName());
@@ -39,8 +39,8 @@ public class UnresolvedException extends UnknownException {
 
     public SystemException resolve() {
         Buffer buf = new Buffer(data);
-        try (org.apache.yoko.orb.CORBA.InputStream in =
-                new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false, converters, GIOP1_2)) {
+        try (InputStream in =
+                new InputStream(buf, 0, false, converters, GIOP1_2)) {
             if (LOGGER.isLoggable(Level.FINE))
                 LOGGER.fine(String.format("Unpacking Unknown Exception Info%n%s", in.dumpData()));
             try {
