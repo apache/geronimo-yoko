@@ -685,7 +685,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 default : {
                     final int wcharLen = buf_.data_[buf_.pos_++] & 0xff;
-                    if (buf_.pos_ + wcharLen > buf_.len_)
+                    if (buf_.pos_ + wcharLen > buf_.length())
                         throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
                     value = converter.read_wchar(this, wcharLen);
@@ -708,7 +708,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 case GIOP1_0: {
                     buf_.pos_ += (buf_.pos_ & 0x1);
 
-                    if (buf_.pos_ + 2 > buf_.len_)
+                    if (buf_.pos_ + 2 > buf_.length())
                         throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
@@ -723,7 +723,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 default : {
                     final int wcharLen = buf_.data_[buf_.pos_++] & 0xff;
-                    if (buf_.pos_ + wcharLen > buf_.len_)
+                    if (buf_.pos_ + wcharLen > buf_.length())
                         throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
                     return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
@@ -778,7 +778,7 @@ final public class InputStream extends InputStreamWithOffsets {
             //
             // check for an overflow condition
             //
-            if (buf_.pos_ + wcLen > buf_.len_)
+            if (buf_.pos_ + wcLen > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
             //
@@ -805,7 +805,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // check for overflow on reader
                     // 
-                    if (buf_.pos_ + 2 > buf_.len_)
+                    if (buf_.pos_ + 2 > buf_.length())
                         throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
@@ -834,7 +834,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // check for an overflow
                     //
-                    if (buf_.pos_ + wcLen > buf_.len_)
+                    if (buf_.pos_ + wcLen > buf_.length())
                         throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
@@ -915,7 +915,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     while (len > 0) {
                         final int wcharLen = converter.read_count_wchar((char) buf_.data_[buf_.pos_]);
                         len -= wcharLen;
-                        if (buf_.pos_ + wcharLen > buf_.len_)
+                        if (buf_.pos_ + wcharLen > buf_.length())
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         char c = converter.read_wchar(this, wcharLen);
@@ -932,7 +932,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     while (len > 0) {
                         final int wcharLen = 2;
                         len -= wcharLen;
-                        if (buf_.pos_ + wcharLen > buf_.len_)
+                        if (buf_.pos_ + wcharLen > buf_.length())
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         char c = (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
@@ -1013,7 +1013,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // start adding the characters to the string buffer
                     //
                     while (len > 0) {
-                        if (buf_.pos_ + 2 > buf_.len_)
+                        if (buf_.available() < 2)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         int checkChar = (buf_.data_[buf_.pos_] << 8) | (buf_.data_[buf_.pos_ + 1] & 0xff);
@@ -1025,7 +1025,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // 
                         // check for an overflow in the read
                         //
-                        if (buf_.pos_ + wcLen > buf_.len_)
+                        if (buf_.pos_ + wcLen > buf_.length())
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         //
@@ -1049,7 +1049,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         //
                         // check for an overflow condition
                         // 
-                        if (buf_.pos_ + wcLen > buf_.len_)
+                        if (buf_.pos_ + wcLen > buf_.length())
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         //
@@ -1086,14 +1086,14 @@ final public class InputStream extends InputStreamWithOffsets {
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
     public int available() throws IOException {
-        _OB_assert(buf_.len_ >= buf_.pos_);
+        _OB_assert(buf_.length() >= buf_.pos_);
 
-        return buf_.len_ - buf_.pos_;
+        return buf_.length() - buf_.pos_;
     }
 
     public int read() throws IOException {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.len_)
+        if (buf_.pos_ + 1 > buf_.length())
             return -1;
 
         return (0xff & buf_.data_[buf_.pos_++]);
@@ -1108,7 +1108,7 @@ final public class InputStream extends InputStreamWithOffsets {
     public boolean read_boolean() {
         checkChunk();
 
-        if (buf_.pos_ + 1 > buf_.len_) {
+        if (buf_.pos_ + 1 > buf_.length()) {
             throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
         }
 
@@ -1119,7 +1119,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public char read_char() {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.len_)
+        if (buf_.pos_ + 1 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
 
         if (charReaderRequired_ || charConversionRequired_) {
@@ -1151,7 +1151,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public byte read_octet() {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.len_)
+        if (buf_.pos_ + 1 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
 
         return buf_.data_[buf_.pos_++];
@@ -1161,7 +1161,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
         buf_.pos_ += (buf_.pos_ & 0x1);
 
-        if (buf_.pos_ + 2 > buf_.len_)
+        if (buf_.pos_ + 2 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
         if (swap_)
             return (short) ((buf_.data_[buf_.pos_++] & 0xff) | (buf_.data_[buf_.pos_++] << 8));
@@ -1188,7 +1188,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (pmod8 != 0)
             buf_.pos_ += 8 - pmod8;
 
-        if (buf_.pos_ + 8 > buf_.len_)
+        if (buf_.pos_ + 8 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1238,9 +1238,8 @@ final public class InputStream extends InputStreamWithOffsets {
         }
 
         int newPos = buf_.pos_ + length;
-        if (newPos < buf_.pos_ || newPos > buf_.len_) {
-            if (logger.isLoggable(Level.FINE))
-                logger.fine(String.format("String length=0x%x newPos=0x%x buf_.pos=0x%x buf_.len=0x%x", length, newPos, buf_.pos_, buf_.len_));
+        if (newPos < buf_.pos_ || newPos > buf_.length()) {
+            if (logger.isLoggable(Level.FINE)) logger.fine(String.format("String length=0x%x newPos=0x%x buf_.pos=0x%x buf_.len=0x%x", length, newPos, buf_.pos_, buf_.length()));
             throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
         }
 
@@ -1335,7 +1334,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length > 0) {
             checkChunk();
 
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.len_)
+            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
 
             for (int i = offset; i < offset + length; i++)
@@ -1347,7 +1346,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length > 0) {
             checkChunk();
 
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.len_)
+            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
 
             if (!(charReaderRequired_ || charConversionRequired_)) {
@@ -1386,7 +1385,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void read_wchar_array(char[] value, int offset, int length) {
         if (length > 0) {
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.len_)
+            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
 
             for (int i = offset; i < offset + length; i++)
@@ -1399,7 +1398,7 @@ final public class InputStream extends InputStreamWithOffsets {
             checkChunk();
 
             int newPos = buf_.pos_ + length;
-            if (newPos < buf_.pos_ || newPos > buf_.len_)
+            if (newPos < buf_.pos_ || newPos > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadOctetArrayOverflow), MinorReadOctetArrayOverflow, COMPLETED_NO);
 
             System.arraycopy(buf_.data_, buf_.pos_, value, offset, length);
@@ -1416,7 +1415,7 @@ final public class InputStream extends InputStreamWithOffsets {
         buf_.pos_ += (buf_.pos_ & 0x1);
 
         int newPos = buf_.pos_ + length * 2;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadShortArrayOverflow), MinorReadShortArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1440,7 +1439,7 @@ final public class InputStream extends InputStreamWithOffsets {
             buf_.pos_ += 4 - pmod4;
 
         int newPos = buf_.pos_ + length * 4;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadLongArrayOverflow), MinorReadLongArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1472,7 +1471,7 @@ final public class InputStream extends InputStreamWithOffsets {
             buf_.pos_ += 8 - pmod8;
 
         int newPos = buf_.pos_ + length * 8;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadLongLongArrayOverflow), MinorReadLongLongArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1510,7 +1509,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 buf_.pos_ += 4 - pmod4;
 
             int newPos = buf_.pos_ + length * 4;
-            if (newPos < buf_.pos_ || newPos > buf_.len_)
+            if (newPos < buf_.pos_ || newPos > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadFloatArrayOverflow), MinorReadFloatArrayOverflow, COMPLETED_NO);
 
             if (swap_)
@@ -1544,7 +1543,7 @@ final public class InputStream extends InputStreamWithOffsets {
             buf_.pos_ += 8 - pmod8;
 
         int newPos = buf_.pos_ + length * 8;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadDoubleArrayOverflow), MinorReadDoubleArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1869,8 +1868,8 @@ final public class InputStream extends InputStreamWithOffsets {
     public InputStream _OB_clone() {
         InputStream result;
 
-        byte[] data = new byte[buf_.len_];
-        System.arraycopy(buf_.data_, 0, data, 0, buf_.len_);
+        byte[] data = new byte[buf_.length()];
+        System.arraycopy(buf_.data_, 0, data, 0, buf_.length());
         Buffer buf = new Buffer(data);
         result = new InputStream(buf, origPos_, origSwap_, codeConverters_, giopVersion_);
         result.orbInstance_ = orbInstance_;
@@ -1885,7 +1884,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void _OB_skip(int n) {
         int newPos = buf_.pos_ + n;
-        if (newPos < buf_.pos_ || newPos > buf_.len_)
+        if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
 
         buf_.pos_ = newPos;
@@ -1895,7 +1894,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (buf_.pos_ % n != 0) {
             int newPos = buf_.pos_ + n - buf_.pos_ % n;
 
-            if (newPos < buf_.pos_ || newPos > buf_.len_)
+            if (newPos < buf_.pos_ || newPos > buf_.length())
                 throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
 
             buf_.pos_ = newPos;
@@ -1931,7 +1930,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (pmod4 != 0)
             buf_.pos_ += 4 - pmod4;
 
-        if (buf_.pos_ + 4 > buf_.len_)
+        if (buf_.pos_ + 4 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
 
         if (swap_)

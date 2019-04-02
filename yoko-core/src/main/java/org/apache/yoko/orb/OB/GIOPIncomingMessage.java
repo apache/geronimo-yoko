@@ -83,15 +83,14 @@ final public class GIOPIncomingMessage {
 
         void add(ORBInstance orbInstance, Buffer b) {
             int len = buf.length();
-            if (maxMessageSize_ > 0 && len + b.rest_length() > maxMessageSize_) {
+            if (maxMessageSize_ > 0 && len + b.available() > maxMessageSize_) {
                 String msg = "incoming fragment exceeds maximum message size (" + maxMessageSize_ + ")";
                 orbInstance_.getLogger().warning(msg);
 
                 throw new IMP_LIMIT(describeImpLimit(MinorMessageSizeLimit), MinorMessageSizeLimit, COMPLETED_NO);
             }
-            buf.realloc(len + b.rest_length());
-            System.arraycopy(b.data(), b.pos(), buf.data(), len, b
-                    .rest_length());
+            buf.realloc(len + b.available());
+            System.arraycopy(b.data(), b.pos(), buf.data(), len, b.available());
         }
     }
 

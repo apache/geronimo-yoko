@@ -487,7 +487,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // to write new data. We must first check if we need to start a
             // chunk, which may result in a recursive call to addCapacity().
             //
-            if (buf_.pos_ == buf_.len_ && valueWriter_ != null) {
+            if (buf_.pos_ == buf_.length() && valueWriter_ != null) {
                 checkBeginChunk();
             }
 
@@ -495,7 +495,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // If there isn't enough room, then reallocate the buffer
             //
             final int len = buf_.pos_ + size;
-            if (len > buf_.len_) {
+            if (len > buf_.length()) {
                 buf_.realloc(len);
             }
         }
@@ -536,7 +536,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // to write new data. We must first check if we need to start a
         // chunk, which may result in a recursive call to addCapacity().
         //
-        if (buf_.pos_ == buf_.len_ && valueWriter_ != null) {
+        if (buf_.pos_ == buf_.length() && valueWriter_ != null) {
             checkBeginChunk();
         }
 
@@ -554,7 +554,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // If there isn't enough room, then reallocate the buffer
         //
         final int len = newPos + size;
-        if (len > buf_.len_) {
+        if (len > buf_.length()) {
             buf_.realloc(len);
             checkTimeout();
         }
@@ -923,9 +923,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     @Override
     public InputStream create_input_stream() {
-        Buffer buf = new Buffer(buf_.len_);
-        if (buf_.len_ > 0)
-            System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.len_);
+        Buffer buf = new Buffer(buf_.length());
+        if (buf_.length() > 0) System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.length());
 
 // this is a useful tracepoint, but produces a lot of data, so turn on only
 // if really needed.
@@ -1058,7 +1057,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
 
                 // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
-                if (buffer.length() - buffer.pos() < 4)
+                if (buffer.available() < 4)
                     buffer.realloc(buffer.length() + 4);
 
                 if (bothRequired)

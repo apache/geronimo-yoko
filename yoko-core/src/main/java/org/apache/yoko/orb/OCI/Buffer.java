@@ -20,6 +20,11 @@ package org.apache.yoko.orb.OCI;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.omg.CORBA.NO_MEMORY;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
@@ -32,13 +37,9 @@ public final class Buffer {
 
     public byte[] data_; // The octet buffer
 
-    public int len_; // The requested size of the buffer
+    private int len_; // The requested size of the buffer
 
     public int pos_; // The position counter
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public byte[] data() {
         return data_;
@@ -48,7 +49,7 @@ public final class Buffer {
         return len_;
     }
 
-    public int rest_length() {
+    public int available() {
         return len_ - pos_;
     }
 
@@ -79,7 +80,7 @@ public final class Buffer {
         StringBuilder dump = new StringBuilder();
         dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
 
-        IORUtil.dump_octets(data_, pos_, rest_length(), dump);
+        IORUtil.dump_octets(data_, pos_, available(), dump);
         return dump.toString();
     }
 
@@ -169,5 +170,34 @@ public final class Buffer {
         sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos));
         IORUtil.dump_octets(data_, pos, len_ - pos, sb);
         return sb.toString();
+    }
+
+    public boolean readFrom(InputStream in) throws IOException {
+        try {
+            int result = in.read(data(), pos(), available());
+            if (result <= 0) return false;
+            advance(result);
+            return true;
+        } catch (InterruptedIOException ex) {
+            advance(ex.bytesTransferred);
+            throw ex;
+        }
+    }
+
+    public void writeInto(OutputStream out) throws IOException {
+        try {
+            out.write(data(), pos(), available());
+            out.flush();
+            pos(length());
+        } catch (InterruptedIOException ex) {
+            advance(ex.bytesTransferred);
+            throw ex;
+        }
+    }
+
+    public byte[] copyRemainingBytes() {
+        byte[] bytes = new byte[available()];
+        System.arraycopy(data_, pos(), bytes, 0, available());
+        return bytes;
     }
 }

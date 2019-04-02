@@ -775,8 +775,7 @@ public final class DowncallStub {
         Buffer buf = o._OB_buffer();
         MessageBody messageBody = new MessageBody();
         messageBody.byte_order = false; // Java is always false
-        messageBody.body = new byte[buf.rest_length()];
-        System.arraycopy(buf.data(), buf.pos(), messageBody.body, 0, buf.rest_length());
+        messageBody.body = buf.copyRemainingBytes();
         payload.body = messageBody;
 
         //
@@ -973,15 +972,14 @@ public final class DowncallStub {
         //
         // Align to an 8 byte boundary if we have something left
         //
-        if (buf.rest_length() > 0) {
+        if (buf.available() > 0) {
             buf.pos((buf.pos() + 7) & ~7);
         }
 
         //
         // Copy in the rest of the message body
         //
-        messageBody.body = new byte[buf.rest_length()];
-        System.arraycopy(buf.data_, buf.pos(), messageBody.body, 0, buf.rest_length());
+        messageBody.body = buf.copyRemainingBytes();
         requestMessage.body = messageBody;
 
         //

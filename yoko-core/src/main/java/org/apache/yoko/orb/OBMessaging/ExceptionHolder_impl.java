@@ -339,10 +339,7 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     //
     public void _OB_extractSequence(Buffer buf) {
         Assert._OB_assert(buf != null);
-
-        marshaled_exception = new byte[buf.rest_length()];
-        System.arraycopy(buf.data_, buf.pos(), marshaled_exception, 0, buf
-                .rest_length());
+        marshaled_exception = buf.copyRemainingBytes();
     }
 
     //
@@ -351,21 +348,16 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     //
     public InputStream _OB_inputStream() {
         Buffer buf = new Buffer(marshaled_exception);
-        InputStream in = new InputStream(
-                buf, 0, false, null, GIOP1_2);
-
-        return in;
+        return new InputStream(buf, 0, false, null, GIOP1_2);
     }
 
     //
     // Register the class used to raise any exceptions. This class will
     // take ownership of that raiser object.
     //
-    public void _OB_register_raise_proxy(
-            UserExceptionRaiseProxy proxy) {
+    public void _OB_register_raise_proxy(UserExceptionRaiseProxy proxy) {
         Assert._OB_assert(proxy != null);
         Assert._OB_assert(raiseProxy_ == null);
-
         raiseProxy_ = proxy;
     }
 

@@ -17,10 +17,6 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
-import static org.apache.yoko.orb.OB.MinorCodes.*;
-
-import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
@@ -40,7 +36,14 @@ import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OCI.SendReceiveMode.*;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorRecv;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
+import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
 
 final public class Transport_impl extends LocalObject implements
         Transport {
@@ -181,17 +184,13 @@ final public class Transport_impl extends LocalObject implements
     public void receive(Buffer buf, boolean block) {
         setBlock(block);
 
-        logger.fine("receiving a buffer of " + buf.rest_length() + " from " + socket_ + " using transport " + this); 
+        logger.fine("receiving a buffer of " + buf.available() + " from " + socket_ + " using transport " + this);
         while (!buf.is_full()) {
             try {
-                int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
-                if (result <= 0) {
+                if (!!!buf.readFrom(in_))
                     throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
-                }
-                buf.advance(result);
             } catch (InterruptedIOException ex) {
                 logger.log(Level.FINE, "Received interrupted exception", ex); 
-                buf.advance(ex.bytesTransferred);
 
                 if (!block)
                     return;
@@ -208,19 +207,13 @@ final public class Transport_impl extends LocalObject implements
     }
 
 
-    public boolean receive_detect(Buffer buf,
-                                  boolean block) {
+    public boolean receive_detect(Buffer buf, boolean block) {
         setBlock(block);
 
         while (!buf.is_full()) {
             try {
-                int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
-                if (result <= 0)
-                    return false;
-                buf.advance(result);
+                return buf.readFrom(in_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
-
                 if (!block)
                     return true;
             } catch (IOException ex) {
@@ -246,13 +239,9 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
-                if (result <= 0) {
+                if (!!!buf.readFrom(in_))
                     throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
-                }
-                buf.advance(result);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
                 return;
             } catch (IOException ex) {
                 logger.log(Level.FINE, "Socket read error", ex); 
@@ -264,8 +253,7 @@ final public class Transport_impl extends LocalObject implements
         }
     }
 
-    public boolean receive_timeout_detect(Buffer buf,
-                                          int t) {
+    public boolean receive_timeout_detect(Buffer buf, int t) {
         if (t < 0)
             throw new InternalError();
 
@@ -276,12 +264,8 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                int result = in_.read(buf.data(), buf.pos(), buf.rest_length());
-                if (result <= 0)
-                    return false;
-                buf.advance(result);
+                return buf.readFrom(in_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
                 return true;
             } catch (IOException ex) {
                 return false;
@@ -296,16 +280,12 @@ final public class Transport_impl extends LocalObject implements
     public void send(Buffer buf, boolean block) {
         setBlock(block);
         
-        logger.fine("Sending buffer of size " + buf.rest_length() + " to " + socket_); 
+        logger.fine("Sending buffer of size " + buf.available() + " to " + socket_);
         
         while (!buf.is_full()) {
             try {
-                out_.write(buf.data(), buf.pos(), buf.rest_length());
-                out_.flush();
-                buf.pos(buf.length());
+                buf.writeInto(out_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
-
                 if (!block)
                     return;
             } catch (IOException ex) {
@@ -323,12 +303,8 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                out_.write(buf.data(), buf.pos(), buf.rest_length());
-                out_.flush();
-                buf.pos(buf.length());
+                buf.writeInto(out_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
-
                 if (!block)
                     return true;
             } catch (IOException ex) {
@@ -354,11 +330,8 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                out_.write(buf.data(), buf.pos(), buf.rest_length());
-                out_.flush();
-                buf.pos(buf.length());
+                buf.writeInto(out_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
                 return;
             } catch (IOException ex) {
                 logger.log(Level.FINE,  "Socket write error", ex);
@@ -381,11 +354,8 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {                                 
             try {
-                out_.write(buf.data(), buf.pos(), buf.rest_length());
-                out_.flush();
-                buf.pos(buf.length());
+                buf.writeInto(out_);
             } catch (InterruptedIOException ex) {
-                buf.advance(ex.bytesTransferred);
                 return true;
             } catch (IOException ex) {
                 return false;
