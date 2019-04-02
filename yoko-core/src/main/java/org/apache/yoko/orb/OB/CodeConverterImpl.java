@@ -17,36 +17,37 @@
 
 package org.apache.yoko.orb.OB;
 
-final class CodeConverterFrom extends CodeConverterBase {
-    //
-    // Unicode character mapping table
-    //
-    private CharMapInfo fromMap_;
+import java.util.Objects;
 
-    // ------------------------------------------------------------------
-    // Constructor
-    // ------------------------------------------------------------------
+import static org.apache.yoko.orb.OB.CharMapInfo.CM_IDENTITY;
 
-    CodeConverterFrom(CodeSetInfo fromSet, CodeSetInfo toSet,
-            CharMapInfo fromMap) {
+final class CodeConverterImpl extends CodeConverterBase {
+    private final CharMapInfo fromMap;
+    private final CharMapInfo toMap;
+    private final boolean conversionRequired;
+
+    CodeConverterImpl(CodeSetInfo fromSet, CodeSetInfo toSet) {
         super(fromSet, toSet);
-
-        fromMap_ = fromMap;
+        fromMap = fromSet.charMap;
+        toMap = toSet.charMap;
+        Objects.requireNonNull(fromMap);
+        Objects.requireNonNull(toMap);
+        conversionRequired = (fromMap == CM_IDENTITY) && (toMap == CM_IDENTITY);
     }
 
-    // ------------------------------------------------------------------
-    // Public member implementations
-    // ------------------------------------------------------------------
-
     public boolean conversionRequired() {
-        return true;
+        return conversionRequired;
     }
 
     public char convert(char v) {
-        if (v <= (char) fromMap_.upper_bound) {
-            return (char) fromMap_.map_values[v];
-        }
+        return convertFromJava(convertToJava(v));
+    }
 
-        return v;
+    private char convertFromJava(char v) {
+        return toMap.convertFromJava(v);
+    }
+
+    private char convertToJava(char v) {
+        return fromMap.convertToJava(v);
     }
 }

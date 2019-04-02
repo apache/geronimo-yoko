@@ -17,6 +17,16 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.omg.CORBA.Policy;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+
 final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // My Server
@@ -55,22 +65,22 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     // Get all profiles that are usable with this client
     //
-    public org.apache.yoko.orb.OCI.ProfileInfo[] getUsableProfiles(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies) {
+    public ProfileInfo[] getUsableProfiles(
+            IOR ior, Policy[] policies) {
         return server_.getUsableProfiles(ior, policies);
     }
 
     //
     // Get the OCI connector info
     //
-    public org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo() {
+    public ConnectorInfo connectorInfo() {
         return null; // There is no connector
     }
 
     //
     // Get the OCI transport info
     //
-    public org.apache.yoko.orb.OCI.TransportInfo transportInfo() {
+    public TransportInfo transportInfo() {
         return null; // There is no transport
     }
 
@@ -79,9 +89,9 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     // OutputStream for marshalling a request
     //
     public DowncallEmitter startDowncall(Downcall down,
-            org.apache.yoko.orb.CORBA.OutputStreamHolder out) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf);
+            OutputStreamHolder out) {
+        Buffer buf = new Buffer();
+        out.value = new OutputStream(buf);
         return this;
     }
 
@@ -138,7 +148,7 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
         return server_.sendReceive(down);
     }
 
-    public org.omg.IOP.ServiceContext[] getAMIRouterSCL() {
+    public ServiceContext[] getAMIRouterSCL() {
         return null;
     }
 }

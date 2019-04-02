@@ -17,25 +17,40 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.IMP_LIMIT;
+import org.omg.GIOP.IORAddressingInfo;
+import org.omg.GIOP.IORAddressingInfoHelper;
+import org.omg.GIOP.KeyAddr;
+import org.omg.GIOP.LocateStatusType_1_2;
+import org.omg.GIOP.MsgType_1_1;
+import org.omg.GIOP.ReplyStatusType_1_2;
+import org.omg.GIOP.TargetAddress;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.TaggedProfile;
+import org.omg.IOP.TaggedProfileHelper;
+
 final public class GIOPOutgoingMessage {
     private static int maxMessageSize_ = 0; // TODO: pick a default
 
     private ORBInstance orbInstance_;
 
-    private org.apache.yoko.orb.CORBA.OutputStream out_;
+    private OutputStream out_;
 
-    private org.apache.yoko.orb.OCI.ProfileInfo profileInfo_;
+    private ProfileInfo profileInfo_;
 
     // ----------------------------------------------------------------------
     // GIOPOutgoingMessage private and protected member implementations
     // ----------------------------------------------------------------------
 
-    private void writeServiceContextList(org.omg.IOP.ServiceContext[] scl) {
+    private void writeServiceContextList(ServiceContext[] scl) {
         int len = scl.length;
         out_.write_ulong(len);
         if (len > 0) {
             for (int i = 0; i < len; i++) {
-                org.omg.IOP.ServiceContext sc = scl[i];
+                ServiceContext sc = scl[i];
                 out_.write_ulong(sc.context_id);
                 int n = sc.context_data.length;
                 out_.write_ulong(n);
@@ -44,7 +59,7 @@ final public class GIOPOutgoingMessage {
         }
     }
 
-    private void writeTargetAddress(org.omg.GIOP.TargetAddress target) {
+    private void writeTargetAddress(TargetAddress target) {
         short disc = target.discriminator();
         out_.write_short(disc);
         switch (disc) {
@@ -60,15 +75,15 @@ final public class GIOPOutgoingMessage {
 
         case 1: // GIOP::ProfileAddr
         {
-            org.omg.IOP.TaggedProfile profile = target.profile();
-            org.omg.IOP.TaggedProfileHelper.write(out_, profile);
+            TaggedProfile profile = target.profile();
+            TaggedProfileHelper.write(out_, profile);
             break;
         }
 
         case 2: // GIOP::ReferenceAddr
         {
-            org.omg.GIOP.IORAddressingInfo info = target.ior();
-            org.omg.GIOP.IORAddressingInfoHelper.write(out_, info);
+            IORAddressingInfo info = target.ior();
+            IORAddressingInfoHelper.write(out_, info);
             break;
         }
 
@@ -82,34 +97,34 @@ final public class GIOPOutgoingMessage {
     // ----------------------------------------------------------------------
 
     GIOPOutgoingMessage(ORBInstance orbInstance,
-            org.apache.yoko.orb.CORBA.OutputStream out,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo) {
+            OutputStream out,
+            ProfileInfo profileInfo) {
         orbInstance_ = orbInstance;
         out_ = out;
         profileInfo_ = profileInfo;
     }
 
-    org.apache.yoko.orb.OCI.ProfileInfo profileInfo() {
+    ProfileInfo profileInfo() {
         return profileInfo_;
     }
 
-    void writeMessageHeader(org.omg.GIOP.MsgType_1_1 type, boolean fragment,
-            int size) {
+    void writeMessageHeader(MsgType_1_1 type, boolean fragment,
+                            int size) {
         Assert._OB_assert(type.value() >= 0
-                && type.value() <= org.omg.GIOP.MsgType_1_1._Fragment);
+                && type.value() <= MsgType_1_1._Fragment);
         Assert
                 ._OB_assert(!(profileInfo_.major == (byte) 1
-                        && profileInfo_.minor == (byte) 0 && (type.value() > org.omg.GIOP.MsgType_1_1._MessageError || fragment)));
+                        && profileInfo_.minor == (byte) 0 && (type.value() > MsgType_1_1._MessageError || fragment)));
 
         if (maxMessageSize_ > 0 && size > maxMessageSize_) {
             String msg = "outgoing message size (" + size
                     + ") exceeds maximum (" + maxMessageSize_ + ")";
             orbInstance_.getLogger().warning(msg);
 
-            throw new org.omg.CORBA.IMP_LIMIT(org.apache.yoko.orb.OB.MinorCodes
-                    .describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorMessageSizeLimit),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorMessageSizeLimit,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new IMP_LIMIT(MinorCodes
+                    .describeImpLimit(MinorCodes.MinorMessageSizeLimit),
+                    MinorCodes.MinorMessageSizeLimit,
+                    CompletionStatus.COMPLETED_NO);
         }
 
         byte flags = 0;
@@ -131,7 +146,7 @@ final public class GIOPOutgoingMessage {
     }
 
     void writeRequestHeader(int id, String op, boolean response,
-            org.omg.IOP.ServiceContext[] scl) {
+            ServiceContext[] scl) {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
@@ -185,7 +200,7 @@ final public class GIOPOutgoingMessage {
             //
             // target
             //
-            out_.write_short(org.omg.GIOP.KeyAddr.value);
+            out_.write_short(KeyAddr.value);
             int keyLen = profileInfo_.key.length;
             out_.write_ulong(keyLen);
             out_.write_octet_array(profileInfo_.key, 0, keyLen);
@@ -215,13 +230,11 @@ final public class GIOPOutgoingMessage {
         }
     }
 
-    void writeReplyHeader(int id, org.omg.GIOP.ReplyStatusType_1_2 status,
-            org.omg.IOP.ServiceContext[] scl) {
+    void writeReplyHeader(int id, ReplyStatusType_1_2 status, ServiceContext[] scl) {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
-            Assert
-                    ._OB_assert(status.value() <= org.omg.GIOP.ReplyStatusType_1_2._LOCATION_FORWARD);
+            Assert._OB_assert(status.value() <= ReplyStatusType_1_2._LOCATION_FORWARD);
 
             writeServiceContextList(scl); // service_context
             out_.write_ulong(id); // request_id
@@ -277,7 +290,7 @@ final public class GIOPOutgoingMessage {
             //
             // target
             //
-            out_.write_short(org.omg.GIOP.KeyAddr.value);
+            out_.write_short(KeyAddr.value);
             int keyLen = profileInfo_.key.length;
             out_.write_ulong(keyLen);
             out_.write_octet_array(profileInfo_.key, 0, keyLen);
@@ -291,12 +304,11 @@ final public class GIOPOutgoingMessage {
     }
 
     // Not currently used
-    void writeLocateReplyHeader(int id, org.omg.GIOP.LocateStatusType_1_2 status) {
+    void writeLocateReplyHeader(int id, LocateStatusType_1_2 status) {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
-            Assert
-                    ._OB_assert(status.value() <= org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD);
+            Assert._OB_assert(status.value() <= LocateStatusType_1_2._OBJECT_FORWARD);
 
             out_.write_ulong(id); // request_id
             out_.write_ulong(status.value()); // locate_status

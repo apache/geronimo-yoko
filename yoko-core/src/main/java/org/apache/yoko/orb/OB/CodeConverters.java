@@ -18,27 +18,30 @@
 package org.apache.yoko.orb.OB;
 
 final public class CodeConverters {
-    public CodeConverterBase inputCharConverter;
+    // This class may look immutable, but CodeConverterBase holds reader and writer objects that are stateful and mutable
+    private static final CodeConverters NULL_CONVERTER = new CodeConverters(null, null, null, null);
 
-    public CodeConverterBase outputCharConverter;
+    public final CodeConverterBase inputCharConverter;
+    public final CodeConverterBase outputCharConverter;
+    public final CodeConverterBase inputWcharConverter;
+    public final CodeConverterBase outputWcharConverter;
 
-    public CodeConverterBase inputWcharConverter;
-
-    public CodeConverterBase outputWcharConverter;
-
-    public CodeConverters() {
+    public CodeConverters(CodeConverterBase inChar, CodeConverterBase outChar, CodeConverterBase inWchar, CodeConverterBase outWChar) {
+        inputCharConverter = inChar;
+        outputCharConverter = outChar;
+        inputWcharConverter = inWchar;
+        outputWcharConverter = outWChar;
     }
 
-    public CodeConverters(CodeConverters c) {
-        if (c != null) {
-            inputCharConverter = c.inputCharConverter;
-            outputCharConverter = c.outputCharConverter;
-            inputWcharConverter = c.inputWcharConverter;
-            outputWcharConverter = c.outputWcharConverter;
-        }
+    private CodeConverters(CodeConverters c) {
+        this(c.inputCharConverter, c.outputCharConverter, c.inputWcharConverter, c.outputWcharConverter);
     }
 
-    public boolean equals(java.lang.Object obj) {
+    public static CodeConverters createCopy(CodeConverters template) {
+        return template == null ? NULL_CONVERTER : new CodeConverters(template);
+    }
+
+    public boolean equals(Object obj) {
         CodeConverters conv = (CodeConverters) obj;
         if (conv == null)
             return false;

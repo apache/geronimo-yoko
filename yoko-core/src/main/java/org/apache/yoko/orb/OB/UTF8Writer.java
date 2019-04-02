@@ -17,14 +17,15 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
 final class UTF8Writer extends CodeSetWriter {
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
         unicodeToUtf8(out, v);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
         unicodeToUtf8(out, v);
     }
 
@@ -37,8 +38,7 @@ final class UTF8Writer extends CodeSetWriter {
             return 3;
     }
 
-    private void unicodeToUtf8(org.apache.yoko.orb.CORBA.OutputStream out,
-            char value) throws org.omg.CORBA.DATA_CONVERSION {
+    private void unicodeToUtf8(OutputStream out, char value) throws DATA_CONVERSION {
         if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
             if ((int) value < 0x80) {
                 // Direct mapping (7 bits) for characters < 0x80
@@ -53,7 +53,7 @@ final class UTF8Writer extends CodeSetWriter {
                 out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
                 out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
             } else
-                throw new org.omg.CORBA.DATA_CONVERSION();
+                throw new DATA_CONVERSION();
         } else {
             if ((int) value < 0x80) {
                 // Direct mapping (7 bits) for characters < 0x80
@@ -68,7 +68,7 @@ final class UTF8Writer extends CodeSetWriter {
                 out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
                 out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
             } else
-                throw new org.omg.CORBA.DATA_CONVERSION();
+                throw new DATA_CONVERSION();
         }
     }
 

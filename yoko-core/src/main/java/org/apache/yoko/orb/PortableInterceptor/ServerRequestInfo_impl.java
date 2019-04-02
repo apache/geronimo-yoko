@@ -17,17 +17,51 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.LocationForward;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ParameterDesc;
+import org.apache.yoko.orb.OB.Util;
+import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.apache.yoko.util.yasf.YasfThreadLocal;
 import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.INV_POLICY;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.UnknownUserException;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.IOP.ServiceContext;
+import org.omg.PortableInterceptor.ForwardRequest;
+import org.omg.PortableInterceptor.InvalidSlot;
+import org.omg.PortableInterceptor.LOCATION_FORWARD;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+import org.omg.PortableInterceptor.SUCCESSFUL;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import org.omg.PortableInterceptor.ServerRequestInterceptor;
+import org.omg.PortableInterceptor.TRANSPORT_RETRY;
+import org.omg.PortableInterceptor.USER_EXCEPTION;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.Servant;
+
+import java.util.Enumeration;
+import java.util.Vector;
 
 final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         ServerRequestInfoExt {
     //
     // Sequence of ServerRequestInterceptors to call on reply
     //
-    java.util.Vector interceptors_ = new java.util.Vector();
+    Vector interceptors_ = new Vector();
 
     //
     // The adapter ID
@@ -42,17 +76,17 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     // The servant
     //
-    private org.omg.PortableServer.Servant servant_;
+    private Servant servant_;
 
     //
     // The POA
     //
-    private org.omg.PortableServer.POA poa_;
+    private POA poa_;
 
     //
     // The adapter ORT
     //
-    private org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate_;
+    private ObjectReferenceTemplate adapterTemplate_;
 
     //
     // The adapter name
@@ -62,7 +96,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     // The information about the transport servicing this request
     //
-    private org.apache.yoko.orb.OCI.TransportInfo transportInfo_;
+    private TransportInfo transportInfo_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java mapping
@@ -76,18 +110,18 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // receive_request_service_contexts: no receive_request: no
     // send_reply: no send_exception: yes send_other: no
     //
-    public org.omg.CORBA.Any sending_exception() {
+    public Any sending_exception() {
         //
         // If status is not SYSTEM_EXCEPTION or USER_EXCEPTION then this
         // is a BAD_INV_ORDER exception
         //
-        if (status_ != org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                && status_ != org.omg.PortableInterceptor.USER_EXCEPTION.value)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (status_ != SYSTEM_EXCEPTION.value
+                && status_ != USER_EXCEPTION.value)
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         //
         // If the application code hasn't provided the exception
@@ -96,32 +130,32 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         // (Java only)
         //
         if (receivedException_ == null) {
-            org.omg.CORBA.Any any = orb_.create_any();
-            org.apache.yoko.orb.OB.Util
+            Any any = orb_.create_any();
+            Util
                     .insertException(
                             any,
-                            new org.omg.CORBA.UNKNOWN(
-                                    org.apache.yoko.orb.OB.MinorCodes
-                                            .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException)
+                            new UNKNOWN(
+                                    MinorCodes
+                                            .describeUnknown(MinorCodes.MinorUnknownUserException)
                                             + ": exception unavailable",
-                                    org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                                    org.omg.CORBA.CompletionStatus.COMPLETED_YES));
+                                    MinorCodes.MinorUnknownUserException,
+                                    CompletionStatus.COMPLETED_YES));
             return any;
         }
 
         //
         // UnknownUserException? Extract the contained UserException.
         //
-        org.omg.CORBA.UnknownUserException unk = null;
+        UnknownUserException unk = null;
         try {
-            unk = (org.omg.CORBA.UnknownUserException) receivedException_;
+            unk = (UnknownUserException) receivedException_;
         } catch (ClassCastException ex) {
         }
         if (unk != null)
             return unk.except;
 
-        org.omg.CORBA.Any any = orb_.create_any();
-        org.apache.yoko.orb.OB.Util.insertException(any, receivedException_);
+        Any any = orb_.create_any();
+        Util.insertException(any, receivedException_);
 
         return any;
     }
@@ -136,11 +170,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public byte[] object_id() {
         if (status_ == NO_REPLY_SC)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         byte[] data = new byte[objectId_.length];
         System.arraycopy(objectId_, 0, data, 0, objectId_.length);
@@ -158,11 +192,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public byte[] adapter_id() {
         if (status_ == NO_REPLY_SC)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         byte[] result = new byte[adapterId_.length];
         System.arraycopy(adapterId_, 0, result, 0, adapterId_.length);
@@ -179,13 +213,13 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public String target_most_derived_interface() {
         if (status_ == NO_REPLY_SC || servant_ == null)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(poa_ != null);
+        Assert._OB_assert(poa_ != null);
         return servant_._all_interfaces(poa_, objectId_)[0];
     }
 
@@ -199,11 +233,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public String server_id() {
         if (status_ == NO_REPLY_SC)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         return adapterTemplate_.server_id();
     }
@@ -218,11 +252,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public String orb_id() {
         if (status_ == NO_REPLY_SC)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         return adapterTemplate_.orb_id();
     }
@@ -237,11 +271,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public String[] adapter_name() {
         if (status_ == NO_REPLY_SC)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
 
         return adapterTemplate_.adapter_name();
     }
@@ -255,7 +289,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public org.omg.CORBA.Policy get_server_policy(int type) {
+    public Policy get_server_policy(int type) {
         for (int i = 0; i < policies_.length; i++) {
             if (policies_[i].policy_type() == type) {
                 return policies_[i];
@@ -269,12 +303,12 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
             return null;
         }
 
-        throw new org.omg.CORBA.INV_POLICY(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeInvPolicy(org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicyFactory)
+        throw new INV_POLICY(
+                MinorCodes
+                        .describeInvPolicy(MinorCodes.MinorNoPolicyFactory)
                         + ": " + type,
-                org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicyFactory,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                MinorCodes.MinorNoPolicyFactory,
+                CompletionStatus.COMPLETED_NO);
     }
 
     //
@@ -285,10 +319,10 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public void set_slot(int id, org.omg.CORBA.Any data)
-            throws org.omg.PortableInterceptor.InvalidSlot {
+    public void set_slot(int id, Any data)
+            throws InvalidSlot {
         if (id >= slots_.length) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
+            throw new InvalidSlot();
         }
         logger.fine("setting slot " + id + " for operation " + op_); 
         slots_[id] = new org.apache.yoko.orb.CORBA.Any(data);
@@ -304,11 +338,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     //
     public boolean target_is_a(String id) {
         if (status_ == NO_REPLY_SC || servant_ == null) {
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
         }
 
         return servant_._is_a(id);
@@ -322,8 +356,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public void add_reply_service_context(org.omg.IOP.ServiceContext sc,
-            boolean addReplace) {
+    public void add_reply_service_context(ServiceContext sc,
+                                          boolean addReplace) {
         addServiceContext(replySCL_, sc, addReplace);
     }
 
@@ -333,17 +367,17 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     // ------------------------------------------------------------------
 
     public ServerRequestInfo_impl(
-            org.omg.CORBA.ORB orb,
+            ORB orb,
             int id,
             String op,
             boolean responseExpected,
-            org.omg.CORBA.Policy[] policies,
+            Policy[] policies,
             byte[] adapterId,
             byte[] objectId,
-            org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate,
-            java.util.Vector request, java.util.Vector reply,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance, Current_impl current,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo) {
+            ObjectReferenceTemplate adapterTemplate,
+            Vector request, Vector reply,
+            ORBInstance orbInstance, Current_impl current,
+            TransportInfo transportInfo) {
         super(orb, id, op, responseExpected, request, reply, orbInstance,
                 policies, current);
 
@@ -373,8 +407,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         slots_ = current_._OB_newSlotTable();
     }
 
-    public void _OB_requestServiceContext(java.util.Vector interceptors)
-            throws org.apache.yoko.orb.OB.LocationForward {
+    public void _OB_requestServiceContext(Vector interceptors)
+            throws LocationForward {
         //
         // Arguments, result and exceptions not available
         //
@@ -384,9 +418,9 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            java.util.Enumeration e = interceptors.elements();
+            Enumeration e = interceptors.elements();
             while (e.hasMoreElements()) {
-                org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) e
+                ServerRequestInterceptor i = (ServerRequestInterceptor) e
                         .nextElement();
 
                 i.receive_request_service_contexts(this);
@@ -395,14 +429,14 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
             popCurrent_ = true;
             current_._OB_pushSlotData(slots_);
-        } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-            org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+        } catch (ForwardRequest ex) {
+            Delegate p = (Delegate) (((ObjectImpl) ex.forward)
                     ._get_delegate());
-            throw new org.apache.yoko.orb.OB.LocationForward(p._OB_IOR(), false);
+            throw new LocationForward(p._OB_IOR(), false);
         }
     }
 
-    public void _OB_request() throws org.apache.yoko.orb.OB.LocationForward {
+    public void _OB_request() throws LocationForward {
         //
         // Arguments, exceptions are now available. Result isn't.
         //
@@ -413,21 +447,21 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            java.util.Enumeration e = interceptors_.elements();
+            Enumeration e = interceptors_.elements();
             while (e.hasMoreElements()) {
-                ((org.omg.PortableInterceptor.ServerRequestInterceptor) (e
+                ((ServerRequestInterceptor) (e
                         .nextElement())).receive_request(this);
             }
-        } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-            org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+        } catch (ForwardRequest ex) {
+            Delegate p = (Delegate) (((ObjectImpl) ex.forward)
                     ._get_delegate());
-            throw new org.apache.yoko.orb.OB.LocationForward(p._OB_IOR(), false);
+            throw new LocationForward(p._OB_IOR(), false);
         }
     }
 
     public void _OB_sendReply() {
-        org.apache.yoko.orb.OB.Assert
-                ._OB_assert(status_ == org.omg.PortableInterceptor.SUCCESSFUL.value);
+        Assert
+                ._OB_assert(status_ == SUCCESSFUL.value);
         //
         // The result is available
         //
@@ -442,7 +476,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
              YasfOverride yasfo = YasfThreadLocal.override()) {
             int curr = interceptors_.size() - 1;
             while (!interceptors_.isEmpty()) {
-                org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) interceptors_
+                ServerRequestInterceptor i = (ServerRequestInterceptor) interceptors_
                         .elementAt(curr);
                 interceptors_.removeElementAt(curr);
                 --curr;
@@ -462,7 +496,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     }
 
     public void _OB_sendException()
-            throws org.apache.yoko.orb.OB.LocationForward {
+            throws LocationForward {
         //
         // Arguments, result not available
         //
@@ -476,13 +510,13 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            org.apache.yoko.orb.OB.Assert
-                    ._OB_assert(status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                            || status_ == org.omg.PortableInterceptor.USER_EXCEPTION.value);
+            Assert
+                    ._OB_assert(status_ == SYSTEM_EXCEPTION.value
+                            || status_ == USER_EXCEPTION.value);
 
             int curr = interceptors_.size() - 1;
             while (!interceptors_.isEmpty()) {
-                org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) interceptors_
+                ServerRequestInterceptor i = (ServerRequestInterceptor) interceptors_
                         .elementAt(curr);
                 interceptors_.removeElementAt(curr);
                 --curr;
@@ -498,14 +532,14 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
                 popCurrent_ = false;
                 current_._OB_popSlotData();
             }
-        } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-            org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+        } catch (ForwardRequest ex) {
+            Delegate p = (Delegate) (((ObjectImpl) ex.forward)
                     ._get_delegate());
-            throw new org.apache.yoko.orb.OB.LocationForward(p._OB_IOR(), false);
+            throw new LocationForward(p._OB_IOR(), false);
         }
     }
 
-    public void _OB_sendOther() throws org.apache.yoko.orb.OB.LocationForward {
+    public void _OB_sendOther() throws LocationForward {
         //
         // Arguments, result not available
         //
@@ -519,13 +553,13 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            org.apache.yoko.orb.OB.Assert
-                    ._OB_assert(status_ == org.omg.PortableInterceptor.LOCATION_FORWARD.value
-                            || status_ == org.omg.PortableInterceptor.TRANSPORT_RETRY.value);
+            Assert
+                    ._OB_assert(status_ == LOCATION_FORWARD.value
+                            || status_ == TRANSPORT_RETRY.value);
 
             int curr = interceptors_.size() - 1;
             while (!interceptors_.isEmpty()) {
-                org.omg.PortableInterceptor.ServerRequestInterceptor i = (org.omg.PortableInterceptor.ServerRequestInterceptor) interceptors_
+                ServerRequestInterceptor i = (ServerRequestInterceptor) interceptors_
                         .elementAt(curr);
                 interceptors_.removeElementAt(curr);
                 --curr;
@@ -541,15 +575,15 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
                 popCurrent_ = false;
                 current_._OB_popSlotData();
             }
-        } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-            org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
+        } catch (ForwardRequest ex) {
+            Delegate p = (Delegate) (((ObjectImpl) ex.forward)
                     ._get_delegate());
-            throw new org.apache.yoko.orb.OB.LocationForward(p._OB_IOR(), false);
+            throw new LocationForward(p._OB_IOR(), false);
         }
     }
 
-    public void _OB_servant(org.omg.PortableServer.Servant servant,
-            org.omg.PortableServer.POA poa) {
+    public void _OB_servant(Servant servant,
+                            POA poa) {
         servant_ = servant;
         poa_ = poa;
     }
@@ -571,9 +605,9 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
     }
 
     public void _OB_parameterDesc(
-            org.apache.yoko.orb.OB.ParameterDesc[] argDesc,
-            org.apache.yoko.orb.OB.ParameterDesc retDesc,
-            org.omg.CORBA.TypeCode[] exceptionTC) {
+            ParameterDesc[] argDesc,
+            ParameterDesc retDesc,
+            TypeCode[] exceptionTC) {
         //
         // Update the argument strategy
         //
@@ -581,7 +615,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
                 exceptionTC);
     }
 
-    public void _OB_arguments(org.omg.CORBA.NVList args) {
+    public void _OB_arguments(NVList args) {
         //
         // Update the argument strategy
         //
@@ -593,11 +627,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
         argStrategy_.setExceptNeverAvail();
     }
 
-    public void _OB_result(org.omg.CORBA.Any value) {
+    public void _OB_result(Any value) {
         //
         // Result is now available. Update the argument strategy.
         //
-        org.apache.yoko.orb.OB.Assert._OB_assert(argStrategy_ != null);
+        Assert._OB_assert(argStrategy_ != null);
         argStrategy_.setResult(value);
     }
 
@@ -609,7 +643,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements
      *
      * @return The TransportInfo object created by the OCI layer.
      */
-    public org.apache.yoko.orb.OCI.TransportInfo getTransportInfo() {
+    public TransportInfo getTransportInfo() {
         return transportInfo_;
     }
 }

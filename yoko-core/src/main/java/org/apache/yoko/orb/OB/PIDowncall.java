@@ -17,15 +17,26 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.Any;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.util.concurrent.AutoLock;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.UNKNOWNHelper;
+import org.omg.CORBA.UnknownUserException;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.PortableInterceptor.ClientRequestInfo;
 
 public class PIDowncall extends Downcall {
     //
     // The IOR and the original IOR
     //
-    protected org.omg.IOP.IOR IOR_;
+    protected IOR IOR_;
 
-    protected org.omg.IOP.IOR origIOR_;
+    protected IOR origIOR_;
 
     //
     // The PortableInterceptor manager
@@ -43,7 +54,7 @@ public class PIDowncall extends Downcall {
     //
     // The ClientRequestInfo object provided by the interceptors
     //
-    protected org.omg.PortableInterceptor.ClientRequestInfo requestInfo_;
+    protected ClientRequestInfo requestInfo_;
 
     // ----------------------------------------------------------------------
     // PIDowncall private and protected member implementations
@@ -67,16 +78,16 @@ public class PIDowncall extends Downcall {
                     // the interceptors but DO NOT modify the Downcall state.
                     //
                     if (ex_ == null && exId_ != null) {
-                        org.omg.CORBA.Any any = new org.apache.yoko.orb.CORBA.Any(
+                        org.omg.CORBA.Any any = new Any(
                                 orbInstance_);
-                        org.omg.CORBA.UNKNOWN sys = new org.omg.CORBA.UNKNOWN(
+                        UNKNOWN sys = new UNKNOWN(
                                 MinorCodes
-                                .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException)
+                                .describeUnknown(MinorCodes.MinorUnknownUserException)
                                 + ": " + exId_,
-                                org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                                org.omg.CORBA.CompletionStatus.COMPLETED_YES);
-                        org.omg.CORBA.UNKNOWNHelper.insert(any, sys);
-                        org.omg.CORBA.UnknownUserException unk = new org.omg.CORBA.UnknownUserException(
+                                MinorCodes.MinorUnknownUserException,
+                                CompletionStatus.COMPLETED_YES);
+                        UNKNOWNHelper.insert(any, sys);
+                        UnknownUserException unk = new UnknownUserException(
                                 any);
                         piManager_.clientReceiveException(requestInfo_, false, unk,
                                 exId_);
@@ -100,7 +111,7 @@ public class PIDowncall extends Downcall {
                         Assert._OB_assert(ex_ != null);
                         piManager_.clientReceiveException(requestInfo_, true, ex_,
                                 exId_);
-                    } catch (org.omg.CORBA.SystemException ex) {
+                    } catch (SystemException ex) {
                         //
                         // Ignore any exception translations for failure
                         // exceptions
@@ -127,9 +138,9 @@ public class PIDowncall extends Downcall {
     // ----------------------------------------------------------------------
 
     public PIDowncall(ORBInstance orbInstance, Client client,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
+            ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp,
-            org.omg.IOP.IOR IOR, org.omg.IOP.IOR origIOR,
+            IOR IOR, IOR origIOR,
             /**/PIManager piManager) {
         super(orbInstance, client, profileInfo, policies, op, resp);
         IOR_ = IOR;
@@ -137,7 +148,7 @@ public class PIDowncall extends Downcall {
         piManager_ = piManager;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
+    public OutputStream preMarshal()
             throws LocationForward, FailureException {
         requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
                 IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,
@@ -160,10 +171,10 @@ public class PIDowncall extends Downcall {
             //
             if (state == State.USER_EXCEPTION && ex_ == null && exId_ == null) {
                 String id = unmarshalExceptionId();
-                setSystemException(new org.omg.CORBA.UNKNOWN(org.apache.yoko.orb.OB.MinorCodes
-                        .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException)
-                        + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_YES));
+                setSystemException(new UNKNOWN(MinorCodes
+                        .describeUnknown(MinorCodes.MinorUnknownUserException)
+                        + ": " + id, MinorCodes.MinorUnknownUserException,
+                        CompletionStatus.COMPLETED_YES));
                 exId_ = id;
             }
     
@@ -184,7 +195,7 @@ public class PIDowncall extends Downcall {
         }
     }
 
-    public void setUserException(org.omg.CORBA.UserException ex, String exId) {
+    public void setUserException(UserException ex, String exId) {
         super.setUserException(ex, exId);
         exId_ = exId;
     }

@@ -25,18 +25,23 @@ import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
+import org.omg.BiDirPolicy.BOTH;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHelper;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
+import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
@@ -47,6 +52,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static javax.rmi.CORBA.Util.*;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.MinorCodes.*;
 
 final class GIOPClient extends Client {
@@ -213,15 +219,8 @@ final class GIOPClient extends Client {
             CodeSetContext ctx = new CodeSetContext();
             CodeConverters conv = codeConverters();
 
-            if (conv.outputCharConverter != null)
-                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
-            else
-                ctx.char_data = CodeSetDatabase.ISOLATIN1;
-
-            if (conv.outputWcharConverter != null)
-                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
-            else
-                ctx.wchar_data = orbInstance_.getNativeWcs();
+            ctx.char_data = conv.outputCharConverter == null ? ISO_LATIN_1.id : conv.outputCharConverter.getTo().id;
+            ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getTo().id;
 
             // Create encapsulation for CONV_FRAME::CodeSetContext
             Buffer buf = new Buffer();
@@ -251,7 +250,7 @@ final class GIOPClient extends Client {
             CodeBaseHelper.write(outCBC, codeBase);
 
             codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
+            codeBaseSC_.context_id = SendingContextRunTime.value;
 
             int len = buf.length();
             byte[] data = buf.data();
@@ -331,12 +330,12 @@ final class GIOPClient extends Client {
     }
 
     /** Get the OCI Connector info */
-    public org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo() {
+    public ConnectorInfo connectorInfo() {
         return connector_.get_info();
     }
 
     /** Get the OCI Transport info */
-    public org.apache.yoko.orb.OCI.TransportInfo transportInfo() {
+    public TransportInfo transportInfo() {
         //
         // Get the connection, but do not create a new one if there is none
         // available
@@ -362,7 +361,7 @@ final class GIOPClient extends Client {
             // available
             //
             connection = getWorker(true, down.policies().connectTimeout);
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             Assert
                     ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
             down.setFailureException(ex);
@@ -387,15 +386,15 @@ final class GIOPClient extends Client {
                     if (conv.outputCharConverter != null) {
                         msg += conv.outputCharConverter.getTo().description;
                     } else {
-                        CodeSetInfo info = CodeSetDatabase.instance().getCodeSetInfo(orbInstance_.getNativeCs());
+                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeCs());
                         msg += info != null ? info.description : null;
                     }
                     msg += "\nwchar code set: ";
                     if (conv.outputWcharConverter != null)
                         msg += conv.outputWcharConverter.getTo().description;
                     else {
-                        CodeSetInfo info = CodeSetDatabase.instance()
-                                .getCodeSetInfo(orbInstance_.getNativeWcs());
+                        CodeSetInfo info = CodeSetInfo
+                                .forRegistryId(orbInstance_.getNativeWcs());
                         msg += info != null ? info.description : null;
                     }
                     orbInstance_.getLogger().trace("outgoing", msg);
@@ -418,7 +417,7 @@ final class GIOPClient extends Client {
                 validGIOPVersion = true;
 
             if (validGIOPVersion
-                    && (down.policies().biDirMode == org.omg.BiDirPolicy.BOTH.value)) {
+                    && (down.policies().biDirMode == BOTH.value)) {
                 Transport t = connection.transport();
 
                 ServiceContext contexts[] = t.get_info()
@@ -451,7 +450,7 @@ final class GIOPClient extends Client {
                         down.responseExpected(), down.getRequestSCL());
 
             return connection.emitterInterface();
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             Assert
                     ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
             down.setFailureException(ex);
@@ -484,7 +483,7 @@ final class GIOPClient extends Client {
         GIOPConnection connection = getWorker(false, -1);
         Assert._OB_assert(connection != null);
         Transport transport = connection.transport();
-        return transport.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
+        return transport.mode() == SendReceiveMode.SendReceive;
     }
 
     @Override

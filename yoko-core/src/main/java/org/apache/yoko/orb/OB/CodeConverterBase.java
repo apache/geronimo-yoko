@@ -17,41 +17,44 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.omg.CORBA.DATA_CONVERSION;
+
+import java.util.Objects;
+
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
+
 abstract public class CodeConverterBase
 // implements CodeSetReader, CodeSetWriter
 {
     //
     // Source and destination code set
     //
-    protected CodeSetInfo from_;
+    private final CodeSetInfo from_;
 
-    protected CodeSetInfo to_;
+    private final CodeSetInfo to_;
 
     //
     // The UTF-8 or fixed width reader/writer
     //
-    private CodeSetReader reader_;
+    private final CodeSetReader reader_;
 
-    private CodeSetWriter writer_;
-
-    private static CodeSetInfo noneInstance_;
+    private final CodeSetWriter writer_;
 
     CodeConverterBase(CodeSetInfo from, CodeSetInfo to) {
-        if ((from == null || to == null) && noneInstance_ == null) {
-            noneInstance_ = new CodeSetInfo("none", 0, 0, null, (short) 2);
-        }
-
         if (from == null)
-            from = noneInstance_;
+            from = CodeSetInfo.NONE;
         if (to == null)
-            to = noneInstance_;
+            to = CodeSetInfo.NONE;
 
         from_ = from;
         to_ = to;
 
-        if (from.rgy_value == CodeSetDatabase.UTF8)
+        if (from == UTF_8)
             reader_ = new UTF8Reader();
-        else if (from.rgy_value == CodeSetDatabase.UTF16)
+        else if (from == UTF_16)
             reader_ = new UTF16Reader();
         else if (from.max_bytes <= 2)
             reader_ = new FixedWidth2Reader();
@@ -60,11 +63,12 @@ abstract public class CodeConverterBase
             // Java doesn't support wide characters larger than 16 bit
             //
             Assert._OB_assert(false);
+            throw new Error("unreachable");
         }
 
-        if (to.rgy_value == CodeSetDatabase.UTF8)
+        if (to == UTF_8)
             writer_ = new UTF8Writer();
-        else if (to.rgy_value == CodeSetDatabase.UTF16)
+        else if (to == UTF_16)
             writer_ = new UTF16Writer();
         else if (to.max_bytes <= 2)
             writer_ = new FixedWidth2Writer();
@@ -73,41 +77,38 @@ abstract public class CodeConverterBase
             // Java doesn't support wide characters larger than 16 bit
             //
             Assert._OB_assert(false);
+            throw new Error("unreachable");
         }
     }
 
-    final public boolean equals(java.lang.Object obj) {
-        if (obj == null)
-            return false;
-        if (obj == this)
-            return true;
-
-        CodeConverterBase b = (CodeConverterBase) obj;
-
-        return (from_.rgy_value == b.from_.rgy_value && to_.rgy_value == b.to_.rgy_value);
+    @Override
+    public final boolean equals(Object other) {
+        if (other == this) return true;
+        return (other instanceof CodeConverterBase) && this.equals((CodeConverterBase) other);
     }
 
-    final public int hashCode() {
-        return from_.rgy_value + 29 * to_.rgy_value;
+    private boolean equals(CodeConverterBase that) {
+        return this.from_ == that.from_ && this.to_ == that.to_;
     }
 
-    final public char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    @Override
+    public int hashCode() {
+        return Objects.hash(from_, to_);
+    }
+
+    final public char read_char(InputStream in) throws DATA_CONVERSION {
         return reader_.read_char(in);
     }
 
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public char read_wchar(InputStream in, int len) throws DATA_CONVERSION {
         return reader_.read_wchar(in, len);
     }
 
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
         writer_.write_char(out, v);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
+    public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
         writer_.write_wchar(out, v);
     }
 
@@ -120,13 +121,11 @@ abstract public class CodeConverterBase
     }
 
     final public boolean readerRequired() {
-        return (from_.rgy_value == CodeSetDatabase.UTF8)
-                || (from_.rgy_value == CodeSetDatabase.UTF16);
+        return (from_ == UTF_8) || (from_ == UTF_16);
     }
 
     final public boolean writerRequired() {
-        return (to_.rgy_value == CodeSetDatabase.UTF8)
-                || (to_.rgy_value == CodeSetDatabase.UTF16);
+        return (to_ == UTF_8) || (to_ == UTF_16);
     }
 
     final public CodeSetInfo getFrom() {
@@ -154,4 +153,5 @@ abstract public class CodeConverterBase
     // Convert narrow or wide character
     //
     public abstract char convert(char value);
+
 }

@@ -17,6 +17,26 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OBPortableServer.POA_impl;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.UnknownUserException;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+import org.omg.PortableInterceptor.ServerRequestInfo;
+import org.omg.PortableServer.Servant;
+
+import java.util.Vector;
+
 public final class PIUpcall extends Upcall {
     //
     // The PortableInterceptor manager
@@ -26,45 +46,45 @@ public final class PIUpcall extends Upcall {
     //
     // The ServerRequestInfo object provided by the interceptors
     //
-    protected org.omg.PortableInterceptor.ServerRequestInfo requestInfo_;
+    protected ServerRequestInfo requestInfo_;
 
     // ----------------------------------------------------------------------
     // PIUpcall public member implementations
     // ----------------------------------------------------------------------
 
     public PIUpcall(ORBInstance orbInstance, UpcallReturn upcallReturn,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo, int requestId,
-            String op, org.apache.yoko.orb.CORBA.InputStream in,
-            org.omg.IOP.ServiceContext[] requestSCL, PIManager piManager) {
+            ProfileInfo profileInfo,
+            TransportInfo transportInfo, int requestId,
+            String op, InputStream in,
+            ServiceContext[] requestSCL, PIManager piManager) {
         super(orbInstance, upcallReturn, profileInfo, transportInfo, requestId,
                 op, in, requestSCL);
         piManager_ = piManager;
     }
 
     public void setArgDesc(ParameterDesc[] argDesc, ParameterDesc retDesc,
-            org.omg.CORBA.TypeCode[] exceptionTC) {
+            TypeCode[] exceptionTC) {
         piManager_.serverParameterDesc(requestInfo_, argDesc, retDesc,
                 exceptionTC);
     }
 
-    public void setArguments(org.omg.CORBA.NVList args) {
+    public void setArguments(NVList args) {
         piManager_.serverArguments(requestInfo_, args);
     }
 
-    public void setResult(org.omg.CORBA.Any any) {
+    public void setResult(Any any) {
         piManager_.serverResult(requestInfo_, any);
     }
 
-    public void receiveRequestServiceContexts(org.omg.CORBA.Policy[] policies,
-            byte[] adapterId, byte[] objectId,
-            org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate)
+    public void receiveRequestServiceContexts(Policy[] policies,
+                                              byte[] adapterId, byte[] objectId,
+                                              ObjectReferenceTemplate adapterTemplate)
 
     throws LocationForward {
         //
         // Copy requestSCL_ into a Vector
         //
-        java.util.Vector requestSCL = new java.util.Vector(requestSCL_.length);
+        Vector requestSCL = new Vector(requestSCL_.length);
         for (int i = 0; i < requestSCL_.length; i++)
             requestSCL.addElement(requestSCL_[i]);
 
@@ -87,7 +107,7 @@ public final class PIUpcall extends Upcall {
         super.postUnmarshal();
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
+    public OutputStream preMarshal()
             throws LocationForward {
         piManager_.serverSendReply(requestInfo_);
         return super.preMarshal();
@@ -96,10 +116,10 @@ public final class PIUpcall extends Upcall {
     //
     // NOTE: Not used in Java
     //
-    public void setUserException(org.omg.CORBA.UserException ex) {
+    public void setUserException(UserException ex) {
         try {
             piManager_.serverSendException(requestInfo_, false, ex);
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (SystemException e) {
             setSystemException(e);
             return;
         } catch (LocationForward e) {
@@ -109,12 +129,12 @@ public final class PIUpcall extends Upcall {
         super.setUserException(ex);
     }
 
-    public void setUserException(org.omg.CORBA.Any any) {
+    public void setUserException(Any any) {
         try {
-            org.omg.CORBA.UnknownUserException uex = new org.omg.CORBA.UnknownUserException(
+            UnknownUserException uex = new UnknownUserException(
                     any);
             piManager_.serverSendException(requestInfo_, false, uex);
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (SystemException e) {
             setSystemException(e);
             return;
         } catch (LocationForward e) {
@@ -129,11 +149,11 @@ public final class PIUpcall extends Upcall {
     // skeletons. If called by a portable skeleton, the exception will be
     // null.
     //
-    public org.apache.yoko.orb.CORBA.OutputStream beginUserException(
-            org.omg.CORBA.UserException ex) {
+    public OutputStream beginUserException(
+            UserException ex) {
         try {
             piManager_.serverSendException(requestInfo_, false, ex);
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (SystemException e) {
             setSystemException(e);
             return null;
         } catch (LocationForward e) {
@@ -143,10 +163,10 @@ public final class PIUpcall extends Upcall {
         return super.beginUserException(ex);
     }
 
-    public void setSystemException(org.omg.CORBA.SystemException ex) {
+    public void setSystemException(SystemException ex) {
         try {
             piManager_.serverSendException(requestInfo_, true, ex);
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (SystemException e) {
             setSystemException(e);
             return;
         } catch (LocationForward e) {
@@ -156,10 +176,10 @@ public final class PIUpcall extends Upcall {
         super.setSystemException(ex);
     }
 
-    public void setLocationForward(org.omg.IOP.IOR ior, boolean perm) {
+    public void setLocationForward(IOR ior, boolean perm) {
         try {
             piManager_.serverSendLocationForward(requestInfo_, ior);
-        } catch (org.omg.CORBA.SystemException e) {
+        } catch (SystemException e) {
             setSystemException(e);
             return;
         } catch (LocationForward e) {
@@ -169,8 +189,8 @@ public final class PIUpcall extends Upcall {
         super.setLocationForward(ior, perm);
     }
 
-    public void setServantAndPOA(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.OBPortableServer.POA_impl poa) {
+    public void setServantAndPOA(Servant servant,
+                                 POA_impl poa) {
         piManager_.serverSetupServant(requestInfo_, servant, poa);
         super.setServantAndPOA(servant, poa);
     }

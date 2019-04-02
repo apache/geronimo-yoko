@@ -17,17 +17,37 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.TypeCode;
+import org.omg.Dynamic.Parameter;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+import org.omg.PortableInterceptor.InvalidSlot;
+import org.omg.PortableInterceptor.LOCATION_FORWARD;
+import org.omg.PortableInterceptor.RequestInfo;
+
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class RequestInfo_impl extends org.omg.CORBA.LocalObject implements
-        org.omg.PortableInterceptor.RequestInfo {
+public class RequestInfo_impl extends LocalObject implements
+        RequestInfo {
 // the real logger backing instance.  We use the interface class as the locator
 static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // The ORB (Java only)
     //
-    protected org.omg.CORBA.ORB orb_;
+    protected ORB orb_;
 
     //
     // The Request ID
@@ -59,17 +79,17 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // The forward reference (if status_ == LOCATION_FORWARD[_PERM]
     //
-    protected org.omg.IOP.IOR forwardReference_;
+    protected IOR forwardReference_;
 
     //
     // The ORB instance
     //
-    protected org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    protected ORBInstance orbInstance_;
 
     //
     // The policies
     //
-    protected org.omg.CORBA.Policy[] policies_;
+    protected Policy[] policies_;
 
     //
     // The argument strategy
@@ -79,9 +99,9 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // The Request and Reply service context lists
     //
-    protected java.util.Vector requestSCL_;
+    protected Vector requestSCL_;
 
-    protected java.util.Vector replySCL_;
+    protected Vector replySCL_;
 
     //
     // ReceivedException (status_ == [SYSTEM|USER]_EXCEPTION)
@@ -93,7 +113,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // Slot data for the request
     //
-    protected org.omg.CORBA.Any[] slots_;
+    protected Any[] slots_;
 
     //
     // A pointer to the PortableInterceptor::Current implementation
@@ -110,9 +130,9 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // Private member implementations
     // ------------------------------------------------------------------
 
-    private org.omg.IOP.ServiceContext copyServiceContext(
-            org.omg.IOP.ServiceContext sc) {
-        org.omg.IOP.ServiceContext result = new org.omg.IOP.ServiceContext();
+    private ServiceContext copyServiceContext(
+            ServiceContext sc) {
+        ServiceContext result = new ServiceContext();
         result.context_id = sc.context_id;
         result.context_data = new byte[sc.context_data.length];
         System.arraycopy(sc.context_data, 0, result.context_data, 0,
@@ -124,38 +144,38 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // Protected member implementations
     // ------------------------------------------------------------------
 
-    protected org.omg.IOP.ServiceContext getServiceContext(java.util.Vector l, int id) {
+    protected ServiceContext getServiceContext(Vector l, int id) {
         for (int i = 0; i < l.size(); i++) {
-            org.omg.IOP.ServiceContext sc = (org.omg.IOP.ServiceContext) l.elementAt(i);
+            ServiceContext sc = (ServiceContext) l.elementAt(i);
             if (sc.context_id == id) {
                 return copyServiceContext(sc);
             }
         }
 
-        throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId)
+        throw new BAD_PARAM(
+                MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidServiceContextId)
                         + ": " + id,
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                MinorCodes.MinorInvalidServiceContextId,
+                CompletionStatus.COMPLETED_NO);
     }
 
-    protected void addServiceContext(java.util.Vector l, org.omg.IOP.ServiceContext sc, boolean addReplace) {
+    protected void addServiceContext(Vector l, ServiceContext sc, boolean addReplace) {
         //
         // It would be possible to use a hashtable internally for this
         // instead of a sequence. However, the additional overhead isn't
         // worth the effort.
         //
         for (int i = 0; i < l.size(); i++) {
-            org.omg.IOP.ServiceContext c = (org.omg.IOP.ServiceContext) l.elementAt(i);
+            ServiceContext c = (ServiceContext) l.elementAt(i);
             if (c.context_id == sc.context_id) {
                 if (!addReplace) {
-                    throw new org.omg.CORBA.BAD_INV_ORDER(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists)
+                    throw new BAD_INV_ORDER(
+                            MinorCodes
+                                    .describeBadInvOrder(MinorCodes.MinorServiceContextExists)
                                     + ": " + sc.context_id,
-                            org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            MinorCodes.MinorServiceContextExists,
+                            CompletionStatus.COMPLETED_NO);
                 }
                 l.setElementAt(copyServiceContext(sc), i);
                 return;
@@ -218,7 +238,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // TODO: verify server side against final document
     //
-    public org.omg.Dynamic.Parameter[] arguments() {
+    public Parameter[] arguments() {
         return argStrategy_.arguments();
     }
 
@@ -238,7 +258,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // TODO: verify server side against final document
     //
-    public org.omg.CORBA.TypeCode[] exceptions() {
+    public TypeCode[] exceptions() {
         return argStrategy_.exceptions();
     }
 
@@ -259,7 +279,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // TODO: verify server side against final document
     //
     public String[] contexts() {
-        throw new org.omg.CORBA.NO_IMPLEMENT(); // TODO: Implement
+        throw new NO_IMPLEMENT(); // TODO: Implement
     }
 
     //
@@ -279,7 +299,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // TODO: verify server side against final document
     //
     public String[] operation_context() {
-        throw new org.omg.CORBA.NO_IMPLEMENT(); // TODO: Implement
+        throw new NO_IMPLEMENT(); // TODO: Implement
     }
 
     //
@@ -296,7 +316,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // receive_request_service_contexts: no receive_request: no
     // send_reply: yes send_exception: no send_other: no
     //
-    public org.omg.CORBA.Any result() {
+    public Any result() {
         return argStrategy_.result();
     }
 
@@ -331,7 +351,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: yes send_other: yes
     //
     public short sync_scope() {
-        throw new org.omg.CORBA.NO_IMPLEMENT(); // TODO: Implement
+        throw new NO_IMPLEMENT(); // TODO: Implement
     }
 
     //
@@ -353,11 +373,11 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         // receive_request_service_context, receive_request
         //
         if (status_ < 0) {
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
         }
         return status_;
     }
@@ -380,15 +400,15 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         // This can only be called if the status is location forward
         // or location forward perm
         //
-        if (status_ != org.omg.PortableInterceptor.LOCATION_FORWARD.value) {
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (status_ != LOCATION_FORWARD.value) {
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(forwardReference_ != null);
+        Assert._OB_assert(forwardReference_ != null);
         return orbInstance_.getObjectFactory().createObject(forwardReference_);
     }
 
@@ -405,15 +425,15 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public org.omg.CORBA.Any get_slot(int id)
-            throws org.omg.PortableInterceptor.InvalidSlot {
+    public Any get_slot(int id)
+            throws InvalidSlot {
         if (id >= slots_.length) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
+            throw new InvalidSlot();
         }
         
         logger.fine("getting slot " + id + " for operation " + op_); 
 
-        org.omg.CORBA.Any result = orb_.create_any();
+        Any result = orb_.create_any();
         if (slots_[id] != null) {
             result.read_value(slots_[id].create_input_stream(), slots_[id].type());
         }
@@ -433,7 +453,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public org.omg.IOP.ServiceContext get_request_service_context(int id) {
+    public ServiceContext get_request_service_context(int id) {
         return getServiceContext(requestSCL_, id);
     }
 
@@ -450,13 +470,13 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // receive_request_service_contexts: no receive_request: no
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public org.omg.IOP.ServiceContext get_reply_service_context(int id) {
+    public ServiceContext get_reply_service_context(int id) {
         if (status_ < 0) {
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_INV_ORDER(
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    MinorCodes.MinorInvalidPICall,
+                    CompletionStatus.COMPLETED_NO);
         }
         return getServiceContext(replySCL_, id);
     }
@@ -469,11 +489,11 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // No argument information available
     //
-    protected RequestInfo_impl(org.omg.CORBA.ORB orb, int id, String op,
-            boolean responseExpected, java.util.Vector requestSCL,
-            java.util.Vector replySCL,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.Policy[] policies, Current_impl current) {
+    protected RequestInfo_impl(ORB orb, int id, String op,
+                               boolean responseExpected, Vector requestSCL,
+                               Vector replySCL,
+                               ORBInstance orbInstance,
+                               Policy[] policies, Current_impl current) {
         orb_ = orb; // Java only
 
         id_ = id;
@@ -490,9 +510,9 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         status_ = status;
     }
 
-    public void _OB_setForwardReference(org.omg.IOP.IOR ior) {
-        org.apache.yoko.orb.OB.Assert
-                ._OB_assert(status_ == org.omg.PortableInterceptor.LOCATION_FORWARD.value);
+    public void _OB_setForwardReference(IOR ior) {
+        Assert
+                ._OB_assert(status_ == LOCATION_FORWARD.value);
         forwardReference_ = ior;
     }
 

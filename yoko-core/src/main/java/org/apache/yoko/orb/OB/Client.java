@@ -17,11 +17,18 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.omg.CORBA.Policy;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+
 public abstract class Client {
     private int usage_; // The usage counter
 
-    private org.apache.yoko.orb.OB.CodeConverters codeConverters_; // The code
-                                                                    // converters
+    private CodeConverters codeConverters_; // The code converters
 
     //
     // The concurrency model for this Client
@@ -78,7 +85,7 @@ public abstract class Client {
     //
     // Get the codeset converters
     //
-    public org.apache.yoko.orb.OB.CodeConverters codeConverters() {
+    public CodeConverters codeConverters() {
         return codeConverters_;
     }
 
@@ -91,30 +98,30 @@ public abstract class Client {
     // get a list of ServiceContexts that have to be sent on an AMI router
     // request
     //
-    public abstract org.omg.IOP.ServiceContext[] getAMIRouterSCL();
+    public abstract ServiceContext[] getAMIRouterSCL();
 
     //
     // Get all profiles that are usable with this client
     //
-    public abstract org.apache.yoko.orb.OCI.ProfileInfo[] getUsableProfiles(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] pl);
+    public abstract ProfileInfo[] getUsableProfiles(
+            IOR ior, Policy[] pl);
 
     //
     // Get the OCI connector info
     //
-    public abstract org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo();
+    public abstract ConnectorInfo connectorInfo();
 
     //
     // Get the OCI transport info
     //
-    public abstract org.apache.yoko.orb.OCI.TransportInfo transportInfo();
+    public abstract TransportInfo transportInfo();
 
     //
     // Start a downcall, returning a downcall emitter and an
     // OutputStream for marshalling a request
     //
     public abstract DowncallEmitter startDowncall(Downcall down,
-            org.apache.yoko.orb.CORBA.OutputStreamHolder out);
+            OutputStreamHolder out);
 
     //
     // Checks whether this client is equal to another client

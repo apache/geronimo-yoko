@@ -17,26 +17,40 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OBPortableServer.POA_impl;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.util.Timeout;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
+import org.omg.CORBA.Any;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UserException;
 import org.omg.CORBA.portable.UnknownException;
+import org.omg.IOP.IOR;
+import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.UnknownExceptionInfo;
+import org.omg.PortableServer.Servant;
+import org.omg.SendingContext.CodeBase;
+import org.omg.SendingContext.CodeBaseHelper;
 
+import javax.rmi.CORBA.ValueHandler;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
+import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class Upcall {
@@ -56,12 +70,12 @@ public class Upcall {
     //
     // Information about the IOR profile
     //
-    protected org.apache.yoko.orb.OCI.ProfileInfo profileInfo_;
+    protected ProfileInfo profileInfo_;
 
     //
     // The OCI transport info object
     //
-    protected org.apache.yoko.orb.OCI.TransportInfo transportInfo_;
+    protected TransportInfo transportInfo_;
 
     //
     // The unique request ID
@@ -76,17 +90,17 @@ public class Upcall {
     //
     // Holds the inout/out parameters and return value
     //
-    protected org.apache.yoko.orb.CORBA.OutputStream out_;
+    protected OutputStream out_;
 
     //
     // Holds the in/inout parameters
     //
-    protected org.apache.yoko.orb.CORBA.InputStream in_;
+    protected InputStream in_;
 
     //
     // The request service context list
     //
-    protected org.omg.IOP.ServiceContext[] requestSCL_;
+    protected ServiceContext[] requestSCL_;
 
     //
     // The reply service context list
@@ -107,9 +121,9 @@ public class Upcall {
     //
     // The servant and POA
     //
-    protected org.omg.PortableServer.Servant servant_;
+    protected Servant servant_;
 
-    protected org.apache.yoko.orb.OBPortableServer.POA_impl poa_;
+    protected POA_impl poa_;
 
     //
     // Whether postinvoke() has been called
@@ -132,9 +146,9 @@ public class Upcall {
     //
     // Codesets SC
     //
-    protected org.omg.IOP.ServiceContext codeSetSC_;
+    protected ServiceContext codeSetSC_;
 
-    protected org.omg.IOP.ServiceContext codeBaseSC_;
+    protected ServiceContext codeBaseSC_;
     private final Timeout timeout;
 
     // ----------------------------------------------------------------------
@@ -142,10 +156,10 @@ public class Upcall {
     // ----------------------------------------------------------------------
 
     public Upcall(ORBInstance orbInstance, UpcallReturn upcallReturn,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo, int requestId,
-            String op, org.apache.yoko.orb.CORBA.InputStream in,
-            org.omg.IOP.ServiceContext[] requestSCL) {
+            ProfileInfo profileInfo,
+            TransportInfo transportInfo, int requestId,
+            String op, InputStream in,
+            ServiceContext[] requestSCL) {
         orbInstance_ = orbInstance;
         upcallReturn_ = upcallReturn;
         profileInfo_ = profileInfo;
@@ -174,11 +188,11 @@ public class Upcall {
         return orbInstance_;
     }
 
-    public org.apache.yoko.orb.OCI.ProfileInfo profileInfo() {
+    public ProfileInfo profileInfo() {
         return profileInfo_;
     }
 
-    public org.apache.yoko.orb.OCI.TransportInfo transportInfo() {
+    public TransportInfo transportInfo() {
         return transportInfo_;
     }
 
@@ -198,28 +212,28 @@ public class Upcall {
         return postinvokeCalled_;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream output() {
+    public OutputStream output() {
         return out_;
     }
 
-    public org.apache.yoko.orb.CORBA.InputStream input() {
+    public InputStream input() {
         return in_;
     }
 
     public void createOutputStream(int offset) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
+        Buffer buf = new Buffer(
                 offset);
         buf.pos(offset);
-        out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
+        out_ = new OutputStream(buf, in_
                 ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
     }
 
-    public org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
+    public InputStream preUnmarshal()
             throws LocationForward {
         return in_;
     }
 
-    public void unmarshalEx(org.omg.CORBA.SystemException ex)
+    public void unmarshalEx(SystemException ex)
             throws LocationForward {
         throw ex;
     }
@@ -280,18 +294,18 @@ public class Upcall {
 */
         if (codeBaseSC_ == null) {
 
-            javax.rmi.CORBA.ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
-            org.omg.SendingContext.CodeBase codeBase = (org.omg.SendingContext.CodeBase) valueHandler.getRunTimeCodeBase();
+            ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
+            CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
 
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            org.apache.yoko.orb.CORBA.OutputStream outCBC = new org.apache.yoko.orb.CORBA.OutputStream(
+            Buffer buf = new Buffer();
+            OutputStream outCBC = new OutputStream(
                     buf);
             outCBC._OB_writeEndian();
-            org.omg.SendingContext.CodeBaseHelper.write(outCBC, codeBase);
+            CodeBaseHelper.write(outCBC, codeBase);
 
-            codeBaseSC_ = new org.omg.IOP.ServiceContext();
-            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
+            codeBaseSC_ = new ServiceContext();
+            codeBaseSC_.context_id = SendingContextRunTime.value;
 
             int len = buf.length();
             byte[] data = buf.data();
@@ -305,7 +319,7 @@ public class Upcall {
         // service context each time we make an invocation.
         //
     }
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
+    public OutputStream preMarshal()
             throws LocationForward {
         //
         // If we have an UpcallReturn object, then invoking upcallBeginReply
@@ -317,13 +331,13 @@ public class Upcall {
         //
         if (upcallReturn_ != null) {
             addUnsentConnectionServiceContexts();
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+            ServiceContext[] scl = new ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallBeginReply(this, scl);
         } else {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            out_ = new org.apache.yoko.orb.CORBA.OutputStream(buf, in_
+            Buffer buf = new Buffer();
+            out_ = new OutputStream(buf, in_
                     ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
         out_._OB_ORBInstance(this.orbInstance());
@@ -344,7 +358,7 @@ public class Upcall {
 //                        msg += conv.outputCharConverter.getTo().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
-//                                .getCodeSetInfo(orbInstance_.getNativeCs());
+//                                .forRegistryId(orbInstance_.getNativeCs());
 //                        msg += info.description;
 //                    }
 //                    msg += "\nwchar code set: ";
@@ -352,7 +366,7 @@ public class Upcall {
 //                        msg += conv.outputWcharConverter.getTo().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
-//                                .getCodeSetInfo(orbInstance_.getNativeWcs());
+//                                .forRegistryId(orbInstance_.getNativeWcs());
 //                        msg += info.description;
 //                    }
 //                    orbInstance_.getLogger().trace("outgoing", msg);
@@ -366,7 +380,7 @@ public class Upcall {
         }
     }
 
-    public void marshalEx(org.omg.CORBA.SystemException ex)
+    public void marshalEx(SystemException ex)
             throws LocationForward {
         throw ex;
     }
@@ -380,9 +394,9 @@ public class Upcall {
     //
     // NOTE: Not used in Java
     //
-    public void setUserException(org.omg.CORBA.UserException ex) {
+    public void setUserException(UserException ex) {
         if (upcallReturn_ != null) {
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+            ServiceContext[] scl = new ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallUserException(this, ex, scl);
@@ -390,15 +404,15 @@ public class Upcall {
         if (out_ != null) out_.setTimeout(Timeout.NEVER);
     }
 
-    public void setUserException(org.omg.CORBA.Any any) {
+    public void setUserException(Any any) {
         if (upcallReturn_ != null) {
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+            ServiceContext[] scl = new ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallBeginUserException(this, scl);
             try {
                 any.write_value(out_);
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 try {
                     marshalEx(ex);
                 } catch (LocationForward f) {
@@ -419,10 +433,10 @@ public class Upcall {
     // exception. If called by a portable skeleton, the exception will
     // be null.
     //
-    public org.apache.yoko.orb.CORBA.OutputStream beginUserException(
-            org.omg.CORBA.UserException ex) {
+    public OutputStream beginUserException(
+            UserException ex) {
         if (upcallReturn_ != null) {
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+            ServiceContext[] scl = new ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallBeginUserException(this, scl);
@@ -450,7 +464,7 @@ public class Upcall {
         }
     }
 
-    public void setSystemException(org.omg.CORBA.SystemException ex) {
+    public void setSystemException(SystemException ex) {
         if (upcallReturn_ != null) {
             addUnsentConnectionServiceContexts();
             userEx_ = false;
@@ -467,8 +481,8 @@ public class Upcall {
     private static void createUnknownExceptionServiceContexts(UnknownException ex, Vector<ServiceContext> scl) {
         final Throwable t = ex.originalEx;
         try (CmsfOverride o = CmsfThreadLocal.override()) {
-            CodeConverters codeConverters = new CodeConverters();
-            codeConverters.outputWcharConverter = CodeSetDatabase.instance().getConverter(UTF16, UTF16);
+            final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
+            CodeConverters codeConverters = new CodeConverters(null, null, null, outputWcharConverter);
             Buffer buf = new Buffer();
             try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
@@ -481,10 +495,10 @@ public class Upcall {
         }
     }
 
-    public void setLocationForward(org.omg.IOP.IOR ior, boolean perm) {
+    public void setLocationForward(IOR ior, boolean perm) {
         if (upcallReturn_ != null) {
             userEx_ = false; // Java only
-            org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[replySCL_
+            ServiceContext[] scl = new ServiceContext[replySCL_
                     .size()];
             replySCL_.copyInto(scl);
             upcallReturn_.upcallForward(this, ior, perm, scl);
@@ -503,8 +517,8 @@ public class Upcall {
         dispatchStrategy_ = dispatchStrategy;
     }
 
-    public void setServantAndPOA(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.OBPortableServer.POA_impl poa) {
+    public void setServantAndPOA(Servant servant,
+                                 POA_impl poa) {
         servant_ = servant;
         poa_ = poa;
     }
@@ -523,7 +537,7 @@ public class Upcall {
                 logger.fine("Dispatching request " + reqId_ + " with dispatch strategy " + dispatchStrategy_.getClass().getName()); 
                 dispatchStrategy_.dispatch(dispatchRequest_);
             }
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             logger.log(Level.FINE, "Exception received dispatching request", ex); 
             setSystemException(ex);
         }

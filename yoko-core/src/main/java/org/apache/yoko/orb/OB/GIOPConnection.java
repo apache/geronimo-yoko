@@ -21,9 +21,11 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.omg.CONV_FRAME.CodeSetContext;
@@ -31,12 +33,16 @@ import org.omg.CONV_FRAME.CodeSetContextHolder;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.StringHolder;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.SystemExceptionHelper;
 import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.UserException;
+import org.omg.GIOP.KeyAddr;
 import org.omg.GIOP.LocateStatusType_1_2;
+import org.omg.GIOP.LocateStatusType_1_2Holder;
 import org.omg.GIOP.ReplyStatusType_1_2;
 import org.omg.GIOP.ReplyStatusType_1_2Holder;
 import org.omg.GIOP.TargetAddressHolder;
@@ -50,10 +56,13 @@ import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
 
+import java.util.Properties;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.yoko.orb.OB.Assert.*;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
@@ -66,7 +75,16 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
-import static org.omg.GIOP.MsgType_1_1.*;
+import static org.omg.GIOP.MsgType_1_1.LocateReply;
+import static org.omg.GIOP.MsgType_1_1.Reply;
+import static org.omg.GIOP.MsgType_1_1._CancelRequest;
+import static org.omg.GIOP.MsgType_1_1._CloseConnection;
+import static org.omg.GIOP.MsgType_1_1._Fragment;
+import static org.omg.GIOP.MsgType_1_1._LocateReply;
+import static org.omg.GIOP.MsgType_1_1._LocateRequest;
+import static org.omg.GIOP.MsgType_1_1._MessageError;
+import static org.omg.GIOP.MsgType_1_1._Reply;
+import static org.omg.GIOP.MsgType_1_1._Request;
 
 abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(GIOPConnection.class.getName());
@@ -119,7 +137,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /* task to execute when ACM timer signal arrives */
-    final class ACMTask extends java.util.TimerTask {
+    final class ACMTask extends TimerTask {
         GIOPConnection connection_;
 
         public ACMTask(GIOPConnection parent) {
@@ -177,8 +195,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     private CodeConverters codeConverters_ = null;
 
     /** maximum GIOP version encountered during message transactions */
-    protected final org.omg.GIOP.Version giopVersion_ = new org.omg.GIOP.Version(
-            (byte) 0, (byte) 0);
+    protected final org.omg.GIOP.Version giopVersion_ = new org.omg.GIOP.Version((byte) 0, (byte) 0);
 
     /** ACM timeout variables */
     protected int shutdownTimeout_ = 2;
@@ -221,7 +238,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** read the codeset information from the SCL */
-    private void readCodeConverters(org.omg.IOP.ServiceContext[] scl) {
+    private void readCodeConverters(ServiceContext[] scl) {
         if (codeConverters_ != null)
             return;
 
@@ -231,31 +248,27 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 CodeSetUtil.extractCodeSetContext(aScl, codeSetContextH);
                 CodeSetContext codeSetContext = codeSetContextH.value;
 
-                CodeSetDatabase db = CodeSetDatabase.instance();
+                final int nativeCs = orbInstance_.getNativeCs();
+                final int alienCs = codeSetContext.char_data;
+                final int nativeWcs = orbInstance_.getNativeWcs();
+                final int alienWcs = codeSetContext.wchar_data;
+                final CodeConverterBase inputCharConverter = getConverter(nativeCs, alienCs);
+                final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
+                final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
+                final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
+                codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
 
-                codeConverters_ = new CodeConverters();
-                codeConverters_.inputCharConverter = db.getConverter(
-                        orbInstance_.getNativeCs(), codeSetContext.char_data);
-                codeConverters_.outputCharConverter = db.getConverter(
-                        codeSetContext.char_data, orbInstance_.getNativeCs());
-                codeConverters_.inputWcharConverter = db.getConverter(
-                        orbInstance_.getNativeWcs(), codeSetContext.wchar_data);
-                codeConverters_.outputWcharConverter = db.getConverter(
-                        codeSetContext.wchar_data, orbInstance_.getNativeWcs());
-
-                CoreTraceLevels coreTraceLevels = orbInstance_
-                        .getCoreTraceLevels();
+                CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
                 if (coreTraceLevels.traceConnections() >= 2) {
                     String msg = "receiving transmission code sets";
                     msg += "\nchar code set: ";
                     if (codeConverters_.inputCharConverter != null)
                         msg += codeConverters_.inputCharConverter.getFrom().description;
                     else {
-                        if (codeSetContext.char_data == 0)
+                        if (alienCs == 0)
                             msg += "none";
                         else {
-                            CodeSetInfo info = db.getCodeSetInfo(orbInstance_
-                                    .getNativeCs());
+                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeCs);
                             msg += info != null ? info.description : null;
                         }
                     }
@@ -263,11 +276,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     if (codeConverters_.inputWcharConverter != null)
                         msg += codeConverters_.inputWcharConverter.getFrom().description;
                     else {
-                        if (codeSetContext.wchar_data == 0)
+                        if (alienWcs == 0)
                             msg += "none";
                         else {
-                            CodeSetInfo info = db.getCodeSetInfo(orbInstance_
-                                    .getNativeWcs());
+                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeWcs);
                             msg += info != null ? info.description : null;
                         }
                     }
@@ -301,7 +313,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         POAManagerFactory poamanFactory = orbInstance_.getPOAManagerFactory();
         _OB_assert(poamanFactory != null);
 
-        org.omg.PortableServer.POAManager[] poaManagers = poamanFactory.list();
+        POAManager[] poaManagers = poamanFactory.list();
 
         for (POAManager poaManager : poaManagers) {
             try {
@@ -426,7 +438,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         try {
             reqId = msg.readRequestHeader(response, target, op, scl);
-            if (target.value.discriminator() != org.omg.GIOP.KeyAddr.value) {
+            if (target.value.discriminator() != KeyAddr.value) {
                 processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 return null;
             }
@@ -616,7 +628,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         //
         // Make sure the transport can send a reply
         //
-        if (transport_.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly) {
+        if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String message = "Discarding locate request - transport "
                     + "does not support twoway invocations";
 
@@ -641,7 +653,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             TargetAddressHolder target = new TargetAddressHolder();
             reqId = msg.readLocateRequestHeader(target);
 
-            if (target.value.discriminator() != org.omg.GIOP.KeyAddr.value) {
+            if (target.value.discriminator() != KeyAddr.value) {
                 processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 return;
             }
@@ -654,7 +666,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // Find the IOR for the key
             //
-            org.omg.IOP.IORHolder ior = new org.omg.IOP.IORHolder();
+            IORHolder ior = new IORHolder();
             int val = oaInterface_.findByKey(key, ior);
             LocateStatusType_1_2 status = LocateStatusType_1_2
                     .from_int(val);
@@ -662,7 +674,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // Send back locate reply message
             //
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
+            Buffer buf = new Buffer(
                     12);
             buf.pos(12);
             OutputStream out = new OutputStream(
@@ -714,7 +726,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         }
 
         int reqId;
-        org.omg.GIOP.LocateStatusType_1_2Holder status = new org.omg.GIOP.LocateStatusType_1_2Holder();
+        LocateStatusType_1_2Holder status = new LocateStatusType_1_2Holder();
 
         try {
             reqId = msg.readLocateReplyHeader(status);
@@ -746,7 +758,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         switch (status.value.value()) {
             case LocateStatusType_1_2._UNKNOWN_OBJECT:
-                down.setSystemException(new org.omg.CORBA.OBJECT_NOT_EXIST());
+                down.setSystemException(new OBJECT_NOT_EXIST());
                 break;
 
             case LocateStatusType_1_2._OBJECT_HERE:
@@ -905,7 +917,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** transmits a reply back once the upcall completes */
-    private void sendUpcallReply(org.apache.yoko.orb.OCI.Buffer buf) {
+    private void sendUpcallReply(Buffer buf) {
         synchronized (this) {
             //
             // no need to do anything if we are closed
@@ -990,7 +1002,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // read ACM properties
         //
         String value;
-        java.util.Properties properties = orbInstance_.getProperties();
+        Properties properties = orbInstance_.getProperties();
 
         //
         // the shutdown timeout for the client
@@ -1034,7 +1046,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // read ACM properties
         //
         String value;
-        java.util.Properties properties = orbInstance_.getProperties();
+        Properties properties = orbInstance_.getProperties();
 
         //
         // the shutdown timeout for the client
@@ -1071,7 +1083,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** start populating the reply data */
-    public void upcallBeginReply(Upcall upcall, org.omg.IOP.ServiceContext[] scl) {
+    public void upcallBeginReply(Upcall upcall, ServiceContext[] scl) {
         upcall.createOutputStream(12);
         OutputStream out = upcall.output();
         ProfileInfo profileInfo = upcall.profileInfo();
@@ -1097,7 +1109,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         //
         // Make sure the transport can send a reply
         //
-        if (transport_.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly) {
+        if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String msg = "Discarding reply - transport does not "
                     + "support twoway invocations";
 
@@ -1143,7 +1155,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** start populating the reply with a user exception */
     public void upcallBeginUserException(Upcall upcall,
-                                         org.omg.IOP.ServiceContext[] scl) {
+                                         ServiceContext[] scl) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1170,7 +1182,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** populate and send the reply with a UserException */
     public void upcallUserException(Upcall upcall,
-                                    org.omg.CORBA.UserException ex, org.omg.IOP.ServiceContext[] scl) {
+                                    UserException ex, ServiceContext[] scl) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1200,7 +1212,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** populate and end the reply with a system exception */
-    public void upcallSystemException(Upcall upcall, SystemException ex, org.omg.IOP.ServiceContext[] scl) {
+    public void upcallSystemException(Upcall upcall, SystemException ex, ServiceContext[] scl) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1227,8 +1239,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** prepare the reply for location forwarding */
-    public void upcallForward(Upcall upcall, IOR ior, boolean perm,
-                              org.omg.IOP.ServiceContext[] scl) {
+    public void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContext[] scl) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();

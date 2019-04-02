@@ -17,16 +17,23 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.omg.CORBA.ExceptionList;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.NamedValue;
+import org.omg.IOP.IOR;
+
 public class PIDIIDowncall extends PIDowncall {
     //
     // Argument, result and exception list description provided by the
     // DII
     //
-    protected org.omg.CORBA.NVList args_;
+    protected NVList args_;
 
-    protected org.omg.CORBA.NamedValue result_;
+    protected NamedValue result_;
 
-    protected org.omg.CORBA.ExceptionList exceptionList_;
+    protected ExceptionList exceptionList_;
 
     // ----------------------------------------------------------------------
     // PIDIIDowncall private and protected member implementations
@@ -37,11 +44,11 @@ public class PIDIIDowncall extends PIDowncall {
     // ----------------------------------------------------------------------
 
     public PIDIIDowncall(ORBInstance orbInstance, Client client,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
+            ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp,
-            org.omg.IOP.IOR IOR, org.omg.IOP.IOR origIOR, PIManager piManager,
-            org.omg.CORBA.NVList args, org.omg.CORBA.NamedValue result,
-            org.omg.CORBA.ExceptionList exceptions) {
+            IOR IOR, IOR origIOR, PIManager piManager,
+            NVList args, NamedValue result,
+            ExceptionList exceptions) {
         super(orbInstance, client, profileInfo, policies, op, resp, IOR,
                 origIOR, piManager);
         args_ = args;
@@ -49,7 +56,7 @@ public class PIDIIDowncall extends PIDowncall {
         exceptionList_ = exceptions;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
+    public OutputStream preMarshal()
             throws LocationForward, FailureException {
         requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
                 IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,
