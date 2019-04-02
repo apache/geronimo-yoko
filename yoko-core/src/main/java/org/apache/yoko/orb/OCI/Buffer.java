@@ -200,4 +200,9 @@ public final class Buffer {
         System.arraycopy(data_, pos(), bytes, 0, available());
         return bytes;
     }
+
+    public void appendRemainingDataFrom(Buffer b) {
+        realloc(length() + b.available());
+        System.arraycopy(b.data(), b.pos(), data(), length(), b.available());
+    }
 }
