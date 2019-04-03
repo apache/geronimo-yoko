@@ -213,11 +213,16 @@ public final class Buffer {
     }
 
     public void align8() {
-        if (available() > 0) pos_ = (pos_ + 7) & ~7;
+        skipTo((this.pos_ + 7) & ~7);
+    }
+
+    private void skipTo(int newPos) {
+        if (newPos > length()) throw new IndexOutOfBoundsException();
+        pos_ = newPos;
     }
 
     public void align4() {
-        if (available() > 0) pos_ = (pos_ + 3) & ~3;
+        skipTo((pos_ + 3) & ~3);
     }
 
     public void align2() {
@@ -229,12 +234,12 @@ public final class Buffer {
             case 8: align8(); break;
             case 4: align4(); break;
             case 2: align2(); break;
-            default: throw new UnsupportedOperationException("Aligning to " + n + " byte boundary");
+            default: throw new UnsupportedOperationException("Aligning to " + n + " byte boundary is not supported");
         }
     }
 
     public void skip(int n) {
-        if (available() > 0) pos_ += n;
+        skipTo(pos_ + n);
     }
 
     public void skipToEnd() {

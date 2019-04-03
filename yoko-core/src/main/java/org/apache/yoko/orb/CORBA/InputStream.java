@@ -1872,20 +1872,18 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void _OB_skip(int n) {
-        if (n < 0 || buf_.available() < n)
+        try {
+            buf_.skip(n);
+        } catch (IndexOutOfBoundsException e) {
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
-
-        buf_.skip(n);
+        }
     }
 
     public void _OB_skipAlign(int n) {
-        if (buf_.pos_ % n != 0) {
-            int newPos = buf_.pos_ + n - buf_.pos_ % n;
-
-            if (newPos < buf_.pos_ || newPos > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
-
-            buf_.pos_ = newPos;
+        try {
+            buf_.align(n);
+        } catch (IndexOutOfBoundsException e) {
+            throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
         }
     }
 
