@@ -213,7 +213,7 @@ public final class Buffer {
     }
 
     public void align8() {
-        skipTo((this.pos_ + 7) & ~7);
+        skipTo((pos_ + 7) & ~7);
     }
 
     private void skipTo(int newPos) {
@@ -226,7 +226,7 @@ public final class Buffer {
     }
 
     public void align2() {
-        skip(pos_ & 0x1);
+        skipBytes(pos_ & 0x1);
     }
 
     public void align(int n) {
@@ -238,7 +238,7 @@ public final class Buffer {
         }
     }
 
-    public void skip(int n) {
+    public void skipBytes(int n) {
         skipTo(pos_ + n);
     }
 
@@ -250,8 +250,28 @@ public final class Buffer {
         pos(0);
     }
 
+    public char peekChar() {
+        return (char)((data_[pos_] << 8) | (data_[pos_ + 1] & 0xff));
+    }
+
+    public byte peekByte() {
+        return data_[pos_];
+    }
+
     public byte readByte() {
         return data_[pos_++];
+    }
+
+    public char readChar() {
+        return (char) ((data_[pos_++] << 8) | (data_[pos_++] & 0xff));
+    }
+
+    public char readChar_LE() {
+        return (char) ((data_[pos_++] & 0xff) | (data_[pos_++] << 8));
+    }
+
+    public char readByteAsChar() {
+        return (char)data_[pos_++];
     }
 
     public void writeByte(int i) {

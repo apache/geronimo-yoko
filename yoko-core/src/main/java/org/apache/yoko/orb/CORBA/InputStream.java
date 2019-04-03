@@ -712,7 +712,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // Assume big endian
                     //
-                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+                    return buf_.readChar();
                 }
 
                 case GIOP1_1: {
@@ -723,7 +723,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     final int wcharLen = buf_.readByte() & 0xff;
                     if (buf_.available() < wcharLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
-                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+                    return buf_.readChar();
                 }
             }
         }
@@ -787,32 +787,19 @@ final public class InputStream extends InputStreamWithOffsets {
             //
             switch (giopVersion_) {
                 case GIOP1_0:
-                    //
-                    // UCS-2 is the native wchar codeset for both Orbacus
-                    // and Orbix/E so conversion should not be necessary
-                    // 
+                    // UCS-2 is the native wchar codeset for both Orbacus and Orbix/E so conversion should not be necessary
                     _OB_assert(!wCharConversionRequired_);
 
-                    //
-                    // align to 2-byte boundary
-                    //
                     buf_.align2();
 
-                    //
                     // check for overflow on reader
-                    // 
                     if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
-                    //
-                    // assume big-endian (both Orbacus and Orbix/E do here)
-                    // and read in the wchar
-                    //
-                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+                    // assume big-endian (both Orbacus and Orbix/E do here) and read in the wchar
+                    return buf_.readChar();
 
-                case GIOP1_1:
-                    //
+                case GIOP1_1:  // TODO: understand or safely delete this case
                     // read according to the endian of the message
-                    //
                     if (converter.getFrom().max_bytes <= 2)
                         value = (char) read_ushort();
                     else
@@ -821,30 +808,14 @@ final public class InputStream extends InputStreamWithOffsets {
                     break;
 
                 default : {
-                    //
                     // read the length octet off the front
-                    // 
                     final int wcLen = buf_.readByte() & 0xff;
 
-                    //
                     // check for an overflow
-                    //
                     if (buf_.available() < wcLen) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
-                    //
                     // read the character off in proper endian format
-                    // 
-                    if (swap_) {
-                        //
-                        // the message was in little endian format
-                        //
-                        value = (char) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
-                    } else {
-                        //
-                        // the message was in big endian format
-                        //
-                        value = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
-                    }
+                    value = swap_ ? buf_.readChar_LE() : buf_.readChar();
 
                     break;
                 }
@@ -907,7 +878,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     final CodeConverterBase converter = codeConverters_.inputWcharConverter;
 
                     while (len > 0) {
-                        final int wcharLen = converter.read_count_wchar((char) buf_.data_[buf_.pos_]);
+                        final int wcharLen = converter.read_count_wchar((char) buf_.peekByte());
                         len -= wcharLen;
                         if (buf_.available() < wcharLen)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
@@ -929,7 +900,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         if (buf_.available() < wcharLen)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
-                        char c = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+                        char c = buf_.readChar();
 
                         stringBuffer.append(c);
                     }
@@ -1010,26 +981,15 @@ final public class InputStream extends InputStreamWithOffsets {
                         if (buf_.available() < 2)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
-                        int checkChar = (buf_.data_[buf_.pos_] << 8) | (buf_.data_[buf_.pos_ + 1] & 0xff);
-
-                        int wcLen = converter.read_count_wchar((char) checkChar);
+                        int wcLen = converter.read_count_wchar(buf_.peekChar());
 
                         len -= wcLen;
 
-                        // 
                         // check for an overflow in the read
-                        //
                         if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
-                        //
-                        // read the character and convert if necessary
-                        // 
                         char c = converter.read_wchar(this, wcLen);
-                        if (wCharConversionRequired_)
-                            c = converter.convert(c);
-
-                        //
-                        // append to the string buffer
+                        if (wCharConversionRequired_) c = converter.convert(c);
                         //
                         stringBuffer.append(c);
                     }
@@ -1050,11 +1010,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // format for GIOP 1.2/1.3
                         // REVISIT: GIOP 1.4 changes these rules
                         // 
-                        char c;
-                        if (swap_)
-                            c = (char) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
-                        else
-                            c = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+                        char c = swap_ ? buf_.readChar_LE() : buf_.readChar();
 
                         if (wCharConversionRequired_)
                             c = converter.convert(c);
@@ -1103,7 +1059,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
 
         if (logger.isLoggable(Level.FINEST))
-            logger.finest(String.format("Boolean value is %b from position 0x%x", buf_.data_[buf_.pos_], buf_.pos_));
+            logger.finest(String.format("Boolean value is %b from position 0x%x", buf_.peekByte(), buf_.pos_));
         return buf_.readByte() != (byte) 0;
     }
 
@@ -1268,9 +1224,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     value = (char) (buf_.readByte() & 0xff);
 
-                //
                 // String must not contain null characters
-                //
                 if (value == 0)
                     throw new MARSHAL(describeMarshal(MinorReadStringNullChar), MinorReadStringNullChar, COMPLETED_NO);
 
@@ -1873,7 +1827,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void _OB_skip(int n) {
         try {
-            buf_.skip(n);
+            buf_.skipBytes(n);
         } catch (IndexOutOfBoundsException e) {
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
         }
