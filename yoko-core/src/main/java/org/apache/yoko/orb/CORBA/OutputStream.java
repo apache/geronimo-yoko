@@ -26,6 +26,7 @@ import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.Buffer.LengthWriter;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.util.Timeout;
 import org.omg.CORBA.BAD_TYPECODE;
@@ -131,22 +132,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     private Object delegateContext_;
     private Timeout timeout = Timeout.NEVER;
 
-    // ------------------------------------------------------------------
-    // Private and protected functions
-    // ------------------------------------------------------------------
-
-    // Write a gap of four bytes (ulong aligned), avoids byte shifts
-    private int writeGap() {
-        LOGGER.finest("Writing a gap value");
+    private Buffer.LengthWriter recordLength() {
         addCapacity(4, 4);
-        int result = buf_.pos_;
-        buf_.pos_ += 4;
-        return result;
-    }
-
-    private void writeLength(final int start) {
-        int length = buf_.writeLengthAt(start);
-        LOGGER.finest("Wrote a length value of " + length + " at offset " + start);
+        return buf_.new LengthWriter(LOGGER);
     }
 
     private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Hashtable history) {
@@ -225,11 +213,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_objref: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                    }
 
                     break;
                 }
@@ -238,16 +226,16 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_except: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    write_ulong(tc.member_count());
-                    for (int i = 0; i < tc.member_count(); i++) {
-                        write_string(tc.member_name(i));
-                        writeTypeCodeImpl(tc.member_type(i), history);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        write_ulong(tc.member_count());
+                        for (int i = 0; i < tc.member_count(); i++) {
+                            write_string(tc.member_name(i));
+                            writeTypeCodeImpl(tc.member_type(i), history);
+                        }
                     }
-                    writeLength(start);
 
                     break;
                 }
@@ -255,64 +243,64 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_union: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    org.omg.CORBA.TypeCode discType = tc.discriminator_type();
-                    writeTypeCodeImpl(discType, history);
-                    int defaultIndex = tc.default_index();
-                    write_long(defaultIndex);
-                    write_ulong(tc.member_count());
-                    for (int i = 0; i < tc.member_count(); i++) {
-                        //
-                        // Check for default label value
-                        //
-                        if (i == defaultIndex) {
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        org.omg.CORBA.TypeCode discType = tc.discriminator_type();
+                        writeTypeCodeImpl(discType, history);
+                        int defaultIndex = tc.default_index();
+                        write_long(defaultIndex);
+                        write_ulong(tc.member_count());
+                        for (int i = 0; i < tc.member_count(); i++) {
                             //
-                            // Marshal a dummy value of the appropriate size
-                            // for the discriminator type
+                            // Check for default label value
                             //
-                            org.omg.CORBA.TypeCode origDiscType = TypeCode._OB_getOrigType(discType);
-                            switch (origDiscType.kind().value()) {
-                            case _tk_short:
-                                write_short((short) 0);
-                                break;
-                            case _tk_ushort:
-                                write_ushort((short) 0);
-                                break;
-                            case _tk_long:
-                                write_long(0);
-                                break;
-                            case _tk_ulong:
-                                write_ulong(0);
-                                break;
-                            case _tk_longlong:
-                                write_longlong(0);
-                                break;
-                            case _tk_ulonglong:
-                                write_ulonglong(0);
-                                break;
-                            case _tk_boolean:
-                                write_boolean(false);
-                                break;
-                            case _tk_char:
-                                write_char((char) 0);
-                                break;
-                            case _tk_enum:
-                                write_ulong(0);
-                                break;
-                            default:
-                                _OB_assert("Invalid sub-type in tk_union");
+                            if (i == defaultIndex) {
+                                //
+                                // Marshal a dummy value of the appropriate size
+                                // for the discriminator type
+                                //
+                                org.omg.CORBA.TypeCode origDiscType = TypeCode._OB_getOrigType(discType);
+                                switch (origDiscType.kind().value()) {
+                                case _tk_short:
+                                    write_short((short) 0);
+                                    break;
+                                case _tk_ushort:
+                                    write_ushort((short) 0);
+                                    break;
+                                case _tk_long:
+                                    write_long(0);
+                                    break;
+                                case _tk_ulong:
+                                    write_ulong(0);
+                                    break;
+                                case _tk_longlong:
+                                    write_longlong(0);
+                                    break;
+                                case _tk_ulonglong:
+                                    write_ulonglong(0);
+                                    break;
+                                case _tk_boolean:
+                                    write_boolean(false);
+                                    break;
+                                case _tk_char:
+                                    write_char((char) 0);
+                                    break;
+                                case _tk_enum:
+                                    write_ulong(0);
+                                    break;
+                                default:
+                                    _OB_assert("Invalid sub-type in tk_union");
+                                }
+                            } else {
+                                tc.member_label(i).write_value(this);
                             }
-                        } else {
-                            tc.member_label(i).write_value(this);
-                        }
 
-                        write_string(tc.member_name(i));
-                        writeTypeCodeImpl(tc.member_type(i), history);
+                            write_string(tc.member_name(i));
+                            writeTypeCodeImpl(tc.member_type(i), history);
+                        }
                     }
-                    writeLength(start);
 
                     break;
                 }
@@ -320,14 +308,14 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_enum: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    write_ulong(tc.member_count());
-                    for (int i = 0; i < tc.member_count(); i++)
-                        write_string(tc.member_name(i));
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        write_ulong(tc.member_count());
+                        for (int i = 0; i < tc.member_count(); i++)
+                            write_string(tc.member_name(i));
+                    }
 
                     break;
                 }
@@ -341,11 +329,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_array: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    writeTypeCodeImpl(tc.content_type(), history);
-                    write_ulong(tc.length());
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        writeTypeCodeImpl(tc.content_type(), history);
+                        write_ulong(tc.length());
+                    }
 
                     break;
                 }
@@ -353,12 +341,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_alias: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeTypeCodeImpl(tc.content_type(), history);
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        writeTypeCodeImpl(tc.content_type(), history);
+                    }
 
                     break;
                 }
@@ -371,19 +359,19 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         concreteBase = TypeCodeFactory.createPrimitiveTC(tk_null);
                     }
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    write_short(tc.type_modifier());
-                    writeTypeCodeImpl(concreteBase, history);
-                    write_ulong(tc.member_count());
-                    for (int i = 0; i < tc.member_count(); i++) {
-                        write_string(tc.member_name(i));
-                        writeTypeCodeImpl(tc.member_type(i), history);
-                        write_short(tc.member_visibility(i));
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        write_short(tc.type_modifier());
+                        writeTypeCodeImpl(concreteBase, history);
+                        write_ulong(tc.member_count());
+                        for (int i = 0; i < tc.member_count(); i++) {
+                            write_string(tc.member_name(i));
+                            writeTypeCodeImpl(tc.member_type(i), history);
+                            write_short(tc.member_visibility(i));
+                        }
                     }
-                    writeLength(start);
 
                     break;
                 }
@@ -391,12 +379,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_value_box: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeTypeCodeImpl(tc.content_type(), history);
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                        writeTypeCodeImpl(tc.content_type(), history);
+                    }
 
                     break;
                 }
@@ -404,11 +392,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_abstract_interface: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                    }
 
                     break;
                 }
@@ -416,11 +404,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_native: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                    }
 
                     break;
                 }
@@ -428,11 +416,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case TCKind._tk_local_interface: {
                     history.put(tc, oldPos);
 
-                    int start = writeGap();
-                    _OB_writeEndian();
-                    write_string(tc.id());
-                    write_string(tc.name());
-                    writeLength(start);
+                    try  (Buffer.LengthWriter w = recordLength()) {
+                        _OB_writeEndian();
+                        write_string(tc.id());
+                        write_string(tc.name());
+                    }
 
                     break;
                 }
@@ -531,7 +519,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // to write new data. We must first check if we need to start a
         // chunk, which may result in a recursive call to addCapacity().
         //
-        if (buf_.pos_ == buf_.length() && valueWriter_ != null) {
+        if (buf_.available() == 0 && valueWriter_ != null) {
             checkBeginChunk();
         }
 
@@ -758,33 +746,32 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             //
             // For octet count
             //
-            int start = writeGap();
+            try (Buffer.LengthWriter w = recordLength()) {
+                if (wCharConversionRequired_) {
+                    final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
-            if (wCharConversionRequired_) {
-                final CodeConverterBase converter = codeConverters_.outputWcharConverter;
+                    for (char anArr : arr) {
+                        char v = converter.convert(anArr);
 
-                for (char anArr : arr) {
-                    char v = converter.convert(anArr);
-
-                    addCapacity(converter.write_count_wchar(v));
-                    converter.write_wchar(this, v);
+                        addCapacity(converter.write_count_wchar(v));
+                        converter.write_wchar(this, v);
+                    }
                 }
-            }
-            //
-            // UTF-16
-            //
-            else {
-                addCapacity(2 * len);
+                //
+                // UTF-16
+                //
+                else {
+                    addCapacity(2 * len);
 
-                for (char v : arr) {
-                    buf_.writeChar(v);
+                    for (char v : arr) {
+                        buf_.writeChar(v);
+                    }
                 }
             }
 
             //
             // Write octet count
             //
-            writeLength(start);
         }
             break;
         }
@@ -839,58 +826,56 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // save the starting position and write the gap to place the
         // length of the string later
         //
-        int start = writeGap();
+        try (Buffer.LengthWriter w = recordLength()) {
+            if (wCharWriterRequired_) {
+                for (char anArr : arr) {
+                    char v = anArr;
 
-        //
-        // we've handled GIOP 1.0/1.1 above so this must be GIOP 1.2+
-        //
-        if (wCharWriterRequired_) {
-            for (char anArr : arr) {
-                char v = anArr;
+                    //
+                    // check if the character requires conversion
+                    //
+                    if (wCharConversionRequired_) v = converter.convert(v);
 
-                //
-                // check if the character requires conversion
-                //
-                if (wCharConversionRequired_)
-                    v = converter.convert(v);
+                    //
+                    // add capacity for the character
+                    //
+                    addCapacity(converter.write_count_wchar(v));
 
+                    //
+                    // write the character
+                    //
+                    converter.write_wchar(this, v);
+                }
+            } else {
                 //
-                // add capacity for the character
+                // since we don't require a special writer, each character
+                // MUST be 2-bytes in size
                 //
-                addCapacity(converter.write_count_wchar(v));
+                addCapacity(len << 1);
 
-                //
-                // write the character
-                //
-                converter.write_wchar(this, v);
-            }
-        } else {
-            //
-            // since we don't require a special writer, each character
-            // MUST be 2-bytes in size
-            //
-            addCapacity(len << 1);
+                for (char anArr : arr) {
+                    char v = anArr;
 
-            for (char anArr : arr) {
-                char v = anArr;
+                    //
+                    // check for conversion
+                    //
+                    if (wCharConversionRequired_) v = converter.convert(v);
 
-                //
-                // check for conversion
-                //
-                if (wCharConversionRequired_)
-                    v = converter.convert(v);
-
-                //
-                // write character in big endian format
-                //
-                buf_.writeChar(v);
+                    //
+                    // write character in big endian format
+                    //
+                    buf_.writeChar(v);
+                }
             }
         }
 
         //
+        // we've handled GIOP 1.0/1.1 above so this must be GIOP 1.2+
+        //
+
+        //
         // write the octet length
         //
-        writeLength(start);
     }
 
     // ------------------------------------------------------------------

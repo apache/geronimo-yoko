@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.util.logging.Logger;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -264,17 +265,50 @@ public final class Buffer {
         data_[pos_++] = (byte) (value >> 000);
     }
 
+    private static final byte PAD_BYTE = (byte)0xbd;
+
     /**
-     * Compute the length starting from <code>index + 4</code> to the current position.
-     * @param index the position in the buffer to write the length
-     * @return the calculate length
+     * Write some padding bytes.
+     * @param n the number of padding bytes to write, from 0 to 7
      */
-    public int writeLengthAt(int index) {
-        int length = pos_ - (index + 4);
-        data_[index+0] = (byte) (length >>> 030);
-        data_[index+1] = (byte) (length >>> 020);
-        data_[index+2] = (byte) (length >>> 010);
-        data_[index+3] = (byte) (length >>> 000);
-        return length;
+    public void pad(int n) {
+        assert 0 <= n;
+        assert n < 8;
+        switch (n) {
+        case 7: writeByte(PAD_BYTE);
+        case 6: writeByte(PAD_BYTE);
+        case 5: writeByte(PAD_BYTE);
+        case 4: writeByte(PAD_BYTE);
+        case 3: writeByte(PAD_BYTE);
+        case 2: writeByte(PAD_BYTE);
+        case 1: writeByte(PAD_BYTE);
+        case 0: return;
+        }
+        throw new AssertionError(n + " must be between 0 and 7 inclusive");
+    }
+
+    public class LengthWriter implements AutoCloseable {
+        final Logger logger;
+        final int index;
+
+        public LengthWriter(Logger logger) {
+            this.logger = logger;
+            this.index = pos();
+            this.logger.finest("Writing a gap value for a length at offset " + index);
+            pad(4);
+        }
+
+        public void close() {
+            writeLength();
+        }
+
+        private void writeLength() {
+            final int length = pos_ - (index + 4);
+            data_[index +0] = (byte) (length >>> 030);
+            data_[index +1] = (byte) (length >>> 020);
+            data_[index +2] = (byte) (length >>> 010);
+            data_[index +3] = (byte) (length >>> 000);
+            logger.finest("Wrote a length value of " + length + " at offset " + index);
+        }
     }
 }
