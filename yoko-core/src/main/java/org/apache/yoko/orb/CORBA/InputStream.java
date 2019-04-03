@@ -685,8 +685,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 default : {
                     final int wcharLen = buf_.readByte() & 0xff;
-                    if (buf_.pos_ + wcharLen > buf_.length())
-                        throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
+                    if (buf_.available() < wcharLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
                     value = converter.read_wchar(this, wcharLen);
 
@@ -706,10 +705,9 @@ final public class InputStream extends InputStreamWithOffsets {
             // Orbix2000/ORBacus/E compatible GIOP 1.0 marshaling
             //
                 case GIOP1_0: {
-                    buf_.pos_ += (buf_.pos_ & 0x1);
+                    buf_.align2();
 
-                    if (buf_.pos_ + 2 > buf_.length())
-                        throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
+                    if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
                     // Assume big endian
@@ -723,8 +721,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 default : {
                     final int wcharLen = buf_.readByte() & 0xff;
-                    if (buf_.pos_ + wcharLen > buf_.length())
-                        throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
+                    if (buf_.available() < wcharLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
                     return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
                 }
@@ -762,7 +759,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // align on two-byte boundary
                     // 
-                    buf_.pos_ += (buf_.pos_ & 1);
+                    buf_.align2();
 
                     break;
 
@@ -778,8 +775,7 @@ final public class InputStream extends InputStreamWithOffsets {
             //
             // check for an overflow condition
             //
-            if (buf_.pos_ + wcLen > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
+            if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
             //
             // read in the value with the reader
@@ -800,13 +796,12 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // align to 2-byte boundary
                     //
-                    buf_.pos_ += (buf_.pos_ & 1);
+                    buf_.align2();
 
                     //
                     // check for overflow on reader
                     // 
-                    if (buf_.pos_ + 2 > buf_.length())
-                        throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
+                    if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
                     // assume big-endian (both Orbacus and Orbix/E do here)
@@ -834,8 +829,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // check for an overflow
                     //
-                    if (buf_.pos_ + wcLen > buf_.length())
-                        throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
+                    if (buf_.available() < wcLen) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     //
                     // read the character off in proper endian format
@@ -915,7 +909,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     while (len > 0) {
                         final int wcharLen = converter.read_count_wchar((char) buf_.data_[buf_.pos_]);
                         len -= wcharLen;
-                        if (buf_.pos_ + wcharLen > buf_.length())
+                        if (buf_.available() < wcharLen)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         char c = converter.read_wchar(this, wcharLen);
@@ -932,7 +926,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     while (len > 0) {
                         final int wcharLen = 2;
                         len -= wcharLen;
-                        if (buf_.pos_ + wcharLen > buf_.length())
+                        if (buf_.available() < wcharLen)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         char c = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
@@ -1025,8 +1019,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // 
                         // check for an overflow in the read
                         //
-                        if (buf_.pos_ + wcLen > buf_.length())
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+                        if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         //
                         // read the character and convert if necessary
@@ -1049,7 +1042,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         //
                         // check for an overflow condition
                         // 
-                        if (buf_.pos_ + wcLen > buf_.length())
+                        if (buf_.available() < wcLen)
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
                         //
@@ -1093,8 +1086,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public int read() throws IOException {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.length())
-            return -1;
+        if (buf_.available() < 1) return -1;
 
         return (0xff & buf_.readByte());
     }
@@ -1108,9 +1100,7 @@ final public class InputStream extends InputStreamWithOffsets {
     public boolean read_boolean() {
         checkChunk();
 
-        if (buf_.pos_ + 1 > buf_.length()) {
-            throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
-        }
+        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
 
         if (logger.isLoggable(Level.FINEST))
             logger.finest(String.format("Boolean value is %b from position 0x%x", buf_.data_[buf_.pos_], buf_.pos_));
@@ -1119,8 +1109,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public char read_char() {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.length())
-            throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
+        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
 
         if (charReaderRequired_ || charConversionRequired_) {
             final CodeConverterBase converter = codeConverters_.inputCharConverter;
@@ -1151,18 +1140,16 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public byte read_octet() {
         checkChunk();
-        if (buf_.pos_ + 1 > buf_.length())
-            throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
+        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
 
         return buf_.readByte();
     }
 
     public short read_short() {
         checkChunk();
-        buf_.pos_ += (buf_.pos_ & 0x1);
+        buf_.align2();
 
-        if (buf_.pos_ + 2 > buf_.length())
-            throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
+        if (buf_.available() < 2) throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
         if (swap_)
             return (short) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
         else
@@ -1184,12 +1171,9 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public long read_longlong() {
         checkChunk();
-        final int pmod8 = buf_.pos_ & 0x7;
-        if (pmod8 != 0)
-            buf_.pos_ += 8 - pmod8;
+        buf_.align8();
 
-        if (buf_.pos_ + 8 > buf_.length())
-            throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
+        if (buf_.available() < 8) throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
 
         if (swap_)
             return ((long) buf_.readByte() & 0xffL)
@@ -1412,7 +1396,7 @@ final public class InputStream extends InputStreamWithOffsets {
             return;
 
         checkChunk();
-        buf_.pos_ += (buf_.pos_ & 0x1);
+        buf_.align2();
 
         int newPos = buf_.pos_ + length * 2;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1434,9 +1418,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length <= 0)
             return;
         checkChunk();
-        final int pmod4 = buf_.pos_ & 0x3;
-        if (pmod4 != 0)
-            buf_.pos_ += 4 - pmod4;
+        buf_.align4();
 
         int newPos = buf_.pos_ + length * 4;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1466,9 +1448,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         checkChunk();
 
-        final int pmod8 = buf_.pos_ & 0x7;
-        if (pmod8 != 0)
-            buf_.pos_ += 8 - pmod8;
+        buf_.align8();
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1504,9 +1484,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length > 0) {
             checkChunk();
 
-            final int pmod4 = buf_.pos_ & 0x3;
-            if (pmod4 != 0)
-                buf_.pos_ += 4 - pmod4;
+            buf_.align4();
 
             int newPos = buf_.pos_ + length * 4;
             if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1538,9 +1516,7 @@ final public class InputStream extends InputStreamWithOffsets {
             return;
 
         checkChunk();
-        final int pmod8 = buf_.pos_ & 0x7;
-        if (pmod8 != 0)
-            buf_.pos_ += 8 - pmod8;
+        buf_.align8();
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1896,11 +1872,10 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void _OB_skip(int n) {
-        int newPos = buf_.pos_ + n;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (n < 0 || buf_.available() < n)
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
 
-        buf_.pos_ = newPos;
+        buf_.skip(n);
     }
 
     public void _OB_skipAlign(int n) {
@@ -1939,12 +1914,9 @@ final public class InputStream extends InputStreamWithOffsets {
         // an infinite loop
         //
 
-        final int pmod4 = buf_.pos_ & 0x3;
-        if (pmod4 != 0)
-            buf_.pos_ += 4 - pmod4;
+        buf_.align4();
 
-        if (buf_.pos_ + 4 > buf_.length())
-            throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
+        if (buf_.available() < 4) throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
 
         if (swap_)
             return (buf_.readByte() & 0xff)
