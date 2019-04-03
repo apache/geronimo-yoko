@@ -254,7 +254,7 @@ public final class Buffer {
     }
 
     public void writeLong(long value) {
-        data_[pos_++] = (byte) (value >> 070); // yes, we really did use octal!
+        data_[pos_++] = (byte) (value >> 070);
         data_[pos_++] = (byte) (value >> 060);
         data_[pos_++] = (byte) (value >> 050);
         data_[pos_++] = (byte) (value >> 040);
@@ -262,5 +262,19 @@ public final class Buffer {
         data_[pos_++] = (byte) (value >> 020);
         data_[pos_++] = (byte) (value >> 010);
         data_[pos_++] = (byte) (value >> 000);
+    }
+
+    /**
+     * Compute the length starting from <code>index + 4</code> to the current position.
+     * @param index the position in the buffer to write the length
+     * @return the calculate length
+     */
+    public int writeLengthAt(int index) {
+        int length = pos_ - (index + 4);
+        data_[index+0] = (byte) (length >>> 030);
+        data_[index+1] = (byte) (length >>> 020);
+        data_[index+2] = (byte) (length >>> 010);
+        data_[index+3] = (byte) (length >>> 000);
+        return length;
     }
 }

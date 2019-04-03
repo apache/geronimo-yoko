@@ -144,14 +144,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         return result;
     }
 
-    private void writeLength(int start) {
-        int length = buf_.pos_ - (start + 4);
-        LOGGER.finest("Writing a length value of " + length + " at offset " + start);
-
-        buf_.data_[start++] = (byte) (length >>> 24);
-        buf_.data_[start++] = (byte) (length >>> 16);
-        buf_.data_[start++] = (byte) (length >>> 8);
-        buf_.data_[start] = (byte) length;
+    private void writeLength(final int start) {
+        int length = buf_.writeLengthAt(start);
+        LOGGER.finest("Wrote a length value of " + length + " at offset " + start);
     }
 
     private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Hashtable history) {
