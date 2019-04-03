@@ -209,8 +209,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                     break;
 
                 case OAInterface.OBJECT_HERE:
-                    InputStream in = new InputStream(
-                            buf, 0, false);
+                    InputStream in = new InputStream(buf, false);
                     down.setNoException(in);
                     break;
 
@@ -241,8 +240,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setPending();
 
                 up = oaInterface_.createUpcall(this, profileInfo, null, reqId,
-                        op, new InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(buf, false), requestSCL);
             } else {
                 //
                 // This is a oneway call, and if there was no exception so
@@ -251,8 +249,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setNoException(null);
 
                 up = oaInterface_.createUpcall(null, profileInfo, null, reqId,
-                        op, new InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(buf, false), requestSCL);
             }
         }
 
@@ -348,8 +345,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             OutputStream out = upcall.output();
             Buffer buf = new Buffer();
             buf.consume(out._OB_buffer());
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             down.setNoException(in);
             callMap_.remove(new Integer(down.requestId()));
         }
@@ -383,8 +379,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             OutputStream out = upcall.output();
             Buffer buf = new Buffer();
             buf.consume(out._OB_buffer());
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             down.setUserException(in);
             callMap_.remove(new Integer(down.requestId()));
         }

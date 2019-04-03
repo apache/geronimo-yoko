@@ -968,13 +968,7 @@ public final class DowncallStub {
         messageBody.byte_order = false;
 
         Buffer buf = tmpIn._OB_buffer();
-
-        //
-        // Align to an 8 byte boundary if we have something left
-        //
-        if (buf.available() > 0) {
-            buf.pos((buf.pos() + 7) & ~7);
-        }
+        buf.align8();
 
         //
         // Copy in the rest of the message body

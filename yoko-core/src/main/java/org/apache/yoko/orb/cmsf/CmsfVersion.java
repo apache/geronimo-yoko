@@ -61,7 +61,7 @@ public enum CmsfVersion {
         if (data == null) return CMSFv1;
         int cmsf = 1;
         Buffer buf = new Buffer(data);
-        try (InputStream in = new InputStream(buf, 0, false)) {
+        try (InputStream in = new InputStream(buf, false)) {
             in._OB_readEndian();
             cmsf = in.read_octet();
         } catch (Exception e) {

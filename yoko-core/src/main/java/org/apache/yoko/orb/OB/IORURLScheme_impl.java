@@ -58,7 +58,7 @@ public class IORURLScheme_impl extends LocalObject implements URLScheme {
                 throw new MARSHAL();
 
             Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             in._OB_readEndian();
             IOR ior = IORHelper.read(in);
             ObjectFactory objectFactory = orbInstance_.getObjectFactory();

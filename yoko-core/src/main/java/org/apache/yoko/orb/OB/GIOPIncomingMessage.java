@@ -244,7 +244,7 @@ final public class GIOPIncomingMessage {
         if (version_.major != 1 || version_.minor > 2)
             throw new COMM_FAILURE(describeCommFailure(MinorVersion), MinorVersion, COMPLETED_MAYBE);
 
-        InputStream in = new InputStream(buf, 0, false);
+        InputStream in = new InputStream(buf, false);
 
         switch (version_.minor) {
         case 0: {
@@ -344,8 +344,7 @@ final public class GIOPIncomingMessage {
                 }
 
                 lastFragment_ = new Fragment();
-                lastFragment_.version = new org.omg.GIOP.Version(
-                        version_.major, version_.minor);
+                lastFragment_.version = new org.omg.GIOP.Version(version_.major, version_.minor);
                 lastFragment_.byteOrder = byteOrder_;
                 lastFragment_.reqId = reqId;
                 lastFragment_.haveReqId = haveReqId;

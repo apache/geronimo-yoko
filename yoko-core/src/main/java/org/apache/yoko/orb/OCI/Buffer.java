@@ -53,7 +53,7 @@ public final class Buffer {
         return len_ - pos_;
     }
 
-    public int pos() {
+    private int pos() {
         return pos_;
     }
 
@@ -75,12 +75,18 @@ public final class Buffer {
      *
      * @return The string value of the data.
      */
-    public String dumpData()
-    {
+    public String dumpRemainingData() {
         StringBuilder dump = new StringBuilder();
         dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
 
         IORUtil.dump_octets(data_, pos_, available(), dump);
+        return dump.toString();
+    }
+
+    public String dumpAllData() {
+        StringBuilder dump = new StringBuilder();
+        dump.append(String.format("Buffer len=0x%x All buffer data=%n%n", len_));
+        IORUtil.dump_octets(data_, 0, length(), dump);
         return dump.toString();
     }
 
@@ -165,10 +171,9 @@ public final class Buffer {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
-        int pos = pos_, len = len_;
-        IORUtil.dump_octets(data_, 0, pos, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos));
-        IORUtil.dump_octets(data_, pos, len_ - pos, sb);
+        IORUtil.dump_octets(data_, 0, pos_, sb);
+        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos_));
+        IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
         return sb.toString();
     }
 
@@ -184,7 +189,7 @@ public final class Buffer {
         }
     }
 
-    public void writeInto(OutputStream out) throws IOException {
+    public void writeTo(OutputStream out) throws IOException {
         try {
             out.write(data(), pos(), available());
             out.flush();
@@ -204,5 +209,18 @@ public final class Buffer {
     public void appendRemainingDataFrom(Buffer b) {
         realloc(length() + b.available());
         System.arraycopy(b.data(), b.pos(), data(), length(), b.available());
+    }
+
+    public void align8() {
+        // Skip cursor to next 8-byte boundary unless already at end of the buffer
+        if (available() > 0) pos((pos() + 7) & ~7);
+    }
+
+    public void skipToEnd() {
+        pos(length());
+    }
+
+    public void rewindToStart() {
+        pos(0);
     }
 }

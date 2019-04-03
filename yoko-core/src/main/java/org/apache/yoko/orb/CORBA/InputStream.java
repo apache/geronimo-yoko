@@ -1802,8 +1802,7 @@ final public class InputStream extends InputStreamWithOffsets {
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public InputStream(Buffer buf, int offs, boolean swap, CodeConverters codeConverters,
-            GiopVersion giopVersion) {
+    private InputStream(Buffer buf, int offs, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
         buf_ = buf;
         buf_.pos(offs);
         swap_ = swap;
@@ -1813,12 +1812,26 @@ final public class InputStream extends InputStreamWithOffsets {
         _OB_codeConverters(codeConverters, giopVersion);
     }
 
+    public InputStream(Buffer buf, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
+        buf_ = buf;
+        buf_.rewindToStart();
+        swap_ = swap;
+        origPos_ = 0;
+        origSwap_ = swap;
+
+        _OB_codeConverters(codeConverters, giopVersion);
+    }
+
     public InputStream(Buffer buf, int offs, boolean swap) {
         this(buf, offs, swap, null, null);
     }
 
+    public InputStream(Buffer buf, boolean swap) {
+        this(buf, swap, null, null);
+    }
+
     public InputStream(Buffer buf) {
-        this(buf, 0, false, null, null);
+        this(buf, false, null, null);
     }
 
     public void _OB_codeConverters(CodeConverters converters, GiopVersion giopVersion) {
@@ -1973,8 +1986,12 @@ final public class InputStream extends InputStreamWithOffsets {
         return codebase_;
     }
 
-    public String dumpData() {
-        return buf_.dumpData();
+    public String dumpRemainingData() {
+        return buf_.dumpRemainingData();
+    }
+
+    public String dumpAllData() {
+        return buf_.dumpAllData();
     }
 
     private void checkChunk() {

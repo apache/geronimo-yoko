@@ -929,10 +929,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 // this is a useful tracepoint, but produces a lot of data, so turn on only
 // if really needed.
 //      if (logger.isLoggable(Level.FINEST)) {
-//          logger.fine("new input stream created:\n" + buf.dumpData());
+//          logger.fine("new input stream created:\n" + buf.dumpRemainingData());
 //      }
 
-        InputStream in = new InputStream(buf, 0, false, codeConverters_, giopVersion_);
+        InputStream in = new InputStream(buf, false, codeConverters_, giopVersion_);
         in._OB_ORBInstance(orbInstance_);
         return in;
     }

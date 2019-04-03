@@ -157,7 +157,7 @@ final class ConFactory_impl extends LocalObject implements
             // Get the IIOP profile body
             //
             final Buffer buf = new Buffer(profile.profile_data);
-            final InputStream in = new InputStream(buf, 0, false);
+            final InputStream in = new InputStream(buf, false);
             in._OB_readEndian();
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
             boolean recordPortZero = false;
@@ -212,7 +212,7 @@ final class ConFactory_impl extends LocalObject implements
             for (TaggedComponent tc: components) {
                 if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
                     final Buffer cbuf = new Buffer(tc.component_data);
-                    final InputStream cin = new InputStream(cbuf, 0, false);
+                    final InputStream cin = new InputStream(cbuf, false);
                     cin._OB_readEndian();
                     final String host = cin.read_string();
                     final short s = cin.read_ushort();

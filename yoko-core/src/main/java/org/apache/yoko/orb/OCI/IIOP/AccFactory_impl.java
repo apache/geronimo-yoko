@@ -200,7 +200,7 @@ final class AccFactory_impl extends LocalObject implements
                 // Extract the 1_0 profile body
                 //
                 Buffer buf = new Buffer(ior.value.profiles[profile].profile_data);
-                InputStream in = new InputStream(buf, 0, false, null, null);
+                InputStream in = new InputStream(buf, false, null, null);
                 in._OB_readEndian();
                 ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 

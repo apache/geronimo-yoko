@@ -221,20 +221,16 @@ public class Upcall {
     }
 
     public void createOutputStream(int offset) {
-        Buffer buf = new Buffer(
-                offset);
-        buf.pos(offset);
-        out_ = new OutputStream(buf, in_
-                ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+        Buffer buf = new Buffer(offset);
+        buf.skipToEnd();
+        out_ = new OutputStream(buf, in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
     }
 
-    public InputStream preUnmarshal()
-            throws LocationForward {
+    public InputStream preUnmarshal() throws LocationForward {
         return in_;
     }
 
-    public void unmarshalEx(SystemException ex)
-            throws LocationForward {
+    public void unmarshalEx(SystemException ex) throws LocationForward {
         throw ex;
     }
 

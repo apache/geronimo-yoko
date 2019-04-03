@@ -284,7 +284,7 @@ final public class Transport_impl extends LocalObject implements
         
         while (!buf.is_full()) {
             try {
-                buf.writeInto(out_);
+                buf.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
                     return;
@@ -303,7 +303,7 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                buf.writeInto(out_);
+                buf.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
                     return true;
@@ -330,7 +330,7 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {
             try {
-                buf.writeInto(out_);
+                buf.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 return;
             } catch (IOException ex) {
@@ -354,7 +354,7 @@ final public class Transport_impl extends LocalObject implements
 
         while (!buf.is_full()) {                                 
             try {
-                buf.writeInto(out_);
+                buf.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 return true;
             } catch (IOException ex) {

@@ -40,9 +40,9 @@ public class UnresolvedException extends UnknownException {
     public SystemException resolve() {
         Buffer buf = new Buffer(data);
         try (InputStream in =
-                new InputStream(buf, 0, false, converters, GIOP1_2)) {
+                new InputStream(buf, false, converters, GIOP1_2)) {
             if (LOGGER.isLoggable(Level.FINE))
-                LOGGER.fine(String.format("Unpacking Unknown Exception Info%n%s", in.dumpData()));
+                LOGGER.fine(String.format("Unpacking Unknown Exception Info%n%s", in.dumpRemainingData()));
             try {
                 in.__setSendingContextRuntime(sendingContextRuntime);
                 in.__setCodeBase(codebase);
@@ -53,13 +53,9 @@ public class UnresolvedException extends UnknownException {
                 x.minor = ex.minor;
                 return x;
             } catch (Exception e) {
-                final String dump = in.dumpData();
-                final int curPos = in.buf_.pos();
-                in.buf_.pos(0);
-                final String fullDump = in.dumpData();
-                in.buf_.pos(curPos);
-                try (StringWriter sw = new StringWriter();
-                        PrintWriter pw = new PrintWriter(sw)) {
+                final String dump = in.dumpRemainingData();
+                final String fullDump = in.dumpAllData();
+                try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
                     e.printStackTrace(pw);
                     LOGGER.severe(String.format("%s:%n%s:%n%s%n%s:%n%s%n%s:%n%s",
                             "Exception reading UnknownExceptionInfo service context",

@@ -348,7 +348,7 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     //
     public InputStream _OB_inputStream() {
         Buffer buf = new Buffer(marshaled_exception);
-        return new InputStream(buf, 0, false, null, GIOP1_2);
+        return new InputStream(buf, false, null, GIOP1_2);
     }
 
     //

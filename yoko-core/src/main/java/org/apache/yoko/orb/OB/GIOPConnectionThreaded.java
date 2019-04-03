@@ -395,7 +395,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 logger.fine("Message body received ");
                 int currentpos = buf.pos_;
                 buf.pos_ = 0;
-                logger.fine("Received message are: \n" + buf.dumpData());
+                logger.fine("Received message are: \n" + buf.dumpRemainingData());
                 buf.pos_ = currentpos;
             }
 
@@ -622,7 +622,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         buf.pos_ = 0;
                         logger.fine(String.format(
                                 "Sent message in blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                msgcount, buf.length(), buf.dumpData()));
+                                msgcount, buf.length(), buf.dumpRemainingData()));
                         buf.pos_ = currentpos;
                         msgcount++;
                     }
@@ -679,7 +679,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                                 buf.pos_ = 0;
                                 logger.fine(String.format(
                                         "Sent message in non-blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                        msgcount, buf.length(), buf.dumpData()));
+                                        msgcount, buf.length(), buf.dumpRemainingData()));
                                 buf.pos_ = currentpos;
                                 msgcount++;
                             }

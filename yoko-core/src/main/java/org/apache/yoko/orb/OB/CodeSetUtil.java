@@ -212,8 +212,7 @@ final public class CodeSetUtil {
     static boolean checkForCodeSetInfo(TaggedComponent comp, CodeSetComponentInfoHolder info) {
         if (comp.tag == TAG_CODE_SETS.value) {
             Buffer buf = new Buffer(comp.component_data);
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             in._OB_readEndian();
             info.value = CodeSetComponentInfoHelper.read(in);
             return true;
@@ -227,7 +226,7 @@ final public class CodeSetUtil {
     //
     static void extractCodeSetContext(ServiceContext context, CodeSetContextHolder ctx) {
         Buffer buf = new Buffer(context.context_data);
-        InputStream in = new InputStream(buf, 0, false);
+        InputStream in = new InputStream(buf, false);
         in._OB_readEndian();
         ctx.value = CodeSetContextHelper.read(in);
     }

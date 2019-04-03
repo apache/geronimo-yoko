@@ -975,10 +975,10 @@ public final class ValueReader {
                 logger.fine(String.format(
                         "RuntimeException happens when reading GIOP stream coming to pos_=0x%x",
                         in_.buf_.pos_));
-                logger.fine(String.format("Wrong data section:%n%s", in_.dumpData()));
+                logger.fine(String.format("Wrong data section:%n%s", in_.dumpRemainingData()));
                 final int currentPos = in_.buf_.pos_;
                 in_.buf_.pos_ = 0;
-                logger.fine(String.format("Full GIOP stream dump:%n%s", in_.dumpData()));
+                logger.fine(String.format("Full GIOP stream dump:%n%s", in_.dumpRemainingData()));
                 in_.buf_.pos_ = currentPos;
             }
             throw ex;

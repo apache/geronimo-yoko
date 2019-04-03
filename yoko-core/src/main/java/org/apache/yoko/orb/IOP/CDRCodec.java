@@ -47,8 +47,7 @@ final class CDRCodec extends LocalObject implements Codec {
             throws FormatMismatch {
         try {
             Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             in._OB_ORBInstance(orbInstance_);
             in._OB_readEndian();
 
@@ -77,7 +76,7 @@ final class CDRCodec extends LocalObject implements Codec {
 
         try {
             Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(buf, 0, false);
+            InputStream in = new InputStream(buf, false);
             in._OB_ORBInstance(orbInstance_);
             in._OB_readEndian();
 
