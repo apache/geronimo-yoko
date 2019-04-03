@@ -684,7 +684,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 }
 
                 default : {
-                    final int wcharLen = buf_.data_[buf_.pos_++] & 0xff;
+                    final int wcharLen = buf_.readByte() & 0xff;
                     if (buf_.pos_ + wcharLen > buf_.length())
                         throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
@@ -714,7 +714,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // Assume big endian
                     //
-                    return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
                 }
 
                 case GIOP1_1: {
@@ -722,11 +722,11 @@ final public class InputStream extends InputStreamWithOffsets {
                 }
 
                 default : {
-                    final int wcharLen = buf_.data_[buf_.pos_++] & 0xff;
+                    final int wcharLen = buf_.readByte() & 0xff;
                     if (buf_.pos_ + wcharLen > buf_.length())
                         throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
 
-                    return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
                 }
             }
         }
@@ -770,7 +770,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // get the octet indicating the wchar len
                     //
-                    wcLen = buf_.data_[buf_.pos_++] & 0xff;
+                    wcLen = buf_.readByte() & 0xff;
 
                     break;
             }
@@ -812,7 +812,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // assume big-endian (both Orbacus and Orbix/E do here)
                     // and read in the wchar
                     //
-                    return (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                    return (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
 
                 case GIOP1_1:
                     //
@@ -829,7 +829,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // read the length octet off the front
                     // 
-                    final int wcLen = buf_.data_[buf_.pos_++] & 0xff;
+                    final int wcLen = buf_.readByte() & 0xff;
 
                     //
                     // check for an overflow
@@ -844,12 +844,12 @@ final public class InputStream extends InputStreamWithOffsets {
                         //
                         // the message was in little endian format
                         //
-                        value = (char) ((buf_.data_[buf_.pos_++] & 0xff) | (buf_.data_[buf_.pos_++] << 8));
+                        value = (char) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
                     } else {
                         //
                         // the message was in big endian format
                         //
-                        value = (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                        value = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
                     }
 
                     break;
@@ -935,7 +935,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         if (buf_.pos_ + wcharLen > buf_.length())
                             throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
 
-                        char c = (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                        char c = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
 
                         stringBuffer.append(c);
                     }
@@ -1059,9 +1059,9 @@ final public class InputStream extends InputStreamWithOffsets {
                         // 
                         char c;
                         if (swap_)
-                            c = (char) ((buf_.data_[buf_.pos_++] & 0xff) | (buf_.data_[buf_.pos_++] << 8));
+                            c = (char) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
                         else
-                            c = (char) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+                            c = (char) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
 
                         if (wCharConversionRequired_)
                             c = converter.convert(c);
@@ -1096,7 +1096,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (buf_.pos_ + 1 > buf_.length())
             return -1;
 
-        return (0xff & buf_.data_[buf_.pos_++]);
+        return (0xff & buf_.readByte());
     }
 
     public org.omg.CORBA.ORB orb() {
@@ -1114,7 +1114,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (logger.isLoggable(Level.FINEST))
             logger.finest(String.format("Boolean value is %b from position 0x%x", buf_.data_[buf_.pos_], buf_.pos_));
-        return buf_.data_[buf_.pos_++] != (byte) 0;
+        return buf_.readByte() != (byte) 0;
     }
 
     public char read_char() {
@@ -1130,12 +1130,12 @@ final public class InputStream extends InputStreamWithOffsets {
             else if (charReaderRequired_)
                 return converter.read_char(this);
             else
-                return converter.convert((char) (buf_.data_[buf_.pos_++] & 0xff));
+                return converter.convert((char) (buf_.readByte() & 0xff));
         } else {
             //
             // Note: byte must be masked with 0xff to correct negative values
             //
-            return (char) (buf_.data_[buf_.pos_++] & 0xff);
+            return (char) (buf_.readByte() & 0xff);
         }
     }
 
@@ -1154,7 +1154,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (buf_.pos_ + 1 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
 
-        return buf_.data_[buf_.pos_++];
+        return buf_.readByte();
     }
 
     public short read_short() {
@@ -1164,9 +1164,9 @@ final public class InputStream extends InputStreamWithOffsets {
         if (buf_.pos_ + 2 > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
         if (swap_)
-            return (short) ((buf_.data_[buf_.pos_++] & 0xff) | (buf_.data_[buf_.pos_++] << 8));
+            return (short) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
         else
-            return (short) ((buf_.data_[buf_.pos_++] << 8) | (buf_.data_[buf_.pos_++] & 0xff));
+            return (short) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
     }
 
     public short read_ushort() {
@@ -1192,23 +1192,23 @@ final public class InputStream extends InputStreamWithOffsets {
             throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
 
         if (swap_)
-            return ((long) buf_.data_[buf_.pos_++] & 0xffL)
-                    | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                    | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                    | ((long) buf_.data_[buf_.pos_++] << 56);
+            return ((long) buf_.readByte() & 0xffL)
+                    | (((long) buf_.readByte() << 8) & 0xff00L)
+                    | (((long) buf_.readByte() << 16) & 0xff0000L)
+                    | (((long) buf_.readByte() << 24) & 0xff000000L)
+                    | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                    | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                    | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                    | ((long) buf_.readByte() << 56);
         else
-            return ((long) buf_.data_[buf_.pos_++] << 56)
-                    | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                    | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                    | ((long) buf_.data_[buf_.pos_++] & 0xffL);
+            return ((long) buf_.readByte() << 56)
+                    | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                    | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                    | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                    | (((long) buf_.readByte() << 24) & 0xff000000L)
+                    | (((long) buf_.readByte() << 16) & 0xff0000L)
+                    | (((long) buf_.readByte() << 8) & 0xff00L)
+                    | ((long) buf_.readByte() & 0xffL);
     }
 
     public long read_ulonglong() {
@@ -1259,7 +1259,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 // Note: byte must be masked with 0xff to correct negative
                 // values
                 //
-                arr[i] = (char) (buf_.data_[buf_.pos_++] & 0xff);
+                arr[i] = (char) (buf_.readByte() & 0xff);
 
                 //
                 // String must not contain null characters
@@ -1282,7 +1282,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // Note: byte must be masked with 0xff to correct negative
                     // values
                     //
-                    value = (char) (buf_.data_[buf_.pos_++] & 0xff);
+                    value = (char) (buf_.readByte() & 0xff);
 
                 //
                 // String must not contain null characters
@@ -1338,7 +1338,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
 
             for (int i = offset; i < offset + length; i++)
-                value[i] = buf_.data_[buf_.pos_++] != (byte) 0;
+                value[i] = buf_.readByte() != (byte) 0;
         }
     }
 
@@ -1355,7 +1355,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // Note: byte must be masked with 0xff to correct negative
                     // values
                     //
-                    value[i] = (char) (buf_.data_[buf_.pos_++] & 0xff);
+                    value[i] = (char) (buf_.readByte() & 0xff);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.inputCharConverter;
@@ -1375,7 +1375,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // Note: byte must be masked with 0xff
                         // to correct negative values
                         //
-                        final char c = (char) (buf_.data_[buf_.pos_++] & 0xff);
+                        final char c = (char) (buf_.readByte() & 0xff);
                         value[i] = converter.convert(c);
                     }
                 }
@@ -1420,10 +1420,10 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = (short) (((short) buf_.data_[buf_.pos_++] & 0xff) | ((short) buf_.data_[buf_.pos_++] << 8));
+                value[i] = (short) (((short) buf_.readByte() & 0xff) | ((short) buf_.readByte() << 8));
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = (short) (((short) buf_.data_[buf_.pos_++] << 8) | ((short) buf_.data_[buf_.pos_++] & 0xff));
+                value[i] = (short) (((short) buf_.readByte() << 8) | ((short) buf_.readByte() & 0xff));
     }
 
     public void read_ushort_array(short[] value, int offset, int length) {
@@ -1444,16 +1444,16 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((int) buf_.data_[buf_.pos_++] & 0xff)
-                        | (((int) buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                        | (((int) buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                        | ((int) buf_.data_[buf_.pos_++] << 24);
+                value[i] = ((int) buf_.readByte() & 0xff)
+                        | (((int) buf_.readByte() << 8) & 0xff00)
+                        | (((int) buf_.readByte() << 16) & 0xff0000)
+                        | ((int) buf_.readByte() << 24);
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((int) buf_.data_[buf_.pos_++] << 24)
-                        | (((int) buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                        | (((int) buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                        | ((int) buf_.data_[buf_.pos_++] & 0xff);
+                value[i] = ((int) buf_.readByte() << 24)
+                        | (((int) buf_.readByte() << 16) & 0xff0000)
+                        | (((int) buf_.readByte() << 8) & 0xff00)
+                        | ((int) buf_.readByte() & 0xff);
     }
 
     public void read_ulong_array(int[] value, int offset, int length) {
@@ -1476,24 +1476,24 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((long) buf_.data_[buf_.pos_++] & 0xffL)
-                        | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                        | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                        | ((long) buf_.data_[buf_.pos_++] << 56);
+                value[i] = ((long) buf_.readByte() & 0xffL)
+                        | (((long) buf_.readByte() << 8) & 0xff00L)
+                        | (((long) buf_.readByte() << 16) & 0xff0000L)
+                        | (((long) buf_.readByte() << 24) & 0xff000000L)
+                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                        | ((long) buf_.readByte() << 56);
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((long) buf_.data_[buf_.pos_++] << 56)
-                        | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                        | ((long) buf_.data_[buf_.pos_++] & 0xffL);
+                value[i] = ((long) buf_.readByte() << 56)
+                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                        | (((long) buf_.readByte() << 24) & 0xff000000L)
+                        | (((long) buf_.readByte() << 16) & 0xff0000L)
+                        | (((long) buf_.readByte() << 8) & 0xff00L)
+                        | ((long) buf_.readByte() & 0xffL);
     }
 
     public void read_ulonglong_array(long[] value, int offset, int length) {
@@ -1514,19 +1514,19 @@ final public class InputStream extends InputStreamWithOffsets {
 
             if (swap_)
                 for (int i = offset; i < offset + length; i++) {
-                    int v = (buf_.data_[buf_.pos_++] & 0xff)
-                            | ((buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                            | ((buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                            | (buf_.data_[buf_.pos_++] << 24);
+                    int v = (buf_.readByte() & 0xff)
+                            | ((buf_.readByte() << 8) & 0xff00)
+                            | ((buf_.readByte() << 16) & 0xff0000)
+                            | (buf_.readByte() << 24);
 
                     value[i] = Float.intBitsToFloat(v);
                 }
             else
                 for (int i = offset; i < offset + length; i++) {
-                    int v = (buf_.data_[buf_.pos_++] << 24)
-                            | ((buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                            | ((buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                            | (buf_.data_[buf_.pos_++] & 0xff);
+                    int v = (buf_.readByte() << 24)
+                            | ((buf_.readByte() << 16) & 0xff0000)
+                            | ((buf_.readByte() << 8) & 0xff00)
+                            | (buf_.readByte() & 0xff);
 
                     value[i] = Float.intBitsToFloat(v);
                 }
@@ -1548,27 +1548,27 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++) {
-                long v = ((long) buf_.data_[buf_.pos_++] & 0xffL)
-                        | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                        | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                        | ((long) buf_.data_[buf_.pos_++] << 56);
+                long v = ((long) buf_.readByte() & 0xffL)
+                        | (((long) buf_.readByte() << 8) & 0xff00L)
+                        | (((long) buf_.readByte() << 16) & 0xff0000L)
+                        | (((long) buf_.readByte() << 24) & 0xff000000L)
+                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                        | ((long) buf_.readByte() << 56);
 
                 value[i] = Double.longBitsToDouble(v);
             }
         else
             for (int i = offset; i < offset + length; i++) {
-                long v = ((long) buf_.data_[buf_.pos_++] << 56)
-                        | (((long) buf_.data_[buf_.pos_++] << 48) & 0xff000000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 40) & 0xff0000000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 32) & 0xff00000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 24) & 0xff000000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 16) & 0xff0000L)
-                        | (((long) buf_.data_[buf_.pos_++] << 8) & 0xff00L)
-                        | ((long) buf_.data_[buf_.pos_++] & 0xffL);
+                long v = ((long) buf_.readByte() << 56)
+                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
+                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
+                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
+                        | (((long) buf_.readByte() << 24) & 0xff000000L)
+                        | (((long) buf_.readByte() << 16) & 0xff0000L)
+                        | (((long) buf_.readByte() << 8) & 0xff00L)
+                        | ((long) buf_.readByte() & 0xffL);
 
                 value[i] = Double.longBitsToDouble(v);
             }
@@ -1947,15 +1947,15 @@ final public class InputStream extends InputStreamWithOffsets {
             throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
 
         if (swap_)
-            return (buf_.data_[buf_.pos_++] & 0xff)
-                    | ((buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                    | ((buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                    | (buf_.data_[buf_.pos_++] << 24);
+            return (buf_.readByte() & 0xff)
+                    | ((buf_.readByte() << 8) & 0xff00)
+                    | ((buf_.readByte() << 16) & 0xff0000)
+                    | (buf_.readByte() << 24);
         else
-            return (buf_.data_[buf_.pos_++] << 24)
-                    | ((buf_.data_[buf_.pos_++] << 16) & 0xff0000)
-                    | ((buf_.data_[buf_.pos_++] << 8) & 0xff00)
-                    | (buf_.data_[buf_.pos_++] & 0xff);
+            return (buf_.readByte() << 24)
+                    | ((buf_.readByte() << 16) & 0xff0000)
+                    | ((buf_.readByte() << 8) & 0xff00)
+                    | (buf_.readByte() & 0xff);
     }
 
     public void _OB_beginValue() {

@@ -609,9 +609,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
             default:
                 addCapacity(3);
-                buf_.data_[buf_.pos_++] = 2;
-                buf_.data_[buf_.pos_++] = (byte) (value >> 8);
-                buf_.data_[buf_.pos_++] = (byte) value;
+                buf_.writeByte(2);
+                buf_.writeChar(value);
                 break;
             }
         }
@@ -708,8 +707,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write 2-byte character in big endian
                 //
-                buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) (value & 0xff);
+                buf_.writeChar(value);
             }
                 break;
 
@@ -727,13 +725,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the octet length at the start
                 //
-                buf_.data_[buf_.pos_++] = 2;
+                buf_.writeByte(2);
 
                 //
                 // write the character in big endian format
                 //
-                buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) (value & 0xff);
+                buf_.writeChar(value);
             }
                 break;
             }
@@ -785,8 +782,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 addCapacity(2 * len);
 
                 for (char v : arr) {
-                    buf_.data_[buf_.pos_++] = (byte) (v >> 8);
-                    buf_.data_[buf_.pos_++] = (byte) v;
+                    buf_.writeChar(v);
                 }
             }
 
@@ -892,8 +888,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write character in big endian format
                 //
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) (v & 0xff);
+                buf_.writeChar(v);
             }
         }
 
@@ -940,7 +935,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void write_boolean(boolean value) {
         addCapacity(1);
 
-        buf_.data_[buf_.pos_++] = value ? (byte) 1 : (byte) 0;
+        buf_.writeByte(value ? (byte) 1 : (byte) 0);
     }
 
     public void write_char(char value) {
@@ -957,7 +952,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (charWriterRequired_)
             converter.write_char(this, value);
         else
-            buf_.data_[buf_.pos_++] = (byte) value;
+            buf_.writeByte(value);
     }
 
     public void write_wchar(char value) {
@@ -973,13 +968,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_octet(byte value) {
         addCapacity(1);
-        buf_.data_[buf_.pos_++] = value;
+        buf_.writeByte(value);
     }
 
     public void write_short(short value) {
         addCapacity(2, 2);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
-        buf_.data_[buf_.pos_++] = (byte) value;
+        buf_.writeShort(value);
     }
 
     public void write_ushort(short value) {
@@ -988,10 +982,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_long(int value) {
         addCapacity(4, 4);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 24);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 16);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
-        buf_.data_[buf_.pos_++] = (byte) value;
+        buf_.writeInt(value);
     }
 
     public void write_ulong(int value) {
@@ -1000,14 +991,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_longlong(long value) {
         addCapacity(8, 8);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 56);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 48);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 40);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 32);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 24);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 16);
-        buf_.data_[buf_.pos_++] = (byte) (value >>> 8);
-        buf_.data_[buf_.pos_++] = (byte) value;
+        buf_.writeLong(value);
     }
 
     public void write_ulonglong(long value) {
@@ -1036,7 +1020,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 if (c > 255)
                     throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
 
-                buf_.data_[buf_.pos_++] = (byte) c;
+                buf_.writeByte(c);
             }
         } else {
             final CodeConverterBase converter = codeConverters_.outputCharConverter;
@@ -1065,7 +1049,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 else if (charWriterRequired_)
                     converter.write_char(tmpStream, c);
                 else
-                    buffer.data_[buffer.pos_++] = (byte) converter.convert(c);
+                    buffer.writeByte(converter.convert(c));
             }
 
             //
@@ -1077,11 +1061,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(bufSize + 1);
 
             for (int i = 0; i < bufSize; i++) {
-                buf_.data_[buf_.pos_++] = buffer.data_[i];
+                buf_.writeByte(buffer.data_[i]);
             }
         }
         // write null terminator
-        buf_.data_[buf_.pos_++] = (byte) 0;
+        buf_.writeByte(0);
     }
 
     public void write_wstring(String value) {
@@ -1096,7 +1080,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length);
 
             for (int i = offset; i < offset + length; i++)
-                buf_.data_[buf_.pos_++] = value[i] ? (byte) 1 : (byte) 0;
+                buf_.writeByte(value[i] ? (byte) 1 : (byte) 0);
         }
     }
 
@@ -1109,7 +1093,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     if (value[i] > 255)
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
-                    buf_.data_[buf_.pos_++] = (byte) value[i];
+                    buf_.writeByte(value[i]);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.outputCharConverter;
@@ -1129,7 +1113,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     else if (charWriterRequired_)
                         converter.write_char(this, value[i]);
                     else
-                        buf_.data_[buf_.pos_++] = (byte) converter.convert(value[i]);
+                        buf_.writeByte(converter.convert(value[i]));
                 }
             }
         }
@@ -1155,8 +1139,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 2, 2);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) value[i];
+                buf_.writeShort(value[i]);
             }
         }
     }
@@ -1170,10 +1153,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 4, 4);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 24);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 16);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) value[i];
+                buf_.writeInt(value[i]);
             }
         }
     }
@@ -1187,14 +1167,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 8, 8);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 56);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 48);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 40);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 32);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 24);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 16);
-                buf_.data_[buf_.pos_++] = (byte) (value[i] >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) value[i];
+                buf_.writeLong(value[i]);
             }
         }
     }
@@ -1210,10 +1183,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 int v = Float.floatToIntBits(value[i]);
 
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 24);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 16);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) v;
+                buf_.writeInt(v);
             }
         }
     }
@@ -1225,14 +1195,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 long v = Double.doubleToLongBits(value[i]);
 
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 56);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 48);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 40);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 32);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 24);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 16);
-                buf_.data_[buf_.pos_++] = (byte) (v >>> 8);
-                buf_.data_[buf_.pos_++] = (byte) v;
+                buf_.writeLong(v);
             }
         }
     }

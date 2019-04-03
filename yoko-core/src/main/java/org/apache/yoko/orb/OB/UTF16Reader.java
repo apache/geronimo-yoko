@@ -25,22 +25,22 @@ final class UTF16Reader extends CodeSetReader {
 
     public char read_char(InputStream in)
             throws DATA_CONVERSION {
-        return (char) (in.buf_.data_[in.buf_.pos_++] & 0xff);
+        return (char) (in.buf_.readByte() & 0xff);
     }
 
     public char read_wchar(InputStream in, int len)
             throws DATA_CONVERSION {
         if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
             if (len == 2) {
-                return (char) ((in.buf_.data_[in.buf_.pos_++] << 8) | (in.buf_.data_[in.buf_.pos_++] & 0xff));
+                return (char) ((in.buf_.readByte() << 8) | (in.buf_.readByte() & 0xff));
             } else
                 throw new DATA_CONVERSION();
         } else {
             //
             // read the first wchar assuming big endian
             //
-            char v = (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff) << 8);
-            v |= (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff));
+            char v = (char) ((in.buf_.readByte() & 0xff) << 8);
+            v |= (char) ((in.buf_.readByte() & 0xff));
 
             //
             // check if this was a BOM
@@ -50,15 +50,15 @@ final class UTF16Reader extends CodeSetReader {
                 //
                 // it was a big endian BOM
                 //
-                v = (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff) << 8);
-                v |= (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff));
+                v = (char) ((in.buf_.readByte() & 0xff) << 8);
+                v |= (char) ((in.buf_.readByte() & 0xff));
             } else if (((Flags_ & CodeSetReader.FIRST_CHAR) != 0)
                     && (v == (char) 0xFFFE)) {
                 //
                 // it was a little endian BOM
                 //
-                v = (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff));
-                v |= (char) ((in.buf_.data_[in.buf_.pos_++] & 0xff) << 8);
+                v = (char) ((in.buf_.readByte() & 0xff));
+                v |= (char) ((in.buf_.readByte() & 0xff) << 8);
 
                 //
                 // enable the little endian reader flag

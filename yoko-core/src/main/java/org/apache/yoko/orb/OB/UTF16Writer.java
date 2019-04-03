@@ -24,7 +24,7 @@ final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;
 
     public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
-        out.buf_.data_[out.buf_.pos_++] = (byte) (v & 0xff);
+        out.buf_.writeByte(v & 0xff);
     }
 
     public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
@@ -42,15 +42,14 @@ final class UTF16Writer extends CodeSetWriter {
             // need to escape it with the Big Endian BOM
             //
             if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
-                out.buf_.data_[out.buf_.pos_++] = (byte) 0xFE;
-                out.buf_.data_[out.buf_.pos_++] = (byte) 0xFF;
+                out.buf_.writeByte(0xFE);
+                out.buf_.writeByte(0xFF);
             }
 
             //
             // we always write our UTF-16 characters in Big Endian format
             //
-            out.buf_.data_[out.buf_.pos_++] = (byte) (v >>> 8);
-            out.buf_.data_[out.buf_.pos_++] = (byte) (v & 0xff);
+            out.buf_.writeChar(v);
 
             //
             // turn off the FIRST_CHAR flag

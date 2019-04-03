@@ -20,7 +20,7 @@ package org.apache.yoko.orb.OB;
 final class FixedWidth2Writer extends CodeSetWriter {
     public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
             throws org.omg.CORBA.DATA_CONVERSION {
-        out.buf_.data_[out.buf_.pos_++] = (byte) v;
+        out.buf_.writeByte(v);
     }
 
     public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)

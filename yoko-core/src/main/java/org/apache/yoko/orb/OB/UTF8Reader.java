@@ -46,7 +46,7 @@ final class UTF8Reader extends CodeSetReader {
     }
 
     private char utf8ToUnicode(InputStream in) throws DATA_CONVERSION {
-        byte first = in.buf_.data_[in.buf_.pos_++];
+        byte first = in.buf_.readByte();
 
         //
         // Direct mapping for characters < 0x80
@@ -68,7 +68,7 @@ final class UTF8Reader extends CodeSetReader {
             }
 
             value <<= 6;
-            value |= in.buf_.data_[in.buf_.pos_++] & 0x3f;
+            value |= in.buf_.readByte() & 0x3f;
         }
         //
         // 16 bit overflow
@@ -82,7 +82,7 @@ final class UTF8Reader extends CodeSetReader {
         }
 
         value <<= 6;
-        value |= in.buf_.data_[in.buf_.pos_++] & 0x3f;
+        value |= in.buf_.readByte() & 0x3f;
 
         return value;
     }

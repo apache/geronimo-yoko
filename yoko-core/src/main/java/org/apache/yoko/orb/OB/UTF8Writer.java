@@ -42,31 +42,31 @@ final class UTF8Writer extends CodeSetWriter {
         if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
             if ((int) value < 0x80) {
                 // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.data_[out.buf_.pos_++] = (byte) value;
+                out.buf_.writeByte(value);
             } else if ((int) value < 0x7ff) {
                 // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 6) | 0xc0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (value & 0x3f);
+                out.buf_.writeByte((value >>> 6) | 0xc0);
+                out.buf_.writeByte(value & 0x3f);
             } else if ((int) value < 0xffff) {
                 // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 12) | 0xe0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
+                out.buf_.writeByte((value >>> 12) | 0xe0);
+                out.buf_.writeByte(((value >>> 6) & 0x3f) | 0x80);
+                out.buf_.writeByte((value & 0x3f) | 0x80);
             } else
                 throw new DATA_CONVERSION();
         } else {
             if ((int) value < 0x80) {
                 // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.data_[out.buf_.pos_++] = (byte) value;
+                out.buf_.writeByte(value);
             } else if ((int) value <= 0x7ff) {
                 // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 6) | 0xc0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
+                out.buf_.writeByte((value >>> 6) | 0xc0);
+                out.buf_.writeByte((value & 0x3f) | 0x80);
             } else if ((int) value <= 0xffff) {
                 // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 12) | 0xe0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
+                out.buf_.writeByte((value >>> 12) | 0xe0);
+                out.buf_.writeByte(((value >>> 6) & 0x3f) | 0x80);
+                out.buf_.writeByte((value & 0x3f) | 0x80);
             } else
                 throw new DATA_CONVERSION();
         }

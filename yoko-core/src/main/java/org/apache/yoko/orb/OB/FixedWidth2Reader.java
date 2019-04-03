@@ -25,12 +25,12 @@ final class FixedWidth2Reader extends CodeSetReader {
         //
         // Note: byte must be masked with 0xff to correct negative values
         //
-        return (char) (in.buf_.data_[in.buf_.pos_++] & 0xff);
+        return (char) (in.buf_.readByte() & 0xff);
     }
 
     public char read_wchar(InputStream in, int len) throws DATA_CONVERSION {
         if (len == 2) {
-            return (char) ((in.buf_.data_[in.buf_.pos_++] << 8) | (in.buf_.data_[in.buf_.pos_++] & 0xff));
+            return (char) ((in.buf_.readByte() << 8) | (in.buf_.readByte() & 0xff));
         } else
             throw new DATA_CONVERSION();
     }

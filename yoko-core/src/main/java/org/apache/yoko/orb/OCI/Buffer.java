@@ -223,4 +223,44 @@ public final class Buffer {
     public void rewindToStart() {
         pos(0);
     }
+
+    public byte readByte() {
+        return data_[pos_++];
+    }
+
+    public void writeByte(int i) {
+        data_[pos_++] = (byte)i;
+    }
+
+    public void writeByte(byte b) {
+        data_[pos_++] = b;
+    }
+
+    public void writeChar(char value) {
+        data_[pos_++] = (byte) (value >> 010);
+        data_[pos_++] = (byte) (value >> 000);
+    }
+
+    public void writeShort(short value) {
+        data_[pos_++] = (byte) (value >> 010);
+        data_[pos_++] = (byte) (value >> 000);
+    }
+
+    public void writeInt(int value) {
+        data_[pos_++] = (byte) (value >> 030);
+        data_[pos_++] = (byte) (value >> 020);
+        data_[pos_++] = (byte) (value >> 010);
+        data_[pos_++] = (byte) (value >> 000);
+    }
+
+    public void writeLong(long value) {
+        data_[pos_++] = (byte) (value >> 070); // yes, we really did use octal!
+        data_[pos_++] = (byte) (value >> 060);
+        data_[pos_++] = (byte) (value >> 050);
+        data_[pos_++] = (byte) (value >> 040);
+        data_[pos_++] = (byte) (value >> 030);
+        data_[pos_++] = (byte) (value >> 020);
+        data_[pos_++] = (byte) (value >> 010);
+        data_[pos_++] = (byte) (value >> 000);
+    }
 }
