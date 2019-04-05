@@ -13,7 +13,11 @@
 package org.apache.yoko.orb.OCI;
 
 public interface BufferWriter {
-    void writeByte(int i);
+    void padAlign2();
+
+    void padAlign4();
+
+    void padAlign8();
 
     /**
      * Write some padding bytes.
@@ -21,6 +25,8 @@ public interface BufferWriter {
      *
      */
     void pad(int n);
+
+    void writeByte(int i);
 
     void writeByte(byte b);
 

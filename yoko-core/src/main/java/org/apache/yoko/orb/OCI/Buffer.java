@@ -194,7 +194,7 @@ public final class Buffer {
         System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
     }
 
-    private class Reader implements BufferReader {
+    private final class Reader implements BufferReader {
         @Override
         public void align2() {
             pos_ += pos_ & 0x1;
@@ -329,9 +329,30 @@ public final class Buffer {
      * instead of division and remainder operations
      */
     private static final int PADDING_POWER = 5;
-    private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, (byte)0xBD);
+    public static final byte PAD_BYTE = (byte) 0xBD;
+    private static final int PADDING_WIDTH = 1 << PADDING_POWER;
+    private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, PAD_BYTE);
 
-    private class Writer implements BufferWriter {
+    private final class Writer implements BufferWriter {
+        @Override
+        public void padAlign2() {
+            if ((pos_ & 1) == 1) writeByte(PAD_BYTE);
+        }
+
+        @Override
+        public void padAlign4() {
+            int remainder = pos_ & 3;
+            if (remainder == 0) return;
+            writeBytes(PADDING, 0, 4 - remainder);
+        }
+
+        @Override
+        public void padAlign8() {
+            int remainder = pos_ & 7;
+            if (remainder == 0) return;
+            writeBytes(PADDING, 0, 8 - remainder);
+        }
+
         @Override
         public void pad(int n) {
             // write as many full copies of PADDING as required
@@ -392,7 +413,7 @@ public final class Buffer {
         }
     }
 
-    public class LengthWriter implements AutoCloseable {
+    public final class LengthWriter implements AutoCloseable {
         final Logger logger;
         final int index;
 
