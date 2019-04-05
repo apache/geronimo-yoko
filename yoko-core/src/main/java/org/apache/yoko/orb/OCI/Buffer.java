@@ -64,23 +64,54 @@ public final class Buffer {
         return pos_ >= len_;
     }
 
-    public void realloc(int len) {
+    /**
+     * Extend the current buffer.
+     * @param extra the number of additional bytes required beyond the end of the buffer.
+     * @return <code>true</code> iff a more space had to be allocated
+     */
+    public boolean addLength(int extra) {
+        return realloc(len_ + extra);
+    }
+
+    /**
+     * Ensure there is space to write from the current position, after aligning on a boundary
+     * @param size the number of bytes to be written
+     * @param align the size of boundary to align on (in bytes)
+     * @return <code>true</code> iff more space had to be allocated
+     */
+    public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
+        final int extra = boundary.gap(pos_) + size - available();
+        return extra > 0 ? addLength(extra) : false;
+    }
+
+    /**
+     * Ensure there is space to write from the current position.
+     * @param size the number of bytes to be written
+     * @return <code>true</code> iff more space had to be allocated
+     */
+    public boolean ensureAvailable(int size) {
+        int extra = size - available();
+        return extra > 0 ? addLength(extra) : false;
+    }
+
+    public boolean realloc(int len) {
+        // there might be no buffer
         if (data_ == null) {
             len_ = len;
             data_ = newBytes(len);
             pos_ = 0;
+            return false;
         }
-        else {
-            _OB_assert(len >= len_);
-            if (len <= data_.length)
-                len_ = len;
-            else {
-                byte[] newData = newBytes(computeNewBufferSize(len));
-                System.arraycopy(data_, 0, newData, 0, len_);
-                data_ = newData;
-                len_ = len;
-            }
+        _OB_assert(len >= len_);
+        // the existing buffer might be big enough
+        if (len <= data_.length) {
+            len_ = len;
+            return false;
         }
+        // ok, we need a bigger buffer
+        data_ = copyOf(data_, computeNewBufferSize(len));
+        len_ = len;
+        return true;
     }
 
     private int computeNewBufferSize(int len) {
@@ -120,16 +151,20 @@ public final class Buffer {
     }
 
     public Buffer(Buffer that) {
-        this(copyBytes(that.data_));
+        this(copyOf(that.data_));
     }
 
     public Buffer(int len) {
         this(newBytes(len), len);
     }
 
-    private static byte[] copyBytes(byte[] data) {
+    private static byte[] copyOf(byte[] data) {
+        return copyOf(data, data.length);
+    }
+
+    private static byte[] copyOf(byte[] data, int length) {
         try {
-            return Arrays.copyOf(data, data.length);
+            return Arrays.copyOf(data, length);
         } catch (OutOfMemoryError oome) {
             throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
@@ -137,7 +172,8 @@ public final class Buffer {
 
     private static byte[] newBytes(int len) {
         try {
-            return new byte[len];
+            // allocate only multiples of 16 so we can pad without checking
+            return new byte[(len + 0xFF) & ~0xFF];
         } catch (OutOfMemoryError oome) {
             throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
@@ -178,34 +214,26 @@ public final class Buffer {
     }
 
     public void appendRemainingDataFrom(Buffer b) {
-        realloc(length() + b.available());
+        addLength(b.available());
         System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
     }
 
+    public enum AlignmentBoundary {
+        NO_BOUNDARY {public int gap(int index) { return 0; }},
+        TWO_BYTE_BOUNDARY {public int gap(int index) { return index & 1; }},
+        FOUR_BYTE_BOUNDARY {public int gap(int index) { return (index + 3) & ~3; }},
+        EIGHT_BYTE_BOUNDARY {public int gap(int index) { return (index + 7) & ~7; }};
+        public abstract int gap(int index);
+        public AlignmentBoundary and(AlignmentBoundary that) {
+            return (that == null || that.ordinal() < this.ordinal()) ? this : that;
+        }
+    }
+
     private final class Reader implements BufferReader {
-        @Override
-        public void align2() {
-            pos_ += pos_ & 0x1;
-        }
 
         @Override
-        public void align4() {
-            pos_ = (pos_ + 3) & ~3;
-        }
-
-        @Override
-        public void align8() {
-            pos_ = (pos_ + 7) & ~7;
-        }
-
-        @Override
-        public void align(int n) {
-            switch (n) {
-            case 8: align8(); break;
-            case 4: align4(); break;
-            case 2: align2(); break;
-            default: throw new UnsupportedOperationException("Aligning to " + n + " byte boundary is not supported");
-            }
+        public void align(AlignmentBoundary boundary) {
+            pos_ += boundary.gap(pos_);
         }
 
         @Override
@@ -323,22 +351,19 @@ public final class Buffer {
 
     private final class Writer implements BufferWriter {
         @Override
-        public void padAlign2() {
-            if ((pos_ & 1) == 1) writeByte(PAD_BYTE);
-        }
-
-        @Override
-        public void padAlign4() {
-            int remainder = pos_ & 3;
-            if (remainder == 0) return;
-            writeBytes(PADDING, 0, 4 - remainder);
-        }
-
-        @Override
-        public void padAlign8() {
-            int remainder = pos_ & 7;
-            if (remainder == 0) return;
-            writeBytes(PADDING, 0, 8 - remainder);
+        public void padAlign(AlignmentBoundary boundary) {
+            final int gap = boundary.gap(pos_);
+            switch (gap) {
+            case 7: writeByte(PAD_BYTE);
+            case 6: writeByte(PAD_BYTE);
+            case 5: writeByte(PAD_BYTE);
+            case 4: writeByte(PAD_BYTE);
+            case 3: writeByte(PAD_BYTE);
+            case 2: writeByte(PAD_BYTE);
+            case 1: writeByte(PAD_BYTE);
+            case 0: break;
+            default: pad(gap);
+            }
         }
 
         @Override

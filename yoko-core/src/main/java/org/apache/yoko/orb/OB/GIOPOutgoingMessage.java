@@ -32,6 +32,8 @@ import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TaggedProfile;
 import org.omg.IOP.TaggedProfileHelper;
 
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+
 final public class GIOPOutgoingMessage {
     private static int maxMessageSize_ = 0; // TODO: pick a default
 
@@ -220,7 +222,7 @@ final public class GIOPOutgoingMessage {
             // boundary, so we notify the OutputStream that it should align
             // the next write
             //
-            out_._OB_alignNext(8);
+            out_._OB_alignNext(EIGHT_BYTE_BOUNDARY);
 
             break;
         }
@@ -253,7 +255,7 @@ final public class GIOPOutgoingMessage {
             // boundary, so we notify the OutputStream that it should align
             // the next write
             //
-            out_._OB_alignNext(8);
+            out_._OB_alignNext(EIGHT_BYTE_BOUNDARY);
 
             break;
         }

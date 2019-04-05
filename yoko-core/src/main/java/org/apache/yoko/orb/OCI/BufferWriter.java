@@ -12,12 +12,10 @@
  */
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary;
+
 public interface BufferWriter {
-    void padAlign2();
-
-    void padAlign4();
-
-    void padAlign8();
+    void padAlign(AlignmentBoundary boundary);
 
     /**
      * Write some padding bytes.

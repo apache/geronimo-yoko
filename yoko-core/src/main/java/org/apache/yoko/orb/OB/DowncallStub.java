@@ -70,6 +70,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 //
@@ -968,7 +969,7 @@ public final class DowncallStub {
         messageBody.byte_order = false;
 
         Buffer buf = tmpIn._OB_buffer();
-        buf.reader.align8();
+        buf.reader.align(EIGHT_BYTE_BOUNDARY);
 
         //
         // Copy in the rest of the message body
