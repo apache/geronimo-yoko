@@ -38,8 +38,6 @@ public final class Buffer {
     public final BufferReader reader = this.new Reader();
     public final BufferWriter writer = new Writer();
 
-    private int max_; // The maximum size of the buffer
-
     public byte[] data_; // The octet buffer
 
     private int len_; // The requested size of the buffer
@@ -66,69 +64,59 @@ public final class Buffer {
         return pos_ >= len_;
     }
 
-    private void alloc(int len) {
-        max_ = len;
-        len_ = len;
-        try {
-            data_ = new byte[max_];
-        } catch (OutOfMemoryError ex) {
-            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
-        }
-        pos_ = 0;
-    }
-
     public void realloc(int len) {
-        if (data_ == null)
-            alloc(len);
+        if (data_ == null) {
+            len_ = len;
+            data_ = newBytes(len);
+            pos_ = 0;
+        }
         else {
             _OB_assert(len >= len_);
-            if (len <= max_)
+            if (len <= data_.length)
                 len_ = len;
             else {
-                final int MAX_OVERALLOC = 4 * 1024 * 1024; // 4 megabytes!
-                // we will look for double the existing capacity, or a smaller increment if it is over a threshold
-                final int minAlloc = min(max_ * 2, max_ + MAX_OVERALLOC);
-                // we might need more if the new length is greater than this minimum new allocation
-                final int newMax = max(len, minAlloc);
-                byte[] newData = null;
-                try {
-                    newData = new byte[newMax];
-                } catch (OutOfMemoryError ex) {
-                    throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
-                }
+                byte[] newData = newBytes(computeNewBufferSize(len));
                 System.arraycopy(data_, 0, newData, 0, len_);
                 data_ = newData;
                 len_ = len;
-                max_ = newMax;
             }
         }
     }
 
+    private int computeNewBufferSize(int len) {
+        // use an allocation threshold of 4 megabytes
+        final int MAX_OVERALLOC = 4 * 1024 * 1024;
+        // double the existing capacity, unless over a threshold
+        final int minAlloc = data_.length + min(data_.length, MAX_OVERALLOC);
+        // allow more if requested length is greater
+        return max(len, minAlloc);
+    }
+
     public void data(byte[] data, int len) {
-        data_ = data;
-        len_ = len;
-        max_ = len;
-        pos_ = 0;
+        this.data_ = data;
+        this.len_ = len;
+        this.pos_ = 0;
     }
 
     public void consume(Buffer buf) {
-        data_ = buf.data_;
-        len_ = buf.len_;
-        max_ = buf.max_;
-        pos_ = buf.pos_;
+        this.data_ = buf.data_;
+        this.len_ = buf.len_;
+        this.pos_ = buf.pos_;
         buf.data_ = null;
         buf.len_ = 0;
-        buf.max_ = 0;
         buf.pos_ = 0;
     }
 
     public Buffer() {}
 
+    private Buffer(byte[] data, int len) {
+        this.data_ = data;
+        this.len_ = len;
+        this.pos_ = 0;
+    }
+
     public Buffer(byte[] data) {
-        data_ = data;
-        len_ = data.length;
-        max_ = data.length;
-        pos_ = 0;
+        this(data, data.length);
     }
 
     public Buffer(Buffer that) {
@@ -136,7 +124,7 @@ public final class Buffer {
     }
 
     public Buffer(int len) {
-        this(newBytes(len));
+        this(newBytes(len), len);
     }
 
     private static byte[] copyBytes(byte[] data) {
