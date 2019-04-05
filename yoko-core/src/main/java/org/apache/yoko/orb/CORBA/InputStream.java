@@ -1728,28 +1728,28 @@ final public class InputStream extends InputStreamWithOffsets {
      * Return the cursor position in the buffer as a formatted string suitable for logging.
      */
     public String dumpPosition() {
-        return buf_.dumpPosition();
+        return bufReader.dumpPosition();
     }
 
     /**
      * Return the unread data in the buffer as a formatted string suitable for logging.
      */
     public String dumpRemainingData() {
-        return buf_.dumpRemainingData();
+        return bufReader.dumpRemainingData();
     }
 
     /**
      * Return all the data in the buffer as a formatted string suitable for logging.
      */
     public String dumpAllData() {
-        return buf_.dumpAllData();
+        return bufReader.dumpAllData();
     }
 
     /**
      * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
      */
     public String dumpAllDataWithPosition() {
-        return buf_.dumpAllDataWithPosition();
+        return bufReader.dumpAllDataWithPosition();
     }
 
     private void checkChunk() {

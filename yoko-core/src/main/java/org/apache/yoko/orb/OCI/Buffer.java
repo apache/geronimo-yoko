@@ -73,45 +73,6 @@ public final class Buffer {
         return pos_ >= len_;
     }
 
-    /**
-     * Return the cursor position in the buffer as a formatted string suitable for logging.
-     */
-    public String dumpPosition() {
-        return String.format("position=0x%x", pos_);
-    }
-
-    /**
-     * Return the unread data in the buffer as a formatted string suitable for logging.
-     */
-    public String dumpRemainingData() {
-        StringBuilder dump = new StringBuilder();
-        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
-
-        IORUtil.dump_octets(data_, pos_, available(), dump);
-        return dump.toString();
-    }
-
-    /**
-     * Return all the data in the buffer as a formatted string suitable for logging.
-     */
-    public String dumpAllData() {
-        StringBuilder dump = new StringBuilder();
-        dump.append(String.format("Buffer len=0x%x All buffer data=%n%n", len_));
-        IORUtil.dump_octets(data_, 0, length(), dump);
-        return dump.toString();
-    }
-
-    /**
-     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
-     */
-    public String dumpAllDataWithPosition() {
-        StringBuilder sb = new StringBuilder();
-        IORUtil.dump_octets(data_, 0, pos_, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos_));
-        IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
-        return sb.toString();
-    }
-
     private void alloc(int len) {
         max_ = len;
         len_ = len;
@@ -183,7 +144,7 @@ public final class Buffer {
 
     @Override
     public String toString() {
-        return dumpAllDataWithPosition();
+        return reader.dumpAllDataWithPosition();
     }
 
     public boolean readFrom(InputStream in) throws IOException {
@@ -291,6 +252,49 @@ public final class Buffer {
         @Override
         public char readChar_LE() {
             return (char) ((data_[pos_++] & 0xff) | (data_[pos_++] << 8));
+        }
+
+        /**
+         * Return the cursor position in the buffer as a formatted string suitable for logging.
+         */
+        @Override
+        public String dumpPosition() {
+            return String.format("position=0x%x", pos_);
+        }
+
+        /**
+         * Return the unread data in the buffer as a formatted string suitable for logging.
+         */
+        @Override
+        public String dumpRemainingData() {
+            StringBuilder dump = new StringBuilder();
+            dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
+
+            IORUtil.dump_octets(data_, pos_, available(), dump);
+            return dump.toString();
+        }
+
+        /**
+         * Return all the data in the buffer as a formatted string suitable for logging.
+         */
+        @Override
+        public String dumpAllData() {
+            StringBuilder dump = new StringBuilder();
+            dump.append(String.format("Buffer len=0x%x All buffer data=%n%n", len_));
+            IORUtil.dump_octets(data_, 0, length(), dump);
+            return dump.toString();
+        }
+
+        /**
+         * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
+         */
+        @Override
+        public String dumpAllDataWithPosition() {
+            StringBuilder sb = new StringBuilder();
+            IORUtil.dump_octets(data_, 0, pos_, sb);
+            sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos_));
+            IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
+            return sb.toString();
         }
     }
 

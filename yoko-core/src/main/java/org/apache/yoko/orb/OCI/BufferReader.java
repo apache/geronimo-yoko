@@ -38,4 +38,12 @@ public interface BufferReader {
     char readChar();
 
     char readChar_LE();
+
+    String dumpPosition();
+
+    String dumpRemainingData();
+
+    String dumpAllData();
+
+    String dumpAllDataWithPosition();
 }
