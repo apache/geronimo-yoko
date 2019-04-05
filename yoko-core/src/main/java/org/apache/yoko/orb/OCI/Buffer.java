@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
 import static java.lang.Math.max;
@@ -138,8 +139,28 @@ public final class Buffer {
         pos_ = 0;
     }
 
+    public Buffer(Buffer that) {
+        this(copyBytes(that.data_));
+    }
+
     public Buffer(int len) {
-        alloc(len);
+        this(newBytes(len));
+    }
+
+    private static byte[] copyBytes(byte[] data) {
+        try {
+            return Arrays.copyOf(data, data.length);
+        } catch (OutOfMemoryError oome) {
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+        }
+    }
+
+    private static byte[] newBytes(int len) {
+        try {
+            return new byte[len];
+        } catch (OutOfMemoryError oome) {
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+        }
     }
 
     @Override
@@ -180,7 +201,6 @@ public final class Buffer {
         realloc(length() + b.available());
         System.arraycopy(b.data(), b.pos(), data(), length(), b.available());
     }
-
 
     private class Reader implements BufferReader {
         @Override
@@ -237,6 +257,14 @@ public final class Buffer {
         @Override
         public char readByteAsChar() {
             return (char) data_[pos_++];
+        }
+
+        @Override
+        public void readBytes(byte[] value, int offset, int length) {
+            if (available() < length) throw new IndexOutOfBoundsException();
+
+            System.arraycopy(data_, pos_, value, offset, length);
+            pos_ += length;
         }
 
         @Override

@@ -688,7 +688,7 @@ final public class Any extends org.omg.CORBA.Any {
 
     public synchronized org.omg.CORBA.portable.InputStream create_input_stream() {
         if (value_ instanceof InputStream) {
-            return ((InputStream) value_)._OB_clone();
+            return new InputStream(((InputStream) value_));
         } else {
             Buffer buf = new Buffer();
             OutputStream out = new OutputStream(buf);

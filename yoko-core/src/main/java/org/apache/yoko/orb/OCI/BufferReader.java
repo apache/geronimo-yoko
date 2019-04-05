@@ -33,6 +33,8 @@ public interface BufferReader {
 
     char readByteAsChar();
 
+    void readBytes(byte[] value, int offset, int length);
+
     char peekChar();
 
     char readChar();

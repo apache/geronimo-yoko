@@ -1097,16 +1097,12 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void read_octet_array(byte[] value, int offset, int length) {
-        if (length > 0) {
-            checkChunk();
-
-            int newPos = buf_.pos_ + length;
-            if (newPos < buf_.pos_ || newPos > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadOctetArrayOverflow), MinorReadOctetArrayOverflow, COMPLETED_NO);
-
-            System.arraycopy(buf_.data_, buf_.pos_, value, offset, length);
-
-            buf_.pos_ = newPos;
+        if (length <= 0) return;
+        checkChunk();
+        try {
+            bufReader.readBytes(value, offset, length);
+        } catch (IndexOutOfBoundsException e) {
+            throw new MARSHAL(describeMarshal(MinorReadOctetArrayOverflow), MinorReadOctetArrayOverflow, COMPLETED_NO);
         }
     }
 
@@ -1479,15 +1475,11 @@ final public class InputStream extends InputStreamWithOffsets {
         valueReader().readValueAny(any, tc);
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
-
     private InputStream(Buffer buf, int offs, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
         buf_ = buf;
         bufReader = buf.reader;
-        buf_.pos(offs);
+        bufReader.rewindToStart();
+        bufReader.skipBytes(offs);
         swap_ = swap;
         origPos_ = offs;
         origSwap_ = swap;
@@ -1495,15 +1487,16 @@ final public class InputStream extends InputStreamWithOffsets {
         _OB_codeConverters(codeConverters, giopVersion);
     }
 
-    public InputStream(Buffer buf, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
-        buf_ = buf;
-        bufReader = buf.reader;
-        bufReader.rewindToStart();
-        swap_ = swap;
-        origPos_ = 0;
-        origSwap_ = swap;
+    /**
+     * Create a new input stream that starts from where <code>that</code> input stream started.
+     */
+    public InputStream(InputStream that) {
+        this(new Buffer(that.buf_), that.origPos_, that.origSwap_, that.codeConverters_, that.giopVersion_);
+        this.orbInstance_ = that.orbInstance_;
+    }
 
-        _OB_codeConverters(codeConverters, giopVersion);
+    public InputStream(Buffer buf, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
+        this(buf, 0, swap, codeConverters, giopVersion);
     }
 
     public InputStream(Buffer buf, int offs, boolean swap) {
@@ -1560,18 +1553,6 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void _OB_swap(boolean swap) {
         swap_ = swap;
-    }
-
-    public InputStream _OB_clone() {
-        InputStream result;
-
-        byte[] data = new byte[buf_.length()];
-        System.arraycopy(buf_.data_, 0, data, 0, buf_.length());
-        Buffer buf = new Buffer(data);
-        result = new InputStream(buf, origPos_, origSwap_, codeConverters_, giopVersion_);
-        result.orbInstance_ = orbInstance_;
-
-        return result;
     }
 
     public void _OB_reset() {
