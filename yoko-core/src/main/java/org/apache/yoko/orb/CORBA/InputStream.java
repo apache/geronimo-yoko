@@ -884,100 +884,40 @@ final public class InputStream extends InputStreamWithOffsets {
     public String read_string() {
         checkChunk();
 
-        //
-        // Number of octets (i.e. bytes) in the string (including
-        // the null terminator). This may not be the same as the
-        // number of characters if encoding was done.
-        //
-        int length = read_ulong();
+        // Number of octets (i.e. bytes) in the string (including the null terminator).
+        // This may not be the same as the number of characters if encoding was done.
 
-        if (length == 0) {
-            throw new MARSHAL(describeMarshal(MinorReadStringZeroLength), MinorReadStringZeroLength, COMPLETED_NO);
-        }
+        int byteCount = read_ulong();
 
-        int newPos = buf_.pos_ + length;
-        if (newPos < buf_.pos_ || newPos > buf_.length()) {
-            if (logger.isLoggable(Level.FINE)) logger.fine(String.format("String length=0x%x newPos=0x%x buf_.pos=0x%x buf_.len=0x%x", length, newPos, buf_.pos_, buf_.length()));
+        if (byteCount == 0) throw new MARSHAL(describeMarshal(MinorReadStringZeroLength), MinorReadStringZeroLength, COMPLETED_NO);
+        if (byteCount < 0) throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
+
+        if (buf_.available() < byteCount) {
+            if (logger.isLoggable(Level.FINE)) logger.fine(String.format("String length=0x%x %n%s", byteCount, bufReader.dumpAllDataWithPosition()));
             throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
         }
 
-        length--;
+        // Java strings don't need null terminators, so our string length will be at most one less than the byte count
+        StringBuilder sb = new StringBuilder(byteCount - 1);
 
-        char[] arr = new char[length];
+        final CodeConverterBase converter = codeConverters_.inputCharConverter;
+        final int expectedRemainder = buf_.available() - (byteCount - 1);
 
-        //
-        // Character Count
-        //
-        int maxChars = length;
-        int numChars = 0;
+        while (buf_.available() > expectedRemainder) {
+            final char value = charReaderRequired_ ? converter.read_char(bufReader) : bufReader.readByteAsChar();
 
-        if (!(charReaderRequired_ || charConversionRequired_)) {
-            for (int i = 0; i < length; i++) {
-                //
-                // Note: byte must be masked with 0xff to correct negative
-                // values
-                //
-                arr[i] = (char) (bufReader.readByte() & 0xff);
+            // String must not contain null characters
+            if (value == 0) throw new MARSHAL(describeMarshal(MinorReadStringNullChar), MinorReadStringNullChar, COMPLETED_NO);
 
-                //
-                // String must not contain null characters
-                //
-                if (arr[i] == 0)
-                    throw new MARSHAL(describeMarshal(MinorReadStringNullChar), MinorReadStringNullChar, COMPLETED_NO);
-            }
-        } else {
-            final CodeConverterBase converter = codeConverters_.inputCharConverter;
-
-            int bufPos0 = buf_.pos_;
-            int i = 0;
-            while (buf_.pos_ - bufPos0 < length) {
-                char value;
-
-                if (charReaderRequired_)
-                    value = converter.read_char(bufReader);
-                else
-                    //
-                    // Note: byte must be masked with 0xff to correct negative
-                    // values
-                    //
-                    value = (char) (bufReader.readByte() & 0xff);
-
-                // String must not contain null characters
-                if (value == 0)
-                    throw new MARSHAL(describeMarshal(MinorReadStringNullChar), MinorReadStringNullChar, COMPLETED_NO);
-
-                if (charConversionRequired_)
-                    arr[i] = converter.convert(value);
-                else
-                    arr[i] = value;
-
-                i++;
-            }
-            numChars = i;
+            sb.append(charConversionRequired_ ? converter.convert(value) : value);
         }
+        // throw MARSHAL if the converter read too many bytes
+        if (buf_.available() < expectedRemainder) throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
 
-        buf_.pos_ = newPos;
-        if (buf_.data_[buf_.pos_ - 1] != 0)
-            throw new MARSHAL(describeMarshal(MinorReadStringNoTerminator), MinorReadStringNoTerminator, COMPLETED_NO);
 
-        int numExtraBytes = 0;
-        if (numChars != 0 && numChars != maxChars) {
-            //
-            // Multiple bytes were required to represent at least one of
-            // the characters present.
-            //
-            numExtraBytes = maxChars - numChars;
-        }
+        if (bufReader.readByte() != 0) throw new MARSHAL(describeMarshal(MinorReadStringNoTerminator), MinorReadStringNoTerminator, COMPLETED_NO);
 
-        if (numExtraBytes > 0) {
-            //
-            // Need to ignore the last 'n' chars in 'arr', where
-            // n = numExtraChars
-            //
-            String arrStr = new String(arr);
-            return arrStr.substring(0, numChars);
-        } else
-            return new String(arr);
+        return sb.toString();
     }
 
     public String read_wstring() {
