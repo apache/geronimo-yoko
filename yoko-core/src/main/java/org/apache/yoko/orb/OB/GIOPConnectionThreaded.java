@@ -816,7 +816,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         break;
 
                     buf = messageQueue_.getFirstUnsentBuffer();
-                    buf.rewindToStart();
+                    buf.reader.rewindToStart();
                     dummy = messageQueue_.moveFirstUnsentToPending();
                 }
 

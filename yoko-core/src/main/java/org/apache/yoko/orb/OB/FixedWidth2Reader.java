@@ -17,20 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.omg.CORBA.DATA_CONVERSION;
 
 final class FixedWidth2Reader extends CodeSetReader {
-    public char read_char(InputStream in) throws DATA_CONVERSION {
-        //
-        // Note: byte must be masked with 0xff to correct negative values
-        //
-        return (char) (in.buf_.readByte() & 0xff);
+    public char read_char(BufferReader bufferReader) {
+        return bufferReader.readByteAsChar();
     }
 
-    public char read_wchar(InputStream in, int len) throws DATA_CONVERSION {
+    public char read_wchar(BufferReader bufferReader, int len) throws DATA_CONVERSION {
         if (len == 2) {
-            return (char) ((in.buf_.readByte() << 8) | (in.buf_.readByte() & 0xff));
+            return (char) ((bufferReader.readByte() << 8) | (bufferReader.readByte() & 0xff));
         } else
             throw new DATA_CONVERSION();
     }

@@ -21,12 +21,11 @@ import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetWriter;
 import org.apache.yoko.orb.OB.MinorCodes;
-import org.apache.yoko.orb.OB.OB_Extras;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.Buffer.LengthWriter;
+import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.util.Timeout;
 import org.omg.CORBA.BAD_TYPECODE;
@@ -60,6 +59,7 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 import static org.omg.CORBA.TCKind._tk_Principal;
@@ -102,9 +102,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private ORBInstance orbInstance_; // Java only
 
-    public final Buffer buf_;
+    private final Buffer buf_;
+    private final BufferWriter bufWriter;
 
-    private GiopVersion giopVersion_ = OB_Extras.DEFAULT_GIOP_VERSION;
+    private GiopVersion giopVersion_ = GIOP1_0;
 
     private final CodeConverters codeConverters_;
 
@@ -116,15 +117,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private boolean wCharConversionRequired_;
 
-    //
     // Handles all OBV marshalling
-    //
     private ValueWriter valueWriter_;
 
-    //
-    // If alignNext_ > 0, the next write should be aligned on this
-    // boundary
-    //
+    // If alignNext_ > 0, the next write should be aligned on this boundary
     private int alignNext_;
 
     private Object invocationContext_;
@@ -550,57 +546,64 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    /** write wchar using old non-compliant method */
-    private void _OB_write_wchar_old(char value) {
-        if (wCharConversionRequired_) {
-            final CodeConverterBase converter = codeConverters_.outputWcharConverter;
-
-            value = converter.convert(value);
-
-            //
-            // For GIOP 1.1 non byte-oriented wide characters are written
-            // as ushort or ulong, depending on their maximum length
-            // listed in the code set registry.
-            //
-            switch (giopVersion_) {
-            case GIOP1_1: {
-                if (converter.getTo().max_bytes <= 2)
-                    write_ushort((short) value);
-                else
-                    write_ulong((int) value);
-            }
-                break;
-
-            default: {
-                final int length = converter.write_count_wchar(value);
-                write_octet((byte) length);
-                addCapacity(length);
-                converter.write_wchar(this, value);
-            }
-                break;
-            }
-        }
+    public void write(int b) {
         //
-        // UTF-16
+        // this matches the behaviour of this function in the Java ORB
+        // and not what is outlined in the java.io.OutputStream
         //
-        else {
-            switch (giopVersion_) {
-            case GIOP1_0:
-            case GIOP1_1:
-                write_ushort((short) value);
-                break;
-
-            default:
-                addCapacity(3);
-                buf_.writeByte(2);
-                buf_.writeChar(value);
-                break;
-            }
-        }
+        write_long(b);
     }
 
-    /** write wchar using new compliant method */
-    private void _OB_write_wchar_new(char value, boolean partOfString) {
+    public org.omg.CORBA.ORB orb() {
+        if (orbInstance_ != null)
+            return orbInstance_.getORB();
+        return null;
+    }
+
+    @Override
+    public InputStream create_input_stream() {
+        Buffer buf = new Buffer(buf_.length());
+        if (buf_.length() > 0) System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.length());
+
+// this is a useful tracepoint, but produces a lot of data, so turn on only
+// if really needed.
+//      if (logger.isLoggable(Level.FINEST)) {
+//          logger.fine("new input stream created:\n" + buf.dumpRemainingData());
+//      }
+
+        InputStream in = new InputStream(buf, false, codeConverters_, giopVersion_);
+        in._OB_ORBInstance(orbInstance_);
+        return in;
+    }
+
+    public void write_boolean(boolean value) {
+        addCapacity(1);
+
+        buf_.writer.writeByte(value ? (byte) 1 : (byte) 0);
+    }
+
+    public void write_char(char value) {
+        if (value > 255)
+            throw new DATA_CONVERSION("char value exceeds 255: " + (int) value);
+
+        addCapacity(1);
+
+        final CodeConverterBase converter = codeConverters_.outputCharConverter;
+
+        if (charConversionRequired_)
+            value = converter.convert(value);
+
+        if (charWriterRequired_)
+            converter.write_char(bufWriter, value);
+        else
+            buf_.writer.writeByte(value);
+    }
+
+    public void write_wchar(char value) {
+        write_wchar(value, false);
+    }
+
+    private void write_wchar(char value, boolean partOfString) {
         final CodeConverterBase converter = codeConverters_.outputWcharConverter;
 
         //
@@ -648,7 +651,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write using the writer
                 //
-                converter.write_wchar(this, value);
+                converter.write_wchar(bufWriter, value);
             }
                 break;
 
@@ -671,7 +674,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the actual character
                 //
-                converter.write_wchar(this, value);
+                converter.write_wchar(bufWriter, value);
             }
                 break;
             }
@@ -690,7 +693,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write 2-byte character in big endian
                 //
-                buf_.writeChar(value);
+                buf_.writer.writeChar(value);
             }
                 break;
 
@@ -708,77 +711,121 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the octet length at the start
                 //
-                buf_.writeByte(2);
+                buf_.writer.writeByte(2);
 
                 //
                 // write the character in big endian format
                 //
-                buf_.writeChar(value);
+                buf_.writer.writeChar(value);
             }
                 break;
             }
         }
     }
 
-    /** write wstring using old non-compliant method */
-    private void _OB_write_wstring_old(String value) {
+    public void write_octet(byte value) {
+        addCapacity(1);
+        buf_.writer.writeByte(value);
+    }
+
+    public void write_short(short value) {
+        addCapacity(2, 2);
+        buf_.writer.writeShort(value);
+    }
+
+    public void write_ushort(short value) {
+        write_short(value);
+    }
+
+    public void write_long(int value) {
+        addCapacity(4, 4);
+        buf_.writer.writeInt(value);
+    }
+
+    public void write_ulong(int value) {
+        write_long(value);
+    }
+
+    public void write_longlong(long value) {
+        addCapacity(8, 8);
+        buf_.writer.writeLong(value);
+    }
+
+    public void write_ulonglong(long value) {
+        write_longlong(value);
+    }
+
+    public void write_float(float value) {
+        write_long(Float.floatToIntBits(value));
+    }
+
+    public void write_double(double value) {
+        write_longlong(Double.doubleToLongBits(value));
+    }
+
+    public void write_string(String value) {
+        LOGGER.finest("Writing string value " + value);
         final char[] arr = value.toCharArray();
-        final int len = arr.length;
+        int len = arr.length;
+        int capacity = len + 1;
 
-        //
-        // 15.3.2.7: For GIOP version 1.1, a wide string is encoded as an
-        // unsigned long indicating the length of the string in octets or
-        // unsigned integers (determined by the transfer syntax for wchar)
-        // followed by the individual wide characters. Both the string length
-        // and contents include a terminating null. The terminating null
-        // character for a wstring is also a wide character.
-        //
-        switch (giopVersion_) {
-        case GIOP1_0:
-        case GIOP1_1: {
-            write_ulong(len + 1);
-            write_wchar_array(arr, 0, len);
-            write_wchar((char) 0);
-        }
-            break;
+        if (!(charWriterRequired_ || charConversionRequired_)) {
+            write_ulong(capacity);
+            addCapacity(capacity);
 
-        default: {
+            for (char c : arr) {
+                if (c > 255)
+                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
+
+                buf_.writer.writeByte(c);
+            }
+        } else {
+            final CodeConverterBase converter = codeConverters_.outputCharConverter;
+
             //
-            // For octet count
+            // Intermediate variable used for efficiency
             //
-            try (Buffer.LengthWriter w = recordLength()) {
-                if (wCharConversionRequired_) {
-                    final CodeConverterBase converter = codeConverters_.outputWcharConverter;
+            boolean bothRequired = charWriterRequired_ && charConversionRequired_;
 
-                    for (char anArr : arr) {
-                        char v = converter.convert(anArr);
+            //
+            // Temporary OCI buffer required
+            //
+            Buffer buffer = new Buffer(64);
+            OutputStream tmpStream = new OutputStream(buffer);
 
-                        addCapacity(converter.write_count_wchar(v));
-                        converter.write_wchar(this, v);
-                    }
-                }
-                //
-                // UTF-16
-                //
-                else {
-                    addCapacity(2 * len);
+            for (char c : arr) {
+                if (c > 255)
+                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
 
-                    for (char v : arr) {
-                        buf_.writeChar(v);
-                    }
-                }
+                // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
+                if (buffer.available() < 4)
+                    buffer.realloc(buffer.length() + 4);
+
+                if (bothRequired)
+                    converter.write_char(buffer.writer, converter.convert(c));
+                else if (charWriterRequired_)
+                    converter.write_char(buffer.writer, c);
+                else
+                    buffer.writer.writeByte(converter.convert(c));
             }
 
             //
-            // Write octet count
+            // Copy the contents from the temporary buffer
             //
+            int bufSize = buffer.pos_;
+
+            write_ulong(bufSize + 1);
+            addCapacity(bufSize + 1);
+
+            for (int i = 0; i < bufSize; i++) {
+                buf_.writer.writeByte(buffer.data_[i]);
+            }
         }
-            break;
-        }
+        // write null terminator
+        buf_.writer.writeByte(0);
     }
 
-    /** write wstring using new compliant method */
-    private void _OB_write_wstring_new(String value) {
+    public void write_wstring(String value) {
         final char[] arr = value.toCharArray();
         final int len = arr.length;
 
@@ -844,7 +891,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     //
                     // write the character
                     //
-                    converter.write_wchar(this, v);
+                    converter.write_wchar(bufWriter, v);
                 }
             } else {
                 //
@@ -864,7 +911,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     //
                     // write character in big endian format
                     //
-                    buf_.writeChar(v);
+                    buf_.writer.writeChar(v);
                 }
             }
         }
@@ -878,189 +925,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         //
     }
 
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
-
-    public void write(int b) {
-        //
-        // this matches the behaviour of this function in the Java ORB
-        // and not what is outlined in the java.io.OutputStream
-        //
-        write_long(b);
-    }
-
-    public org.omg.CORBA.ORB orb() {
-        if (orbInstance_ != null)
-            return orbInstance_.getORB();
-        return null;
-    }
-
-    @Override
-    public InputStream create_input_stream() {
-        Buffer buf = new Buffer(buf_.length());
-        if (buf_.length() > 0) System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.length());
-
-// this is a useful tracepoint, but produces a lot of data, so turn on only
-// if really needed.
-//      if (logger.isLoggable(Level.FINEST)) {
-//          logger.fine("new input stream created:\n" + buf.dumpRemainingData());
-//      }
-
-        InputStream in = new InputStream(buf, false, codeConverters_, giopVersion_);
-        in._OB_ORBInstance(orbInstance_);
-        return in;
-    }
-
-    public void write_boolean(boolean value) {
-        addCapacity(1);
-
-        buf_.writeByte(value ? (byte) 1 : (byte) 0);
-    }
-
-    public void write_char(char value) {
-        if (value > 255)
-            throw new DATA_CONVERSION("char value exceeds 255: " + (int) value);
-
-        addCapacity(1);
-
-        final CodeConverterBase converter = codeConverters_.outputCharConverter;
-
-        if (charConversionRequired_)
-            value = converter.convert(value);
-
-        if (charWriterRequired_)
-            converter.write_char(this, value);
-        else
-            buf_.writeByte(value);
-    }
-
-    public void write_wchar(char value) {
-        write_wchar(value, false);
-    }
-
-    private void write_wchar(char value, boolean partOfString) {
-        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
-            _OB_write_wchar_new(value, partOfString);
-        else
-            _OB_write_wchar_old(value);
-    }
-
-    public void write_octet(byte value) {
-        addCapacity(1);
-        buf_.writeByte(value);
-    }
-
-    public void write_short(short value) {
-        addCapacity(2, 2);
-        buf_.writeShort(value);
-    }
-
-    public void write_ushort(short value) {
-        write_short(value);
-    }
-
-    public void write_long(int value) {
-        addCapacity(4, 4);
-        buf_.writeInt(value);
-    }
-
-    public void write_ulong(int value) {
-        write_long(value);
-    }
-
-    public void write_longlong(long value) {
-        addCapacity(8, 8);
-        buf_.writeLong(value);
-    }
-
-    public void write_ulonglong(long value) {
-        write_longlong(value);
-    }
-
-    public void write_float(float value) {
-        write_long(Float.floatToIntBits(value));
-    }
-
-    public void write_double(double value) {
-        write_longlong(Double.doubleToLongBits(value));
-    }
-
-    public void write_string(String value) {
-        LOGGER.finest("Writing string value " + value);
-        final char[] arr = value.toCharArray();
-        int len = arr.length;
-        int capacity = len + 1;
-
-        if (!(charWriterRequired_ || charConversionRequired_)) {
-            write_ulong(capacity);
-            addCapacity(capacity);
-
-            for (char c : arr) {
-                if (c > 255)
-                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
-
-                buf_.writeByte(c);
-            }
-        } else {
-            final CodeConverterBase converter = codeConverters_.outputCharConverter;
-
-            //
-            // Intermediate variable used for efficiency
-            //
-            boolean bothRequired = charWriterRequired_ && charConversionRequired_;
-
-            //
-            // Temporary OCI buffer required
-            //
-            Buffer buffer = new Buffer(64);
-            OutputStream tmpStream = new OutputStream(buffer);
-
-            for (char c : arr) {
-                if (c > 255)
-                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
-
-                // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
-                if (buffer.available() < 4)
-                    buffer.realloc(buffer.length() + 4);
-
-                if (bothRequired)
-                    converter.write_char(tmpStream, converter.convert(c));
-                else if (charWriterRequired_)
-                    converter.write_char(tmpStream, c);
-                else
-                    buffer.writeByte(converter.convert(c));
-            }
-
-            //
-            // Copy the contents from the temporary buffer
-            //
-            int bufSize = buffer.pos_;
-
-            write_ulong(bufSize + 1);
-            addCapacity(bufSize + 1);
-
-            for (int i = 0; i < bufSize; i++) {
-                buf_.writeByte(buffer.data_[i]);
-            }
-        }
-        // write null terminator
-        buf_.writeByte(0);
-    }
-
-    public void write_wstring(String value) {
-        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
-            _OB_write_wstring_new(value);
-        else
-            _OB_write_wstring_old(value);
-    }
-
     public void write_boolean_array(boolean[] value, int offset, int length) {
         if (length > 0) {
             addCapacity(length);
 
             for (int i = offset; i < offset + length; i++)
-                buf_.writeByte(value[i] ? (byte) 1 : (byte) 0);
+                buf_.writer.writeByte(value[i] ? (byte) 1 : (byte) 0);
         }
     }
 
@@ -1073,7 +943,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     if (value[i] > 255)
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
-                    buf_.writeByte(value[i]);
+                    buf_.writer.writeByte(value[i]);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.outputCharConverter;
@@ -1089,11 +959,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
                     if (bothRequired)
-                        converter.write_char(this, converter.convert(value[i]));
+                        converter.write_char(bufWriter, converter.convert(value[i]));
                     else if (charWriterRequired_)
-                        converter.write_char(this, value[i]);
+                        converter.write_char(bufWriter, value[i]);
                     else
-                        buf_.writeByte(converter.convert(value[i]));
+                        buf_.writer.writeByte(converter.convert(value[i]));
                 }
             }
         }
@@ -1119,7 +989,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 2, 2);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writeShort(value[i]);
+                buf_.writer.writeShort(value[i]);
             }
         }
     }
@@ -1133,7 +1003,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 4, 4);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writeInt(value[i]);
+                buf_.writer.writeInt(value[i]);
             }
         }
     }
@@ -1147,7 +1017,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 8, 8);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writeLong(value[i]);
+                buf_.writer.writeLong(value[i]);
             }
         }
     }
@@ -1163,7 +1033,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 int v = Float.floatToIntBits(value[i]);
 
-                buf_.writeInt(v);
+                buf_.writer.writeInt(v);
             }
         }
     }
@@ -1175,7 +1045,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 long v = Double.doubleToLongBits(value[i]);
 
-                buf_.writeLong(v);
+                buf_.writer.writeLong(v);
             }
         }
     }
@@ -1821,6 +1691,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public OutputStream(Buffer buf, CodeConverters converters, GiopVersion giopVersion) {
         buf_ = buf;
+        bufWriter = buf.writer;
 
         if (giopVersion != null)
             giopVersion_ = giopVersion;

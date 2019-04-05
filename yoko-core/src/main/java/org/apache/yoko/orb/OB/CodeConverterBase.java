@@ -17,8 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.BufferWriter;
 import org.omg.CORBA.DATA_CONVERSION;
 
 import java.util.Objects;
@@ -26,15 +26,10 @@ import java.util.Objects;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
 
-abstract public class CodeConverterBase
-// implements CodeSetReader, CodeSetWriter
-{
-    //
-    // Source and destination code set
-    //
-    private final CodeSetInfo from_;
+abstract public class CodeConverterBase {
+    private final CodeSetInfo sourceCodeSet;
 
-    private final CodeSetInfo to_;
+    private final CodeSetInfo destinationCodeSet;
 
     //
     // The UTF-8 or fixed width reader/writer
@@ -43,20 +38,20 @@ abstract public class CodeConverterBase
 
     private final CodeSetWriter writer_;
 
-    CodeConverterBase(CodeSetInfo from, CodeSetInfo to) {
-        if (from == null)
-            from = CodeSetInfo.NONE;
-        if (to == null)
-            to = CodeSetInfo.NONE;
+    CodeConverterBase(CodeSetInfo source, CodeSetInfo destination) {
+        if (source == null)
+            source = CodeSetInfo.NONE;
+        if (destination == null)
+            destination = CodeSetInfo.NONE;
 
-        from_ = from;
-        to_ = to;
+        sourceCodeSet = source;
+        destinationCodeSet = destination;
 
-        if (from == UTF_8)
+        if (source == UTF_8)
             reader_ = new UTF8Reader();
-        else if (from == UTF_16)
+        else if (source == UTF_16)
             reader_ = new UTF16Reader();
-        else if (from.max_bytes <= 2)
+        else if (source.max_bytes <= 2)
             reader_ = new FixedWidth2Reader();
         else {
             //
@@ -66,11 +61,11 @@ abstract public class CodeConverterBase
             throw new Error("unreachable");
         }
 
-        if (to == UTF_8)
+        if (destination == UTF_8)
             writer_ = new UTF8Writer();
-        else if (to == UTF_16)
+        else if (destination == UTF_16)
             writer_ = new UTF16Writer();
-        else if (to.max_bytes <= 2)
+        else if (destination.max_bytes <= 2)
             writer_ = new FixedWidth2Writer();
         else {
             //
@@ -88,28 +83,28 @@ abstract public class CodeConverterBase
     }
 
     private boolean equals(CodeConverterBase that) {
-        return this.from_ == that.from_ && this.to_ == that.to_;
+        return this.sourceCodeSet == that.sourceCodeSet && this.destinationCodeSet == that.destinationCodeSet;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(from_, to_);
+        return Objects.hash(sourceCodeSet, destinationCodeSet);
     }
 
-    final public char read_char(InputStream in) throws DATA_CONVERSION {
-        return reader_.read_char(in);
+    final public char read_char(BufferReader bufferReader) throws DATA_CONVERSION {
+        return reader_.read_char(bufferReader);
     }
 
-    public char read_wchar(InputStream in, int len) throws DATA_CONVERSION {
-        return reader_.read_wchar(in, len);
+    public char read_wchar(BufferReader bufferReader, int len) throws DATA_CONVERSION {
+        return reader_.read_wchar(bufferReader, len);
     }
 
-    public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
-        writer_.write_char(out, v);
+    public void write_char(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+        writer_.write_char(bufferWriter, v);
     }
 
-    public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
-        writer_.write_wchar(out, v);
+    public void write_wchar(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+        writer_.write_wchar(bufferWriter, v);
     }
 
     public int read_count_wchar(char v) {
@@ -121,19 +116,19 @@ abstract public class CodeConverterBase
     }
 
     final public boolean readerRequired() {
-        return (from_ == UTF_8) || (from_ == UTF_16);
+        return (sourceCodeSet == UTF_8) || (sourceCodeSet == UTF_16);
     }
 
     final public boolean writerRequired() {
-        return (to_ == UTF_8) || (to_ == UTF_16);
+        return (destinationCodeSet == UTF_8) || (destinationCodeSet == UTF_16);
     }
 
-    final public CodeSetInfo getFrom() {
-        return from_;
+    final public CodeSetInfo getSourceCodeSet() {
+        return sourceCodeSet;
     }
 
-    final public CodeSetInfo getTo() {
-        return to_;
+    final public CodeSetInfo getDestinationCodeSet() {
+        return destinationCodeSet;
     }
 
     final public void set_reader_flags(int flags) {
@@ -144,14 +139,8 @@ abstract public class CodeConverterBase
         writer_.set_flags(flags);
     }
 
-    //
-    // Get conversion type
-    //
     public abstract boolean conversionRequired();
 
-    //
-    // Convert narrow or wide character
-    //
     public abstract char convert(char value);
 
 }

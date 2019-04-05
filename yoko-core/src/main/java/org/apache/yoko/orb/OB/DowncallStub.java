@@ -968,7 +968,7 @@ public final class DowncallStub {
         messageBody.byte_order = false;
 
         Buffer buf = tmpIn._OB_buffer();
-        buf.align8();
+        buf.reader.align8();
 
         //
         // Copy in the rest of the message body

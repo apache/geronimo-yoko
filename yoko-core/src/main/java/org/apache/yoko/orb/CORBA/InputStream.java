@@ -20,12 +20,12 @@ package org.apache.yoko.orb.CORBA;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetReader;
-import org.apache.yoko.orb.OB.OB_Extras;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
 import org.apache.yoko.orb.OB.TypeCodeCache;
 import org.apache.yoko.orb.OB.ValueReader;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
 import org.omg.CORBA.BAD_TYPECODE;
@@ -95,6 +95,7 @@ import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
 import static org.omg.CORBA.TCKind._tk_TypeCode;
@@ -136,11 +137,13 @@ final public class InputStream extends InputStreamWithOffsets {
 
     private ORBInstance orbInstance_;
 
-    public final Buffer buf_;
+    private final Buffer buf_;
+    
+    private final BufferReader bufReader;
 
     boolean swap_;
 
-    private GiopVersion giopVersion_ = OB_Extras.DEFAULT_GIOP_VERSION;
+    private GiopVersion giopVersion_ = GIOP1_0;
 
     private final int origPos_;
 
@@ -656,83 +659,61 @@ final public class InputStream extends InputStreamWithOffsets {
         return valueReader_;
     }
 
-    //
-    // reads wide-characters using the old non-compliant method
-    //
-    private char _OB_read_wchar_old() {
+    public int available() throws IOException {
+        _OB_assert(buf_.length() >= buf_.pos_);
+
+        return buf_.length() - buf_.pos_;
+    }
+
+    public int read() throws IOException {
+        checkChunk();
+        if (buf_.available() < 1) return -1;
+
+        return (0xff & bufReader.readByte());
+    }
+
+    public org.omg.CORBA.ORB orb() {
+        if (orbInstance_ != null)
+            return orbInstance_.getORB();
+        return null;
+    }
+
+    public boolean read_boolean() {
         checkChunk();
 
-        if (wCharConversionRequired_) {
-            final CodeConverterBase converter = codeConverters_.inputWcharConverter;
+        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
 
-            char value;
+        if (logger.isLoggable(Level.FINEST))
+            logger.finest(String.format("Boolean value is %b from position 0x%x", bufReader.peekByte(), buf_.pos_));
+        return bufReader.readByte() != (byte) 0;
+    }
 
+    public char read_char() {
+        checkChunk();
+        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
+
+        if (charReaderRequired_ || charConversionRequired_) {
+            final CodeConverterBase converter = codeConverters_.inputCharConverter;
+
+            if (charReaderRequired_ && charConversionRequired_)
+                return converter.convert(converter.read_char(bufReader));
+            else if (charReaderRequired_)
+                return converter.read_char(bufReader);
+            else
+                return converter.convert((char) (bufReader.readByte() & 0xff));
+        } else {
             //
-            // For GIOP 1.1 non byte-oriented wide characters are written
-            // as ushort or ulong, depending on their maximum length
-            // listed in the code set registry.
+            // Note: byte must be masked with 0xff to correct negative values
             //
-            switch (giopVersion_) {
-
-                case GIOP1_1: {
-                    if (converter.getFrom().max_bytes <= 2)
-                        value = (char) read_ushort();
-                    else
-                        value = (char) read_ulong();
-
-                    break;
-                }
-
-                default : {
-                    final int wcharLen = buf_.readByte() & 0xff;
-                    if (buf_.available() < wcharLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
-
-                    value = converter.read_wchar(this, wcharLen);
-
-                    break;
-                }
-            }
-
-            return converter.convert(value);
-        }
-        //
-        // UTF-16
-        //
-        else {
-            switch (giopVersion_) {
-
-            //
-            // Orbix2000/ORBacus/E compatible GIOP 1.0 marshaling
-            //
-                case GIOP1_0: {
-                    buf_.align2();
-
-                    if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
-
-                    //
-                    // Assume big endian
-                    //
-                    return buf_.readChar();
-                }
-
-                case GIOP1_1: {
-                    return (char) read_ushort();
-                }
-
-                default : {
-                    final int wcharLen = buf_.readByte() & 0xff;
-                    if (buf_.available() < wcharLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
-
-                    return buf_.readChar();
-                }
-            }
+            return (char) (bufReader.readByte() & 0xff);
         }
     }
 
-    //
-    // reads wide-characters using compliant method
-    //
-    private char _OB_read_wchar_new(boolean partOfString) {
+    public char read_wchar() {
+        return read_wchar(false);
+    }
+
+    private char read_wchar(boolean partOfString) {
         checkChunk();
 
         char value;
@@ -758,8 +739,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case GIOP1_1:
                     //
                     // align on two-byte boundary
-                    // 
-                    buf_.align2();
+                    //
+                    bufReader.align2();
 
                     break;
 
@@ -767,7 +748,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // get the octet indicating the wchar len
                     //
-                    wcLen = buf_.readByte() & 0xff;
+                    wcLen = bufReader.readByte() & 0xff;
 
                     break;
             }
@@ -780,7 +761,7 @@ final public class InputStream extends InputStreamWithOffsets {
             //
             // read in the value with the reader
             //
-            value = converter.read_wchar(this, wcLen);
+            value = converter.read_wchar(bufReader, wcLen);
         } else {
             //
             // no reader is required then
@@ -790,17 +771,17 @@ final public class InputStream extends InputStreamWithOffsets {
                     // UCS-2 is the native wchar codeset for both Orbacus and Orbix/E so conversion should not be necessary
                     _OB_assert(!wCharConversionRequired_);
 
-                    buf_.align2();
+                    bufReader.align2();
 
                     // check for overflow on reader
                     if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     // assume big-endian (both Orbacus and Orbix/E do here) and read in the wchar
-                    return buf_.readChar();
+                    return bufReader.readChar();
 
                 case GIOP1_1:  // TODO: understand or safely delete this case
                     // read according to the endian of the message
-                    if (converter.getFrom().max_bytes <= 2)
+                    if (converter.getSourceCodeSet().max_bytes <= 2)
                         value = (char) read_ushort();
                     else
                         value = (char) read_ulong();
@@ -809,13 +790,13 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 default : {
                     // read the length octet off the front
-                    final int wcLen = buf_.readByte() & 0xff;
+                    final int wcLen = bufReader.readByte() & 0xff;
 
                     // check for an overflow
                     if (buf_.available() < wcLen) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     // read the character off in proper endian format
-                    value = swap_ ? buf_.readChar_LE() : buf_.readChar();
+                    value = swap_ ? bufReader.readChar_LE() : bufReader.readChar();
 
                     break;
                 }
@@ -831,285 +812,22 @@ final public class InputStream extends InputStreamWithOffsets {
         return value;
     }
 
-    //
-    // reads wide strings using the old improper way
-    //
-    private String _OB_read_wstring_old() {
-        final String s;
-
-        checkChunk();
-        int len = read_ulong();
-
-        //
-        // 15.3.2.7: For GIOP version 1.1, a wide string is encoded as an
-        // unsigned long indicating the length of the string in octets or
-        // unsigned integers (determined by the transfer syntax for wchar)
-        // followed by the individual wide characters. Both the string length
-        // and contents include a terminating null. The terminating null
-        // character for a wstring is also a wide character.
-        //
-        // For GIOP 1.1 the length must not be 0.
-        //
-        switch (giopVersion_) {
-
-            case GIOP1_0:
-            case GIOP1_1: {
-                if (len == 0)
-                    throw new MARSHAL(describeMarshal(MinorReadWStringZeroLength), MinorReadWStringZeroLength, COMPLETED_NO);
-
-                char[] tmp = new char[len];
-                read_wchar_array(tmp, 0, len);
-
-                //
-                // Check for terminating null wchar
-                //
-                if (tmp[len - 1] != 0)
-                    throw new MARSHAL(describeMarshal(MinorReadWStringNoTerminator), MinorReadWStringNoTerminator, COMPLETED_NO);
-
-                s = new String(tmp, 0, len - 1);
-
-                break;
-            }
-
-            default : {
-                StringBuilder stringBuffer = new StringBuilder(len);
-
-                if (wCharConversionRequired_) {
-                    final CodeConverterBase converter = codeConverters_.inputWcharConverter;
-
-                    while (len > 0) {
-                        final int wcharLen = converter.read_count_wchar((char) buf_.peekByte());
-                        len -= wcharLen;
-                        if (buf_.available() < wcharLen)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
-
-                        char c = converter.read_wchar(this, wcharLen);
-
-                        c = converter.convert(c);
-
-                        stringBuffer.append(c);
-                    }
-                }
-                //
-                // UTF-16
-                //
-                else {
-                    while (len > 0) {
-                        final int wcharLen = 2;
-                        len -= wcharLen;
-                        if (buf_.available() < wcharLen)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
-
-                        char c = buf_.readChar();
-
-                        stringBuffer.append(c);
-                    }
-                }
-
-                s = stringBuffer.toString();
-
-                break;
-            }
-        }
-
-        return s;
-    }
-
-    //
-    // reads wide strings using the new compliant method
-    //
-    private String _OB_read_wstring_new() {
-        final String s;
-        checkChunk();
-
-        final CodeConverterBase converter = codeConverters_.inputWcharConverter;
-
-        //
-        // read the length of the string (specified in characters for
-        // GIOP 1.0/1.1 and in octets for GIOP 1.2+)
-        // 
-        int len = read_ulong();
-        if (logger.isLoggable(Level.FINE))
-            logger.fine(String.format("Reading wstring of length 0x%x", len));
-
-        switch (giopVersion_) {
-
-            case GIOP1_0:
-            case GIOP1_1: {
-                //
-                // it is not legal in GIOP 1.0/1.1 for a string to be 0 in
-                // length... it MUST have a null terminator
-                // 
-                if (len == 0) {
-                    throw new MARSHAL(describeMarshal(MinorReadWStringZeroLength), MinorReadWStringZeroLength, COMPLETED_NO);
-                }
-
-                char[] tmp = new char[len];
-
-                if (wCharReaderRequired_) {
-                    converter.set_reader_flags(CodeSetReader.FIRST_CHAR);
-                }
-
-                for (int i = 0; i < len; i++) {
-                    tmp[i] = read_wchar(true);
-                }
-
-                //
-                // Check for terminating null wchar
-                //
-                if (tmp[len - 1] != 0)
-                    throw new MARSHAL(describeMarshal(MinorReadWStringNoTerminator), MinorReadWStringNoTerminator, COMPLETED_NO);
-
-                //
-                // create the final string
-                // 
-                s = new String(tmp, 0, len - 1);
-
-                break;
-            }
-
-            default : {
-                StringBuilder stringBuffer = new StringBuilder(len);
-
-                if (wCharReaderRequired_) {
-                    converter.set_reader_flags(CodeSetReader.FIRST_CHAR);
-
-                    //
-                    // start adding the characters to the string buffer
-                    //
-                    while (len > 0) {
-                        if (buf_.available() < 2)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
-
-                        int wcLen = converter.read_count_wchar(buf_.peekChar());
-
-                        len -= wcLen;
-
-                        // check for an overflow in the read
-                        if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
-
-                        char c = converter.read_wchar(this, wcLen);
-                        if (wCharConversionRequired_) c = converter.convert(c);
-                        //
-                        stringBuffer.append(c);
-                    }
-                } else {
-                    final int wcLen = 2;
-
-                    while (len > 0) {
-                        len -= wcLen;
-
-                        //
-                        // check for an overflow condition
-                        // 
-                        if (buf_.available() < wcLen)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
-
-                        //
-                        // read in the char using the message endian
-                        // format for GIOP 1.2/1.3
-                        // REVISIT: GIOP 1.4 changes these rules
-                        // 
-                        char c = swap_ ? buf_.readChar_LE() : buf_.readChar();
-
-                        if (wCharConversionRequired_)
-                            c = converter.convert(c);
-
-                        //
-                        // append to the string buffer
-                        //
-                        stringBuffer.append(c);
-                    }
-                }
-
-                s = stringBuffer.toString();
-
-                break;
-            }
-        }
-
-        return s;
-    }
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
-    public int available() throws IOException {
-        _OB_assert(buf_.length() >= buf_.pos_);
-
-        return buf_.length() - buf_.pos_;
-    }
-
-    public int read() throws IOException {
-        checkChunk();
-        if (buf_.available() < 1) return -1;
-
-        return (0xff & buf_.readByte());
-    }
-
-    public org.omg.CORBA.ORB orb() {
-        if (orbInstance_ != null)
-            return orbInstance_.getORB();
-        return null;
-    }
-
-    public boolean read_boolean() {
-        checkChunk();
-
-        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
-
-        if (logger.isLoggable(Level.FINEST))
-            logger.finest(String.format("Boolean value is %b from position 0x%x", buf_.peekByte(), buf_.pos_));
-        return buf_.readByte() != (byte) 0;
-    }
-
-    public char read_char() {
-        checkChunk();
-        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
-
-        if (charReaderRequired_ || charConversionRequired_) {
-            final CodeConverterBase converter = codeConverters_.inputCharConverter;
-
-            if (charReaderRequired_ && charConversionRequired_)
-                return converter.convert(converter.read_char(this));
-            else if (charReaderRequired_)
-                return converter.read_char(this);
-            else
-                return converter.convert((char) (buf_.readByte() & 0xff));
-        } else {
-            //
-            // Note: byte must be masked with 0xff to correct negative values
-            //
-            return (char) (buf_.readByte() & 0xff);
-        }
-    }
-
-    public char read_wchar() {
-        return read_wchar(false);
-    }
-
-    private char read_wchar(boolean partOfString) {
-        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
-            return _OB_read_wchar_new(partOfString);
-        return _OB_read_wchar_old();
-    }
-
     public byte read_octet() {
         checkChunk();
         if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
 
-        return buf_.readByte();
+        return bufReader.readByte();
     }
 
     public short read_short() {
         checkChunk();
-        buf_.align2();
+        bufReader.align2();
 
         if (buf_.available() < 2) throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
         if (swap_)
-            return (short) ((buf_.readByte() & 0xff) | (buf_.readByte() << 8));
+            return (short) ((bufReader.readByte() & 0xff) | (bufReader.readByte() << 8));
         else
-            return (short) ((buf_.readByte() << 8) | (buf_.readByte() & 0xff));
+            return (short) ((bufReader.readByte() << 8) | (bufReader.readByte() & 0xff));
     }
 
     public short read_ushort() {
@@ -1127,28 +845,28 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public long read_longlong() {
         checkChunk();
-        buf_.align8();
+        bufReader.align8();
 
         if (buf_.available() < 8) throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
 
         if (swap_)
-            return ((long) buf_.readByte() & 0xffL)
-                    | (((long) buf_.readByte() << 8) & 0xff00L)
-                    | (((long) buf_.readByte() << 16) & 0xff0000L)
-                    | (((long) buf_.readByte() << 24) & 0xff000000L)
-                    | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                    | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                    | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                    | ((long) buf_.readByte() << 56);
+            return ((long) bufReader.readByte() & 0xffL)
+                    | (((long) bufReader.readByte() << 8) & 0xff00L)
+                    | (((long) bufReader.readByte() << 16) & 0xff0000L)
+                    | (((long) bufReader.readByte() << 24) & 0xff000000L)
+                    | (((long) bufReader.readByte() << 32) & 0xff00000000L)
+                    | (((long) bufReader.readByte() << 40) & 0xff0000000000L)
+                    | (((long) bufReader.readByte() << 48) & 0xff000000000000L)
+                    | ((long) bufReader.readByte() << 56);
         else
-            return ((long) buf_.readByte() << 56)
-                    | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                    | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                    | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                    | (((long) buf_.readByte() << 24) & 0xff000000L)
-                    | (((long) buf_.readByte() << 16) & 0xff0000L)
-                    | (((long) buf_.readByte() << 8) & 0xff00L)
-                    | ((long) buf_.readByte() & 0xffL);
+            return ((long) bufReader.readByte() << 56)
+                    | (((long) bufReader.readByte() << 48) & 0xff000000000000L)
+                    | (((long) bufReader.readByte() << 40) & 0xff0000000000L)
+                    | (((long) bufReader.readByte() << 32) & 0xff00000000L)
+                    | (((long) bufReader.readByte() << 24) & 0xff000000L)
+                    | (((long) bufReader.readByte() << 16) & 0xff0000L)
+                    | (((long) bufReader.readByte() << 8) & 0xff00L)
+                    | ((long) bufReader.readByte() & 0xffL);
     }
 
     public long read_ulonglong() {
@@ -1199,7 +917,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 // Note: byte must be masked with 0xff to correct negative
                 // values
                 //
-                arr[i] = (char) (buf_.readByte() & 0xff);
+                arr[i] = (char) (bufReader.readByte() & 0xff);
 
                 //
                 // String must not contain null characters
@@ -1216,13 +934,13 @@ final public class InputStream extends InputStreamWithOffsets {
                 char value;
 
                 if (charReaderRequired_)
-                    value = converter.read_char(this);
+                    value = converter.read_char(bufReader);
                 else
                     //
                     // Note: byte must be masked with 0xff to correct negative
                     // values
                     //
-                    value = (char) (buf_.readByte() & 0xff);
+                    value = (char) (bufReader.readByte() & 0xff);
 
                 // String must not contain null characters
                 if (value == 0)
@@ -1263,9 +981,116 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public String read_wstring() {
-        if (!OB_Extras.COMPAT_WIDE_MARSHAL)
-            return _OB_read_wstring_new();
-        return _OB_read_wstring_old();
+        final String s;
+        checkChunk();
+
+        final CodeConverterBase converter = codeConverters_.inputWcharConverter;
+
+        //
+        // read the length of the string (specified in characters for
+        // GIOP 1.0/1.1 and in octets for GIOP 1.2+)
+        //
+        int len = read_ulong();
+        if (logger.isLoggable(Level.FINE))
+            logger.fine(String.format("Reading wstring of length 0x%x", len));
+
+        switch (giopVersion_) {
+
+            case GIOP1_0:
+            case GIOP1_1: {
+                //
+                // it is not legal in GIOP 1.0/1.1 for a string to be 0 in
+                // length... it MUST have a null terminator
+                //
+                if (len == 0) {
+                    throw new MARSHAL(describeMarshal(MinorReadWStringZeroLength), MinorReadWStringZeroLength, COMPLETED_NO);
+                }
+
+                char[] tmp = new char[len];
+
+                if (wCharReaderRequired_) {
+                    converter.set_reader_flags(CodeSetReader.FIRST_CHAR);
+                }
+
+                for (int i = 0; i < len; i++) {
+                    tmp[i] = read_wchar(true);
+                }
+
+                //
+                // Check for terminating null wchar
+                //
+                if (tmp[len - 1] != 0)
+                    throw new MARSHAL(describeMarshal(MinorReadWStringNoTerminator), MinorReadWStringNoTerminator, COMPLETED_NO);
+
+                //
+                // create the final string
+                //
+                s = new String(tmp, 0, len - 1);
+
+                break;
+            }
+
+            default : {
+                StringBuilder stringBuffer = new StringBuilder(len);
+
+                if (wCharReaderRequired_) {
+                    converter.set_reader_flags(CodeSetReader.FIRST_CHAR);
+
+                    //
+                    // start adding the characters to the string buffer
+                    //
+                    while (len > 0) {
+                        if (buf_.available() < 2)
+                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+
+                        int wcLen = converter.read_count_wchar(bufReader.peekChar());
+
+                        len -= wcLen;
+
+                        // check for an overflow in the read
+                        if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+
+                        char c = converter.read_wchar(bufReader, wcLen);
+                        if (wCharConversionRequired_) c = converter.convert(c);
+                        //
+                        stringBuffer.append(c);
+                    }
+                } else {
+                    final int wcLen = 2;
+
+                    while (len > 0) {
+                        len -= wcLen;
+
+                        //
+                        // check for an overflow condition
+                        //
+                        if (buf_.available() < wcLen)
+                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+
+                        //
+                        // read in the char using the message endian
+                        // format for GIOP 1.2/1.3
+                        // REVISIT: GIOP 1.4 changes these rules
+                        //
+                        char c = swap_ ? bufReader.readChar_LE() : bufReader.readChar();
+
+                        if (wCharConversionRequired_)
+                            c = converter.convert(c);
+
+                        //
+                        // append to the string buffer
+                        //
+                        stringBuffer.append(c);
+                    }
+                }
+
+                s = stringBuffer.toString();
+
+                break;
+            }
+        }
+
+        return s;
     }
 
     public void read_boolean_array(boolean[] value, int offset, int length) {
@@ -1276,7 +1101,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
 
             for (int i = offset; i < offset + length; i++)
-                value[i] = buf_.readByte() != (byte) 0;
+                value[i] = bufReader.readByte() != (byte) 0;
         }
     }
 
@@ -1293,7 +1118,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // Note: byte must be masked with 0xff to correct negative
                     // values
                     //
-                    value[i] = (char) (buf_.readByte() & 0xff);
+                    value[i] = (char) (bufReader.readByte() & 0xff);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.inputCharConverter;
@@ -1305,15 +1130,15 @@ final public class InputStream extends InputStreamWithOffsets {
 
                 for (int i = offset; i < offset + length; i++) {
                     if (bothRequired)
-                        value[i] = converter.convert(converter.read_char(this));
+                        value[i] = converter.convert(converter.read_char(bufReader));
                     else if (charReaderRequired_)
-                        value[i] = converter.read_char(this);
+                        value[i] = converter.read_char(bufReader);
                     else {
                         //
                         // Note: byte must be masked with 0xff
                         // to correct negative values
                         //
-                        final char c = (char) (buf_.readByte() & 0xff);
+                        final char c = (char) (bufReader.readByte() & 0xff);
                         value[i] = converter.convert(c);
                     }
                 }
@@ -1350,7 +1175,7 @@ final public class InputStream extends InputStreamWithOffsets {
             return;
 
         checkChunk();
-        buf_.align2();
+        bufReader.align2();
 
         int newPos = buf_.pos_ + length * 2;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1358,10 +1183,10 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = (short) (((short) buf_.readByte() & 0xff) | ((short) buf_.readByte() << 8));
+                value[i] = (short) (((short) bufReader.readByte() & 0xff) | ((short) bufReader.readByte() << 8));
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = (short) (((short) buf_.readByte() << 8) | ((short) buf_.readByte() & 0xff));
+                value[i] = (short) (((short) bufReader.readByte() << 8) | ((short) bufReader.readByte() & 0xff));
     }
 
     public void read_ushort_array(short[] value, int offset, int length) {
@@ -1372,7 +1197,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length <= 0)
             return;
         checkChunk();
-        buf_.align4();
+        bufReader.align4();
 
         int newPos = buf_.pos_ + length * 4;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1380,16 +1205,16 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((int) buf_.readByte() & 0xff)
-                        | (((int) buf_.readByte() << 8) & 0xff00)
-                        | (((int) buf_.readByte() << 16) & 0xff0000)
-                        | ((int) buf_.readByte() << 24);
+                value[i] = ((int) bufReader.readByte() & 0xff)
+                        | (((int) bufReader.readByte() << 8) & 0xff00)
+                        | (((int) bufReader.readByte() << 16) & 0xff0000)
+                        | ((int) bufReader.readByte() << 24);
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((int) buf_.readByte() << 24)
-                        | (((int) buf_.readByte() << 16) & 0xff0000)
-                        | (((int) buf_.readByte() << 8) & 0xff00)
-                        | ((int) buf_.readByte() & 0xff);
+                value[i] = ((int) bufReader.readByte() << 24)
+                        | (((int) bufReader.readByte() << 16) & 0xff0000)
+                        | (((int) bufReader.readByte() << 8) & 0xff00)
+                        | ((int) bufReader.readByte() & 0xff);
     }
 
     public void read_ulong_array(int[] value, int offset, int length) {
@@ -1402,7 +1227,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         checkChunk();
 
-        buf_.align8();
+        bufReader.align8();
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1410,24 +1235,24 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((long) buf_.readByte() & 0xffL)
-                        | (((long) buf_.readByte() << 8) & 0xff00L)
-                        | (((long) buf_.readByte() << 16) & 0xff0000L)
-                        | (((long) buf_.readByte() << 24) & 0xff000000L)
-                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                        | ((long) buf_.readByte() << 56);
+                value[i] = ((long) bufReader.readByte() & 0xffL)
+                        | (((long) bufReader.readByte() << 8) & 0xff00L)
+                        | (((long) bufReader.readByte() << 16) & 0xff0000L)
+                        | (((long) bufReader.readByte() << 24) & 0xff000000L)
+                        | (((long) bufReader.readByte() << 32) & 0xff00000000L)
+                        | (((long) bufReader.readByte() << 40) & 0xff0000000000L)
+                        | (((long) bufReader.readByte() << 48) & 0xff000000000000L)
+                        | ((long) bufReader.readByte() << 56);
         else
             for (int i = offset; i < offset + length; i++)
-                value[i] = ((long) buf_.readByte() << 56)
-                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                        | (((long) buf_.readByte() << 24) & 0xff000000L)
-                        | (((long) buf_.readByte() << 16) & 0xff0000L)
-                        | (((long) buf_.readByte() << 8) & 0xff00L)
-                        | ((long) buf_.readByte() & 0xffL);
+                value[i] = ((long) bufReader.readByte() << 56)
+                        | (((long) bufReader.readByte() << 48) & 0xff000000000000L)
+                        | (((long) bufReader.readByte() << 40) & 0xff0000000000L)
+                        | (((long) bufReader.readByte() << 32) & 0xff00000000L)
+                        | (((long) bufReader.readByte() << 24) & 0xff000000L)
+                        | (((long) bufReader.readByte() << 16) & 0xff0000L)
+                        | (((long) bufReader.readByte() << 8) & 0xff00L)
+                        | ((long) bufReader.readByte() & 0xffL);
     }
 
     public void read_ulonglong_array(long[] value, int offset, int length) {
@@ -1438,7 +1263,7 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length > 0) {
             checkChunk();
 
-            buf_.align4();
+            bufReader.align4();
 
             int newPos = buf_.pos_ + length * 4;
             if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1446,19 +1271,19 @@ final public class InputStream extends InputStreamWithOffsets {
 
             if (swap_)
                 for (int i = offset; i < offset + length; i++) {
-                    int v = (buf_.readByte() & 0xff)
-                            | ((buf_.readByte() << 8) & 0xff00)
-                            | ((buf_.readByte() << 16) & 0xff0000)
-                            | (buf_.readByte() << 24);
+                    int v = (bufReader.readByte() & 0xff)
+                          | ((bufReader.readByte() << 8) & 0xff00)
+                          | ((bufReader.readByte() << 16) & 0xff0000)
+                          | (bufReader.readByte() << 24);
 
                     value[i] = Float.intBitsToFloat(v);
                 }
             else
                 for (int i = offset; i < offset + length; i++) {
-                    int v = (buf_.readByte() << 24)
-                            | ((buf_.readByte() << 16) & 0xff0000)
-                            | ((buf_.readByte() << 8) & 0xff00)
-                            | (buf_.readByte() & 0xff);
+                    int v = (bufReader.readByte() << 24)
+                          | ((bufReader.readByte() << 16) & 0xff0000)
+                          | ((bufReader.readByte() << 8) & 0xff00)
+                          | (bufReader.readByte() & 0xff);
 
                     value[i] = Float.intBitsToFloat(v);
                 }
@@ -1470,38 +1295,25 @@ final public class InputStream extends InputStreamWithOffsets {
             return;
 
         checkChunk();
-        buf_.align8();
+        bufReader.align8();
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
             throw new MARSHAL(describeMarshal(MinorReadDoubleArrayOverflow), MinorReadDoubleArrayOverflow, COMPLETED_NO);
 
-        if (swap_)
+        if (swap_) {
             for (int i = offset; i < offset + length; i++) {
-                long v = ((long) buf_.readByte() & 0xffL)
-                        | (((long) buf_.readByte() << 8) & 0xff00L)
-                        | (((long) buf_.readByte() << 16) & 0xff0000L)
-                        | (((long) buf_.readByte() << 24) & 0xff000000L)
-                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                        | ((long) buf_.readByte() << 56);
+                long v = ((long) bufReader.readByte() & 0xffL) | (((long) bufReader.readByte() << 8) & 0xff00L) | (((long) bufReader.readByte() << 16) & 0xff0000L) | (((long) bufReader.readByte() << 24) & 0xff000000L) | (((long) bufReader.readByte() << 32) & 0xff00000000L) | (((long) bufReader.readByte() << 40) & 0xff0000000000L) | (((long) bufReader.readByte() << 48) & 0xff000000000000L) | ((long) bufReader.readByte() << 56);
 
                 value[i] = Double.longBitsToDouble(v);
             }
-        else
+        } else {
             for (int i = offset; i < offset + length; i++) {
-                long v = ((long) buf_.readByte() << 56)
-                        | (((long) buf_.readByte() << 48) & 0xff000000000000L)
-                        | (((long) buf_.readByte() << 40) & 0xff0000000000L)
-                        | (((long) buf_.readByte() << 32) & 0xff00000000L)
-                        | (((long) buf_.readByte() << 24) & 0xff000000L)
-                        | (((long) buf_.readByte() << 16) & 0xff0000L)
-                        | (((long) buf_.readByte() << 8) & 0xff00L)
-                        | ((long) buf_.readByte() & 0xffL);
+                long v = ((long) bufReader.readByte() << 56) | (((long) bufReader.readByte() << 48) & 0xff000000000000L) | (((long) bufReader.readByte() << 40) & 0xff0000000000L) | (((long) bufReader.readByte() << 32) & 0xff00000000L) | (((long) bufReader.readByte() << 24) & 0xff000000L) | (((long) bufReader.readByte() << 16) & 0xff0000L) | (((long) bufReader.readByte() << 8) & 0xff00L) | ((long) bufReader.readByte() & 0xffL);
 
                 value[i] = Double.longBitsToDouble(v);
             }
+        }
     }
 
     public org.omg.CORBA.Object read_Object() {
@@ -1734,6 +1546,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     private InputStream(Buffer buf, int offs, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
         buf_ = buf;
+        bufReader = buf.reader;
         buf_.pos(offs);
         swap_ = swap;
         origPos_ = offs;
@@ -1744,7 +1557,8 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public InputStream(Buffer buf, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
         buf_ = buf;
-        buf_.rewindToStart();
+        bufReader = buf.reader;
+        bufReader.rewindToStart();
         swap_ = swap;
         origPos_ = 0;
         origSwap_ = swap;
@@ -1827,7 +1641,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void _OB_skip(int n) {
         try {
-            buf_.skipBytes(n);
+            bufReader.skipBytes(n);
         } catch (IndexOutOfBoundsException e) {
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
         }
@@ -1835,7 +1649,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public void _OB_skipAlign(int n) {
         try {
-            buf_.align(n);
+            bufReader.align(n);
         } catch (IndexOutOfBoundsException e) {
             throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
         }
@@ -1866,20 +1680,20 @@ final public class InputStream extends InputStreamWithOffsets {
         // an infinite loop
         //
 
-        buf_.align4();
+        bufReader.align4();
 
         if (buf_.available() < 4) throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
 
         if (swap_)
-            return (buf_.readByte() & 0xff)
-                    | ((buf_.readByte() << 8) & 0xff00)
-                    | ((buf_.readByte() << 16) & 0xff0000)
-                    | (buf_.readByte() << 24);
+            return (bufReader.readByte() & 0xff)
+                    | ((bufReader.readByte() << 8) & 0xff00)
+                    | ((bufReader.readByte() << 16) & 0xff0000)
+                    | (bufReader.readByte() << 24);
         else
-            return (buf_.readByte() << 24)
-                    | ((buf_.readByte() << 16) & 0xff0000)
-                    | ((buf_.readByte() << 8) & 0xff00)
-                    | (buf_.readByte() & 0xff);
+            return (bufReader.readByte() << 24)
+                    | ((bufReader.readByte() << 16) & 0xff0000)
+                    | ((bufReader.readByte() << 8) & 0xff00)
+                    | (bufReader.readByte() & 0xff);
     }
 
     public void _OB_beginValue() {
@@ -1910,12 +1724,32 @@ final public class InputStream extends InputStreamWithOffsets {
         return codebase_;
     }
 
+    /**
+     * Return the cursor position in the buffer as a formatted string suitable for logging.
+     */
+    public String dumpPosition() {
+        return buf_.dumpPosition();
+    }
+
+    /**
+     * Return the unread data in the buffer as a formatted string suitable for logging.
+     */
     public String dumpRemainingData() {
         return buf_.dumpRemainingData();
     }
 
+    /**
+     * Return all the data in the buffer as a formatted string suitable for logging.
+     */
     public String dumpAllData() {
         return buf_.dumpAllData();
+    }
+
+    /**
+     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
+     */
+    public String dumpAllDataWithPosition() {
+        return buf_.dumpAllDataWithPosition();
     }
 
     private void checkChunk() {

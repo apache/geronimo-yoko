@@ -34,6 +34,9 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 public final class Buffer {
+    public final BufferReader reader = this.new Reader();
+    public final BufferWriter writer = new Writer();
+
     private int max_; // The maximum size of the buffer
 
     public byte[] data_; // The octet buffer
@@ -71,10 +74,14 @@ public final class Buffer {
     }
 
     /**
-     * Return the data in the buffer as a formatted string suitable for
-     * logging.
-     *
-     * @return The string value of the data.
+     * Return the cursor position in the buffer as a formatted string suitable for logging.
+     */
+    public String dumpPosition() {
+        return String.format("position=0x%x", pos_);
+    }
+
+    /**
+     * Return the unread data in the buffer as a formatted string suitable for logging.
      */
     public String dumpRemainingData() {
         StringBuilder dump = new StringBuilder();
@@ -84,6 +91,9 @@ public final class Buffer {
         return dump.toString();
     }
 
+    /**
+     * Return all the data in the buffer as a formatted string suitable for logging.
+     */
     public String dumpAllData() {
         StringBuilder dump = new StringBuilder();
         dump.append(String.format("Buffer len=0x%x All buffer data=%n%n", len_));
@@ -91,9 +101,16 @@ public final class Buffer {
         return dump.toString();
     }
 
-    // ------------------------------------------------------------------
-    // Additional Yoko specific functions
-    // ------------------------------------------------------------------
+    /**
+     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
+     */
+    public String dumpAllDataWithPosition() {
+        StringBuilder sb = new StringBuilder();
+        IORUtil.dump_octets(data_, 0, pos_, sb);
+        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos_));
+        IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
+        return sb.toString();
+    }
 
     private void alloc(int len) {
         max_ = len;
@@ -151,11 +168,6 @@ public final class Buffer {
         buf.pos_ = 0;
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
-
     public Buffer() {}
 
     public Buffer(byte[] data) {
@@ -171,11 +183,7 @@ public final class Buffer {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        IORUtil.dump_octets(data_, 0, pos_, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos_));
-        IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
-        return sb.toString();
+        return dumpAllDataWithPosition();
     }
 
     public boolean readFrom(InputStream in) throws IOException {
@@ -212,124 +220,139 @@ public final class Buffer {
         System.arraycopy(b.data(), b.pos(), data(), length(), b.available());
     }
 
-    public void align8() {
-        skipTo((pos_ + 7) & ~7);
-    }
 
-    private void skipTo(int newPos) {
-        if (newPos > length()) throw new IndexOutOfBoundsException();
-        pos_ = newPos;
-    }
+    private class Reader implements BufferReader {
+        @Override
+        public void align2() {
+            pos_ += pos_ & 0x1;
+        }
 
-    public void align4() {
-        skipTo((pos_ + 3) & ~3);
-    }
+        @Override
+        public void align4() {
+            pos_ = (pos_ + 3) & ~3;
+        }
 
-    public void align2() {
-        skipBytes(pos_ & 0x1);
-    }
+        @Override
+        public void align8() {
+            pos_ = (pos_ + 7) & ~7;
+        }
 
-    public void align(int n) {
-        switch (n) {
+        @Override
+        public void align(int n) {
+            switch (n) {
             case 8: align8(); break;
             case 4: align4(); break;
             case 2: align2(); break;
             default: throw new UnsupportedOperationException("Aligning to " + n + " byte boundary is not supported");
+            }
+        }
+
+        @Override
+        public void skipBytes(int n) {
+            if (pos_ + n > len_) throw new IndexOutOfBoundsException();
+            pos_ = pos_ + n;
+        }
+
+        @Override
+        public void skipToEnd() {
+            pos_ = len_;
+        }
+
+        @Override
+        public void rewindToStart() {
+            pos_ = 0;
+        }
+
+        @Override
+        public byte peekByte() {
+            return data_[pos_];
+        }
+
+        @Override
+        public byte readByte() {
+            return data_[pos_++];
+        }
+
+        @Override
+        public char readByteAsChar() {
+            return (char) data_[pos_++];
+        }
+
+        @Override
+        public char peekChar() {
+            return (char)((data_[pos_] << 8) | (data_[pos_ + 1] & 0xff));
+        }
+
+        @Override
+        public char readChar() {
+            return (char) ((data_[pos_++] << 8) | (data_[pos_++] & 0xff));
+        }
+
+        @Override
+        public char readChar_LE() {
+            return (char) ((data_[pos_++] & 0xff) | (data_[pos_++] << 8));
         }
     }
 
-    public void skipBytes(int n) {
-        skipTo(pos_ + n);
-    }
-
-    public void skipToEnd() {
-        pos(length());
-    }
-
-    public void rewindToStart() {
-        pos(0);
-    }
-
-    public char peekChar() {
-        return (char)((data_[pos_] << 8) | (data_[pos_ + 1] & 0xff));
-    }
-
-    public byte peekByte() {
-        return data_[pos_];
-    }
-
-    public byte readByte() {
-        return data_[pos_++];
-    }
-
-    public char readChar() {
-        return (char) ((data_[pos_++] << 8) | (data_[pos_++] & 0xff));
-    }
-
-    public char readChar_LE() {
-        return (char) ((data_[pos_++] & 0xff) | (data_[pos_++] << 8));
-    }
-
-    public char readByteAsChar() {
-        return (char)data_[pos_++];
-    }
-
-    public void writeByte(int i) {
-        data_[pos_++] = (byte)i;
-    }
-
-    public void writeByte(byte b) {
-        data_[pos_++] = b;
-    }
-
-    public void writeChar(char value) {
-        data_[pos_++] = (byte) (value >> 010);
-        data_[pos_++] = (byte) (value >> 000);
-    }
-
-    public void writeShort(short value) {
-        data_[pos_++] = (byte) (value >> 010);
-        data_[pos_++] = (byte) (value >> 000);
-    }
-
-    public void writeInt(int value) {
-        data_[pos_++] = (byte) (value >> 030);
-        data_[pos_++] = (byte) (value >> 020);
-        data_[pos_++] = (byte) (value >> 010);
-        data_[pos_++] = (byte) (value >> 000);
-    }
-
-    public void writeLong(long value) {
-        data_[pos_++] = (byte) (value >> 070);
-        data_[pos_++] = (byte) (value >> 060);
-        data_[pos_++] = (byte) (value >> 050);
-        data_[pos_++] = (byte) (value >> 040);
-        data_[pos_++] = (byte) (value >> 030);
-        data_[pos_++] = (byte) (value >> 020);
-        data_[pos_++] = (byte) (value >> 010);
-        data_[pos_++] = (byte) (value >> 000);
-    }
-
-    private static final byte PAD_BYTE = (byte)0xbd;
-
-    /**
-     * Write some padding bytes.
-     * @param n the number of padding bytes to write, from 0 to 7
-     */
-    public void pad(int n) {
-        assert 0 <= n;
-        assert n < 8;
-        switch (n) {
-        case 7: writeByte(PAD_BYTE);
-        case 6: writeByte(PAD_BYTE);
-        case 5: writeByte(PAD_BYTE);
-        case 4: writeByte(PAD_BYTE);
-        case 3: writeByte(PAD_BYTE);
-        case 2: writeByte(PAD_BYTE);
-        case 1: writeByte(PAD_BYTE);
-        case 0: return;
+    private class Writer implements BufferWriter {
+        @Override
+        public void writeByte(int i) {
+            data_[pos_++] = (byte)i;
         }
-        throw new AssertionError(n + " must be between 0 and 7 inclusive");
+
+        @Override
+        public void pad(int n) {
+            final byte PAD_BYTE = (byte)0xbd;
+            assert 0 <= n && n < 8;
+            switch (n) {
+            case 7: data_[pos_++] = PAD_BYTE;
+            case 6: data_[pos_++] = PAD_BYTE;
+            case 5: data_[pos_++] = PAD_BYTE;
+            case 4: data_[pos_++] = PAD_BYTE;
+            case 3: data_[pos_++] = PAD_BYTE;
+            case 2: data_[pos_++] = PAD_BYTE;
+            case 1: data_[pos_++] = PAD_BYTE;
+            case 0: return;
+            }
+            throw new AssertionError(n + " must be between 0 and 7 inclusive");
+        }
+
+        @Override
+        public void writeByte(byte b) {
+            data_[pos_++] = b;
+        }
+
+        @Override
+        public void writeChar(char value) {
+            data_[pos_++] = (byte) (value >> 010);
+            data_[pos_++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeShort(short value) {
+            data_[pos_++] = (byte) (value >> 010);
+            data_[pos_++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeInt(int value) {
+            data_[pos_++] = (byte) (value >> 030);
+            data_[pos_++] = (byte) (value >> 020);
+            data_[pos_++] = (byte) (value >> 010);
+            data_[pos_++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeLong(long value) {
+            data_[pos_++] = (byte) (value >> 070);
+            data_[pos_++] = (byte) (value >> 060);
+            data_[pos_++] = (byte) (value >> 050);
+            data_[pos_++] = (byte) (value >> 040);
+            data_[pos_++] = (byte) (value >> 030);
+            data_[pos_++] = (byte) (value >> 020);
+            data_[pos_++] = (byte) (value >> 010);
+            data_[pos_++] = (byte) (value >> 000);
+        }
     }
 
     public class LengthWriter implements AutoCloseable {
@@ -340,7 +363,7 @@ public final class Buffer {
             this.logger = logger;
             this.index = pos();
             this.logger.finest("Writing a gap value for a length at offset " + index);
-            pad(4);
+            writer.pad(4);
         }
 
         public void close() {

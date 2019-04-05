@@ -271,7 +271,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     String msg = "receiving transmission code sets";
                     msg += "\nchar code set: ";
                     if (codeConverters_.inputCharConverter != null)
-                        msg += codeConverters_.inputCharConverter.getFrom().description;
+                        msg += codeConverters_.inputCharConverter.getSourceCodeSet().description;
                     else {
                         if (alienCs == 0)
                             msg += "none";
@@ -282,7 +282,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     }
                     msg += "\nwchar code set: ";
                     if (codeConverters_.inputWcharConverter != null)
-                        msg += codeConverters_.inputWcharConverter.getFrom().description;
+                        msg += codeConverters_.inputWcharConverter.getSourceCodeSet().description;
                     else {
                         if (alienWcs == 0)
                             msg += "none";

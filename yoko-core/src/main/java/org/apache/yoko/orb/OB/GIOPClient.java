@@ -219,8 +219,8 @@ final class GIOPClient extends Client {
             CodeSetContext ctx = new CodeSetContext();
             CodeConverters conv = codeConverters();
 
-            ctx.char_data = conv.outputCharConverter == null ? ISO_LATIN_1.id : conv.outputCharConverter.getTo().id;
-            ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getTo().id;
+            ctx.char_data = conv.outputCharConverter == null ? ISO_LATIN_1.id : conv.outputCharConverter.getDestinationCodeSet().id;
+            ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getDestinationCodeSet().id;
 
             // Create encapsulation for CONV_FRAME::CodeSetContext
             Buffer buf = new Buffer();
@@ -384,14 +384,14 @@ final class GIOPClient extends Client {
                     String msg = "sending transmission code sets";
                     msg += "\nchar code set: ";
                     if (conv.outputCharConverter != null) {
-                        msg += conv.outputCharConverter.getTo().description;
+                        msg += conv.outputCharConverter.getDestinationCodeSet().description;
                     } else {
                         CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeCs());
                         msg += info != null ? info.description : null;
                     }
                     msg += "\nwchar code set: ";
                     if (conv.outputWcharConverter != null)
-                        msg += conv.outputWcharConverter.getTo().description;
+                        msg += conv.outputWcharConverter.getDestinationCodeSet().description;
                     else {
                         CodeSetInfo info = CodeSetInfo
                                 .forRegistryId(orbInstance_.getNativeWcs());

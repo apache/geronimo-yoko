@@ -222,7 +222,7 @@ public class Upcall {
 
     public void createOutputStream(int offset) {
         Buffer buf = new Buffer(offset);
-        buf.skipToEnd();
+        buf.reader.skipToEnd();
         out_ = new OutputStream(buf, in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
     }
 
@@ -257,12 +257,12 @@ public class Upcall {
             CodeConverters conv = codeConverters();
 
             if (conv.outputCharConverter != null)
-                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
+                ctx.char_data = conv.outputCharConverter.getDestinationCodeSet().rgy_value;
             else
                 ctx.char_data = CodeSetDatabase.ISOLATIN1;
 
             if (conv.outputWcharConverter != null)
-                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
+                ctx.wchar_data = conv.outputWcharConverter.getDestinationCodeSet().rgy_value;
             else
                 ctx.wchar_data = orbInstance_.getNativeWcs();
 
@@ -351,7 +351,7 @@ public class Upcall {
 //                    String msg = "sending transmission code sets";
 //                    msg += "\nchar code set: ";
 //                    if (conv.outputCharConverter != null)
-//                        msg += conv.outputCharConverter.getTo().description;
+//                        msg += conv.outputCharConverter.getDestinationCodeSet().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
 //                                .forRegistryId(orbInstance_.getNativeCs());
@@ -359,7 +359,7 @@ public class Upcall {
 //                    }
 //                    msg += "\nwchar code set: ";
 //                    if (conv.outputWcharConverter != null)
-//                        msg += conv.outputWcharConverter.getTo().description;
+//                        msg += conv.outputWcharConverter.getDestinationCodeSet().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
 //                                .forRegistryId(orbInstance_.getNativeWcs());

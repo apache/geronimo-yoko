@@ -24,12 +24,12 @@ public final class UnsentMessage {
 
     UnsentMessage(org.apache.yoko.orb.OCI.Buffer buf) {
         this.buf = buf;
-        this.buf.rewindToStart();
+        this.buf.reader.rewindToStart();
     }
 
     UnsentMessage(Downcall down) {
         this.down = down;
         this.buf = down.output()._OB_buffer();
-        this.buf.rewindToStart();
+        this.buf.reader.rewindToStart();
     }
 }

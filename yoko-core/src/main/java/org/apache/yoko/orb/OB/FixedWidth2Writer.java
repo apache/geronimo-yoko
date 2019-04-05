@@ -17,16 +17,15 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.BufferWriter;
+
 final class FixedWidth2Writer extends CodeSetWriter {
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        out.buf_.writeByte(v);
+    public void write_char(BufferWriter bufferWriter, char v) {
+        bufferWriter.writeByte(v);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        out.buf_.data_[out.buf_.pos_] = (byte) (v >> 8);
-        out.buf_.data_[out.buf_.pos_ + 1] = (byte) v;
+    public void write_wchar(BufferWriter bufferWriter, char v) {
+        bufferWriter.writeChar(v);
     }
 
     public int count_wchar(char v) {

@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.INV_OBJREF;
 
@@ -37,7 +38,7 @@ final class CodeConverterNone extends CodeConverterBase {
         return true;
     }
 
-    public char read_wchar(InputStream in, int len) {
+    public char read_wchar(BufferReader bufferReader, int len) {
         throw new BAD_PARAM(describeBadParam(MinorNoWcharCodeSet), MinorNoWcharCodeSet, COMPLETED_NO);
     }
 

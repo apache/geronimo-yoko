@@ -17,16 +17,28 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.BufferWriter;
 import org.omg.CORBA.DATA_CONVERSION;
 
 final class UTF8Writer extends CodeSetWriter {
-    public void write_char(OutputStream out, char v) throws DATA_CONVERSION {
-        unicodeToUtf8(out, v);
+    public void write_char(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+        if ((int) v < 0x80) {
+            // Direct mapping (7 bits) for characters < 0x80
+            bufferWriter.writeByte(v);
+        } else if ((int) v <= 0x7ff) {
+            // 5 free bits (%110xxxxx | %vvvvv)
+            bufferWriter.writeByte((v >>> 6) | 0xc0);
+            bufferWriter.writeByte((v & 0x3f) | 0x80);
+        } else if ((int) v <= 0xffff) {
+            // 4 free bits (%1110xxxx | %vvvv)
+            bufferWriter.writeByte((v >>> 12) | 0xe0);
+            bufferWriter.writeByte(((v >>> 6) & 0x3f) | 0x80);
+            bufferWriter.writeByte((v & 0x3f) | 0x80);
+        } else throw new DATA_CONVERSION();
     }
 
-    public void write_wchar(OutputStream out, char v) throws DATA_CONVERSION {
-        unicodeToUtf8(out, v);
+    public void write_wchar(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+        write_char(bufferWriter, v);
     }
 
     public int count_wchar(char value) {
@@ -36,40 +48,6 @@ final class UTF8Writer extends CodeSetWriter {
             return 2;
         else
             return 3;
-    }
-
-    private void unicodeToUtf8(OutputStream out, char value) throws DATA_CONVERSION {
-        if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
-            if ((int) value < 0x80) {
-                // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.writeByte(value);
-            } else if ((int) value < 0x7ff) {
-                // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.writeByte((value >>> 6) | 0xc0);
-                out.buf_.writeByte(value & 0x3f);
-            } else if ((int) value < 0xffff) {
-                // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.writeByte((value >>> 12) | 0xe0);
-                out.buf_.writeByte(((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.writeByte((value & 0x3f) | 0x80);
-            } else
-                throw new DATA_CONVERSION();
-        } else {
-            if ((int) value < 0x80) {
-                // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.writeByte(value);
-            } else if ((int) value <= 0x7ff) {
-                // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.writeByte((value >>> 6) | 0xc0);
-                out.buf_.writeByte((value & 0x3f) | 0x80);
-            } else if ((int) value <= 0xffff) {
-                // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.writeByte((value >>> 12) | 0xe0);
-                out.buf_.writeByte(((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.writeByte((value & 0x3f) | 0x80);
-            } else
-                throw new DATA_CONVERSION();
-        }
     }
 
     public void set_flags(int flags) {

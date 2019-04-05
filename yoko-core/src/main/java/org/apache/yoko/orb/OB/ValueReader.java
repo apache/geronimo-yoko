@@ -358,7 +358,7 @@ public final class ValueReader {
 
     private void readHeader(Header h) {
         if (logger.isLoggable(Level.FINE))
-            logger.fine(String.format("Reading header with tag value 0x%08x at pos=0x%x", h.tag, in_.buf_.pos_));
+            logger.fine(String.format("Reading header with tag value 0x%08x at %s", h.tag, in_.dumpPosition()));
 
         //
         // Special cases are handled elsewhere
@@ -972,14 +972,8 @@ public final class ValueReader {
             return valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
             if (logger.isLoggable(Level.FINE)) {
-                logger.fine(String.format(
-                        "RuntimeException happens when reading GIOP stream coming to pos_=0x%x",
-                        in_.buf_.pos_));
-                logger.fine(String.format("Wrong data section:%n%s", in_.dumpRemainingData()));
-                final int currentPos = in_.buf_.pos_;
-                in_.buf_.pos_ = 0;
-                logger.fine(String.format("Full GIOP stream dump:%n%s", in_.dumpRemainingData()));
-                in_.buf_.pos_ = currentPos;
+                logger.fine("RuntimeException happens when reading GIOP stream");
+                logger.fine(in_.dumpAllDataWithPosition());
             }
             throw ex;
         }
@@ -1078,7 +1072,7 @@ public final class ValueReader {
         try {
             result = read(strategy);
         } catch (MARSHAL marshalex) {
-            logger.severe(String.format("MARSHAL \"%s\", at pos=0x%x", marshalex.getMessage(), (in_.buf_.pos_ - 4)));
+            logger.severe(String.format("MARSHAL \"%s\", 4 bytes before ", marshalex.getMessage(), (in_.dumpPosition())));
             if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
                 result = read(strategy);
             } else {
