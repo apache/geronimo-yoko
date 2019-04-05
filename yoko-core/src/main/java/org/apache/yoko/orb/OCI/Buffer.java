@@ -58,14 +58,6 @@ public final class Buffer {
         return len_ - pos_;
     }
 
-    private int pos() {
-        return pos_;
-    }
-
-    public void pos(int pos) {
-        pos_ = pos;
-    }
-
     public void advance(int delta) {
         pos_ += delta;
     }
@@ -170,7 +162,7 @@ public final class Buffer {
 
     public boolean readFrom(InputStream in) throws IOException {
         try {
-            int result = in.read(data(), pos(), available());
+            int result = in.read(data(), pos_, available());
             if (result <= 0) return false;
             advance(result);
             return true;
@@ -182,9 +174,9 @@ public final class Buffer {
 
     public void writeTo(OutputStream out) throws IOException {
         try {
-            out.write(data(), pos(), available());
+            out.write(data(), pos_, available());
             out.flush();
-            pos(length());
+            pos_ = length();
         } catch (InterruptedIOException ex) {
             advance(ex.bytesTransferred);
             throw ex;
@@ -193,13 +185,13 @@ public final class Buffer {
 
     public byte[] copyRemainingBytes() {
         byte[] bytes = new byte[available()];
-        System.arraycopy(data_, pos(), bytes, 0, available());
+        System.arraycopy(data_, pos_, bytes, 0, available());
         return bytes;
     }
 
     public void appendRemainingDataFrom(Buffer b) {
         realloc(length() + b.available());
-        System.arraycopy(b.data(), b.pos(), data(), length(), b.available());
+        System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
     }
 
     private class Reader implements BufferReader {
@@ -326,27 +318,40 @@ public final class Buffer {
         }
     }
 
+    private static byte[] arrayOf(int n, byte b) {
+        byte[] result = new byte[n];
+        Arrays.fill(result, b);
+        return result;
+    }
+
+    /**
+     * The base 2 log of the width of our padding array. This allows us to use bit shifting and masking
+     * instead of division and remainder operations
+     */
+    private static final int PADDING_POWER = 5;
+    private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, (byte)0xBD);
+
     private class Writer implements BufferWriter {
         @Override
-        public void writeByte(int i) {
-            data_[pos_++] = (byte)i;
+        public void pad(int n) {
+            // write as many full copies of PADDING as required
+            for (int i = n >> PADDING_POWER; i > 0; i--) writeBytes(PADDING);
+            // write any remaining bytes of PADDING
+            writeBytes(PADDING, 0, n & ((1 << PADDING_POWER) - 1));
+        }
+
+        private void writeBytes(byte[] bytes) {
+            writeBytes(bytes, 0, bytes.length);
+        }
+
+        private void writeBytes(byte[] bytes, int offset, int length) {
+            System.arraycopy(bytes, 0, data_, pos_, length);
+            pos_ += length;
         }
 
         @Override
-        public void pad(int n) {
-            final byte PAD_BYTE = (byte)0xbd;
-            assert 0 <= n && n < 8;
-            switch (n) {
-            case 7: data_[pos_++] = PAD_BYTE;
-            case 6: data_[pos_++] = PAD_BYTE;
-            case 5: data_[pos_++] = PAD_BYTE;
-            case 4: data_[pos_++] = PAD_BYTE;
-            case 3: data_[pos_++] = PAD_BYTE;
-            case 2: data_[pos_++] = PAD_BYTE;
-            case 1: data_[pos_++] = PAD_BYTE;
-            case 0: return;
-            }
-            throw new AssertionError(n + " must be between 0 and 7 inclusive");
+        public void writeByte(int i) {
+            data_[pos_++] = (byte)i;
         }
 
         @Override
@@ -393,7 +398,7 @@ public final class Buffer {
 
         public LengthWriter(Logger logger) {
             this.logger = logger;
-            this.index = pos();
+            this.index = pos_;
             this.logger.finest("Writing a gap value for a length at offset " + index);
             writer.pad(4);
         }

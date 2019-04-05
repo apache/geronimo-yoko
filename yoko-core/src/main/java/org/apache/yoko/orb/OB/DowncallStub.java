@@ -554,7 +554,7 @@ public final class DowncallStub {
         // Create buffer to contain our marshalable data
         //
         Buffer buf = new Buffer(12);
-        buf.pos(12);
+        buf.writer.pad(12);
 
         //
         // Obtain information regarding our target

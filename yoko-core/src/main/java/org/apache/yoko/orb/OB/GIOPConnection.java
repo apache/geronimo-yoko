@@ -679,12 +679,9 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
 
             // Send back locate reply message
-            //
-            Buffer buf = new Buffer(
-                    12);
-            buf.pos(12);
-            OutputStream out = new OutputStream(
-                    buf);
+            Buffer buf = new Buffer(12);
+            buf.writer.pad(12);
+            OutputStream out = new OutputStream(buf);
             ProfileInfo profileInfo = new ProfileInfo();
             profileInfo.major = msg.version().major;
             profileInfo.minor = msg.version().minor;

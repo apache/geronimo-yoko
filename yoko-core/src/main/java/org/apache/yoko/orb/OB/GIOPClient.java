@@ -425,13 +425,10 @@ final class GIOPClient extends Client {
                 for (ServiceContext context : contexts) down.addToRequestSCL(context);
             }
 
-            ProfileInfo profileInfo = down
-                    .profileInfo();
-            Buffer buf = new Buffer(
-                    12);
-            buf.pos(12);
-            out.value = new OutputStream(buf,
-                    codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
+            ProfileInfo profileInfo = down.profileInfo();
+            Buffer buf = new Buffer(12);
+            buf.writer.pad(12);
+            out.value = new OutputStream(buf, codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
 
             //
             // Create GIOP outgoing message
