@@ -372,7 +372,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 inMsg.extractHeader(buf);
                 logger.fine("Header received for message of size " + inMsg.size());
-                buf.realloc(12 + inMsg.size());
+                buf.addLength(inMsg.size());
             } catch (SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
