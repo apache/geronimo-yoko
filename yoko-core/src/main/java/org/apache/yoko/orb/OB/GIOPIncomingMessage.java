@@ -43,8 +43,6 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorVersion;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
@@ -143,7 +141,7 @@ final public class GIOPIncomingMessage {
         int len = in.read_ulong();
         for (int i = 0; i < len; i++) {
             // context_id
-            in.skipAlign(FOUR_BYTE_BOUNDARY);
+            in._OB_skipAlign(4);
             in._OB_skip(4);
             // context_data
             int datalen = in.read_ulong();
@@ -658,7 +656,10 @@ final public class GIOPIncomingMessage {
             // For GIOP 1.2, the body (if present) must be aligned on
             // an 8-octet boundary
             //
-            if (in_._OB_pos() < size_ + 12) in_.skipAlign(EIGHT_BYTE_BOUNDARY);
+            if (in_._OB_pos() < size_ + 12)
+            {
+                in_._OB_skipAlign(8);
+            }
 
             break;
         }
@@ -701,7 +702,7 @@ final public class GIOPIncomingMessage {
             // an 8-octet boundary
             //
             if (in_._OB_pos() < size_ + 12)
-                in_.skipAlign(EIGHT_BYTE_BOUNDARY);
+                in_._OB_skipAlign(8);
 
             break;
         }

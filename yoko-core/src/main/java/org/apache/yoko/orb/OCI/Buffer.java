@@ -32,6 +32,9 @@ import static java.lang.Math.min;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.TWO_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 public final class Buffer {
@@ -221,8 +224,8 @@ public final class Buffer {
     public enum AlignmentBoundary {
         NO_BOUNDARY {public int gap(int index) { return 0; }},
         TWO_BYTE_BOUNDARY {public int gap(int index) { return index & 1; }},
-        FOUR_BYTE_BOUNDARY {public int gap(int index) { return (index + 3) & ~3; }},
-        EIGHT_BYTE_BOUNDARY {public int gap(int index) { return (index + 7) & ~7; }};
+        FOUR_BYTE_BOUNDARY {public int gap(int index) { return ((index + 3) & ~3) - index; }},
+        EIGHT_BYTE_BOUNDARY {public int gap(int index) { return ((index + 7) & ~7) - index; }};
         public abstract int gap(int index);
         public AlignmentBoundary and(AlignmentBoundary that) {
             return (that == null || that.ordinal() < this.ordinal()) ? this : that;
@@ -230,6 +233,21 @@ public final class Buffer {
     }
 
     private final class Reader implements BufferReader {
+        @Override
+        public void align2() { align(TWO_BYTE_BOUNDARY); }
+        @Override
+        public void align4() { align(FOUR_BYTE_BOUNDARY); }
+        @Override
+        public void align8() { align(EIGHT_BYTE_BOUNDARY); }
+        @Override
+        public void align(int n) {
+            switch (n) {
+            case 2: align2(); break;
+            case 4: align4(); break;
+            case 8: align8(); break;
+            case 0: break;
+            }
+        }
 
         @Override
         public void align(AlignmentBoundary boundary) {

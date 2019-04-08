@@ -15,6 +15,14 @@ package org.apache.yoko.orb.OCI;
 import org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary;
 
 public interface BufferReader {
+    void align2();
+
+    void align4();
+
+    void align8();
+
+    void align(int n);
+
     void align(AlignmentBoundary boundary);
 
     void skipBytes(int n);
