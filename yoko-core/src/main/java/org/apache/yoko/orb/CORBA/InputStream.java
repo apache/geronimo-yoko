@@ -95,6 +95,9 @@ import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.TWO_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
@@ -740,7 +743,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     // align on two-byte boundary
                     //
-                    bufReader.align2();
+                    bufReader.align(TWO_BYTE_BOUNDARY);
 
                     break;
 
@@ -771,7 +774,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     // UCS-2 is the native wchar codeset for both Orbacus and Orbix/E so conversion should not be necessary
                     _OB_assert(!wCharConversionRequired_);
 
-                    bufReader.align2();
+                    bufReader.align(TWO_BYTE_BOUNDARY);
 
                     // check for overflow on reader
                     if (buf_.available() < 2) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
@@ -821,7 +824,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public short read_short() {
         checkChunk();
-        bufReader.align2();
+        bufReader.align(TWO_BYTE_BOUNDARY);
 
         if (buf_.available() < 2) throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
         if (swap_)
@@ -845,7 +848,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public long read_longlong() {
         checkChunk();
-        bufReader.align8();
+        bufReader.align(EIGHT_BYTE_BOUNDARY);
 
         if (buf_.available() < 8) throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
 
@@ -1111,7 +1114,7 @@ final public class InputStream extends InputStreamWithOffsets {
             return;
 
         checkChunk();
-        bufReader.align2();
+        bufReader.align(TWO_BYTE_BOUNDARY);
 
         int newPos = buf_.pos_ + length * 2;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1130,10 +1133,9 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void read_long_array(int[] value, int offset, int length) {
-        if (length <= 0)
-            return;
+        if (length <= 0) return;
         checkChunk();
-        bufReader.align4();
+        bufReader.align(FOUR_BYTE_BOUNDARY);
 
         int newPos = buf_.pos_ + length * 4;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1163,7 +1165,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         checkChunk();
 
-        bufReader.align8();
+        bufReader.align(EIGHT_BYTE_BOUNDARY);
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1196,42 +1198,40 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void read_float_array(float[] value, int offset, int length) {
-        if (length > 0) {
-            checkChunk();
+        if (length <= 0) return;
+        checkChunk();
 
-            bufReader.align4();
+        bufReader.align(FOUR_BYTE_BOUNDARY);
 
-            int newPos = buf_.pos_ + length * 4;
-            if (newPos < buf_.pos_ || newPos > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadFloatArrayOverflow), MinorReadFloatArrayOverflow, COMPLETED_NO);
+        int newPos = buf_.pos_ + length * 4;
+        if (newPos < buf_.pos_ || newPos > buf_.length())
+            throw new MARSHAL(describeMarshal(MinorReadFloatArrayOverflow), MinorReadFloatArrayOverflow, COMPLETED_NO);
 
-            if (swap_)
-                for (int i = offset; i < offset + length; i++) {
-                    int v = (bufReader.readByte() & 0xff)
-                          | ((bufReader.readByte() << 8) & 0xff00)
-                          | ((bufReader.readByte() << 16) & 0xff0000)
-                          | (bufReader.readByte() << 24);
+        if (swap_)
+            for (int i = offset; i < offset + length; i++) {
+                int v = (bufReader.readByte() & 0xff)
+                      | ((bufReader.readByte() << 8) & 0xff00)
+                      | ((bufReader.readByte() << 16) & 0xff0000)
+                      | (bufReader.readByte() << 24);
 
-                    value[i] = Float.intBitsToFloat(v);
-                }
-            else
-                for (int i = offset; i < offset + length; i++) {
-                    int v = (bufReader.readByte() << 24)
-                          | ((bufReader.readByte() << 16) & 0xff0000)
-                          | ((bufReader.readByte() << 8) & 0xff00)
-                          | (bufReader.readByte() & 0xff);
+                value[i] = Float.intBitsToFloat(v);
+            }
+        else
+            for (int i = offset; i < offset + length; i++) {
+                int v = (bufReader.readByte() << 24)
+                      | ((bufReader.readByte() << 16) & 0xff0000)
+                      | ((bufReader.readByte() << 8) & 0xff00)
+                      | (bufReader.readByte() & 0xff);
 
-                    value[i] = Float.intBitsToFloat(v);
-                }
-        }
+                value[i] = Float.intBitsToFloat(v);
+            }
     }
 
     public void read_double_array(double[] value, int offset, int length) {
-        if (length <= 0)
-            return;
+        if (length <= 0) return;
 
         checkChunk();
-        bufReader.align8();
+        bufReader.align(EIGHT_BYTE_BOUNDARY);
 
         int newPos = buf_.pos_ + length * 8;
         if (newPos < buf_.pos_ || newPos > buf_.length())
@@ -1568,12 +1568,8 @@ final public class InputStream extends InputStreamWithOffsets {
         }
     }
 
-    public void _OB_skipAlign(int n) {
-        try {
-            bufReader.align(n);
-        } catch (IndexOutOfBoundsException e) {
-            throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
-        }
+    public void skipAlign(Buffer.AlignmentBoundary boundary) {
+        bufReader.align(boundary);
     }
 
     public void _OB_readEndian() {
@@ -1596,12 +1592,8 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public int _OB_readLongUnchecked() {
-        //
-        // The chunking code needs to read a long value without entering
-        // an infinite loop
-        //
-
-        bufReader.align4();
+        // The chunking code needs to read a long value without entering an infinite loop
+        bufReader.align(FOUR_BYTE_BOUNDARY);
 
         if (buf_.available() < 4) throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
 
