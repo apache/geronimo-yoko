@@ -24,7 +24,7 @@ public class AlignmentBoundaryTest {
         AlignmentBoundary boundary = AlignmentBoundary.NO_BOUNDARY;
         for (int i = 0; i < 100; i++) {
             assertThat(boundary.gap(i), is(0));
-//            assertThat(boundary.newIndex(i), is(i));
+            assertThat(boundary.newIndex(i), is(i));
         }
     }
 
@@ -48,7 +48,15 @@ public class AlignmentBoundaryTest {
             int expectedGap = width - (i % width);
             if (expectedGap == width) expectedGap = 0;
             assertThat(boundary.gap(i), is(expectedGap));
-//            assertThat(boundary.newIndex(i), is(i + expectedGap));
+            assertThat(boundary.newIndex(i), is(i + expectedGap));
+        }
+    }
+
+    @Test
+    public void testBoundaryConflation() {
+        for (AlignmentBoundary a: AlignmentBoundary.values()) for (AlignmentBoundary b: AlignmentBoundary.values()) {
+            AlignmentBoundary expected = AlignmentBoundary.values()[Math.max(a.ordinal(), b.ordinal())];
+            assertThat(a.and(b), is(expected));
         }
     }
 }

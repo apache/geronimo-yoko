@@ -76,27 +76,6 @@ public final class Buffer {
         return realloc(len_ + extra);
     }
 
-    /**
-     * Ensure there is space to write from the current position, after aligning on a boundary
-     * @param size the number of bytes to be written
-     * @param align the size of boundary to align on (in bytes)
-     * @return <code>true</code> iff more space had to be allocated
-     */
-    public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
-        final int extra = boundary.gap(pos_) + size - available();
-        return extra > 0 ? addLength(extra) : false;
-    }
-
-    /**
-     * Ensure there is space to write from the current position.
-     * @param size the number of bytes to be written
-     * @return <code>true</code> iff more space had to be allocated
-     */
-    public boolean ensureAvailable(int size) {
-        int extra = size - available();
-        return extra > 0 ? addLength(extra) : false;
-    }
-
     public boolean realloc(int len) {
         // there might be no buffer
         if (data_ == null) {
@@ -222,13 +201,43 @@ public final class Buffer {
     }
 
     public enum AlignmentBoundary {
-        NO_BOUNDARY {public int gap(int index) { return 0; }},
-        TWO_BYTE_BOUNDARY {public int gap(int index) { return index & 1; }},
-        FOUR_BYTE_BOUNDARY {public int gap(int index) { return ((index + 3) & ~3) - index; }},
-        EIGHT_BYTE_BOUNDARY {public int gap(int index) { return ((index + 7) & ~7) - index; }};
-        public abstract int gap(int index);
-        public AlignmentBoundary and(AlignmentBoundary that) {
-            return (that == null || that.ordinal() < this.ordinal()) ? this : that;
+        NO_BOUNDARY {
+            int gap(int index) { return 0; }
+            int newIndex(int index) { return index; }
+            public AlignmentBoundary and(AlignmentBoundary that) { return that; }
+        }, TWO_BYTE_BOUNDARY {
+            int gap(int index) { return index & 1; }
+            int newIndex(int index) { return (index + 1) & ~1; }
+            public AlignmentBoundary and(AlignmentBoundary that) { return that == NO_BOUNDARY ? this : that; }
+        }, FOUR_BYTE_BOUNDARY {
+            int gap(int index) { return -index & 3; }
+            int newIndex(int index) { return (index + 3) & ~3; }
+            public AlignmentBoundary and(AlignmentBoundary that) { return that == EIGHT_BYTE_BOUNDARY ? that : this; }
+        }, EIGHT_BYTE_BOUNDARY {
+            int gap(int index) { return -index & 7; }
+            int newIndex(int index) { return (index + 7) & ~7; }
+            public AlignmentBoundary and(AlignmentBoundary that) { return this; }
+        };
+        abstract int gap(int index);
+        abstract int newIndex(int index);
+        public abstract AlignmentBoundary and(AlignmentBoundary that);
+    }
+
+    private enum Padding {;
+        /**
+         * The base 2 log of the width of our padding array.
+         * The array size must be a power of 2, so bit
+         * shifting and masking operations can replace
+         * division and remainder operations.
+         */
+        private static final int PADDING_POWER = 5;
+        private static final int PADDING_WIDTH = 1 << PADDING_POWER;
+        private static final byte PAD_BYTE = (byte) 0xBD;
+        private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, PAD_BYTE);
+        private static byte[] arrayOf(int n, byte b) {
+            byte[] result = new byte[n];
+            Arrays.fill(result, b);
+            return result;
         }
     }
 
@@ -251,7 +260,7 @@ public final class Buffer {
 
         @Override
         public void align(AlignmentBoundary boundary) {
-            pos_ += boundary.gap(pos_);
+            pos_ = boundary.newIndex(pos_);
         }
 
         @Override
@@ -352,33 +361,18 @@ public final class Buffer {
         }
     }
 
-    private static byte[] arrayOf(int n, byte b) {
-        byte[] result = new byte[n];
-        Arrays.fill(result, b);
-        return result;
-    }
-
-    /**
-     * The base 2 log of the width of our padding array. This allows us to use bit shifting and masking
-     * instead of division and remainder operations
-     */
-    private static final int PADDING_POWER = 5;
-    public static final byte PAD_BYTE = (byte) 0xBD;
-    private static final int PADDING_WIDTH = 1 << PADDING_POWER;
-    private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, PAD_BYTE);
-
     private final class Writer implements BufferWriter {
         @Override
         public void padAlign(AlignmentBoundary boundary) {
             final int gap = boundary.gap(pos_);
             switch (gap) {
-            case 7: writeByte(PAD_BYTE);
-            case 6: writeByte(PAD_BYTE);
-            case 5: writeByte(PAD_BYTE);
-            case 4: writeByte(PAD_BYTE);
-            case 3: writeByte(PAD_BYTE);
-            case 2: writeByte(PAD_BYTE);
-            case 1: writeByte(PAD_BYTE);
+            case 7: writeByte(Padding.PAD_BYTE);
+            case 6: writeByte(Padding.PAD_BYTE);
+            case 5: writeByte(Padding.PAD_BYTE);
+            case 4: writeByte(Padding.PAD_BYTE);
+            case 3: writeByte(Padding.PAD_BYTE);
+            case 2: writeByte(Padding.PAD_BYTE);
+            case 1: writeByte(Padding.PAD_BYTE);
             case 0: break;
             default: pad(gap);
             }
@@ -387,9 +381,21 @@ public final class Buffer {
         @Override
         public void pad(int n) {
             // write as many full copies of PADDING as required
-            for (int i = n >> PADDING_POWER; i > 0; i--) writeBytes(PADDING);
+            for (int i = n >> Padding.PADDING_POWER; i > 0; i--) writeBytes(Padding.PADDING);
             // write any remaining bytes of PADDING
-            writeBytes(PADDING, 0, n & ((1 << PADDING_POWER) - 1));
+            writeBytes(Padding.PADDING, 0, n & ((1 << Padding.PADDING_POWER) - 1));
+        }
+
+        @Override
+        public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
+            padAlign(boundary);
+            return ensureAvailable(size);
+        }
+
+        @Override
+        public boolean ensureAvailable(int size) {
+            final int shortfall = size - available();
+            return shortfall > 0 && addLength(shortfall);
         }
 
         private void writeBytes(byte[] bytes) {

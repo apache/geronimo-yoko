@@ -24,6 +24,21 @@ public interface BufferWriter {
      */
     void pad(int n);
 
+    /**
+     * Ensure there is space to write from the current position, after aligning on a boundary
+     * @param size the number of bytes to be written
+     * @param align the size of boundary to align on (in bytes)
+     * @return <code>true</code> iff more space had to be allocated
+     */
+    boolean ensureAvailable(int size, AlignmentBoundary boundary);
+
+    /**
+     * Ensure there is space to write from the current position.
+     * @param size the number of bytes to be written
+     * @return <code>true</code> iff more space had to be allocated
+     */
+    boolean ensureAvailable(int size);
+
     void writeByte(int i);
 
     void writeByte(byte b);
