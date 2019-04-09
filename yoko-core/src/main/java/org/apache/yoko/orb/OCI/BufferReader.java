@@ -12,8 +12,6 @@
  */
 package org.apache.yoko.orb.OCI;
 
-import org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary;
-
 public interface BufferReader {
     void align2();
 

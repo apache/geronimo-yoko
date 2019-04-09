@@ -43,8 +43,8 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorVersion;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 

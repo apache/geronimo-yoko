@@ -24,6 +24,7 @@ import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
 import org.apache.yoko.orb.OB.TypeCodeCache;
 import org.apache.yoko.orb.OB.ValueReader;
+import org.apache.yoko.orb.OCI.AlignmentBoundary;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -95,9 +96,9 @@ import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.TWO_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
@@ -1568,7 +1569,7 @@ final public class InputStream extends InputStreamWithOffsets {
         }
     }
 
-    public void skipAlign(Buffer.AlignmentBoundary boundary) {
+    public void skipAlign(AlignmentBoundary boundary) {
         bufReader.align(boundary);
     }
 

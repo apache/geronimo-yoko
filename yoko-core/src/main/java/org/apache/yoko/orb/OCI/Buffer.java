@@ -32,9 +32,9 @@ import static java.lang.Math.min;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary.TWO_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 public final class Buffer {
@@ -200,29 +200,6 @@ public final class Buffer {
         System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
     }
 
-    public enum AlignmentBoundary {
-        NO_BOUNDARY {
-            int gap(int index) { return 0; }
-            int newIndex(int index) { return index; }
-            public AlignmentBoundary and(AlignmentBoundary that) { return that; }
-        }, TWO_BYTE_BOUNDARY {
-            int gap(int index) { return index & 1; }
-            int newIndex(int index) { return (index + 1) & ~1; }
-            public AlignmentBoundary and(AlignmentBoundary that) { return that == NO_BOUNDARY ? this : that; }
-        }, FOUR_BYTE_BOUNDARY {
-            int gap(int index) { return -index & 3; }
-            int newIndex(int index) { return (index + 3) & ~3; }
-            public AlignmentBoundary and(AlignmentBoundary that) { return that == EIGHT_BYTE_BOUNDARY ? that : this; }
-        }, EIGHT_BYTE_BOUNDARY {
-            int gap(int index) { return -index & 7; }
-            int newIndex(int index) { return (index + 7) & ~7; }
-            public AlignmentBoundary and(AlignmentBoundary that) { return this; }
-        };
-        abstract int gap(int index);
-        abstract int newIndex(int index);
-        public abstract AlignmentBoundary and(AlignmentBoundary that);
-    }
-
     private enum Padding {;
         /**
          * The base 2 log of the width of our padding array.
@@ -231,7 +208,6 @@ public final class Buffer {
          * division and remainder operations.
          */
         private static final int PADDING_POWER = 5;
-        private static final int PADDING_WIDTH = 1 << PADDING_POWER;
         private static final byte PAD_BYTE = (byte) 0xBD;
         private static final byte[] PADDING = arrayOf(1 << PADDING_POWER, PAD_BYTE);
         private static byte[] arrayOf(int n, byte b) {

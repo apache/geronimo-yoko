@@ -12,7 +12,6 @@
  */
 package org.apache.yoko.orb.OCI;
 
-import org.apache.yoko.orb.OCI.Buffer.AlignmentBoundary;
 import org.junit.Test;
 
 import static org.hamcrest.Matchers.is;
