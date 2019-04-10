@@ -100,6 +100,7 @@ import static org.omg.CORBA.TCKind._tk_void;
 import static org.omg.CORBA.TCKind._tk_wchar;
 import static org.omg.CORBA.TCKind._tk_wstring;
 import static org.omg.CORBA.TCKind.tk_null;
+import static org.omg.CORBA_2_4.TCKind._tk_local_interface;
 
 public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream implements ValueOutputStream {
     private static final Logger LOGGER = Logger.getLogger(OutputStream.class.getName());
@@ -414,7 +415,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case TCKind._tk_local_interface: {
+                case _tk_local_interface: {
                     history.put(tc, oldPos);
 
                     try  (Buffer.LengthWriter w = recordLength()) {
@@ -1122,475 +1123,488 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_InputStream(final org.omg.CORBA.portable.InputStream in, org.omg.CORBA.TypeCode tc) {
-        final InputStream obin = in instanceof InputStream ? (InputStream) in : null;
-
         try {
             LOGGER.fine("writing a value of type " + tc.kind().value());
 
             switch (tc.kind().value()) {
-            case _tk_null:
-            case _tk_void:
-                break;
-
-            case _tk_short:
-            case _tk_ushort:
-                write_short(in.read_short());
-                break;
-
-            case _tk_long:
-            case _tk_ulong:
-            case _tk_float:
-            case _tk_enum:
-                write_long(in.read_long());
-                break;
-
-            case _tk_double:
-            case _tk_longlong:
-            case _tk_ulonglong:
-                write_longlong(in.read_longlong());
-                break;
-
-            case _tk_boolean:
-            case _tk_octet:
-                write_octet(in.read_octet());
-                break;
-
-            case _tk_char:
-                write_char(in.read_char());
-                break;
-
-            case _tk_wchar:
-                write_wchar(in.read_wchar());
-                break;
-
-            case _tk_fixed:
-                write_fixed(in.read_fixed());
-                break;
-
-            case _tk_any: {
-                // Don't do this: write_any(in.read_any())
-                // This is faster:
-                org.omg.CORBA.TypeCode p = in.read_TypeCode();
-                write_TypeCode(p);
-                write_InputStream(in, p);
-                break;
-            }
-
-            case _tk_TypeCode: {
-                // Don't do this: write_TypeCode(in.read_TypeCode())
-                // This is faster:
-
-                int kind = in.read_ulong();
-
-                //
-                // An indirection is not permitted at this level
-                //
-                if (kind == -1) {
-                    throw new MARSHAL(
-                            describeMarshal(MinorReadInvTypeCodeIndirection),
-                            MinorReadInvTypeCodeIndirection,
-                            COMPLETED_NO);
-                }
-
-                write_ulong(kind);
-
-                switch (kind) {
                 case _tk_null:
                 case _tk_void:
-                case _tk_short:
-                case _tk_long:
-                case _tk_ushort:
-                case _tk_ulong:
-                case _tk_float:
-                case _tk_double:
-                case _tk_boolean:
-                case _tk_char:
-                case _tk_octet:
-                case _tk_any:
-                case _tk_TypeCode:
-                case _tk_Principal:
-                case _tk_longlong:
-                case _tk_ulonglong:
-                case _tk_longdouble:
-                case _tk_wchar:
                     break;
 
-                case _tk_fixed:
-                    write_ushort(in.read_ushort());
+                case _tk_short:
+                case _tk_ushort:
                     write_short(in.read_short());
                     break;
 
-                case _tk_objref:
-                case _tk_struct:
-                case _tk_union:
+                case _tk_long:
+                case _tk_ulong:
+                case _tk_float:
                 case _tk_enum:
-                case _tk_sequence:
-                case _tk_array:
-                case _tk_alias:
-                case _tk_except:
-                case _tk_value:
-                case _tk_value_box:
-                case _tk_abstract_interface:
-                case _tk_native:
-                case TCKind._tk_local_interface: {
-                    final int len = in.read_ulong();
-                    write_ulong(len);
-                    readFrom(in, len);
+                    write_long(in.read_long());
+                    break;
+
+                case _tk_double:
+                case _tk_longlong:
+                case _tk_ulonglong:
+                    write_longlong(in.read_longlong());
+                    break;
+
+                case _tk_boolean:
+                case _tk_octet:
+                    write_octet(in.read_octet());
+                    break;
+
+                case _tk_char:
+                    write_char(in.read_char());
+                    break;
+
+                case _tk_wchar:
+                    write_wchar(in.read_wchar());
+                    break;
+
+                case _tk_fixed:
+                    write_fixed(in.read_fixed());
+                    break;
+
+                case _tk_any: {
+                    // Don't do this: write_any(in.read_any())
+                    // This is faster:
+                    org.omg.CORBA.TypeCode p = in.read_TypeCode();
+                    write_TypeCode(p);
+                    write_InputStream(in, p);
                     break;
                 }
+
+                case _tk_TypeCode:
+                    copyTypeCodeFrom(in);
+                    break;
+
+                case _tk_Principal:
+                    write_Principal(in.read_Principal());
+                    break;
+
+                case _tk_objref: {
+                    // Don't do this: write_Object(in.read_Object())
+                    // This is faster:
+                    IOR ior = IORHelper.read(in);
+                    IORHelper.write(this, ior);
+                    break;
+                }
+
+                case _tk_struct:
+                    for (int i = 0; i < tc.member_count(); i++)
+                        write_InputStream(in, tc.member_type(i));
+                    break;
+
+                case _tk_except:
+                    write_string(in.read_string());
+                    for (int i = 0; i < tc.member_count(); i++)
+                        write_InputStream(in, tc.member_type(i));
+                    break;
+
+                case _tk_union:
+                    copyUnionFrom(in, tc);
+                    break;
 
                 case _tk_string:
-                case _tk_wstring: {
-                    int bound = in.read_ulong();
-                    write_ulong(bound);
+                    write_string(in.read_string());
                     break;
-                }
 
+                case _tk_wstring:
+                    write_wstring(in.read_wstring());
+                    break;
+
+                case _tk_sequence:
+                case _tk_array:
+                    copyArrayFrom(in, tc);
+                    break;
+
+                case _tk_alias:
+                    write_InputStream(in, tc.content_type());
+                    break;
+
+                case _tk_value:
+                case _tk_value_box:
+                    copyValueFrom((org.omg.CORBA_2_3.portable.InputStream) in, tc);
+                    break;
+
+                case _tk_abstract_interface:
+                    copyAbstractInterfaceFrom(in);
+                    break;
+
+                case _tk_local_interface:
+                case _tk_native:
                 default:
-                    throw new InternalError();
-                }
-
-                break;
-            }
-
-            case _tk_Principal:
-                write_Principal(in.read_Principal());
-                break;
-
-            case _tk_objref: {
-                // Don't do this: write_Object(in.read_Object())
-                // This is faster:
-                IOR ior = IORHelper.read(in);
-                IORHelper.write(this, ior);
-                break;
-            }
-
-            case _tk_struct:
-                for (int i = 0; i < tc.member_count(); i++)
-                    write_InputStream(in, tc.member_type(i));
-                break;
-
-            case _tk_except:
-                write_string(in.read_string());
-                for (int i = 0; i < tc.member_count(); i++)
-                    write_InputStream(in, tc.member_type(i));
-                break;
-
-            case _tk_union: {
-                int defaultIndex = tc.default_index();
-                int memberIndex = -1;
-
-                org.omg.CORBA.TypeCode origDiscType = TypeCode._OB_getOrigType(tc.discriminator_type());
-
-                switch (origDiscType.kind().value()) {
-                case _tk_short: {
-                    short val = in.read_short();
-                    write_short(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_short()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_ushort: {
-                    short val = in.read_ushort();
-                    write_ushort(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_ushort()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_long: {
-                    int val = in.read_long();
-                    write_long(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_long()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_ulong: {
-                    int val = in.read_ulong();
-                    write_ulong(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_ulong()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_longlong: {
-                    long val = in.read_longlong();
-                    write_longlong(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_longlong()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_ulonglong: {
-                    long val = in.read_ulonglong();
-                    write_ulonglong(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_ulonglong()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_char: {
-                    char val = in.read_char();
-                    write_char(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_char()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_boolean: {
-                    boolean val = in.read_boolean();
-                    write_boolean(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).extract_boolean()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                case _tk_enum: {
-                    int val = in.read_long();
-                    write_long(val);
-
-                    for (int i = 0; i < tc.member_count(); i++)
-                        if (i != defaultIndex) {
-                            if (val == tc.member_label(i).create_input_stream().read_long()) {
-                                memberIndex = i;
-                                break;
-                            }
-                        }
-
-                    break;
-                }
-
-                default:
-                    _OB_assert("Invalid typecode in tk_union");
-                }
-
-                if (memberIndex >= 0)
-                    write_InputStream(in, tc.member_type(memberIndex));
-                else if (defaultIndex >= 0)
-                    write_InputStream(in, tc.member_type(defaultIndex));
-
-                break;
-            }
-
-            case _tk_string:
-                write_string(in.read_string());
-                break;
-
-            case _tk_wstring:
-                write_wstring(in.read_wstring());
-                break;
-
-            case _tk_sequence:
-            case _tk_array: {
-                int len;
-
-                if (tc.kind().value() == _tk_sequence) {
-                    len = in.read_ulong();
-                    write_ulong(len);
-                } else
-                    len = tc.length();
-
-                if (len > 0) {
-                    org.omg.CORBA.TypeCode origContentType = TypeCode._OB_getOrigType(tc.content_type());
-
-                    switch (origContentType.kind().value()) {
-                    case _tk_null:
-                    case _tk_void:
-                        break;
-
-                    case _tk_short:
-                    case _tk_ushort: {
-                        if (obin != null && obin.swap_) {
-                            short[] s = new short[len];
-                            in.read_short_array(s, 0, len);
-                            write_short_array(s, 0, len);
-                        } else {
-                            // Read one value for the alignment
-                            write_short(in.read_short());
-                            final int n = 2 * (len - 1);
-
-                            if (n > 0) {
-                                // Copy the rest
-                                readFrom(in, n);
-                            }
-                        }
-                        break;
-                    }
-
-                    case _tk_long:
-                    case _tk_ulong:
-                    case _tk_float: {
-                        if (obin != null && obin.swap_) {
-                            int[] i = new int[len];
-                            in.read_long_array(i, 0, len);
-                            write_long_array(i, 0, len);
-                        } else {
-                            // Read one value for the alignment
-                            write_long(in.read_long());
-                            final int n = 4 * (len - 1);
-
-                            if (n > 0) {
-                                // Copy the rest
-                                readFrom(in, n);
-                            }
-                        }
-                        break;
-                    }
-
-                    case _tk_double:
-                    case _tk_longlong:
-                    case _tk_ulonglong: {
-                        if (obin != null && obin.swap_) {
-                            long[] l = new long[len];
-                            in.read_longlong_array(l, 0, len);
-                            write_longlong_array(l, 0, len);
-                        } else {
-                            // Read one value for the alignment
-                            write_longlong(in.read_longlong());
-                            final int n = 8 * (len - 1);
-                            if (n > 0) {
-                                // Copy the rest
-                                readFrom(in, n);
-                            }
-                        }
-                        break;
-                    }
-
-                    case _tk_boolean:
-                    case _tk_octet:
-                        readFrom(in, len);
-                        break;
-
-                    case _tk_char:
-                        if (charWriterRequired_ || charConversionRequired_) {
-                            char[] ch = new char[len];
-                            in.read_char_array(ch, 0, len);
-                            write_char_array(ch, 0, len);
-                        } else {
-                            readFrom(in, len);
-                        }
-                        break;
-
-                    case _tk_wchar: {
-                        char[] wch = new char[len];
-                        in.read_wchar_array(wch, 0, len);
-                        write_wchar_array(wch, 0, len);
-                        break;
-                    }
-
-                    case _tk_alias:
-                        _OB_assert("tk_alias not supported in tk_array or tk_sequence");
-                        break;
-
-                    default:
-                        for (int i = 0; i < len; i++)
-                            write_InputStream(in, tc.content_type());
-                        break;
-                    }
-                }
-
-                break;
-            }
-
-            case _tk_alias:
-                write_InputStream(in, tc.content_type());
-                break;
-
-            case _tk_value:
-            case _tk_value_box:
-                if (obin == null) {
-                    org.omg.CORBA_2_3.portable.InputStream i = (org.omg.CORBA_2_3.portable.InputStream) in;
-                    write_value(i.read_value());
-                } else
-                    obin._OB_remarshalValue(tc, this);
-                break;
-
-            case _tk_abstract_interface: {
-                boolean b = in.read_boolean();
-                write_boolean(b);
-                if (b) {
-                    write_Object(in.read_Object());
-                } else {
-                    if (obin == null) {
-                        org.omg.CORBA_2_3.portable.InputStream i = (org.omg.CORBA_2_3.portable.InputStream) in;
-                        write_value(i.read_value());
-                    } else {
-                        //
-                        // We have no TypeCode information about the
-                        // valuetype, so we must use _tc_ValueBase and
-                        // rely on the type information sent on the wire
-                        //
-                        obin._OB_remarshalValue(ValueBaseHelper.type(), this);
-                    }
-                }
-                break;
-            }
-
-            case TCKind._tk_local_interface:
-            case _tk_native:
-            default:
-                _OB_assert("unsupported types");
+                    _OB_assert("unsupported types");
             }
         } catch (BadKind | Bounds ex) {
             _OB_assert(ex);
+        }
+    }
+
+    private void copyValueFrom(org.omg.CORBA_2_3.portable.InputStream in, org.omg.CORBA.TypeCode tc) {
+        if (in instanceof InputStream) {
+            ((InputStream)in)._OB_remarshalValue(tc, this);
+        } else {
+            write_value(in.read_value());
+        }
+        return;
+    }
+
+    private void copyAbstractInterfaceFrom(org.omg.CORBA.portable.InputStream in) {
+        boolean b = in.read_boolean();
+        write_boolean(b);
+        if (b) {
+            write_Object(in.read_Object());
+        } else if (in instanceof InputStream) {
+            //
+            // We have no TypeCode information about the
+            // valuetype, so we must use _tc_ValueBase and
+            // rely on the type information sent on the wire
+            //
+            ((InputStream) in)._OB_remarshalValue(ValueBaseHelper.type(), this);
+        } else {
+            write_value(((org.omg.CORBA_2_3.portable.InputStream) in).read_value());
+        }
+    }
+
+    private void copyArrayFrom(org.omg.CORBA.portable.InputStream in, org.omg.CORBA.TypeCode tc) throws BadKind {
+        final boolean swapInput = (in instanceof InputStream) && ((InputStream)in).swap_;
+        int len;
+
+        if (tc.kind().value() == _tk_sequence) {
+            len = in.read_ulong();
+            write_ulong(len);
+        } else {
+            len = tc.length();
+        }
+
+        if (len <= 0) return;
+
+        org.omg.CORBA.TypeCode origContentType = TypeCode._OB_getOrigType(tc.content_type());
+
+        switch (origContentType.kind().value()) {
+        case _tk_null:
+        case _tk_void:
+            break;
+
+        case _tk_short:
+        case _tk_ushort: {
+            if (swapInput) {
+                short[] s = new short[len];
+                in.read_short_array(s, 0, len);
+                write_short_array(s, 0, len);
+            } else {
+                // Read one value for the alignment
+                write_short(in.read_short());
+                final int n = 2 * (len - 1);
+
+                if (n > 0) {
+                    // Copy the rest
+                    readFrom(in, n);
+                }
+            }
+            break;
+        }
+
+        case _tk_long:
+        case _tk_ulong:
+        case _tk_float: {
+            if (swapInput) {
+                int[] i = new int[len];
+                in.read_long_array(i, 0, len);
+                write_long_array(i, 0, len);
+            } else {
+                // Read one value for the alignment
+                write_long(in.read_long());
+                final int n = 4 * (len - 1);
+
+                if (n > 0) {
+                    // Copy the rest
+                    readFrom(in, n);
+                }
+            }
+            break;
+        }
+
+        case _tk_double:
+        case _tk_longlong:
+        case _tk_ulonglong: {
+            if (swapInput) {
+                long[] l = new long[len];
+                in.read_longlong_array(l, 0, len);
+                write_longlong_array(l, 0, len);
+            } else {
+                // Read one value for the alignment
+                write_longlong(in.read_longlong());
+                final int n = 8 * (len - 1);
+                if (n > 0) {
+                    // Copy the rest
+                    readFrom(in, n);
+                }
+            }
+            break;
+        }
+
+        case _tk_boolean:
+        case _tk_octet:
+            readFrom(in, len);
+            break;
+
+        case _tk_char:
+            if (charWriterRequired_ || charConversionRequired_) {
+                char[] ch = new char[len];
+                in.read_char_array(ch, 0, len);
+                write_char_array(ch, 0, len);
+            } else {
+                readFrom(in, len);
+            }
+            break;
+
+        case _tk_wchar: {
+            char[] wch = new char[len];
+            in.read_wchar_array(wch, 0, len);
+            write_wchar_array(wch, 0, len);
+            break;
+        }
+
+        case _tk_alias:
+            _OB_assert("tk_alias not supported in tk_array or tk_sequence");
+            break;
+
+        default:
+            for (int i = 0; i < len; i++)
+                write_InputStream(in, tc.content_type());
+            break;
+        }
+    }
+
+    private void copyUnionFrom(org.omg.CORBA.portable.InputStream in, org.omg.CORBA.TypeCode tc) throws BadKind, Bounds {
+        int defaultIndex = tc.default_index();
+        int memberIndex = -1;
+
+        org.omg.CORBA.TypeCode origDiscType = TypeCode._OB_getOrigType(tc.discriminator_type());
+
+        switch (origDiscType.kind().value()) {
+        case _tk_short: {
+            short val = in.read_short();
+            write_short(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_short()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_ushort: {
+            short val = in.read_ushort();
+            write_ushort(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_ushort()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_long: {
+            int val = in.read_long();
+            write_long(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_long()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_ulong: {
+            int val = in.read_ulong();
+            write_ulong(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_ulong()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_longlong: {
+            long val = in.read_longlong();
+            write_longlong(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_longlong()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_ulonglong: {
+            long val = in.read_ulonglong();
+            write_ulonglong(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_ulonglong()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_char: {
+            char val = in.read_char();
+            write_char(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_char()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_boolean: {
+            boolean val = in.read_boolean();
+            write_boolean(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).extract_boolean()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        case _tk_enum: {
+            int val = in.read_long();
+            write_long(val);
+
+            for (int i = 0; i < tc.member_count(); i++)
+                if (i != defaultIndex) {
+                    if (val == tc.member_label(i).create_input_stream().read_long()) {
+                        memberIndex = i;
+                        break;
+                    }
+                }
+
+            break;
+        }
+
+        default:
+            _OB_assert("Invalid typecode in tk_union");
+        }
+
+        if (memberIndex >= 0)
+            write_InputStream(in, tc.member_type(memberIndex));
+        else if (defaultIndex >= 0)
+            write_InputStream(in, tc.member_type(defaultIndex));
+
+        return;
+    }
+
+    private void copyTypeCodeFrom(org.omg.CORBA.portable.InputStream in) {
+        // Don't do this: write_TypeCode(in.read_TypeCode())
+        // This is faster:
+
+        int kind = in.read_ulong();
+
+        //
+        // An indirection is not permitted at this level
+        //
+        if (kind == -1) {
+            throw new MARSHAL(
+                    describeMarshal(MinorReadInvTypeCodeIndirection),
+                    MinorReadInvTypeCodeIndirection,
+                    COMPLETED_NO);
+        }
+
+        write_ulong(kind);
+
+        switch (kind) {
+        case _tk_null:
+        case _tk_void:
+        case _tk_short:
+        case _tk_long:
+        case _tk_ushort:
+        case _tk_ulong:
+        case _tk_float:
+        case _tk_double:
+        case _tk_boolean:
+        case _tk_char:
+        case _tk_octet:
+        case _tk_any:
+        case _tk_TypeCode:
+        case _tk_Principal:
+        case _tk_longlong:
+        case _tk_ulonglong:
+        case _tk_longdouble:
+        case _tk_wchar:
+            break;
+
+        case _tk_fixed:
+            write_ushort(in.read_ushort());
+            write_short(in.read_short());
+            break;
+
+        case _tk_objref:
+        case _tk_struct:
+        case _tk_union:
+        case _tk_enum:
+        case _tk_sequence:
+        case _tk_array:
+        case _tk_alias:
+        case _tk_except:
+        case _tk_value:
+        case _tk_value_box:
+        case _tk_abstract_interface:
+        case _tk_native:
+        case _tk_local_interface: {
+            final int len = in.read_ulong();
+            write_ulong(len);
+            readFrom(in, len);
+            break;
+        }
+
+        case _tk_string:
+        case _tk_wstring: {
+            int bound = in.read_ulong();
+            write_ulong(bound);
+            break;
+        }
+
+        default:
+            throw new InternalError();
         }
     }
 
