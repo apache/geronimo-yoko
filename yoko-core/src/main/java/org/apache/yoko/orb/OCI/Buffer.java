@@ -70,29 +70,23 @@ public final class Buffer {
     /**
      * Extend the current buffer.
      * @param extra the number of additional bytes required beyond the end of the buffer.
-     * @return <code>true</code> iff a more space had to be allocated
+     * @return <code>true</code> iff an existing buffer was insufficient
      */
     public boolean addLength(int extra) {
-        return realloc(len_ + extra);
-    }
-
-    public boolean realloc(int len) {
-        // there might be no buffer
+        _OB_assert(extra >= 0);
+        len_ += extra;
+        // there might be no buffer at all
         if (data_ == null) {
-            len_ = len;
-            data_ = newBytes(len);
+            data_ = newBytes(len_);
             pos_ = 0;
             return false;
         }
-        _OB_assert(len >= len_);
         // the existing buffer might be big enough
-        if (len <= data_.length) {
-            len_ = len;
+        if (len_ <= data_.length) {
             return false;
         }
         // ok, we need a bigger buffer
-        data_ = copyOf(data_, computeNewBufferSize(len));
-        len_ = len;
+        data_ = copyOf(data_, computeNewBufferSize(len_));
         return true;
     }
 
@@ -340,7 +334,10 @@ public final class Buffer {
     private final class Writer implements BufferWriter {
         @Override
         public void padAlign(AlignmentBoundary boundary) {
-            final int gap = boundary.gap(pos_);
+            padGap(boundary.gap(pos_));
+        }
+
+        private void padGap(int gap) {
             switch (gap) {
             case 7: writeByte(Padding.PAD_BYTE);
             case 6: writeByte(Padding.PAD_BYTE);
@@ -364,8 +361,10 @@ public final class Buffer {
 
         @Override
         public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
-            padAlign(boundary);
-            return ensureAvailable(size);
+            int gap = boundary.gap(pos_);
+            boolean bufferReplaced = ensureAvailable(gap + size);
+            padGap(gap);
+            return bufferReplaced;
         }
 
         @Override

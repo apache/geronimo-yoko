@@ -24,6 +24,7 @@ import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
+import org.apache.yoko.orb.OCI.AlignmentBoundary;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -59,6 +60,10 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.NO_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
@@ -445,17 +450,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private void addCapacity(int size) {
-        //
-        // Expand buffer to hold requested size
-        //
-        // Note: OutputStreams are not always written to in a linear
-        // fashion, i.e., sometimes the position is reset to
-        // an earlier point and data is patched in. Therefore,
-        // do NOT do this:
-        //
-        // buf_.realloc(buf_.len_ + size);
-        //
-        //
         if (alignNext_ > 0) {
             int align = alignNext_;
             alignNext_ = 0;
@@ -470,13 +464,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 checkBeginChunk();
             }
 
-            //
             // If there isn't enough room, then reallocate the buffer
-            //
-            final int len = buf_.pos_ + size;
-            if (len > buf_.length()) {
-                buf_.realloc(len);
-            }
+            bufWriter.ensureAvailable(size);
         }
     }
 
@@ -487,24 +476,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             throw new TIMEOUT("Reply timed out on server", MinorCodes.MinorOther, COMPLETED_YES);
         }
     }
-
-    private int roundUp(final int i, final int align) {
-        switch (align) {
-            case 0x00: return i;
-            case 0x01: return i;
-            case 0x02: return ((i + 0b0001) & ~(0b0001));
-            case 0x04: return ((i + 0b0011) & ~(0b0011));
-            case 0x08: return ((i + 0b0111) & ~(0b0111));
-            case 0x10: return ((i + 0b1111) & ~(0b1111));
-            default:
-                if (LOGGER.isLoggable(Level.WARNING))
-                    LOGGER.warning(String.format("Aligning on a strange number 0x%x", align));
-                final int j = (i + align - 1);
-                return (j - (j % align));
-        }
-    }
-
-    private static final byte PAD_BYTE = (byte)0xbd;
 
     private void addCapacity(int size, int align) {
         // use addCapacity(int) if align == 0
@@ -527,23 +498,18 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             alignNext_ = 0;
         }
 
-        final int newPos = roundUp(buf_.pos_, align);
+        final AlignmentBoundary boundary;
+        switch (align) {
+        case 0: boundary = NO_BOUNDARY; break;
+        case 2: boundary = TWO_BYTE_BOUNDARY; break;
+        case 4: boundary = FOUR_BYTE_BOUNDARY; break;
+        case 8: boundary = EIGHT_BYTE_BOUNDARY; break;
+        default: throw new Error();
+        }
 
-        //
         // If there isn't enough room, then reallocate the buffer
-        //
-        final int len = newPos + size;
-        if (len > buf_.length()) {
-            buf_.realloc(len);
-            checkTimeout();
-        }
+        bufWriter.ensureAvailable(size, boundary);
 
-        //
-        // Pad to the requested boundary
-        //
-        for (; buf_.pos_ < newPos; buf_.pos_++) {
-            buf_.data_[buf_.pos_] = PAD_BYTE;
-        }
     }
 
     public void write(int b) {
@@ -799,7 +765,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
                 // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
                 if (buffer.available() < 4)
-                    buffer.realloc(buffer.length() + 4);
+                    buffer.addLength(4);
 
                 if (bothRequired)
                     converter.write_char(buffer.writer, converter.convert(c));
