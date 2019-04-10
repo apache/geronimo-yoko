@@ -663,13 +663,13 @@ final public class InputStream extends InputStreamWithOffsets {
         return valueReader_;
     }
 
-    public int available() throws IOException {
+    public int available() {
         _OB_assert(buf_.length() >= buf_.pos_);
 
         return buf_.length() - buf_.pos_;
     }
 
-    public int read() throws IOException {
+    public int read() {
         checkChunk();
         if (buf_.available() < 1) return -1;
 

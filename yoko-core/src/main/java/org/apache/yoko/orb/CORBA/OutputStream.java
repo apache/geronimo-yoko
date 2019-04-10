@@ -41,7 +41,6 @@ import org.omg.CORBA.TypeCodePackage.Bounds;
 import org.omg.CORBA.ValueBaseHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.ValueOutputStream;
-import org.omg.CORBA_2_4.TCKind;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 import org.omg.IOP.TaggedProfile;
@@ -730,44 +729,40 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             //
             // Intermediate variable used for efficiency
             //
-            boolean bothRequired = charWriterRequired_ && charConversionRequired_;
+            final boolean bothRequired = charWriterRequired_ && charConversionRequired_;
 
             //
             // Temporary OCI buffer required
             //
-            Buffer buffer = new Buffer(64);
-            OutputStream tmpStream = new OutputStream(buffer);
+            final Buffer tmpBuf = new Buffer();
 
             for (char c : arr) {
-                if (c > 255)
-                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
+                if (c > 0xff) throw new DATA_CONVERSION(String.format("illegal char value for string: 0x%04x", (int)c));
 
                 // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
-                if (buffer.available() < 4)
-                    buffer.addLength(4);
+                if (tmpBuf.available() < 4) tmpBuf.addLength(4);
 
                 if (bothRequired)
-                    converter.write_char(buffer.writer, converter.convert(c));
+                    converter.write_char(tmpBuf.writer, converter.convert(c));
                 else if (charWriterRequired_)
-                    converter.write_char(buffer.writer, c);
+                    converter.write_char(tmpBuf.writer, c);
                 else
-                    buffer.writer.writeByte(converter.convert(c));
+                    tmpBuf.writer.writeByte(converter.convert(c));
             }
 
             //
             // Copy the contents from the temporary buffer
             //
-            int bufSize = buffer.pos_;
+            InputStream tmpBufInputStream = new InputStream(tmpBuf);
+            final int tmpBufSize = tmpBufInputStream.available();
 
-            write_ulong(bufSize + 1);
-            addCapacity(bufSize + 1);
+            write_ulong(tmpBufSize + 1);
+            addCapacity(tmpBufSize + 1);
 
-            for (int i = 0; i < bufSize; i++) {
-                buf_.writer.writeByte(buffer.data_[i]);
-            }
+            bufWriter.readFrom(tmpBufInputStream);
         }
         // write null terminator
-        buf_.writer.writeByte(0);
+        bufWriter.writeByte(0);
     }
 
     public void write_wstring(String value) {
@@ -1166,14 +1161,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     write_fixed(in.read_fixed());
                     break;
 
-                case _tk_any: {
-                    // Don't do this: write_any(in.read_any())
-                    // This is faster:
-                    org.omg.CORBA.TypeCode p = in.read_TypeCode();
-                    write_TypeCode(p);
-                    write_InputStream(in, p);
+                case _tk_any:
+                    copyAnyFrom(in);
                     break;
-                }
 
                 case _tk_TypeCode:
                     copyTypeCodeFrom(in);
@@ -1183,13 +1173,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     write_Principal(in.read_Principal());
                     break;
 
-                case _tk_objref: {
-                    // Don't do this: write_Object(in.read_Object())
-                    // This is faster:
-                    IOR ior = IORHelper.read(in);
-                    IORHelper.write(this, ior);
+                case _tk_objref:
+                    copyObjRefFrom(in);
                     break;
-                }
 
                 case _tk_struct:
                     for (int i = 0; i < tc.member_count(); i++)
@@ -1242,13 +1228,27 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
+    private void copyObjRefFrom(org.omg.CORBA.portable.InputStream in) {
+        // Don't do this: write_Object(in.read_Object())
+        // This is faster:
+        IOR ior = IORHelper.read(in);
+        IORHelper.write(this, ior);
+    }
+
+    private void copyAnyFrom(org.omg.CORBA.portable.InputStream in) {
+        // Don't do this: write_any(in.read_any())
+        // This is faster:
+        org.omg.CORBA.TypeCode p = in.read_TypeCode();
+        write_TypeCode(p);
+        write_InputStream(in, p);
+    }
+
     private void copyValueFrom(org.omg.CORBA_2_3.portable.InputStream in, org.omg.CORBA.TypeCode tc) {
         if (in instanceof InputStream) {
             ((InputStream)in)._OB_remarshalValue(tc, this);
         } else {
             write_value(in.read_value());
         }
-        return;
     }
 
     private void copyAbstractInterfaceFrom(org.omg.CORBA.portable.InputStream in) {
@@ -1289,64 +1289,23 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             break;
 
         case _tk_short:
-        case _tk_ushort: {
-            if (swapInput) {
-                short[] s = new short[len];
-                in.read_short_array(s, 0, len);
-                write_short_array(s, 0, len);
-            } else {
-                // Read one value for the alignment
-                write_short(in.read_short());
-                final int n = 2 * (len - 1);
-
-                if (n > 0) {
-                    // Copy the rest
-                    readFrom(in, n);
-                }
-            }
+        case _tk_ushort:
+            copyShortArrayFrom(in, len, swapInput);
             break;
-        }
 
-        case _tk_long:
+            case _tk_long:
         case _tk_ulong:
-        case _tk_float: {
-            if (swapInput) {
-                int[] i = new int[len];
-                in.read_long_array(i, 0, len);
-                write_long_array(i, 0, len);
-            } else {
-                // Read one value for the alignment
-                write_long(in.read_long());
-                final int n = 4 * (len - 1);
-
-                if (n > 0) {
-                    // Copy the rest
-                    readFrom(in, n);
-                }
-            }
+        case _tk_float:
+            copyIntArrayFrom(in, len, swapInput);
             break;
-        }
 
-        case _tk_double:
+            case _tk_double:
         case _tk_longlong:
-        case _tk_ulonglong: {
-            if (swapInput) {
-                long[] l = new long[len];
-                in.read_longlong_array(l, 0, len);
-                write_longlong_array(l, 0, len);
-            } else {
-                // Read one value for the alignment
-                write_longlong(in.read_longlong());
-                final int n = 8 * (len - 1);
-                if (n > 0) {
-                    // Copy the rest
-                    readFrom(in, n);
-                }
-            }
+        case _tk_ulonglong:
+            copyLongArrayFrom(in, len, swapInput);
             break;
-        }
 
-        case _tk_boolean:
+            case _tk_boolean:
         case _tk_octet:
             readFrom(in, len);
             break;
@@ -1376,6 +1335,56 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = 0; i < len; i++)
                 write_InputStream(in, tc.content_type());
             break;
+        }
+    }
+
+    private void copyLongArrayFrom(org.omg.CORBA.portable.InputStream in, int num, boolean swapInput) {
+        if (swapInput) {
+            long[] l = new long[num];
+            in.read_longlong_array(l, 0, num);
+            write_longlong_array(l, 0, num);
+        } else {
+            // Read one value for the alignment
+            write_longlong(in.read_longlong());
+            final int n = 8 * (num - 1);
+            if (n > 0) {
+                // Copy the rest
+                readFrom(in, n);
+            }
+        }
+    }
+
+    private void copyIntArrayFrom(org.omg.CORBA.portable.InputStream in, int num, boolean swapInput) {
+        if (swapInput) {
+            int[] i = new int[num];
+            in.read_long_array(i, 0, num);
+            write_long_array(i, 0, num);
+        } else {
+            // Read one value for the alignment
+            write_long(in.read_long());
+            final int n = 4 * (num - 1);
+
+            if (n > 0) {
+                // Copy the rest
+                readFrom(in, n);
+            }
+        }
+    }
+
+    private void copyShortArrayFrom(org.omg.CORBA.portable.InputStream in, int num, boolean swapInput) {
+        if (swapInput) {
+            short[] s = new short[num];
+            in.read_short_array(s, 0, num);
+            write_short_array(s, 0, num);
+        } else {
+            // Read one value for the alignment
+            write_short(in.read_short());
+            final int n = 2 * (num - 1);
+
+            if (n > 0) {
+                // Copy the rest
+                readFrom(in, n);
+            }
         }
     }
 

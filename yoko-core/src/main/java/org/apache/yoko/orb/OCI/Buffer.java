@@ -38,11 +38,10 @@ import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 public final class Buffer {
-    public final BufferReader reader = this.new Reader();
+    public final BufferReader reader = new Reader();
     public final BufferWriter writer = new Writer();
 
-    public byte[] data_; // The octet buffer
-
+    private transient byte[] data_; // The octet buffer
     private int len_; // The requested size of the buffer
 
     public int pos_; // The position counter
@@ -59,7 +58,7 @@ public final class Buffer {
         return len_ - pos_;
     }
 
-    public void advance(int delta) {
+    private void advance(int delta) {
         pos_ += delta;
     }
 
@@ -75,12 +74,7 @@ public final class Buffer {
     public boolean addLength(int extra) {
         _OB_assert(extra >= 0);
         len_ += extra;
-        // there might be no buffer at all
-        if (data_ == null) {
-            data_ = newBytes(len_);
-            pos_ = 0;
-            return false;
-        }
+
         // the existing buffer might be big enough
         if (len_ <= data_.length) {
             return false;
@@ -114,7 +108,9 @@ public final class Buffer {
         buf.pos_ = 0;
     }
 
-    public Buffer() {}
+    public Buffer() {
+        this(16);
+    }
 
     private Buffer(byte[] data, int pos, int len) {
         this.data_ = data;
@@ -141,7 +137,7 @@ public final class Buffer {
     private static byte[] copyOf(byte[] data, int length) {
         try {
             return Arrays.copyOf(data, length);
-        } catch (OutOfMemoryError oome) {
+        } catch (OutOfMemoryError oom) {
             throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
     }
@@ -150,7 +146,7 @@ public final class Buffer {
         try {
             // allocate only multiples of 16 so we can pad without checking
             return new byte[(len + 0xFF) & ~0xFF];
-        } catch (OutOfMemoryError oome) {
+        } catch (OutOfMemoryError oom) {
             throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
     }
