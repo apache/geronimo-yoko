@@ -465,8 +465,7 @@ public final class IORUtil {
     //
     // Produce a human-friendly description of an IOR tagged component
     //
-    public static void describe_component(
-            TaggedComponent component, StringBuilder sb) {
+    public static void describe_component(TaggedComponent component, StringBuilder sb) {
 
         switch (component.tag) {
         case TAG_ORB_TYPE.value: {

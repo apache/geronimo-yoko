@@ -516,6 +516,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     @Override
     public InputStream create_input_stream() {
         Buffer buf = new Buffer(buf_.length());
+//        buf = new Buffer(buf_);
+
         if (buf_.length() > 0) System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.length());
 
 // this is a useful tracepoint, but produces a lot of data, so turn on only

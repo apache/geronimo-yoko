@@ -116,22 +116,22 @@ public final class Buffer {
 
     public Buffer() {}
 
-    private Buffer(byte[] data, int len) {
+    private Buffer(byte[] data, int pos, int len) {
         this.data_ = data;
+        this.pos_ = pos;
         this.len_ = len;
-        this.pos_ = 0;
     }
 
     public Buffer(byte[] data) {
-        this(data, data.length);
+        this(data, 0, data.length);
     }
 
     public Buffer(Buffer that) {
-        this(copyOf(that.data_));
+        this(copyOf(that.data_), that.pos_, that.len_);
     }
 
     public Buffer(int len) {
-        this(newBytes(len), len);
+        this(newBytes(len), 0, len);
     }
 
     private static byte[] copyOf(byte[] data) {
