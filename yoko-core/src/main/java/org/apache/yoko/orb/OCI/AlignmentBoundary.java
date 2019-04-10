@@ -29,19 +29,15 @@ public enum AlignmentBoundary {
     NO_BOUNDARY {
         int gap(int index) { return 0; }
         int newIndex(int index) { return index; }
-        public AlignmentBoundary and(AlignmentBoundary that) { return requireNonNull(that); }
     }, TWO_BYTE_BOUNDARY {
         int gap(int index) { return index & 1; }
         int newIndex(int index) { return (index + 1) & ~1; }
-        public AlignmentBoundary and(AlignmentBoundary that) { return requireNonNull(that) == NO_BOUNDARY ? this : that; }
     }, FOUR_BYTE_BOUNDARY {
         int gap(int index) { return -index & 3; }
         int newIndex(int index) { return (index + 3) & ~3; }
-        public AlignmentBoundary and(AlignmentBoundary that) { return requireNonNull(that) == EIGHT_BYTE_BOUNDARY ? that : this; }
     }, EIGHT_BYTE_BOUNDARY {
         int gap(int index) { return -index & 7; }
         int newIndex(int index) { return (index + 7) & ~7; }
-        public AlignmentBoundary and(AlignmentBoundary that) { return this; }
     };
 
     /**
@@ -53,11 +49,4 @@ public enum AlignmentBoundary {
      * Calculate the index of the next alignment boundary.
      */
     abstract int newIndex(int index);
-
-    /**
-     * Returns the minimum alignment boundary that satisfies both <code>this</code> alignment boundary
-     * and <code>that</code> alignment boundary (i.e. the larger of the two).
-     * @param that the other alignment boundary --- must not be <code>null</code>
-     */
-    public abstract AlignmentBoundary and(AlignmentBoundary that);
 }

@@ -124,8 +124,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Handles all OBV marshalling
     private ValueWriter valueWriter_;
 
-    // The next write should be aligned on this boundary
-    private AlignmentBoundary nextBoundary = NO_BOUNDARY;
+    // In GIOP 1.2, the body must be aligned on an 8-byte boundary.
+    // This flag is used to keep track of when that alignment is necessary.
+    private boolean atEndOfGiop_1_2_Header = false;
 
     private Object invocationContext_;
 
@@ -449,10 +450,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private void addCapacity(int size) {
-        if (nextBoundary != NO_BOUNDARY) {
-            AlignmentBoundary boundary = nextBoundary;
-            nextBoundary = NO_BOUNDARY;
-            addCapacity(size, boundary);
+        if (atEndOfGiop_1_2_Header) {
+            atEndOfGiop_1_2_Header = false;
+            addCapacity(size, EIGHT_BYTE_BOUNDARY);
         } else {
             //
             // If we're at the end of the current buffer, then we are about
@@ -489,28 +489,14 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             checkBeginChunk();
         }
 
-        if (nextBoundary != NO_BOUNDARY) {
-            boundary = boundary.and(nextBoundary);
-            nextBoundary = NO_BOUNDARY;
+        if (atEndOfGiop_1_2_Header) {
+            boundary = EIGHT_BYTE_BOUNDARY;
+            atEndOfGiop_1_2_Header = false;
         }
-
 
         // If there isn't enough room, then reallocate the buffer
         final boolean resized = bufWriter.ensureAvailable(size, boundary);
         if (resized) checkTimeout();
-
-    }
-
-    private AlignmentBoundary convertIntToAlignmentBoundary(int align) {
-        AlignmentBoundary boundary;
-        switch (align) {
-        case 0: boundary = NO_BOUNDARY; break;
-        case 2: boundary = TWO_BYTE_BOUNDARY; break;
-        case 4: boundary = FOUR_BYTE_BOUNDARY; break;
-        case 8: boundary = EIGHT_BYTE_BOUNDARY; break;
-        default: throw new Error();
-        }
-        return boundary;
     }
 
     public void write(int b) {
@@ -1695,8 +1681,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         buf_.pos_ = pos;
     }
 
-    public void _OB_alignNext(int n) {
-        nextBoundary = convertIntToAlignmentBoundary(n);
+    public void markGiop_1_2_HeaderComplete() {
+        this.atEndOfGiop_1_2_Header = true;
     }
 
     public void _OB_writeEndian() {

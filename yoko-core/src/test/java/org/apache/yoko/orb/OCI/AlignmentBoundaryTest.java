@@ -54,12 +54,4 @@ public class AlignmentBoundaryTest {
             assertThat(boundary.newIndex(i), is(i + expectedGap));
         }
     }
-
-    @Test
-    public void testBoundaryConflation() {
-        for (AlignmentBoundary a: AlignmentBoundary.values()) for (AlignmentBoundary b: AlignmentBoundary.values()) {
-            AlignmentBoundary expected = AlignmentBoundary.values()[Math.max(a.ordinal(), b.ordinal())];
-            assertThat(a.and(b), is(expected));
-        }
-    }
 }

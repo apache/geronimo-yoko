@@ -220,7 +220,7 @@ final public class GIOPOutgoingMessage {
             // boundary, so we notify the OutputStream that it should align
             // the next write
             //
-            out_._OB_alignNext(8);
+            out_.markGiop_1_2_HeaderComplete();
 
             break;
         }
@@ -253,7 +253,7 @@ final public class GIOPOutgoingMessage {
             // boundary, so we notify the OutputStream that it should align
             // the next write
             //
-            out_._OB_alignNext(8);
+            out_.markGiop_1_2_HeaderComplete();
 
             break;
         }
