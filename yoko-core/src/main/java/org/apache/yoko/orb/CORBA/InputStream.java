@@ -43,7 +43,6 @@ import org.omg.IOP.IORHelper;
 import org.omg.SendingContext.CodeBase;
 
 import javax.rmi.CORBA.Util;
-import java.io.IOException;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -96,9 +95,9 @@ import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
-import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.TWO_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
@@ -207,7 +206,7 @@ final public class InputStream extends InputStreamWithOffsets {
             indirectionPos += (indirectionPos & 0x3); // adjust for alignment
             TypeCode p = (TypeCode) history.get(indirectionPos);
             if (p == null) {
-                throw new MARSHAL(describeMarshal(MinorReadInvTypeCodeIndirection), MinorReadInvTypeCodeIndirection, COMPLETED_NO);
+                throw newMarshalError(MinorReadInvTypeCodeIndirection);
             }
             history.put(oldPos, p);
             tc = p;
@@ -686,7 +685,7 @@ final public class InputStream extends InputStreamWithOffsets {
     public boolean read_boolean() {
         checkChunk();
 
-        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadBooleanOverflow), MinorReadBooleanOverflow, COMPLETED_NO);
+        if (buf_.available() < 1) throw newMarshalError(MinorReadBooleanOverflow);
 
         if (logger.isLoggable(Level.FINEST))
             logger.finest(String.format("Boolean value is %b from position 0x%x", bufReader.peekByte(), buf_.pos_));
@@ -695,7 +694,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public char read_char() {
         checkChunk();
-        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadCharOverflow), MinorReadCharOverflow, COMPLETED_NO);
+        if (buf_.available() < 1) throw newMarshalError(MinorReadCharOverflow);
 
         if (charReaderRequired_ || charConversionRequired_) {
             final CodeConverterBase converter = codeConverters_.inputCharConverter;
@@ -761,7 +760,7 @@ final public class InputStream extends InputStreamWithOffsets {
             //
             // check for an overflow condition
             //
-            if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWCharOverflow), MinorReadWCharOverflow, COMPLETED_NO);
+            if (buf_.available() < wcLen) throw newMarshalError(MinorReadWCharOverflow);
 
             //
             // read in the value with the reader
@@ -819,7 +818,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public byte read_octet() {
         checkChunk();
-        if (buf_.available() < 1) throw new MARSHAL(describeMarshal(MinorReadOctetOverflow), MinorReadOctetOverflow, COMPLETED_NO);
+        if (buf_.available() < 1) throw newMarshalError(MinorReadOctetOverflow);
 
         return bufReader.readByte();
     }
@@ -828,7 +827,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
         bufReader.align(TWO_BYTE_BOUNDARY);
 
-        if (buf_.available() < 2) throw new MARSHAL(describeMarshal(MinorReadShortOverflow), MinorReadShortOverflow, COMPLETED_NO);
+        if (buf_.available() < 2) throw newMarshalError(MinorReadShortOverflow);
         if (swap_)
             return (short) ((bufReader.readByte() & 0xff) | (bufReader.readByte() << 8));
         else
@@ -852,7 +851,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
         bufReader.align(EIGHT_BYTE_BOUNDARY);
 
-        if (buf_.available() < 8) throw new MARSHAL(describeMarshal(MinorReadLongLongOverflow), MinorReadLongLongOverflow, COMPLETED_NO);
+        if (buf_.available() < 8) throw newMarshalError(MinorReadLongLongOverflow);
 
         if (swap_)
             return ((long) bufReader.readByte() & 0xffL)
@@ -894,12 +893,12 @@ final public class InputStream extends InputStreamWithOffsets {
 
         int byteCount = read_ulong();
 
-        if (byteCount == 0) throw new MARSHAL(describeMarshal(MinorReadStringZeroLength), MinorReadStringZeroLength, COMPLETED_NO);
-        if (byteCount < 0) throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
+        if (byteCount == 0) throw newMarshalError(MinorReadStringZeroLength);
+        if (byteCount < 0) throw newMarshalError(MinorReadStringOverflow);
 
         if (buf_.available() < byteCount) {
             if (logger.isLoggable(Level.FINE)) logger.fine(String.format("String length=0x%x %n%s", byteCount, bufReader.dumpAllDataWithPosition()));
-            throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadStringOverflow);
         }
 
         // Java strings don't need null terminators, so our string length will be at most one less than the byte count
@@ -912,15 +911,15 @@ final public class InputStream extends InputStreamWithOffsets {
             final char value = charReaderRequired_ ? converter.read_char(bufReader) : bufReader.readByteAsChar();
 
             // String must not contain null characters
-            if (value == 0) throw new MARSHAL(describeMarshal(MinorReadStringNullChar), MinorReadStringNullChar, COMPLETED_NO);
+            if (value == 0) throw newMarshalError(MinorReadStringNullChar);
 
             sb.append(charConversionRequired_ ? converter.convert(value) : value);
         }
         // throw MARSHAL if the converter read too many bytes
-        if (buf_.available() < expectedRemainder) throw new MARSHAL(describeMarshal(MinorReadStringOverflow), MinorReadStringOverflow, COMPLETED_NO);
+        if (buf_.available() < expectedRemainder) throw newMarshalError(MinorReadStringOverflow);
 
 
-        if (bufReader.readByte() != 0) throw new MARSHAL(describeMarshal(MinorReadStringNoTerminator), MinorReadStringNoTerminator, COMPLETED_NO);
+        if (bufReader.readByte() != 0) throw newMarshalError(MinorReadStringNoTerminator);
 
         return sb.toString();
     }
@@ -948,7 +947,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 // length... it MUST have a null terminator
                 //
                 if (len == 0) {
-                    throw new MARSHAL(describeMarshal(MinorReadWStringZeroLength), MinorReadWStringZeroLength, COMPLETED_NO);
+                    throw newMarshalError(MinorReadWStringZeroLength);
                 }
 
                 char[] tmp = new char[len];
@@ -965,7 +964,7 @@ final public class InputStream extends InputStreamWithOffsets {
                 // Check for terminating null wchar
                 //
                 if (tmp[len - 1] != 0)
-                    throw new MARSHAL(describeMarshal(MinorReadWStringNoTerminator), MinorReadWStringNoTerminator, COMPLETED_NO);
+                    throw newMarshalError(MinorReadWStringNoTerminator);
 
                 //
                 // create the final string
@@ -986,14 +985,14 @@ final public class InputStream extends InputStreamWithOffsets {
                     //
                     while (len > 0) {
                         if (buf_.available() < 2)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+                            throw newMarshalError(MinorReadWStringOverflow);
 
                         int wcLen = converter.read_count_wchar(bufReader.peekChar());
 
                         len -= wcLen;
 
                         // check for an overflow in the read
-                        if (buf_.available() < wcLen) throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+                        if (buf_.available() < wcLen) throw newMarshalError(MinorReadWStringOverflow);
 
                         char c = converter.read_wchar(bufReader, wcLen);
                         if (wCharConversionRequired_) c = converter.convert(c);
@@ -1010,7 +1009,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // check for an overflow condition
                         //
                         if (buf_.available() < wcLen)
-                            throw new MARSHAL(describeMarshal(MinorReadWStringOverflow), MinorReadWStringOverflow, COMPLETED_NO);
+                            throw newMarshalError(MinorReadWStringOverflow);
 
                         //
                         // read in the char using the message endian
@@ -1043,7 +1042,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
 
         if (buf_.available() < length)
-            throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadBooleanArrayOverflow);
 
         for (int i = offset; i < offset + length; i++)
             value[i] = bufReader.readByte() != (byte) 0;
@@ -1053,8 +1052,8 @@ final public class InputStream extends InputStreamWithOffsets {
         if (length <= 0) return;
         checkChunk();
 
-        if (buf_.available() < blength)
-            throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
+        if (buf_.available() < length)
+            throw newMarshalError(MinorReadCharArrayOverflow);
 
         if (!(charReaderRequired_ || charConversionRequired_)) {
             for (int i = offset; i < offset + length; i++) {
@@ -1092,7 +1091,7 @@ final public class InputStream extends InputStreamWithOffsets {
     public void read_wchar_array(char[] value, int offset, int length) {
         if (length <= 0) return;
         if (buf_.available() < length)
-            throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadCharArrayOverflow);
 
         for (int i = offset; i < offset + length; i++)
             value[i] = read_wchar(false);
@@ -1104,7 +1103,7 @@ final public class InputStream extends InputStreamWithOffsets {
         try {
             bufReader.readBytes(value, offset, length);
         } catch (IndexOutOfBoundsException e) {
-            throw new MARSHAL(describeMarshal(MinorReadOctetArrayOverflow), MinorReadOctetArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadOctetArrayOverflow);
         }
     }
 
@@ -1114,7 +1113,7 @@ final public class InputStream extends InputStreamWithOffsets {
         bufReader.align(TWO_BYTE_BOUNDARY);
 
         if (buf_.available() < length * 2)
-            throw new MARSHAL(describeMarshal(MinorReadShortArrayOverflow), MinorReadShortArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadShortArrayOverflow);
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
@@ -1134,7 +1133,7 @@ final public class InputStream extends InputStreamWithOffsets {
         bufReader.align(FOUR_BYTE_BOUNDARY);
 
         if (buf_.available() < length * 4)
-            throw new MARSHAL(describeMarshal(MinorReadLongArrayOverflow), MinorReadLongArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadLongArrayOverflow);
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
@@ -1150,6 +1149,10 @@ final public class InputStream extends InputStreamWithOffsets {
                         | ((int) bufReader.readByte() & 0xff);
     }
 
+    private static MARSHAL newMarshalError(int minor) {
+        return new MARSHAL(describeMarshal(minor), minor, COMPLETED_NO);
+    }
+
     public void read_ulong_array(int[] value, int offset, int length) {
         read_long_array(value, offset, length);
     }
@@ -1163,7 +1166,7 @@ final public class InputStream extends InputStreamWithOffsets {
         bufReader.align(EIGHT_BYTE_BOUNDARY);
 
         if (buf_.available() < length * 8)
-            throw new MARSHAL(describeMarshal(MinorReadLongLongArrayOverflow), MinorReadLongLongArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadLongLongArrayOverflow);
 
         if (swap_)
             for (int i = offset; i < offset + length; i++)
@@ -1198,7 +1201,7 @@ final public class InputStream extends InputStreamWithOffsets {
         bufReader.align(FOUR_BYTE_BOUNDARY);
 
         if (buf_.available() < length * 4)
-            throw new MARSHAL(describeMarshal(MinorReadFloatArrayOverflow), MinorReadFloatArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadFloatArrayOverflow);
 
         if (swap_)
             for (int i = offset; i < offset + length; i++) {
@@ -1227,7 +1230,7 @@ final public class InputStream extends InputStreamWithOffsets {
         bufReader.align(EIGHT_BYTE_BOUNDARY);
 
         if (buf_.available() < length * 8)
-            throw new MARSHAL(describeMarshal(MinorReadDoubleArrayOverflow), MinorReadDoubleArrayOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadDoubleArrayOverflow);
 
         if (swap_) {
             for (int i = offset; i < offset + length; i++) {
@@ -1396,7 +1399,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
             int hi = (b >>> 4) & 0x0f;
             if (hi > 9)
-                throw new MARSHAL(describeMarshal(MinorReadFixedInvalid), MinorReadFixedInvalid, COMPLETED_NO);
+                throw newMarshalError(MinorReadFixedInvalid);
 
             //
             // 0 as high nibble is only valid if it's not the first nibble
@@ -1412,7 +1415,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     sBuffer.append("-");
                 break;
             } else
-                throw new MARSHAL(describeMarshal(MinorReadFixedInvalid), MinorReadFixedInvalid, COMPLETED_NO);
+                throw newMarshalError(MinorReadFixedInvalid);
 
             first = false;
         }
@@ -1422,7 +1425,7 @@ final public class InputStream extends InputStreamWithOffsets {
         try {
             return new BigDecimal(sBuffer.toString());
         } catch (NumberFormatException ex) {
-            throw new MARSHAL(describeMarshal(MinorReadFixedInvalid), MinorReadFixedInvalid, COMPLETED_NO);
+            throw newMarshalError(MinorReadFixedInvalid);
         }
     }
 
@@ -1556,7 +1559,7 @@ final public class InputStream extends InputStreamWithOffsets {
         try {
             bufReader.skipBytes(n);
         } catch (IndexOutOfBoundsException e) {
-            throw new MARSHAL(describeMarshal(MinorReadOverflow), MinorReadOverflow, COMPLETED_NO);
+            throw newMarshalError(MinorReadOverflow);
         }
     }
 
@@ -1587,7 +1590,7 @@ final public class InputStream extends InputStreamWithOffsets {
         // The chunking code needs to read a long value without entering an infinite loop
         bufReader.align(FOUR_BYTE_BOUNDARY);
 
-        if (buf_.available() < 4) throw new MARSHAL(describeMarshal(MinorReadLongOverflow), MinorReadLongOverflow, COMPLETED_NO);
+        if (buf_.available() < 4) throw newMarshalError(MinorReadLongOverflow);
 
         if (swap_)
             return (bufReader.readByte() & 0xff)
