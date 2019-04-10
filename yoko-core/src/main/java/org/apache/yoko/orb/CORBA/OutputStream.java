@@ -515,18 +515,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     @Override
     public InputStream create_input_stream() {
-        Buffer buf = new Buffer(buf_.length());
-//        buf = new Buffer(buf_);
-
-        if (buf_.length() > 0) System.arraycopy(buf_.data_, 0, buf.data_, 0, buf_.length());
-
-// this is a useful tracepoint, but produces a lot of data, so turn on only
-// if really needed.
-//      if (logger.isLoggable(Level.FINEST)) {
-//          logger.fine("new input stream created:\n" + buf.dumpRemainingData());
-//      }
-
-        InputStream in = new InputStream(buf, false, codeConverters_, giopVersion_);
+        InputStream in = new InputStream(new Buffer(buf_), false, codeConverters_, giopVersion_);
         in._OB_ORBInstance(orbInstance_);
         return in;
     }
