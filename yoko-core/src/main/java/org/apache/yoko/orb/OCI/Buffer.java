@@ -373,11 +373,13 @@ public final class Buffer {
             return shortfall > 0 && addLength(shortfall);
         }
 
-        private void writeBytes(byte[] bytes) {
+        @Override
+        public void writeBytes(byte[] bytes) {
             writeBytes(bytes, 0, bytes.length);
         }
 
-        private void writeBytes(byte[] bytes, int offset, int length) {
+        @Override
+        public void writeBytes(byte[] bytes, int offset, int length) {
             System.arraycopy(bytes, 0, data_, pos_, length);
             pos_ += length;
         }

@@ -43,6 +43,10 @@ public interface BufferWriter {
      */
     boolean ensureAvailable(int size);
 
+    void writeBytes(byte[] bytes);
+
+    void writeBytes(byte[] bytes, int offset, int length);
+
     void writeByte(int i);
 
     void writeByte(byte b);

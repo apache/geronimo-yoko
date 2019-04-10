@@ -919,13 +919,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_octet_array(byte[] value, int offset, int length) {
-        if (length > 0) {
-            addCapacity(length);
-
-            System.arraycopy(value, offset, buf_.data_, buf_.pos_, length);
-
-            buf_.pos_ += length;
-        }
+        if (length <= 0) return;
+        addCapacity(length);
+        bufWriter.writeBytes(value, offset, length);
     }
 
     public void write_short_array(short[] value, int offset, int length) {
