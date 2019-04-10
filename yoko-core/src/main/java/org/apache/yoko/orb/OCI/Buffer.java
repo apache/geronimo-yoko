@@ -162,7 +162,7 @@ public final class Buffer {
 
     public boolean readFrom(InputStream in) throws IOException {
         try {
-            int result = in.read(data(), pos_, available());
+            int result = in.read(data_, pos_, available());
             if (result <= 0) return false;
             advance(result);
             return true;
@@ -174,7 +174,7 @@ public final class Buffer {
 
     public void writeTo(OutputStream out) throws IOException {
         try {
-            out.write(data(), pos_, available());
+            out.write(data_, pos_, available());
             out.flush();
             pos_ = length();
         } catch (InterruptedIOException ex) {
@@ -381,6 +381,13 @@ public final class Buffer {
         @Override
         public void writeBytes(byte[] bytes, int offset, int length) {
             System.arraycopy(bytes, 0, data_, pos_, length);
+            pos_ += length;
+        }
+
+        @Override
+        public void readFrom(org.omg.CORBA.portable.InputStream source) {
+            final int length = available();
+            source.read_octet_array(data_, pos_, length);
             pos_ += length;
         }
 

@@ -16,6 +16,8 @@
  */
 package org.apache.yoko.orb.OCI;
 
+import org.omg.CORBA.portable.InputStream;
+
 public interface BufferWriter {
     void padAlign(AlignmentBoundary boundary);
 
@@ -46,6 +48,8 @@ public interface BufferWriter {
     void writeBytes(byte[] bytes);
 
     void writeBytes(byte[] bytes, int offset, int length);
+
+    void readFrom(InputStream source);
 
     void writeByte(int i);
 

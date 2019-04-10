@@ -1235,9 +1235,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case TCKind._tk_local_interface: {
                     final int len = in.read_ulong();
                     write_ulong(len);
-                    addCapacity(len);
-                    in.read_octet_array(buf_.data_, buf_.pos_, len);
-                    buf_.pos_ += len;
+                    readFrom(in, len);
                     break;
                 }
 
@@ -1460,22 +1458,18 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
                     case _tk_short:
                     case _tk_ushort: {
-                        if (obin == null || obin.swap_) {
+                        if (obin != null && obin.swap_) {
                             short[] s = new short[len];
                             in.read_short_array(s, 0, len);
                             write_short_array(s, 0, len);
                         } else {
                             // Read one value for the alignment
-                            write_short(obin.read_short());
+                            write_short(in.read_short());
                             final int n = 2 * (len - 1);
 
                             if (n > 0) {
                                 // Copy the rest
-                                addCapacity(n);
-                                Buffer buf = obin._OB_buffer();
-                                System.arraycopy(buf.data_, buf.pos_, buf_.data_, buf_.pos_, n);
-                                buf.pos_ += n;
-                                buf_.pos_ += n;
+                                readFrom(in, n);
                             }
                         }
                         break;
@@ -1484,22 +1478,18 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     case _tk_long:
                     case _tk_ulong:
                     case _tk_float: {
-                        if (obin == null || obin.swap_) {
+                        if (obin != null && obin.swap_) {
                             int[] i = new int[len];
                             in.read_long_array(i, 0, len);
                             write_long_array(i, 0, len);
                         } else {
                             // Read one value for the alignment
-                            write_long(obin.read_long());
+                            write_long(in.read_long());
                             final int n = 4 * (len - 1);
 
                             if (n > 0) {
                                 // Copy the rest
-                                addCapacity(n);
-                                Buffer buf = obin._OB_buffer();
-                                System.arraycopy(buf.data_, buf.pos_, buf_.data_, buf_.pos_, n);
-                                buf.pos_ += n;
-                                buf_.pos_ += n;
+                                readFrom(in, n);
                             }
                         }
                         break;
@@ -1508,21 +1498,17 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     case _tk_double:
                     case _tk_longlong:
                     case _tk_ulonglong: {
-                        if (obin == null || obin.swap_) {
+                        if (obin != null && obin.swap_) {
                             long[] l = new long[len];
                             in.read_longlong_array(l, 0, len);
                             write_longlong_array(l, 0, len);
                         } else {
                             // Read one value for the alignment
-                            write_longlong(obin.read_longlong());
+                            write_longlong(in.read_longlong());
                             final int n = 8 * (len - 1);
                             if (n > 0) {
                                 // Copy the rest
-                                addCapacity(n);
-                                Buffer buf = obin._OB_buffer();
-                                System.arraycopy(buf.data_, buf.pos_, buf_.data_, buf_.pos_, n);
-                                buf.pos_ += n;
-                                buf_.pos_ += n;
+                                readFrom(in, n);
                             }
                         }
                         break;
@@ -1530,17 +1516,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
                     case _tk_boolean:
                     case _tk_octet:
-                        if (obin == null) {
-                            addCapacity(len);
-                            in.read_octet_array(buf_.data_, buf_.pos_, len);
-                            buf_.pos_ += len;
-                        } else {
-                            addCapacity(len);
-                            Buffer buf = obin._OB_buffer();
-                            System.arraycopy(buf.data_, buf.pos_, buf_.data_, buf_.pos_, len);
-                            buf.pos_ += len;
-                            buf_.pos_ += len;
-                        }
+                        readFrom(in, len);
                         break;
 
                     case _tk_char:
@@ -1549,9 +1525,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                             in.read_char_array(ch, 0, len);
                             write_char_array(ch, 0, len);
                         } else {
-                            addCapacity(len);
-                            in.read_octet_array(buf_.data_, buf_.pos_, len);
-                            buf_.pos_ += len;
+                            readFrom(in, len);
                         }
                         break;
 
@@ -1618,6 +1592,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         } catch (BadKind | Bounds ex) {
             _OB_assert(ex);
         }
+    }
+
+    private void readFrom(org.omg.CORBA.portable.InputStream in, int length) {
+        addCapacity(length);
+        bufWriter.readFrom(in);
     }
 
     // ------------------------------------------------------------------
