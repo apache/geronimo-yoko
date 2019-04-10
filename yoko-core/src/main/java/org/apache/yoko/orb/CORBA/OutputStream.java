@@ -51,7 +51,6 @@ import java.math.BigDecimal;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
@@ -125,8 +124,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Handles all OBV marshalling
     private ValueWriter valueWriter_;
 
-    // If alignNext_ > 0, the next write should be aligned on this boundary
-    private int alignNext_;
+    // The next write should be aligned on this boundary
+    private AlignmentBoundary nextBoundary = NO_BOUNDARY;
 
     private Object invocationContext_;
 
@@ -134,7 +133,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     private Timeout timeout = Timeout.NEVER;
 
     private Buffer.LengthWriter recordLength() {
-        addCapacity(4, 4);
+        addCapacity(4, FOUR_BYTE_BOUNDARY);
         return buf_.new LengthWriter(LOGGER);
     }
 
@@ -450,10 +449,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private void addCapacity(int size) {
-        if (alignNext_ > 0) {
-            int align = alignNext_;
-            alignNext_ = 0;
-            addCapacity(size, align);
+        if (nextBoundary != NO_BOUNDARY) {
+            AlignmentBoundary boundary = nextBoundary;
+            nextBoundary = NO_BOUNDARY;
+            addCapacity(size, boundary);
         } else {
             //
             // If we're at the end of the current buffer, then we are about
@@ -465,7 +464,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             }
 
             // If there isn't enough room, then reallocate the buffer
-            bufWriter.ensureAvailable(size);
+            final boolean resized = bufWriter.ensureAvailable(size);
+            if (resized) checkTimeout();
         }
     }
 
@@ -477,9 +477,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    private void addCapacity(int size, int align) {
-        // use addCapacity(int) if align == 0
-        _OB_assert(align > 0);
+    private void addCapacity(int size, AlignmentBoundary boundary) {
+        _OB_assert(boundary != NO_BOUNDARY);
 
         //
         // If we're at the end of the current buffer, then we are about
@@ -490,15 +489,20 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             checkBeginChunk();
         }
 
-        //
-        // If alignNext_ is set, then use the larger of alignNext_ and align
-        //
-        if (alignNext_ > 0) {
-            align = (alignNext_ > align ? alignNext_ : align);
-            alignNext_ = 0;
+        if (nextBoundary != NO_BOUNDARY) {
+            boundary = boundary.and(nextBoundary);
+            nextBoundary = NO_BOUNDARY;
         }
 
-        final AlignmentBoundary boundary;
+
+        // If there isn't enough room, then reallocate the buffer
+        final boolean resized = bufWriter.ensureAvailable(size, boundary);
+        if (resized) checkTimeout();
+
+    }
+
+    private AlignmentBoundary convertIntToAlignmentBoundary(int align) {
+        AlignmentBoundary boundary;
         switch (align) {
         case 0: boundary = NO_BOUNDARY; break;
         case 2: boundary = TWO_BYTE_BOUNDARY; break;
@@ -506,10 +510,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         case 8: boundary = EIGHT_BYTE_BOUNDARY; break;
         default: throw new Error();
         }
-
-        // If there isn't enough room, then reallocate the buffer
-        bufWriter.ensureAvailable(size, boundary);
-
+        return boundary;
     }
 
     public void write(int b) {
@@ -612,7 +613,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // allocate aligned space
                 //
-                addCapacity(2, 2);
+                addCapacity(2, TWO_BYTE_BOUNDARY);
 
                 //
                 // write using the writer
@@ -654,7 +655,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // add aligned capacity
                 //
-                addCapacity(2, 2);
+                addCapacity(2, TWO_BYTE_BOUNDARY);
 
                 //
                 // write 2-byte character in big endian
@@ -695,7 +696,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_short(short value) {
-        addCapacity(2, 2);
+        addCapacity(2, TWO_BYTE_BOUNDARY);
         buf_.writer.writeShort(value);
     }
 
@@ -704,7 +705,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_long(int value) {
-        addCapacity(4, 4);
+        addCapacity(4, FOUR_BYTE_BOUNDARY);
         buf_.writer.writeInt(value);
     }
 
@@ -713,7 +714,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_longlong(long value) {
-        addCapacity(8, 8);
+        addCapacity(8, EIGHT_BYTE_BOUNDARY);
         buf_.writer.writeLong(value);
     }
 
@@ -952,7 +953,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_short_array(short[] value, int offset, int length) {
         if (length > 0) {
-            addCapacity(length * 2, 2);
+            addCapacity(length * 2, TWO_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
                 buf_.writer.writeShort(value[i]);
@@ -966,7 +967,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_long_array(int[] value, int offset, int length) {
         if (length > 0) {
-            addCapacity(length * 4, 4);
+            addCapacity(length * 4, FOUR_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
                 buf_.writer.writeInt(value[i]);
@@ -980,7 +981,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_longlong_array(long[] value, int offset, int length) {
         if (length > 0) {
-            addCapacity(length * 8, 8);
+            addCapacity(length * 8, EIGHT_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
                 buf_.writer.writeLong(value[i]);
@@ -994,7 +995,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_float_array(float[] value, int offset, int length) {
         if (length > 0) {
-            addCapacity(length * 4, 4);
+            addCapacity(length * 4, FOUR_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
                 int v = Float.floatToIntBits(value[i]);
@@ -1006,7 +1007,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_double_array(double[] value, int offset, int length) {
         if (length > 0) {
-            addCapacity(length * 8, 8);
+            addCapacity(length * 8, EIGHT_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
                 long v = Double.doubleToLongBits(value[i]);
@@ -1695,7 +1696,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void _OB_alignNext(int n) {
-        alignNext_ = n;
+        nextBoundary = convertIntToAlignmentBoundary(n);
     }
 
     public void _OB_writeEndian() {
