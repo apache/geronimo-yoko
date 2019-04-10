@@ -664,9 +664,10 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public int available() {
-        _OB_assert(buf_.length() >= buf_.pos_);
+        int available =  buf_.available();
+        _OB_assert(available >= 0);
 
-        return buf_.length() - buf_.pos_;
+        return available;
     }
 
     public int read() {
@@ -1038,66 +1039,63 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void read_boolean_array(boolean[] value, int offset, int length) {
-        if (length > 0) {
-            checkChunk();
+        if (length <= 0) return;
+        checkChunk();
 
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
+        if (buf_.available() < length)
+            throw new MARSHAL(describeMarshal(MinorReadBooleanArrayOverflow), MinorReadBooleanArrayOverflow, COMPLETED_NO);
 
-            for (int i = offset; i < offset + length; i++)
-                value[i] = bufReader.readByte() != (byte) 0;
-        }
+        for (int i = offset; i < offset + length; i++)
+            value[i] = bufReader.readByte() != (byte) 0;
     }
 
     public void read_char_array(char[] value, int offset, int length) {
-        if (length > 0) {
-            checkChunk();
+        if (length <= 0) return;
+        checkChunk();
 
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
+        if (buf_.available() < blength)
+            throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
 
-            if (!(charReaderRequired_ || charConversionRequired_)) {
-                for (int i = offset; i < offset + length; i++) {
-                    //
-                    // Note: byte must be masked with 0xff to correct negative
-                    // values
-                    //
-                    value[i] = (char) (bufReader.readByte() & 0xff);
-                }
-            } else {
-                final CodeConverterBase converter = codeConverters_.inputCharConverter;
-
+        if (!(charReaderRequired_ || charConversionRequired_)) {
+            for (int i = offset; i < offset + length; i++) {
                 //
-                // Intermediate variable used for efficiency
+                // Note: byte must be masked with 0xff to correct negative
+                // values
                 //
-                boolean bothRequired = charReaderRequired_ && charConversionRequired_;
+                value[i] = (char) (bufReader.readByte() & 0xff);
+            }
+        } else {
+            final CodeConverterBase converter = codeConverters_.inputCharConverter;
 
-                for (int i = offset; i < offset + length; i++) {
-                    if (bothRequired)
-                        value[i] = converter.convert(converter.read_char(bufReader));
-                    else if (charReaderRequired_)
-                        value[i] = converter.read_char(bufReader);
-                    else {
-                        //
-                        // Note: byte must be masked with 0xff
-                        // to correct negative values
-                        //
-                        final char c = (char) (bufReader.readByte() & 0xff);
-                        value[i] = converter.convert(c);
-                    }
+            //
+            // Intermediate variable used for efficiency
+            //
+            boolean bothRequired = charReaderRequired_ && charConversionRequired_;
+
+            for (int i = offset; i < offset + length; i++) {
+                if (bothRequired)
+                    value[i] = converter.convert(converter.read_char(bufReader));
+                else if (charReaderRequired_)
+                    value[i] = converter.read_char(bufReader);
+                else {
+                    //
+                    // Note: byte must be masked with 0xff
+                    // to correct negative values
+                    //
+                    final char c = (char) (bufReader.readByte() & 0xff);
+                    value[i] = converter.convert(c);
                 }
             }
         }
     }
 
     public void read_wchar_array(char[] value, int offset, int length) {
-        if (length > 0) {
-            if (buf_.pos_ + length < buf_.pos_ || buf_.pos_ + length > buf_.length())
-                throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
+        if (length <= 0) return;
+        if (buf_.available() < length)
+            throw new MARSHAL(describeMarshal(MinorReadCharArrayOverflow), MinorReadCharArrayOverflow, COMPLETED_NO);
 
-            for (int i = offset; i < offset + length; i++)
-                value[i] = read_wchar(false);
-        }
+        for (int i = offset; i < offset + length; i++)
+            value[i] = read_wchar(false);
     }
 
     public void read_octet_array(byte[] value, int offset, int length) {
@@ -1111,14 +1109,11 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void read_short_array(short[] value, int offset, int length) {
-        if (length <= 0)
-            return;
-
+        if (length <= 0) return;
         checkChunk();
         bufReader.align(TWO_BYTE_BOUNDARY);
 
-        int newPos = buf_.pos_ + length * 2;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (buf_.available() < length * 2)
             throw new MARSHAL(describeMarshal(MinorReadShortArrayOverflow), MinorReadShortArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1138,8 +1133,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
         bufReader.align(FOUR_BYTE_BOUNDARY);
 
-        int newPos = buf_.pos_ + length * 4;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (buf_.available() < length * 4)
             throw new MARSHAL(describeMarshal(MinorReadLongArrayOverflow), MinorReadLongArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1168,8 +1162,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         bufReader.align(EIGHT_BYTE_BOUNDARY);
 
-        int newPos = buf_.pos_ + length * 8;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (buf_.available() < length * 8)
             throw new MARSHAL(describeMarshal(MinorReadLongLongArrayOverflow), MinorReadLongLongArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1204,8 +1197,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         bufReader.align(FOUR_BYTE_BOUNDARY);
 
-        int newPos = buf_.pos_ + length * 4;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (buf_.available() < length * 4)
             throw new MARSHAL(describeMarshal(MinorReadFloatArrayOverflow), MinorReadFloatArrayOverflow, COMPLETED_NO);
 
         if (swap_)
@@ -1234,8 +1226,7 @@ final public class InputStream extends InputStreamWithOffsets {
         checkChunk();
         bufReader.align(EIGHT_BYTE_BOUNDARY);
 
-        int newPos = buf_.pos_ + length * 8;
-        if (newPos < buf_.pos_ || newPos > buf_.length())
+        if (buf_.available() < length * 8)
             throw new MARSHAL(describeMarshal(MinorReadDoubleArrayOverflow), MinorReadDoubleArrayOverflow, COMPLETED_NO);
 
         if (swap_) {

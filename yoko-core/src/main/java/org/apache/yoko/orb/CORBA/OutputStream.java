@@ -459,7 +459,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // to write new data. We must first check if we need to start a
             // chunk, which may result in a recursive call to addCapacity().
             //
-            if (buf_.pos_ == buf_.length() && valueWriter_ != null) {
+            if (buf_.is_full() && valueWriter_ != null) {
                 checkBeginChunk();
             }
 
