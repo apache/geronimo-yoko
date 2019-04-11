@@ -34,7 +34,6 @@ import org.omg.IOP.ServiceContext;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final public class CollocatedServer extends Server implements UpcallReturn {
@@ -193,8 +192,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             int reqId = down.requestId();
             String op = down.operation();
             OutputStream out = down.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
+            Buffer buf = new Buffer(out._OB_buffer());
             ServiceContext[] requestSCL = down.getRequestSCL();
 
             //
@@ -343,8 +341,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         if (down != null) // Might be null if the request timed out
         {
             OutputStream out = upcall.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
+            Buffer buf = new Buffer(out._OB_buffer());
             InputStream in = new InputStream(buf, false);
             down.setNoException(in);
             callMap_.remove(new Integer(down.requestId()));
@@ -377,8 +374,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         //
         if (down != null) {
             OutputStream out = upcall.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
+            Buffer buf = new Buffer(out._OB_buffer());
             InputStream in = new InputStream(buf, false);
             down.setUserException(in);
             callMap_.remove(new Integer(down.requestId()));
