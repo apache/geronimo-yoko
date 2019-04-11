@@ -75,7 +75,8 @@ public enum CmsfVersion {
         try (OutputStream out = new OutputStream(buf)) {
             out._OB_writeEndian();
             out.write_octet(value);
-            return Arrays.copyOf(buf.data(), buf.length());
+            buf.reader.rewindToStart();
+            return buf.reader.copyRemainingBytes();
         } catch (IOException e) {
             throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }

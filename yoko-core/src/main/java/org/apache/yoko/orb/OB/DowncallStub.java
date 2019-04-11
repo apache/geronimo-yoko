@@ -775,7 +775,7 @@ public final class DowncallStub {
         Buffer buf = o._OB_buffer();
         MessageBody messageBody = new MessageBody();
         messageBody.byte_order = false; // Java is always false
-        messageBody.body = buf.copyRemainingBytes();
+        messageBody.body = buf.reader.copyRemainingBytes();
         payload.body = messageBody;
 
         //
@@ -973,7 +973,7 @@ public final class DowncallStub {
         //
         // Copy in the rest of the message body
         //
-        messageBody.body = buf.copyRemainingBytes();
+        messageBody.body = buf.reader.copyRemainingBytes();
         requestMessage.body = messageBody;
 
         //

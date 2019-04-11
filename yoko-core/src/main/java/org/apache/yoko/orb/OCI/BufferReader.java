@@ -60,4 +60,6 @@ public interface BufferReader {
      * @param writer
      */
     void appendAvailableDataTo(Buffer.Writer writer);
+
+    byte[] copyRemainingBytes();
 }

@@ -37,10 +37,8 @@ final class CDRCodec extends LocalObject implements Codec {
         out._OB_ORBInstance(orbInstance_);
         out._OB_writeEndian();
         out.write_any(data);
-
-        byte[] result = new byte[buf.length()];
-        System.arraycopy(buf.data(), 0, result, 0, buf.length());
-        return result;
+        buf.reader.rewindToStart();
+        return buf.reader.copyRemainingBytes();
     }
 
     public org.omg.CORBA.Any decode(byte[] data)

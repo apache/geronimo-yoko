@@ -339,7 +339,7 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     //
     public void _OB_extractSequence(Buffer buf) {
         Assert._OB_assert(buf != null);
-        marshaled_exception = buf.copyRemainingBytes();
+        marshaled_exception = buf.reader.copyRemainingBytes();
     }
 
     //

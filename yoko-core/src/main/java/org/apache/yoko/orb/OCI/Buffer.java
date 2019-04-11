@@ -187,12 +187,6 @@ public final class Buffer {
         }
     }
 
-    public byte[] copyRemainingBytes() {
-        byte[] bytes = new byte[available()];
-        System.arraycopy(data_, pos_, bytes, 0, available());
-        return bytes;
-    }
-
     public void appendRemainingDataFrom(Buffer b) {
         addLength(b.available());
         System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
@@ -337,6 +331,11 @@ public final class Buffer {
         @Override
         public void appendAvailableDataTo(Writer writer) {
             writer.writeBytes(data_, pos_, available());
+        }
+
+        @Override
+        public byte[] copyRemainingBytes() {
+            return copyOf(data_, available());
         }
     }
 
