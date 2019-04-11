@@ -111,26 +111,20 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
             BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
             biDirCtxt.listen_points = listenMap_.getListenPoints();
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(
-                    buf);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
 
-            out._OB_writeEndian();
-            BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+                // Fill in the bidir service context
+                ServiceContext context = new ServiceContext();
+                context.context_id = BI_DIR_IIOP.value;
+                context.context_data = out.copyWrittenBytes();
 
-            //
-            // Fill in the bidir service context
-            //
-            ServiceContext context = new ServiceContext();
-            context.context_id = BI_DIR_IIOP.value;
-            context.context_data = buf.data();
-
-            //
-            // Create and fill the return context list
-            //
-            scl = new ServiceContext[1];
-            scl[0] = context;
-            return scl;
+                // Create and fill the return context list
+                scl = new ServiceContext[1];
+                scl[0] = context;
+                return scl;
+            }
         }
 
         //

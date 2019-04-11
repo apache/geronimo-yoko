@@ -462,9 +462,8 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
 
         _OB_marshal(out);
 
-        InputStream in = (InputStream) out.create_input_stream();
-        Any result = new Any(orbInstance_, type_, in);
-        return result;
+        InputStream in = out.create_input_stream();
+        return new Any(orbInstance_, type_, in);
     }
 
     public synchronized boolean equal(DynAny dyn_any) {

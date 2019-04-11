@@ -32,13 +32,12 @@ final class CDRCodec extends LocalObject implements Codec {
     private ORBInstance orbInstance_;
 
     public byte[] encode(org.omg.CORBA.Any data) {
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        out._OB_writeEndian();
-        out.write_any(data);
-        buf.reader.rewindToStart();
-        return buf.reader.copyRemainingBytes();
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            out._OB_writeEndian();
+            out.write_any(data);
+            return out.copyWrittenBytes();
+        }
     }
 
     public org.omg.CORBA.Any decode(byte[] data)
@@ -57,15 +56,12 @@ final class CDRCodec extends LocalObject implements Codec {
     }
 
     public byte[] encode_value(org.omg.CORBA.Any data) {
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        out._OB_writeEndian();
-        data.write_value(out);
-
-        byte[] result = new byte[buf.length()];
-        System.arraycopy(buf.data(), 0, result, 0, buf.length());
-        return result;
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            out._OB_writeEndian();
+            data.write_value(out);
+            return out.copyWrittenBytes();
+        }
     }
 
     public org.omg.CORBA.Any decode_value(byte[] data, TypeCode tc) throws FormatMismatch, TypeMismatch {

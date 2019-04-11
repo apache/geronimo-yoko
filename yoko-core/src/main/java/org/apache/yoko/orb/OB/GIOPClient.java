@@ -223,20 +223,17 @@ final class GIOPClient extends Client {
             ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getDestinationCodeSet().id;
 
             // Create encapsulation for CONV_FRAME::CodeSetContext
-            Buffer buf = new Buffer();
-            OutputStream outCSC = new OutputStream(buf);
-            outCSC._OB_writeEndian();
-            CodeSetContextHelper.write(outCSC, ctx);
+            try (OutputStream outCSC = new OutputStream(new Buffer())) {
+                outCSC._OB_writeEndian();
+                CodeSetContextHelper.write(outCSC, ctx);
 
-            // Create service context containing the
-            // CONV_FRAME::CodeSetContext encapsulation
-            codeSetSC_ = new ServiceContext();
-            codeSetSC_.context_id = CodeSets.value;
+                // Create service context containing the
+                // CONV_FRAME::CodeSetContext encapsulation
+                codeSetSC_ = new ServiceContext();
+                codeSetSC_.context_id = CodeSets.value;
 
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeSetSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeSetSC_.context_data, 0, len);
+                codeSetSC_.context_data = outCSC.copyWrittenBytes();
+            }
         }
         if (codeBaseSC_ == null) {
 
@@ -244,18 +241,14 @@ final class GIOPClient extends Client {
             CodeBase codeBase = CodeBaseHelper.narrow(valueHandler.getRunTimeCodeBase());
 
 
-            Buffer buf = new Buffer();
-            OutputStream outCBC = new OutputStream(buf);
-            outCBC._OB_writeEndian();
-            CodeBaseHelper.write(outCBC, codeBase);
+            try (OutputStream outCBC = new OutputStream(new Buffer())) {
+                outCBC._OB_writeEndian();
+                CodeBaseHelper.write(outCBC, codeBase);
 
-            codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = SendingContextRunTime.value;
-
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeBaseSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+                codeBaseSC_ = new ServiceContext();
+                codeBaseSC_.context_id = SendingContextRunTime.value;
+                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
+            }
         }
         //
         // NOTE: We don't initialize the INVOCATION_POLICIES service context

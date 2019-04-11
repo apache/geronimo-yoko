@@ -90,7 +90,7 @@ final public class GIOPIncomingMessage {
 
                 throw new IMP_LIMIT(describeImpLimit(MinorMessageSizeLimit), MinorMessageSizeLimit, COMPLETED_NO);
             }
-            buf.appendRemainingDataFrom(b);
+            buf.writer.writeBytes(b.reader);
         }
 
     }

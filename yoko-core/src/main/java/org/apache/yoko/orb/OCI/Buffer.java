@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OCI;
 
 import org.apache.yoko.orb.OB.IORUtil;
+import org.apache.yoko.util.HexConverter;
 import org.omg.CORBA.NO_MEMORY;
 
 import java.io.IOException;
@@ -66,6 +67,12 @@ public final class Buffer {
         return pos_ >= len_;
     }
 
+    public boolean dataEquals(Buffer that) {
+        if (len_ != that.len_) return false;
+        for (int i = 0; i < len_; i++) if(data_[i] != that.data_[i]) return false;
+        return true;
+    }
+
     /**
      * Extend the current buffer.
      * @param extra the number of additional bytes required beyond the end of the buffer.
@@ -91,12 +98,6 @@ public final class Buffer {
         final int minAlloc = data_.length + min(data_.length, MAX_OVERALLOC);
         // allow more if requested length is greater
         return max(len, minAlloc);
-    }
-
-    public void data(byte[] data, int len) {
-        this.data_ = data;
-        this.len_ = len;
-        this.pos_ = 0;
     }
 
     public void consume(Buffer buf) {
@@ -180,16 +181,11 @@ public final class Buffer {
         try {
             out.write(data_, pos_, available());
             out.flush();
-            pos_ = length();
+            pos_ = len_;
         } catch (InterruptedIOException ex) {
             advance(ex.bytesTransferred);
             throw ex;
         }
-    }
-
-    public void appendRemainingDataFrom(Buffer b) {
-        addLength(b.available());
-        System.arraycopy(b.data(), b.pos_, data(), length(), b.available());
     }
 
     private enum Padding {;
@@ -336,6 +332,11 @@ public final class Buffer {
         @Override
         public byte[] copyRemainingBytes() {
             return copyOf(data_, available());
+        }
+
+        @Override
+        public String remainingBytesToAscii() {
+            return HexConverter.octetsToAscii(data_, available());
         }
     }
 

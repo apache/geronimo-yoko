@@ -71,14 +71,10 @@ public enum CmsfVersion {
     }
     
     private static byte[] genData(byte value) {
-        Buffer buf = new Buffer(2);
-        try (OutputStream out = new OutputStream(buf)) {
+        try (OutputStream out = new OutputStream(new Buffer(2))) {
             out._OB_writeEndian();
             out.write_octet(value);
-            buf.reader.rewindToStart();
-            return buf.reader.copyRemainingBytes();
-        } catch (IOException e) {
-            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
+            return out.copyWrittenBytes();
         }
     }
 }

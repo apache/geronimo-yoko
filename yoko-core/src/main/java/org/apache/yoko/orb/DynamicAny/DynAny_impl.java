@@ -1000,13 +1000,12 @@ abstract class DynAny_impl extends LocalObject implements
             throw new TypeMismatch();
 
         DynAny_impl impl = (DynAny_impl) comp;
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        impl._OB_marshal(out);
-        InputStream in = out.create_input_stream();
-
-        return in.read_value();
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            impl._OB_marshal(out);
+            InputStream in = out.create_input_stream();
+            return in.read_value();
+        }
     }
 
     public synchronized Object get_abstract()

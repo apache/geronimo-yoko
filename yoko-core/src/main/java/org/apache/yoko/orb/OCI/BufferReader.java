@@ -62,4 +62,6 @@ public interface BufferReader {
     void appendAvailableDataTo(Buffer.Writer writer);
 
     byte[] copyRemainingBytes();
+
+    String remainingBytesToAscii();
 }

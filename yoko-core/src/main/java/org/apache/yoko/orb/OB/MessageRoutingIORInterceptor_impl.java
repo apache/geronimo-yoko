@@ -56,12 +56,9 @@ final public class MessageRoutingIORInterceptor_impl extends LocalObject impleme
         TaggedComponent routerComponent = new TaggedComponent();
         routerComponent.tag = TAG_MESSAGE_ROUTERS.value;
 
-        //
         // Create an OutputStream and write all of the router IORs
-        //
-        Buffer routerBuf = new Buffer();
-        OutputStream routerOut = new OutputStream(routerBuf);
-        routerOut._OB_writeEndian();
+        try (OutputStream routerOut = new OutputStream(new Buffer())) {
+            routerOut._OB_writeEndian();
 
             // This list actually needs to be written in reverse order
             int len = routerList_.length;
@@ -69,13 +66,9 @@ final public class MessageRoutingIORInterceptor_impl extends LocalObject impleme
             for (int i = len; i > 0; --i) reorderedList[i - 1] = routerList_[len - i];
             RouterListHelper.write(routerOut, reorderedList);
 
-        //
-        // Write the routerlist data into the tagged component
-        //
-        routerComponent.component_data = new byte[routerOut._OB_pos()];
-        System.arraycopy(routerBuf.data(), 0, routerComponent.component_data,
-                0, routerBuf.length());
-
+            // Write the routerlist data into the tagged component
+            routerComponent.component_data = routerOut.copyWrittenBytes();
+        }
         try {
             info.add_ior_component(routerComponent);
         } catch (BAD_PARAM ex) {
@@ -98,15 +91,13 @@ final public class MessageRoutingIORInterceptor_impl extends LocalObject impleme
 
         // Create an OutputStream and write all of the policies
         //
-        Buffer policyBuf = new Buffer();
-        OutputStream policyOut = new OutputStream(policyBuf);
-        policyOut._OB_writeEndian();
-        PolicyValueSeqHelper.write(policyOut, policiesHolder.value);
+        try (OutputStream policyOut = new OutputStream(new Buffer())) {
+            policyOut._OB_writeEndian();
+            PolicyValueSeqHelper.write(policyOut, policiesHolder.value);
 
-        // Write the routerlist data into the tagged component
-        policyComponent.component_data = new byte[policyOut._OB_pos()];
-        System.arraycopy(policyBuf.data(), 0, policyComponent.component_data, 0, policyBuf.length());
-
+            // Write the routerlist data into the tagged component
+            policyComponent.component_data = policyOut.copyWrittenBytes();
+        }
         try {
             info.add_ior_component(policyComponent);
         } catch (BAD_PARAM ignored) {

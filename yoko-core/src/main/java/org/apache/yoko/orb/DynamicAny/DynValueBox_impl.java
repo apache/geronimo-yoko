@@ -22,6 +22,7 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.TypeCodePackage.BadKind;
@@ -145,12 +146,12 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
         if (is_null())
             return new Any(orbInstance_, type_, null);
         else {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_ORBInstance(orbInstance_);
-            _OB_marshal(out);
-            InputStream in = (InputStream) out.create_input_stream();
-            return new Any(orbInstance_, type_, in);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_ORBInstance(orbInstance_);
+                _OB_marshal(out);
+                InputStream in = out.create_input_stream();
+                return new Any(orbInstance_, type_, in);
+            }
         }
     }
 

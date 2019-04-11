@@ -166,14 +166,11 @@ public class CorbalocProtocol_impl extends LocalObject implements
                 body.port = (short) port;
             body.object_key = key;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(
-                    buf);
-            out._OB_writeEndian();
-            ProfileBody_1_0Helper.write(out, body);
-            profile.profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, profile.profile_data, 0, buf
-                    .length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                ProfileBody_1_0Helper.write(out, body);
+                profile.profile_data = out.copyWrittenBytes();
+            }
         } else {
             // 
             // IIOP version is 1.1 or 1.2
@@ -188,14 +185,11 @@ public class CorbalocProtocol_impl extends LocalObject implements
             body.object_key = key;
             body.components = new TaggedComponent[0];
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(
-                    buf);
-            out._OB_writeEndian();
-            ProfileBody_1_1Helper.write(out, body);
-            profile.profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, profile.profile_data, 0, buf
-                    .length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                ProfileBody_1_1Helper.write(out, body);
+                profile.profile_data = out.copyWrittenBytes();
+            }
         }
 
         return profile;

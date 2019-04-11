@@ -145,25 +145,25 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 //
                 // Send a MessageError message
                 //
-                Buffer buf = new Buffer(12);
-                OutputStream out = new OutputStream(buf);
+                try (OutputStream out = new OutputStream(new Buffer(12))) {
 
-                ProfileInfo profileInfo = new ProfileInfo();
+                    ProfileInfo profileInfo = new ProfileInfo();
 
-                synchronized (this) {
-                    profileInfo.major = giopVersion_.major;
-                    profileInfo.minor = giopVersion_.minor;
+                    synchronized (this) {
+                        profileInfo.major = giopVersion_.major;
+                        profileInfo.minor = giopVersion_.minor;
+                    }
+
+                    GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+
+                    outgoing.writeMessageHeader(MsgType_1_1.MessageError, false, 0);
+                    out._OB_pos(0);
+
+                    synchronized (sendMutex_) {
+                        transport_.send(out._OB_buffer(), true);
+                    }
+                    _OB_assert(out._OB_buffer().is_full());
                 }
-
-                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
-
-                outgoing.writeMessageHeader(MsgType_1_1.MessageError, false, 0);
-                out._OB_pos(0);
-
-                synchronized (sendMutex_) {
-                    transport_.send(out._OB_buffer(), true);
-                }
-                _OB_assert(out._OB_buffer().is_full());
             } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 return;
@@ -203,17 +203,17 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // send a CloseConnection if we can
         //
         if (canSendCloseConnection()) {
-            Buffer buf = new Buffer(12);
-            OutputStream out = new OutputStream(buf);
+            try (OutputStream out = new OutputStream(new Buffer(12))) {
 
-            ProfileInfo profileInfo = new ProfileInfo();
-            profileInfo.major = giopVersion_.major;
-            profileInfo.minor = giopVersion_.minor;
+                ProfileInfo profileInfo = new ProfileInfo();
+                profileInfo.major = giopVersion_.major;
+                profileInfo.minor = giopVersion_.minor;
 
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
-            outgoing.writeMessageHeader(MsgType_1_1.CloseConnection, false, 0);
+                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+                outgoing.writeMessageHeader(MsgType_1_1.CloseConnection, false, 0);
 
-            messageQueue_.add(orbInstance_, out._OB_buffer());
+                messageQueue_.add(orbInstance_, out._OB_buffer());
+            }
         } else {
             logger.fine("could not send close connection message");
         }

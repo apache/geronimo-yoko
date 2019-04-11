@@ -1325,16 +1325,12 @@ public class ORB_impl extends ORBSingleton {
                 ior = delegate._OB_origIOR();
             }
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(
-                    buf);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                IORHelper.write(out, ior);
 
-            out._OB_writeEndian();
-            IORHelper.write(out, ior);
-
-            String str = HexConverter.octetsToAscii(buf
-                    .data(), buf.length());
-            return "IOR:" + str;
+                return "IOR:" + out.writtenBytesToAscii();
+            }
         }
     }
 
@@ -1650,14 +1646,11 @@ public class ORB_impl extends ORBSingleton {
 
     public org.omg.CORBA.portable.OutputStream create_output_stream() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(
-                buf);
-        out._OB_ORBInstance(orbInstance_);
-        return out;
+            OutputStream out = new OutputStream(new Buffer());
+            out._OB_ORBInstance(orbInstance_);
+            return out;
         }
     }
 

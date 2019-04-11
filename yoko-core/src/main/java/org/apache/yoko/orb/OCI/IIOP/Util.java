@@ -74,13 +74,11 @@ final public class Util {
             else
                 body.port = (short) port;
             body.object_key = profileInfo.key;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            ProfileBody_1_0Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                ProfileBody_1_0Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         } else {
             ProfileBody_1_1 body = new ProfileBody_1_1();
             body.iiop_version = new Version(profileInfo.major,
@@ -92,13 +90,11 @@ final public class Util {
                 body.port = (short) port;
             body.object_key = profileInfo.key;
             body.components = profileInfo.components;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            ProfileBody_1_1Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                ProfileBody_1_1Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         }
 
         return ior;

@@ -90,8 +90,7 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     //
     public DowncallEmitter startDowncall(Downcall down,
             OutputStreamHolder out) {
-        Buffer buf = new Buffer();
-        out.value = new OutputStream(buf);
+        out.value = new OutputStream(new Buffer());
         return this;
     }
 

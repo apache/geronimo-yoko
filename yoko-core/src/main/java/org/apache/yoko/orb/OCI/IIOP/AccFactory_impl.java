@@ -225,23 +225,21 @@ final class AccFactory_impl extends LocalObject implements
                 //
                 // Remarshal the new body
                 //
-                Buffer buf2 = new Buffer();
-                OutputStream out = new OutputStream(
-                        buf2);
-                out._OB_writeEndian();
-                ProfileBody_1_0Helper.write(out, body);
+                try (OutputStream out = new OutputStream(new Buffer())) {
+                    out._OB_writeEndian();
+                    ProfileBody_1_0Helper.write(out, body);
 
-                //
-                // Remarshal the components if the IIOP version is > 1.0
-                //
-                if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
-                    out.write_ulong(components.length);
-                    for (int i = 0; i < components.length; i++) {
-                        TaggedComponentHelper.write(out, components[i]);
+                    //
+                    // Remarshal the components if the IIOP version is > 1.0
+                    //
+                    if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
+                        out.write_ulong(components.length);
+                        for (int i = 0; i < components.length; i++) {
+                            TaggedComponentHelper.write(out, components[i]);
+                        }
                     }
+                    ior.value.profiles[profile].profile_data = out.copyWrittenBytes();
                 }
-                ior.value.profiles[profile].profile_data = new byte[buf2.length()];
-                System.arraycopy(buf2.data(), 0, ior.value.profiles[profile].profile_data, 0, buf2.length());
             }
         }
     }

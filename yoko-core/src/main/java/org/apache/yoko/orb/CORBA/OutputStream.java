@@ -1592,6 +1592,25 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
+    @Override
+    public void close() {}
+
+    boolean writtenBytesEqual(OutputStream that) {
+        return buf_.dataEquals(that.buf_);
+    }
+
+    public byte[] copyWrittenBytes() {
+        bufWriter.trim();
+        buf_.reader.rewindToStart();
+        return buf_.reader.copyRemainingBytes();
+    }
+
+    public String writtenBytesToAscii() {
+        bufWriter.trim();
+        buf_.reader.rewindToStart();
+        return buf_.reader.remainingBytesToAscii();
+    }
+
     public Buffer _OB_buffer() {
         return buf_;
     }

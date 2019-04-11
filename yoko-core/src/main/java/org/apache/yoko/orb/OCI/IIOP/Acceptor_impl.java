@@ -299,15 +299,11 @@ final class Acceptor_impl extends LocalObject implements
                 ior.value.profiles = profiles;
                 ior.value.profiles[len - 1] = new TaggedProfile();
                 ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                Buffer buf = new Buffer();
-                OutputStream out = new OutputStream(buf);
-                out._OB_writeEndian();
-                ProfileBody_1_0Helper.write(out, body);
-                ior.value.profiles[len - 1].profile_data = new byte[buf
-                        .length()];
-                System.arraycopy(buf.data(), 0,
-                        ior.value.profiles[len - 1].profile_data, 0, buf
-                                .length());
+                try (OutputStream out = new OutputStream(new Buffer())) {
+                    out._OB_writeEndian();
+                    ProfileBody_1_0Helper.write(out, body);
+                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
+                }
             }
         } else {
             if (multiProfile_) {
@@ -342,15 +338,11 @@ final class Acceptor_impl extends LocalObject implements
                     ior.value.profiles = profiles;
                     ior.value.profiles[len - 1] = new TaggedProfile();
                     ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                    Buffer buf = new Buffer();
-                    OutputStream out = new OutputStream(buf);
-                    out._OB_writeEndian();
-                    ProfileBody_1_1Helper.write(out, body);
-                    ior.value.profiles[len - 1].profile_data = new byte[buf
-                            .length()];
-                    System.arraycopy(buf.data(), 0,
-                            ior.value.profiles[len - 1].profile_data, 0, buf
-                                    .length());
+                    try (OutputStream out = new OutputStream(new Buffer())) {
+                        out._OB_writeEndian();
+                        ProfileBody_1_1Helper.write(out, body);
+                        ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
+                    }
                 }
             } else {
                 //
@@ -376,14 +368,12 @@ final class Acceptor_impl extends LocalObject implements
                 for (int i = 1; i < hosts_.length; i++) {
                     TaggedComponent c = new TaggedComponent();
                     c.tag = TAG_ALTERNATE_IIOP_ADDRESS.value;
-                    Buffer buf = new Buffer();
-                    OutputStream out = new OutputStream(buf);
-                    out._OB_writeEndian();
-                    out.write_string(hosts_[i]);
-                    out.write_ushort(body.port);
-                    c.component_data = new byte[buf.length()];
-                    System.arraycopy(buf.data(), 0, c.component_data, 0, buf
-                            .length());
+                    try (OutputStream out = new OutputStream(new Buffer())) {
+                        out._OB_writeEndian();
+                        out.write_string(hosts_[i]);
+                        out.write_ushort(body.port);
+                        c.component_data = out.copyWrittenBytes();
+                    }
                     components.addElement(c);
                 }
                 body.components = new TaggedComponent[components
@@ -397,15 +387,11 @@ final class Acceptor_impl extends LocalObject implements
                 ior.value.profiles = profiles;
                 ior.value.profiles[len - 1] = new TaggedProfile();
                 ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                Buffer buf = new Buffer();
-                OutputStream out = new OutputStream(buf);
-                out._OB_writeEndian();
-                ProfileBody_1_1Helper.write(out, body);
-                ior.value.profiles[len - 1].profile_data = new byte[buf
-                        .length()];
-                System.arraycopy(buf.data(), 0,
-                        ior.value.profiles[len - 1].profile_data, 0, buf
-                                .length());
+                try (OutputStream out = new OutputStream(new Buffer())) {
+                    out._OB_writeEndian();
+                    ProfileBody_1_1Helper.write(out, body);
+                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
+                }
             }
         }
     }

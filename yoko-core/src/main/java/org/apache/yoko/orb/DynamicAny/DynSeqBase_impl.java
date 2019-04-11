@@ -40,7 +40,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
 
     protected TCKind contentKind_;
 
-    private DynAny[] components_;
+    protected DynAny[] components_;
 
     protected int index_ = 0;
 
@@ -70,7 +70,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
 
         dynValueReader_ = dynValueReader;
 
-        components_ = new org.omg.DynamicAny.DynAny[0];
+        components_ = new DynAny[0];
 
         try {
             contentType_ = origType_.content_type();
@@ -123,7 +123,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
     // Private and protected member implementations
     // ------------------------------------------------------------------
 
-    protected void childModified(org.omg.DynamicAny.DynAny p) {
+    protected void childModified(DynAny p) {
         if (ignoreChild_) {
             ignoreChild_ = false;
             return;
@@ -611,7 +611,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
 
         if (len > length_) // increase length
         {
-            org.omg.DynamicAny.DynAny[] components = new org.omg.DynamicAny.DynAny[len];
+            DynAny[] components = new DynAny[len];
             System.arraycopy(components_, 0, components, 0, length_);
 
             if ((contentKind_.value() == TCKind._tk_value)
@@ -631,7 +631,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             components_ = components;
         } else if (len < length_) // decrease length
         {
-            org.omg.DynamicAny.DynAny[] components = new org.omg.DynamicAny.DynAny[len];
+            DynAny[] components = new DynAny[len];
             System.arraycopy(components_, 0, components, 0, len);
             components_ = components;
         }
@@ -667,7 +667,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         return result;
     }
 
-    protected org.omg.DynamicAny.DynAny[] getElementsAsDynAny() {
+    protected DynAny[] getElementsAsDynAny() {
         if (primitive_) {
             for (int i = 0; i < length_; i++) {
                 if (components_[i] == null)
@@ -675,7 +675,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             }
         }
 
-        org.omg.DynamicAny.DynAny[] result = new org.omg.DynamicAny.DynAny[length_];
+        DynAny[] result = new DynAny[length_];
         System.arraycopy(components_, 0, result, 0, length_);
         return result;
     }
@@ -695,13 +695,12 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             throw new TypeMismatch();
 
         DynAny_impl impl = (DynAny_impl) dyn_any;
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        impl._OB_marshal(out);
-        org.omg.CORBA.portable.InputStream in = out.create_input_stream();
-        _OB_unmarshal((InputStream) in);
-
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            impl._OB_marshal(out);
+            InputStream in = out.create_input_stream();
+            _OB_unmarshal(in);
+        }
         notifyParent();
     }
 
@@ -745,18 +744,17 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         if (destroyed_)
             throw new OBJECT_NOT_EXIST();
 
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
 
         _OB_marshal(out);
 
-        org.omg.CORBA.portable.InputStream in = out.create_input_stream();
-        Any result = new Any(orbInstance_, type_, in);
-        return result;
+            InputStream in = out.create_input_stream();
+            return new Any(orbInstance_, type_, in);
+        }
     }
 
-    public synchronized boolean equal(org.omg.DynamicAny.DynAny dyn_any) {
+    public synchronized boolean equal(DynAny dyn_any) {
         if (destroyed_)
             throw new OBJECT_NOT_EXIST();
 
@@ -874,29 +872,28 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         return true;
     }
 
-    public synchronized org.omg.DynamicAny.DynAny copy() {
+    public synchronized DynAny copy() {
         if (destroyed_)
             throw new OBJECT_NOT_EXIST();
 
         DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_,
                 factory_);
 
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        _OB_marshal(out, dynValueWriter);
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            _OB_marshal(out, dynValueWriter);
 
-        dynValueReader_ = dynValueWriter.getReader();
+            dynValueReader_ = dynValueWriter.getReader();
 
-        org.omg.DynamicAny.DynAny result = prepare(type_, dynValueReader_,
-                false);
+            DynAny result = prepare(type_, dynValueReader_, false);
 
-        DynSeqBase_impl seq = (DynSeqBase_impl) result;
+            DynSeqBase_impl seq = (DynSeqBase_impl) result;
 
-        org.omg.CORBA.portable.InputStream in = out.create_input_stream();
-        seq._OB_unmarshal((InputStream) in);
+            InputStream in = out.create_input_stream();
+            seq._OB_unmarshal(in);
 
-        return result;
+            return result;
+        }
     }
 
     public synchronized boolean seek(int index) {
@@ -1172,8 +1169,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
     }
 
     final public synchronized void insert_dyn_any(DynAny value) throws TypeMismatch, InvalidValue {
-        if (value == null)
-            throw new TypeMismatch();
+        if (value == null) throw new TypeMismatch();
 
         validate(TCKind.tk_any);
 
@@ -1582,8 +1578,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
                             ._OB_assert(components_[i] == null);
 
                     try {
-                        components_[i] = dynValueReader_.readValue(in,
-                                contentType_);
+                        components_[i] = dynValueReader_.readValue(in, contentType_);
                     } catch (InconsistentTypeCode ex) {
                         Assert._OB_assert(ex);
                         return;

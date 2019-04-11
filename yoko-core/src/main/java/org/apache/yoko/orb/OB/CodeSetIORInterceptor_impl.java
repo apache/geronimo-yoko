@@ -67,9 +67,7 @@ public final class CodeSetIORInterceptor_impl extends LocalObject implements IOR
         out._OB_writeEndian();
         CodeSetComponentInfoHelper.write(out, codeSetInfo);
 
-        component.component_data = new byte[out._OB_pos()];
-        System.arraycopy(buf.data(), 0, component.component_data, 0, buf
-                .length());
+            component.component_data = out.copyWrittenBytes();
 
         try {
             info.add_ior_component(component);

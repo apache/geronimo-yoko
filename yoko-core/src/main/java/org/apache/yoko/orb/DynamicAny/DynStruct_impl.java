@@ -23,6 +23,7 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
@@ -52,7 +53,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
 
         try {
             int count = origType_.member_count();
-            components_ = new org.omg.DynamicAny.DynAny[count];
+            components_ = new DynAny[count];
 
             for (int i = 0; i < count; i++)
                 components_[i] = create(origType_.member_type(i), true);
@@ -76,7 +77,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
 
         try {
             int count = origType_.member_count();
-            components_ = new org.omg.DynamicAny.DynAny[count];
+            components_ = new DynAny[count];
 
             for (int i = 0; i < count; i++) {
                 org.omg.CORBA.TypeCode memberType = origType_.member_type(i);
@@ -177,18 +178,17 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
     public synchronized org.omg.CORBA.Any to_any() {
         if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
 
             _OB_marshal(out);
 
-        InputStream in = (InputStream) out.create_input_stream();
-        Any result = new Any(orbInstance_, type_, in);
-        return result;
+            InputStream in = out.create_input_stream();
+            return new Any(orbInstance_, type_, in);
+        }
     }
 
-    public synchronized boolean equal(org.omg.DynamicAny.DynAny dyn_any) {
+    public synchronized boolean equal(DynAny dyn_any) {
         if (destroyed_)
             throw new OBJECT_NOT_EXIST();
 
@@ -219,24 +219,22 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
         // They will be referenced again during demarshalling, thus
         // maintaining DynValue equality between the original and the copy.
         //
-        DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_,
-                factory_);
+        DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_, factory_);
 
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        _OB_marshal(out, dynValueWriter);
+        try (OutputStream out = new OutputStream(new Buffer())) {
+            out._OB_ORBInstance(orbInstance_);
+            _OB_marshal(out, dynValueWriter);
 
-        dynValueReader_ = dynValueWriter.getReader();
+            dynValueReader_ = dynValueWriter.getReader();
 
-        org.omg.DynamicAny.DynAny result = prepare(type_, dynValueReader_,
-                false);
-        DynAny_impl impl = (DynAny_impl) result;
+            DynAny result = prepare(type_, dynValueReader_, false);
+            DynAny_impl impl = (DynAny_impl) result;
 
-        InputStream in = (InputStream) out.create_input_stream();
-        impl._OB_unmarshal(in);
+            InputStream in = out.create_input_stream();
+            impl._OB_unmarshal(in);
 
-        return result;
+            return result;
+        }
     }
 
     public synchronized boolean seek(int index) {

@@ -109,18 +109,7 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     private boolean compare(Buffer buf1, Buffer buf2) {
-        int len1 = buf1.length();
-        int len2 = buf2.length();
-        if (len1 != len2)
-            return false;
-
-        byte[] data1 = buf1.data();
-        byte[] data2 = buf2.data();
-        for (int i = 0; i < len1; i++)
-            if (data1[i] != data2[i])
-                return false;
-
-        return true;
+        return buf1.dataEquals(buf2);
     }
 
     private void setType(org.omg.CORBA.TypeCode tc) {
@@ -240,11 +229,11 @@ final public class Any extends org.omg.CORBA.Any {
         case _tk_union:
         case _tk_sequence:
         case _tk_array: {
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_ORBInstance(orbInstance_);
-            out.write_InputStream(in, origType_);
-            value_ = out.create_input_stream();
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_ORBInstance(orbInstance_);
+                out.write_InputStream(in, origType_);
+                value_ = out.create_input_stream();
+            }
             break;
         }
 
@@ -419,7 +408,7 @@ final public class Any extends org.omg.CORBA.Any {
             ((Streamable) value_)._write(os1);
             OutputStream os2 = (OutputStream) create_output_stream();
             ((Streamable) any.value_)._write(os2);
-            return compare(os1._OB_buffer(), os2._OB_buffer());
+            return os1.writtenBytesEqual(os2);
         }
 
         int kind = origType_.kind().value();
@@ -680,8 +669,7 @@ final public class Any extends org.omg.CORBA.Any {
         // Spec says that calling create_output_stream and
         // writing to the any will update the state of the
         // last streamable object, if present.
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
+        OutputStream out = new OutputStream(new Buffer());
         out._OB_ORBInstance(orbInstance_);
         return out;
     }
@@ -690,11 +678,11 @@ final public class Any extends org.omg.CORBA.Any {
         if (value_ instanceof InputStream) {
             return new InputStream(((InputStream) value_));
         } else {
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_ORBInstance(orbInstance_);
-            write_value(out);
-            return out.create_input_stream();
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_ORBInstance(orbInstance_);
+                write_value(out);
+                return out.create_input_stream();
+            }
         }
     }
 

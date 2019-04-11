@@ -294,19 +294,15 @@ public class Upcall {
             CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
 
 
-            Buffer buf = new Buffer();
-            OutputStream outCBC = new OutputStream(
-                    buf);
-            outCBC._OB_writeEndian();
-            CodeBaseHelper.write(outCBC, codeBase);
+            try (OutputStream outCBC = new OutputStream(new Buffer())) {
+                outCBC._OB_writeEndian();
+                CodeBaseHelper.write(outCBC, codeBase);
 
-            codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = SendingContextRunTime.value;
+                codeBaseSC_ = new ServiceContext();
+                codeBaseSC_.context_id = SendingContextRunTime.value;
 
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeBaseSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
+            }
         }
         //
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
@@ -483,11 +479,9 @@ public class Upcall {
             try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);
-                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
+                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, os.copyWrittenBytes());
                 scl.add(sc);
             }
-        } catch (IOException e) {
-            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 

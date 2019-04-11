@@ -681,36 +681,37 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Send back locate reply message
             Buffer buf = new Buffer(12);
             buf.writer.pad(12);
-            OutputStream out = new OutputStream(buf);
-            ProfileInfo profileInfo = new ProfileInfo();
-            profileInfo.major = msg.version().major;
-            profileInfo.minor = msg.version().minor;
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
-            outgoing.writeLocateReplyHeader(reqId, status);
+            try (OutputStream out = new OutputStream(buf)) {
+                ProfileInfo profileInfo = new ProfileInfo();
+                profileInfo.major = msg.version().major;
+                profileInfo.minor = msg.version().minor;
+                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+                outgoing.writeLocateReplyHeader(reqId, status);
 
-            // If the reply status is OBJECT_FORWARD or OBJECT_FORWARD_PERM
-            // the IOR is appended to the end of the LocateReply.
-            if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
+                // If the reply status is OBJECT_FORWARD or OBJECT_FORWARD_PERM
+                // the IOR is appended to the end of the LocateReply.
+                if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
 
-            //
-            // TODO:
-            // LOC_SYSTEM_EXCEPTION,
-            // LOC_NEEDS_ADDRESSING_MODE
-            //
-            int pos = out._OB_pos();
-            out._OB_pos(0);
-            outgoing.writeMessageHeader(LocateReply, false, pos - 12);
-            out._OB_pos(pos);
+                //
+                // TODO:
+                // LOC_SYSTEM_EXCEPTION,
+                // LOC_NEEDS_ADDRESSING_MODE
+                //
+                int pos = out._OB_pos();
+                out._OB_pos(0);
+                outgoing.writeMessageHeader(LocateReply, false, pos - 12);
+                out._OB_pos(pos);
 
-            //
-            // A locate request is treated just like an upcall
-            //
-            upcallsInProgress_++;
+                //
+                // A locate request is treated just like an upcall
+                //
+                upcallsInProgress_++;
 
-            //
-            // Send the locate reply
-            //
-            sendUpcallReply(out._OB_buffer());
+                //
+                // Send the locate reply
+                //
+                sendUpcallReply(out._OB_buffer());
+            }
         } catch (SystemException ex) {
             processException(State.Error, ex, false);
         }

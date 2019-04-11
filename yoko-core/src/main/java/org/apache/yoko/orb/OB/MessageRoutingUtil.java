@@ -231,48 +231,40 @@ final public class MessageRoutingUtil {
 
             value.ptype = REBIND_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            RebindModeHelper.write(out, mode);
-
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                RebindModeHelper.write(out, mode);
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
 
         case REQUEST_PRIORITY_POLICY_TYPE.value: {
-            RequestPriorityPolicy p = RequestPriorityPolicyHelper
-                    .narrow(policy);
+            RequestPriorityPolicy p = RequestPriorityPolicyHelper.narrow(policy);
 
             PriorityRange range = p.priority_range();
 
             value.ptype = REQUEST_PRIORITY_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            PriorityRangeHelper.write(out, range);
-
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                PriorityRangeHelper.write(out, range);
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case REPLY_PRIORITY_POLICY_TYPE.value: {
-            ReplyPriorityPolicy p = ReplyPriorityPolicyHelper
-                    .narrow(policy);
+            ReplyPriorityPolicy p = ReplyPriorityPolicyHelper.narrow(policy);
 
             PriorityRange range = p.priority_range();
 
             value.ptype = REPLY_PRIORITY_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            PriorityRangeHelper.write(out, range);
-
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                PriorityRangeHelper.write(out, range);
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case REQUEST_START_TIME_POLICY_TYPE.value: {
@@ -282,13 +274,11 @@ final public class MessageRoutingUtil {
 
             value.ptype = REQUEST_START_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, time);
-
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, time);
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case REQUEST_END_TIME_POLICY_TYPE.value: {
@@ -298,13 +288,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = REQUEST_END_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, time);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, time);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case REPLY_START_TIME_POLICY_TYPE.value: {
@@ -314,13 +303,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = REPLY_START_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, time);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, time);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case REPLY_END_TIME_POLICY_TYPE.value: {
@@ -330,13 +318,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = REPLY_END_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, time);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, time);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case RELATIVE_REQ_TIMEOUT_POLICY_TYPE.value: {
@@ -347,13 +334,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = REQUEST_END_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, timeout);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, timeout);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case RELATIVE_RT_TIMEOUT_POLICY_TYPE.value: {
@@ -364,13 +350,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = REPLY_END_TIME_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            UtcTHelper.write(out, timeout);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                UtcTHelper.write(out, timeout);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case ROUTING_POLICY_TYPE.value: {
@@ -380,13 +365,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = ROUTING_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            RoutingTypeRangeHelper.write(out, range);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                RoutingTypeRangeHelper.write(out, range);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case MAX_HOPS_POLICY_TYPE.value: {
@@ -396,13 +380,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = MAX_HOPS_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            out.write_ushort(hops);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                out.write_ushort(hops);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         case QUEUE_ORDER_POLICY_TYPE.value: {
@@ -412,13 +395,12 @@ final public class MessageRoutingUtil {
 
             value.ptype = QUEUE_ORDER_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            OrderingHelper.write(out, order);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                OrderingHelper.write(out, order);
 
-            value.pvalue = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, value.pvalue, 0, buf.length());
+                value.pvalue = out.copyWrittenBytes();
+            }
             break;
         }
         default: {
@@ -432,7 +414,6 @@ final public class MessageRoutingUtil {
 
     public static void getComponentPolicyValues(IORInfo info, PolicyValueSeqHolder policies) {
         // Retrieve the value for the REQUEST_PRIORITY_POLICY_TYPE
-        //
         try {
             Policy p = info.get_effective_policy(REQUEST_PRIORITY_POLICY_TYPE.value);
 
@@ -568,14 +549,11 @@ final public class MessageRoutingUtil {
 
             val.ptype = REBIND_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            RebindModeHelper.write(out, policyList.rebindMode);
-            val.pvalue = new byte[out._OB_pos()];
-            System.arraycopy(buf.data(), 0, val.pvalue, 0, buf.length());
-
-            //
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                RebindModeHelper.write(out, policyList.rebindMode);
+                val.pvalue = out.copyWrittenBytes();
+            }
             // Add the rebind policy to the list of supplied policies
             int len = policies.value.length;
             PolicyValue[] newSeq = new PolicyValue[len + 1];
@@ -589,14 +567,11 @@ final public class MessageRoutingUtil {
 
             val.ptype = QUEUE_ORDER_POLICY_TYPE.value;
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            OrderingHelper.write(out, policyList.queueOrder);
-            val.pvalue = new byte[out._OB_pos()];
-            System.arraycopy(buf.data(), 0, val.pvalue, 0, buf.length());
-
-            //
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_writeEndian();
+                OrderingHelper.write(out, policyList.queueOrder);
+                val.pvalue = out.copyWrittenBytes();
+            }
             // Add the queue order policy to the list of supplied policies
             int len = policies.value.length;
             PolicyValue[] newSeq = new PolicyValue[len + 1];

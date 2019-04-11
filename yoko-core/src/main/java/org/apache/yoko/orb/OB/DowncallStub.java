@@ -915,13 +915,11 @@ public final class DowncallStub {
         // Create an output stream an write the PolicyValueSeq
         //
         if (invocPoliciesHolder.value != null) {
-            Buffer scBuf = new Buffer();
-            org.apache.yoko.orb.CORBA.OutputStream scOut = new org.apache.yoko.orb.CORBA.OutputStream(
-                    scBuf);
-            scOut._OB_writeEndian();
-            PolicyValueSeqHelper.write(scOut, invocPoliciesHolder.value);
-            invocPoliciesSC.context_data = new byte[scOut._OB_pos()];
-            System.arraycopy(invocPoliciesSC.context_data, 0, scBuf.data(), 0, scBuf.length());
+            try (org.apache.yoko.orb.CORBA.OutputStream scOut = new org.apache.yoko.orb.CORBA.OutputStream(new Buffer())) {
+                scOut._OB_writeEndian();
+                PolicyValueSeqHelper.write(scOut, invocPoliciesHolder.value);
+                invocPoliciesSC.context_data = scOut.copyWrittenBytes();
+            }
         }
 
         //

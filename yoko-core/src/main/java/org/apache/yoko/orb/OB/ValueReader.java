@@ -1516,14 +1516,14 @@ public final class ValueReader {
                 buf_.pos_ = startPos;
                 chunkState_.copyFrom(startState);
 
-                final Buffer buf = new Buffer();
-                final OutputStream out = new OutputStream(buf);
-                out._OB_ORBInstance(orbInstance_);
-                remarshalValue(origTC, out);
-                final InputStream in = (InputStream) out.create_input_stream();
-                Assert._OB_assert(obAny != null);
-                obAny.replace(tc, in);
-                return;
+                try (OutputStream out = new OutputStream(new Buffer())) {
+                    out._OB_ORBInstance(orbInstance_);
+                    remarshalValue(origTC, out);
+                    final InputStream in = (InputStream) out.create_input_stream();
+                    Assert._OB_assert(obAny != null);
+                    obAny.replace(tc, in);
+                    return;
+                }
             } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
@@ -1604,14 +1604,15 @@ public final class ValueReader {
                 buf_.pos_ = startPos;
                 chunkState_.copyFrom(startState);
 
-                final Buffer buf = new Buffer();
-                final OutputStream out = new OutputStream(buf);
-                out._OB_ORBInstance(orbInstance_);
-                final TypeCode t = remarshalValue(origTC, out);
-                final InputStream in = (InputStream) out.create_input_stream();
-                Assert._OB_assert(obAny != null);
-                obAny.replace(t, in);
-                return;
+                final TypeCode t;
+                try (OutputStream out = new OutputStream(new Buffer())) {
+                    out._OB_ORBInstance(orbInstance_);
+                    t = remarshalValue(origTC, out);
+                    final InputStream in = (InputStream) out.create_input_stream();
+                    Assert._OB_assert(obAny != null);
+                    obAny.replace(t, in);
+                    return;
+                }
             }
         }
 

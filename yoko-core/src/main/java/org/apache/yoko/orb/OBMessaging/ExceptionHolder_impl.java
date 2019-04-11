@@ -335,14 +335,6 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     }
 
     //
-    // Copy the contents of the stream into the internal octet sequence
-    //
-    public void _OB_extractSequence(Buffer buf) {
-        Assert._OB_assert(buf != null);
-        marshaled_exception = buf.reader.copyRemainingBytes();
-    }
-
-    //
     // Obtain an input stream from the marshalled exception sequence. This
     // is used for unmarshalling the exception.
     //

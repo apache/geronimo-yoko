@@ -272,17 +272,17 @@ final class DynValue_impl extends DynValueCommon_impl implements
         if (is_null())
             return new Any(orbInstance_, type_, null);
         else {
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_ORBInstance(orbInstance_);
+            try (OutputStream out = new OutputStream(new Buffer())) {
+                out._OB_ORBInstance(orbInstance_);
 
-            if (dynValueWriter != null)
-                _OB_marshal(out, dynValueWriter);
-            else
-                _OB_marshal(out);
+                if (dynValueWriter != null)
+                    _OB_marshal(out, dynValueWriter);
+                else
+                    _OB_marshal(out);
 
-            InputStream in = (InputStream) out.create_input_stream();
-            return new Any(orbInstance_, type_, in);
+                InputStream in = out.create_input_stream();
+                return new Any(orbInstance_, type_, in);
+            }
         }
     }
 
