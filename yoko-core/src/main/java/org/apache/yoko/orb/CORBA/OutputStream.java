@@ -162,9 +162,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
         LOGGER.finest("Writing a type code of type " + tc.kind().value());
 
-        //
         // For performance reasons, handle the primitive TypeCodes first
-        //
         switch (tc.kind().value()) {
         case _tk_null:
         case _tk_void:
@@ -186,9 +184,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         case _tk_Principal:
             write_ulong(tc.kind().value());
             return;
-
-        default:
-            break;
         }
 
         Integer indirectionPos = (Integer) history.get(tc);
@@ -212,7 +207,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case _tk_objref: {
+                case _tk_objref:
+                case _tk_local_interface:
+                case _tk_abstract_interface:
+                case _tk_native: {
                     history.put(tc, oldPos);
 
                     try  (SimplyCloseable sc = recordLength()) {
@@ -340,7 +338,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     break;
                 }
 
-                case _tk_alias: {
+                case _tk_alias:
+                case _tk_value_box: {
                     history.put(tc, oldPos);
 
                     try  (SimplyCloseable sc = recordLength()) {
@@ -373,55 +372,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                             writeTypeCodeImpl(tc.member_type(i), history);
                             write_short(tc.member_visibility(i));
                         }
-                    }
-
-                    break;
-                }
-
-                case _tk_value_box: {
-                    history.put(tc, oldPos);
-
-                    try  (SimplyCloseable sc = recordLength()) {
-                        _OB_writeEndian();
-                        write_string(tc.id());
-                        write_string(tc.name());
-                        writeTypeCodeImpl(tc.content_type(), history);
-                    }
-
-                    break;
-                }
-
-                case _tk_abstract_interface: {
-                    history.put(tc, oldPos);
-
-                    try  (SimplyCloseable sc = recordLength()) {
-                        _OB_writeEndian();
-                        write_string(tc.id());
-                        write_string(tc.name());
-                    }
-
-                    break;
-                }
-
-                case _tk_native: {
-                    history.put(tc, oldPos);
-
-                    try  (SimplyCloseable sc = recordLength()) {
-                        _OB_writeEndian();
-                        write_string(tc.id());
-                        write_string(tc.name());
-                    }
-
-                    break;
-                }
-
-                case _tk_local_interface: {
-                    history.put(tc, oldPos);
-
-                    try  (SimplyCloseable sc = recordLength()) {
-                        _OB_writeEndian();
-                        write_string(tc.id());
-                        write_string(tc.name());
                     }
 
                     break;
@@ -523,8 +473,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_boolean(boolean value) {
         addCapacity(1);
-
-        buf_.writer.writeByte(value ? (byte) 1 : (byte) 0);
+        bufWriter.writeByte(value ? 1 : 0);
     }
 
     public void write_char(char value) {
@@ -541,7 +490,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (charWriterRequired_)
             converter.write_char(bufWriter, value);
         else
-            buf_.writer.writeByte(value);
+            bufWriter.writeByte(value);
     }
 
     public void write_wchar(char value) {
@@ -638,7 +587,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write 2-byte character in big endian
                 //
-                buf_.writer.writeChar(value);
+                bufWriter.writeChar(value);
             }
                 break;
 
@@ -656,12 +605,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the octet length at the start
                 //
-                buf_.writer.writeByte(2);
+                bufWriter.writeByte(2);
 
                 //
                 // write the character in big endian format
                 //
-                buf_.writer.writeChar(value);
+                bufWriter.writeChar(value);
             }
                 break;
             }
@@ -670,12 +619,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_octet(byte value) {
         addCapacity(1);
-        buf_.writer.writeByte(value);
+        bufWriter.writeByte(value);
     }
 
     public void write_short(short value) {
         addCapacity(2, TWO_BYTE_BOUNDARY);
-        buf_.writer.writeShort(value);
+        bufWriter.writeShort(value);
     }
 
     public void write_ushort(short value) {
@@ -684,7 +633,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_long(int value) {
         addCapacity(4, FOUR_BYTE_BOUNDARY);
-        buf_.writer.writeInt(value);
+        bufWriter.writeInt(value);
     }
 
     public void write_ulong(int value) {
@@ -693,7 +642,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_longlong(long value) {
         addCapacity(8, EIGHT_BYTE_BOUNDARY);
-        buf_.writer.writeLong(value);
+        bufWriter.writeLong(value);
     }
 
     public void write_ulonglong(long value) {
@@ -721,7 +670,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             if (charConversionRequired_) {
                 for (char c: arr) bufWriter.writeByte(converter.convert(checkChar(c)));
             } else {
-                for (char c: arr) buf_.writer.writeByte(checkChar(c));
+                for (char c: arr) bufWriter.writeByte(checkChar(c));
             }
             // write null terminator
             bufWriter.writeByte(0);
@@ -748,7 +697,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
     }
 
-    private char checkChar(char c) {
+    private static char checkChar(char c) {
         if (c > 0xff) throw new DATA_CONVERSION(String.format("illegal char value for string: 0x%04x", (int)c));
         return c;
     }
@@ -836,7 +785,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     //
                     // write character in big endian format
                     //
-                    buf_.writer.writeChar(v);
+                    bufWriter.writeChar(v);
                 }
             }
         }
@@ -855,7 +804,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length);
 
             for (int i = offset; i < offset + length; i++)
-                buf_.writer.writeByte(value[i] ? (byte) 1 : (byte) 0);
+                bufWriter.writeByte(value[i] ? 1 : 0);
         }
     }
 
@@ -868,7 +817,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     if (value[i] > 255)
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
-                    buf_.writer.writeByte(value[i]);
+                    bufWriter.writeByte(value[i]);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.outputCharConverter;
@@ -888,7 +837,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     else if (charWriterRequired_)
                         converter.write_char(bufWriter, value[i]);
                     else
-                        buf_.writer.writeByte(converter.convert(value[i]));
+                        bufWriter.writeByte(converter.convert(value[i]));
                 }
             }
         }
@@ -910,7 +859,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 2, TWO_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writer.writeShort(value[i]);
+                bufWriter.writeShort(value[i]);
             }
         }
     }
@@ -924,7 +873,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 4, FOUR_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writer.writeInt(value[i]);
+                bufWriter.writeInt(value[i]);
             }
         }
     }
@@ -938,7 +887,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 8, EIGHT_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                buf_.writer.writeLong(value[i]);
+                bufWriter.writeLong(value[i]);
             }
         }
     }
@@ -954,7 +903,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 int v = Float.floatToIntBits(value[i]);
 
-                buf_.writer.writeInt(v);
+                bufWriter.writeInt(v);
             }
         }
     }
@@ -966,7 +915,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 long v = Double.doubleToLongBits(value[i]);
 
-                buf_.writer.writeLong(v);
+                bufWriter.writeLong(v);
             }
         }
     }
