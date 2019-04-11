@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.omg.CORBA.COMM_FAILURE;
+
 /**
  *
  * The interface for a Transport object, which provides operations
@@ -30,26 +32,9 @@ package org.apache.yoko.orb.OCI;
  *
  **/
 public interface TransportOperations {
-    /** The plugin id. */
-    String id();
-
-    /** The profile id tag. */
-    int tag();
 
     /** The send/receive capabilities of this Transport. */
     SendReceiveMode mode();
-
-    /**
-     * The "handle" for this Transport. The handle may <em>only</em>
-     * be used to determine whether the Transport object is ready to
-     * send or to receive data, e.g., with <code>select()</code> on
-     * Unix-based operating systems. All other uses (e.g., calls to
-     * <code>read()</code>, <code>write()</code>,
-     * <code>close()</code>) are strictly non-compliant. A handle
-     * value of -1 indicates that the protocol plug-in does not
-     * support "selectable" Transports.
-     **/
-    int handle();
 
     /**
      * Closes the Transport. After calling <code>close</code>, no
@@ -107,33 +92,6 @@ public interface TransportOperations {
     boolean receive_detect(Buffer buf, boolean block);
 
     /**
-     * Similar to <code>receive</code>, but it is
-     * possible to specify a timeout. On return the caller can test
-     * whether there was a timeout by checking if the buffer has
-     * been filled completely.
-     * 
-     * @param buf The buffer to fill.
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>receive(buf, FALSE)</code>.
-     * @exception COMM_FAILURE In case of an error.
-     **/
-    void receive_timeout(Buffer buf, int timeout);
-
-    /**
-     * Similar to <code>receive_timeout</code>, but it signals a
-     * connection loss by returning <code>FALSE</code> instead of
-     * raising <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>receive(buf, FALSE)</code>.
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     * @exception COMM_FAILURE In case of an error.
-     **/
-    boolean receive_timeout_detect(Buffer buf, int timeout);
-
-    /**
      * Sends a buffer's contents.
      *
      * @param buf The buffer to send.
@@ -173,20 +131,6 @@ public interface TransportOperations {
      * @exception COMM_FAILURE In case of an error.
      **/
     void send_timeout(Buffer buf, int timeout);
-
-    /**
-     * Similar to <code>send_timeout</code>, but it signals a
-     * connection loss by returning <code>FALSE</code> instead of
-     * raising <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>send(buf, FALSE)</code>.
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     * @exception COMM_FAILURE In case of an error.
-     **/
-    boolean send_timeout_detect(Buffer buf, int timeout);
 
     /**
      * Returns the information object associated with

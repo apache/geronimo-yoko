@@ -24,8 +24,6 @@ import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.LocalObject;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.IOP.TAG_INTERNET_IOP;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -137,20 +135,8 @@ final public class Transport_impl extends LocalObject implements
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public String id() {
-        return PLUGIN_ID.value;
-    }
-
-    public int tag() {
-        return TAG_INTERNET_IOP.value;
-    }
-
     public SendReceiveMode mode() {
         return SendReceive;
-    }
-
-    public int handle() {
-        throw new NO_IMPLEMENT();
     }
 
     public void close() {
@@ -226,57 +212,6 @@ final public class Transport_impl extends LocalObject implements
         return true;
     }
 
-    public void receive_timeout(Buffer buf, int t) {
-        if (t < 0)
-            throw new InternalError();
-
-        if (t == 0) {
-            receive(buf, false);
-            return;
-        }
-
-        setSoTimeout(t);
-
-        while (!buf.is_full()) {
-            try {
-                if (!!!buf.readFrom(in_))
-                    throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
-            } catch (InterruptedIOException ex) {
-                return;
-            } catch (IOException ex) {
-                logger.log(Level.FINE, "Socket read error", ex); 
-                throw asCommFailure(ex, MinorRecv, "I/O error during read");
-            } catch (NullPointerException ex) {
-                logger.log(Level.FINE, "Socket read error", ex); 
-                throw asCommFailure(ex, MinorRecv, "NullPointerException during read");
-            }
-        }
-    }
-
-    public boolean receive_timeout_detect(Buffer buf, int t) {
-        if (t < 0)
-            throw new InternalError();
-
-        if (t == 0)
-            return receive_detect(buf, false);
-
-        setSoTimeout(t);
-
-        while (!buf.is_full()) {
-            try {
-                return buf.readFrom(in_);
-            } catch (InterruptedIOException ex) {
-                return true;
-            } catch (IOException ex) {
-                return false;
-            } catch (NullPointerException ex) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     public void send(Buffer buf, boolean block) {
         setBlock(block);
         
@@ -341,30 +276,6 @@ final public class Transport_impl extends LocalObject implements
                 throw asCommFailure(ex, MinorSend, "NullPointerException during write");
             }
         }
-    }
-
-    public boolean send_timeout_detect(Buffer buf, int t) {
-        if (t < 0)
-            throw new InternalError();
-
-        if (t == 0)
-            return send_detect(buf, false);
-
-        setSoTimeout(t);
-
-        while (!buf.is_full()) {                                 
-            try {
-                buf.writeTo(out_);
-            } catch (InterruptedIOException ex) {
-                return true;
-            } catch (IOException ex) {
-                return false;
-            } catch (NullPointerException ex) {
-                return false;
-            }
-        }
-
-        return true;
     }
 
     public org.apache.yoko.orb.OCI.TransportInfo get_info() {
