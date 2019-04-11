@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
@@ -230,27 +231,25 @@ final public class GIOPIncomingMessage {
     }
 
     void extractHeader(Buffer buf) {
+        InputStream in = new InputStream(buf, false);
+        BufferReader reader = buf.reader;
+        reader.rewindToStart();
         in_ = null;
 
-        byte[] pos = buf.data();
-        if (pos[0] != (byte) 'G' || pos[1] != (byte) 'I' || pos[2] != (byte) 'O' || pos[3] != (byte) 'P') {
+        if ('G' != reader.readByte() || 'I' != reader.readByte() || 'O' != reader.readByte() || 'P' != reader.readByte())
             throw new COMM_FAILURE(describeCommFailure(MinorNoGIOP) + ": missing GIOP magic key", MinorNoGIOP, COMPLETED_MAYBE);
-        }
 
         //
         // Peek at version
         //
-        version_.major = pos[4];
-        version_.minor = pos[5];
+        version_.major = reader.readByte();
+        version_.minor = reader.readByte();
 
         if (version_.major != 1 || version_.minor > 2)
             throw new COMM_FAILURE(describeCommFailure(MinorVersion), MinorVersion, COMPLETED_MAYBE);
 
-        InputStream in = new InputStream(buf, false);
-
         switch (version_.minor) {
         case 0: {
-            in._OB_skip(6); // magic + GIOP_version
             byteOrder_ = in.read_boolean();
             in._OB_swap(byteOrder_ != false);
             fragment_ = false;
@@ -265,7 +264,6 @@ final public class GIOPIncomingMessage {
 
         case 1:
         case 2: {
-            in._OB_skip(6); // magic + GIOP_version
             byte flags = in.read_octet();
             byteOrder_ = ((flags & 0x01) == 1);
             fragment_ = ((flags & 0x02) == 2);
@@ -299,7 +297,7 @@ final public class GIOPIncomingMessage {
         // evenly divisible by 8.
         //
         if (version_.minor == 2 && fragment_ && (size_ + 12) % 8 != 0)
-            throw new COMM_FAILURE(describeCommFailure(MinorFragment) + ": invalid GIOP 1.2 fragment size", MinorFragment, COMPLETED_MAYBE);
+            throw new COMM_FAILURE(String.format("%s: invalid GIOP 1.2 fragment size %d", describeCommFailure(MinorFragment), size_), MinorFragment, COMPLETED_MAYBE);
     }
 
     boolean consumeBuffer(Buffer buf) {

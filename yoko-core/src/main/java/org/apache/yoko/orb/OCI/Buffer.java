@@ -47,10 +47,6 @@ public final class Buffer {
 
     public int pos_; // The position counter
 
-    public byte[] data() {
-        return data_;
-    }
-
     public int length() {
         return len_;
     }
