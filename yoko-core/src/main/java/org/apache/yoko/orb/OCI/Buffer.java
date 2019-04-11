@@ -108,8 +108,12 @@ public final class Buffer {
         buf.pos_ = 0;
     }
 
+    /**
+     * Create a Buffer with initial length zero.
+     */
     public Buffer() {
-        this(16);
+        // since we expect a write operation to follow, allocate a small buffer up front
+        this(newBytes(16), 0, 0);
     }
 
     private Buffer(byte[] data, int pos, int len) {
@@ -117,6 +121,7 @@ public final class Buffer {
         this.pos_ = pos;
         this.len_ = len;
     }
+
 
     public Buffer(byte[] data) {
         this(data, 0, data.length);
@@ -126,6 +131,9 @@ public final class Buffer {
         this(copyOf(that.data_), that.pos_, that.len_);
     }
 
+    /**
+     * Create a Buffer with <code>len</code> bytes available for writing.
+     */
     public Buffer(int len) {
         this(newBytes(len), 0, len);
     }
@@ -207,7 +215,7 @@ public final class Buffer {
         }
     }
 
-    private final class Reader implements BufferReader {
+    final class Reader implements BufferReader {
         @Override
         public void align2() { align(TWO_BYTE_BOUNDARY); }
         @Override
@@ -325,9 +333,19 @@ public final class Buffer {
             IORUtil.dump_octets(data_, pos_, len_ - pos_, sb);
             return sb.toString();
         }
+
+        @Override
+        public void appendAvailableDataTo(Writer writer) {
+            writer.writeBytes(data_, pos_, available());
+        }
     }
 
-    private final class Writer implements BufferWriter {
+    final class Writer implements BufferWriter {
+        @Override
+        public void trim() {
+            len_ = pos_;
+        }
+
         @Override
         public void padAlign(AlignmentBoundary boundary) {
             padGap(boundary.gap(pos_));
@@ -428,13 +446,23 @@ public final class Buffer {
             data_[pos_++] = (byte) (value >> 010);
             data_[pos_++] = (byte) (value >> 000);
         }
+
+        @Override
+        public void writeBytes(BufferReader reader) {
+            reader.appendAvailableDataTo(this);
+        }
+
+        @Override
+        public SimplyCloseable recordLength(Logger logger) {
+            return new LengthWriter(logger);
+        }
     }
 
-    public final class LengthWriter implements AutoCloseable {
+    private final class LengthWriter implements SimplyCloseable {
         final Logger logger;
         final int index;
 
-        public LengthWriter(Logger logger) {
+        private LengthWriter(Logger logger) {
             this.logger = logger;
             this.index = pos_;
             this.logger.finest("Writing a gap value for a length at offset " + index);

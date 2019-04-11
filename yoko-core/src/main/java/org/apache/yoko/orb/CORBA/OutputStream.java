@@ -28,6 +28,7 @@ import org.apache.yoko.orb.OCI.AlignmentBoundary;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.orb.OCI.SimplyCloseable;
 import org.apache.yoko.util.Timeout;
 import org.omg.CORBA.BAD_TYPECODE;
 import org.omg.CORBA.DATA_CONVERSION;
@@ -133,9 +134,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     private Object delegateContext_;
     private Timeout timeout = Timeout.NEVER;
 
-    private Buffer.LengthWriter recordLength() {
+    private SimplyCloseable recordLength() {
         addCapacity(4, FOUR_BYTE_BOUNDARY);
-        return buf_.new LengthWriter(LOGGER);
+        return bufWriter.recordLength(LOGGER);
     }
 
     private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Hashtable history) {
@@ -214,7 +215,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_objref: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -227,7 +228,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_except: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -244,7 +245,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_union: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -309,7 +310,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_enum: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -330,7 +331,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_array: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         writeTypeCodeImpl(tc.content_type(), history);
                         write_ulong(tc.length());
@@ -342,7 +343,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_alias: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -360,7 +361,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         concreteBase = TypeCodeFactory.createPrimitiveTC(tk_null);
                     }
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -380,7 +381,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_value_box: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -393,7 +394,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_abstract_interface: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -405,7 +406,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_native: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -417,7 +418,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_local_interface: {
                     history.put(tc, oldPos);
 
-                    try  (Buffer.LengthWriter w = recordLength()) {
+                    try  (SimplyCloseable sc = recordLength()) {
                         _OB_writeEndian();
                         write_string(tc.id());
                         write_string(tc.name());
@@ -710,59 +711,46 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void write_string(String value) {
         LOGGER.finest("Writing string value " + value);
         final char[] arr = value.toCharArray();
-        int len = arr.length;
-        int capacity = len + 1;
+        final CodeConverterBase converter = codeConverters_.outputCharConverter;
 
-        if (!(charWriterRequired_ || charConversionRequired_)) {
-            write_ulong(capacity);
+        if (!charWriterRequired_) {
+            int len = arr.length;
+            int capacity = len + 1;
+            write_ulong(capacity); // writes the length and ensures a two-byte boundary alignment
             addCapacity(capacity);
-
-            for (char c : arr) {
-                if (c > 255)
-                    throw new DATA_CONVERSION("illegal char value for string: " + (int) c);
-
-                buf_.writer.writeByte(c);
+            if (charConversionRequired_) {
+                for (char c: arr) bufWriter.writeByte(converter.convert(checkChar(c)));
+            } else {
+                for (char c: arr) buf_.writer.writeByte(checkChar(c));
             }
+            // write null terminator
+            bufWriter.writeByte(0);
         } else {
-            final CodeConverterBase converter = codeConverters_.outputCharConverter;
-
-            //
-            // Intermediate variable used for efficiency
-            //
-            final boolean bothRequired = charWriterRequired_ && charConversionRequired_;
-
-            //
-            // Temporary OCI buffer required
-            //
-            final Buffer tmpBuf = new Buffer();
-
-            for (char c : arr) {
-                if (c > 0xff) throw new DATA_CONVERSION(String.format("illegal char value for string: 0x%04x", (int)c));
-
-                // Ensure we have 4 bytes - long enough for the widest UTF8 char and for a surrogate pair in UTF16
-                if (tmpBuf.available() < 4) tmpBuf.addLength(4);
-
-                if (bothRequired)
-                    converter.write_char(tmpBuf.writer, converter.convert(c));
-                else if (charWriterRequired_)
-                    converter.write_char(tmpBuf.writer, c);
-                else
-                    tmpBuf.writer.writeByte(converter.convert(c));
+            // We don't know how much space each character will require: each char could take up to four bytes.
+            // To avoid re-allocation, create a large enough temporary buffer up front.
+            // NOTE: we need to use a temporary buffer to count the bytes reliably, because
+            // chunking can add bytes other than just the chars to be written.
+            final Buffer tmpBuf = new Buffer(4 + value.length() * 4 + 1);
+            final BufferWriter tmpWriter = tmpBuf.writer;
+            if (charConversionRequired_) {
+                for (char c : arr) converter.write_char(tmpWriter, converter.convert(checkChar(c)));
+            } else {
+                for (char c : arr) converter.write_char(tmpWriter, checkChar(c));
             }
-
-            //
-            // Copy the contents from the temporary buffer
-            //
-            InputStream tmpBufInputStream = new InputStream(tmpBuf);
-            final int tmpBufSize = tmpBufInputStream.available();
-
-            write_ulong(tmpBufSize + 1);
-            addCapacity(tmpBufSize + 1);
-
-            bufWriter.readFrom(tmpBufInputStream);
+            // write the null terminator
+            tmpWriter.writeByte(0);
+            // ignore any unused space in the buffer
+            tmpWriter.trim();
+            tmpBuf.reader.rewindToStart();
+            write_ulong(tmpBuf.length()); // writes the length and ensures a two-byte boundary alignment
+            addCapacity(tmpBuf.length());
+            bufWriter.writeBytes(tmpBuf.reader);
         }
-        // write null terminator
-        bufWriter.writeByte(0);
+    }
+
+    private char checkChar(char c) {
+        if (c > 0xff) throw new DATA_CONVERSION(String.format("illegal char value for string: 0x%04x", (int)c));
+        return c;
     }
 
     public void write_wstring(String value) {
@@ -809,11 +797,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             default:
         }
 
-        //
-        // save the starting position and write the gap to place the
-        // length of the string later
-        //
-        try (Buffer.LengthWriter w = recordLength()) {
+        // save the starting position and write the gap to place the length of the string later
+        try (SimplyCloseable sc = recordLength()) {
             if (wCharWriterRequired_) {
                 for (char anArr : arr) {
                     char v = anArr;

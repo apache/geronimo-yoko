@@ -54,4 +54,10 @@ public interface BufferReader {
     String dumpAllData();
 
     String dumpAllDataWithPosition();
+
+    /**
+     * Copy the available data to the provided writer
+     * @param writer
+     */
+    void appendAvailableDataTo(Buffer.Writer writer);
 }

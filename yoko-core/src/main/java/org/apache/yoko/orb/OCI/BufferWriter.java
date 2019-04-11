@@ -18,7 +18,11 @@ package org.apache.yoko.orb.OCI;
 
 import org.omg.CORBA.portable.InputStream;
 
+import java.util.logging.Logger;
+
 public interface BufferWriter {
+    void trim();
+
     void padAlign(AlignmentBoundary boundary);
 
     /**
@@ -62,4 +66,17 @@ public interface BufferWriter {
     void writeInt(int value);
 
     void writeLong(long value);
+
+    /**
+     * Write the available bytes from <code>reader</code>.
+     * @param reader
+     */
+    void writeBytes(BufferReader reader);
+
+    /**
+     * Leaves a 4 byte space to write a length. When {@link SimplyCloseable#close()} is called,
+     * the number of intervening bytes is written as a length to the remembered location.
+     * @param logger the logger to use to log the operations - must not be null
+     */
+    SimplyCloseable recordLength(Logger logger);
 }
