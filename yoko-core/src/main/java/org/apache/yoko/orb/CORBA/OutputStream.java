@@ -49,13 +49,15 @@ import org.omg.IOP.TaggedProfile;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Enumeration;
-import java.util.Hashtable;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorIncompleteTypeCode;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorOther;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvTypeCodeIndirection;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
@@ -139,7 +141,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         return bufWriter.recordLength(LOGGER);
     }
 
-    private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Hashtable history) {
+    private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Map<org.omg.CORBA.TypeCode, Integer> history) {
         //
         // Try casting the TypeCode to org.apache.yoko.orb.CORBA.TypeCode. This
         // could
@@ -273,6 +275,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                                     write_long(0);
                                     break;
                                 case _tk_ulong:
+                                case _tk_enum:
                                     write_ulong(0);
                                     break;
                                 case _tk_longlong:
@@ -286,9 +289,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                                     break;
                                 case _tk_char:
                                     write_char((char) 0);
-                                    break;
-                                case _tk_enum:
-                                    write_ulong(0);
                                     break;
                                 default:
                                     _OB_assert("Invalid sub-type in tk_union");
@@ -424,7 +424,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (timeout.isExpired()) {
             // we only ever want to throw the exception once
             timeout = Timeout.NEVER;
-            throw new TIMEOUT("Reply timed out on server", MinorCodes.MinorOther, COMPLETED_YES);
+            throw new TIMEOUT("Reply timed out on server", MinorOther, COMPLETED_YES);
         }
     }
 
@@ -938,19 +938,14 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public void write_TypeCode(org.omg.CORBA.TypeCode t) {
-        //
         // NOTE:
-        //
         // No data with natural alignment of greater than four octets
         // is needed for TypeCode. Therefore it is not necessary to do
         // encapsulation in a separate buffer.
-        //
 
-        if (t == null)
-            throw new BAD_TYPECODE("TypeCode is nil");
+        if (t == null) throw new BAD_TYPECODE("TypeCode is nil");
 
-        Hashtable history = new Hashtable(11);
-        writeTypeCodeImpl(t, history);
+        writeTypeCodeImpl(t, new HashMap<org.omg.CORBA.TypeCode, Integer>());
     }
 
     public void write_any(org.omg.CORBA.Any value) {
@@ -988,26 +983,21 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void write_fixed(BigDecimal value) {
         String v = value.abs().toString();
 
-        //
         // Append coded sign to value string
-        //
-        if (value.signum() == -1)
-            v += (char) ('0' + 0x0d);
-        else
-            v += (char) ('0' + 0x0c);
+        v += getSignChar(value);
 
-        String s = "";
         if ((v.length() & 1) != 0)
-            s = "0";
+            v = "0" + v;
 
-        s += v;
-        final int len = s.length();
-
-        for (int i = 0; i < len - 1; i += 2) {
-            char c1 = s.charAt(i);
-            char c2 = s.charAt(i + 1);
+        for (int i = 0; i < v.length(); i += 2) {
+            char c1 = v.charAt(i);
+            char c2 = v.charAt(i + 1);
             write_octet((byte) ((c1 - '0') << 4 | (c2 - '0')));
         }
+    }
+
+    private static int getSignChar(BigDecimal value) {
+        return '0' + (char) (value.signum() == -1 ? 0x0d : 0x0c);
     }
 
     public void write_value(Serializable value) {
@@ -1191,11 +1181,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         if (b) {
             write_Object(in.read_Object());
         } else if (in instanceof InputStream) {
-            //
             // We have no TypeCode information about the
             // valuetype, so we must use _tc_ValueBase and
             // rely on the type information sent on the wire
-            //
             ((InputStream) in)._OB_remarshalValue(ValueBaseHelper.type(), this);
         } else {
             write_value(((org.omg.CORBA_2_3.portable.InputStream) in).read_value());
