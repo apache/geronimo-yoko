@@ -20,12 +20,12 @@ package org.apache.yoko.orb.CORBA;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetWriter;
-import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.AlignmentBoundary;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.SimplyCloseable;
@@ -109,7 +109,6 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private ORBInstance orbInstance_; // Java only
 
-    private final Buffer buf_;
     private final BufferWriter bufWriter;
 
     private GiopVersion giopVersion_ = GIOP1_0;
@@ -191,12 +190,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         Integer indirectionPos = (Integer) history.get(tc);
         if (indirectionPos != null) {
             write_long(-1);
-            int offs = indirectionPos - buf_.pos_;
+            int offs = indirectionPos - bufWriter.getPosition();
             LOGGER.finest("Writing an indirect type code for offset " + offs);
             write_long(offs);
         } else {
             write_ulong(tc.kind().value());
-            Integer oldPos = buf_.pos_ - 4;
+            Integer oldPos = bufWriter.getPosition() - 4;
 
             try {
                 switch (tc.kind().value()) {
@@ -395,8 +394,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private ValueWriter valueWriter() {
-        if (valueWriter_ == null)
-            valueWriter_ = new ValueWriter(this);
+        if (valueWriter_ == null) valueWriter_ = new ValueWriter(this, bufWriter);
         return valueWriter_;
     }
 
@@ -410,7 +408,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // to write new data. We must first check if we need to start a
             // chunk, which may result in a recursive call to addCapacity().
             //
-            if (buf_.is_full() && valueWriter_ != null) {
+            if (bufWriter.isComplete() && valueWriter_ != null) {
                 checkBeginChunk();
             }
 
@@ -436,7 +434,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // to write new data. We must first check if we need to start a
         // chunk, which may result in a recursive call to addCapacity().
         //
-        if (buf_.available() == 0 && valueWriter_ != null) {
+        if (bufWriter.isComplete() && valueWriter_ != null) {
             checkBeginChunk();
         }
 
@@ -459,14 +457,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public org.omg.CORBA.ORB orb() {
-        if (orbInstance_ != null)
-            return orbInstance_.getORB();
-        return null;
+        return (orbInstance_ == null) ? null : orbInstance_.getORB();
     }
 
     @Override
     public InputStream create_input_stream() {
-        InputStream in = new InputStream(new Buffer(buf_), false, codeConverters_, giopVersion_);
+        InputStream in = new InputStream(getBufferReader(), false, codeConverters_, giopVersion_);
         in._OB_ORBInstance(orbInstance_);
         return in;
     }
@@ -679,8 +675,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // To avoid re-allocation, create a large enough temporary buffer up front.
             // NOTE: we need to use a temporary buffer to count the bytes reliably, because
             // chunking can add bytes other than just the chars to be written.
-            final Buffer tmpBuf = new Buffer(4 + value.length() * 4 + 1);
-            final BufferWriter tmpWriter = tmpBuf.writer;
+            final BufferWriter tmpWriter = BufferFactory.createWriteBuffer(4 + value.length() * 4 + 1);
             if (charConversionRequired_) {
                 for (char c : arr) converter.write_char(tmpWriter, converter.convert(checkChar(c)));
             } else {
@@ -690,10 +685,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             tmpWriter.writeByte(0);
             // ignore any unused space in the buffer
             tmpWriter.trim();
-            tmpBuf.reader.rewindToStart();
-            write_ulong(tmpBuf.length()); // writes the length and ensures a two-byte boundary alignment
-            addCapacity(tmpBuf.length());
-            bufWriter.writeBytes(tmpBuf.reader);
+            // write the length
+            write_ulong(tmpWriter.length());
+            // and write the contents
+            addCapacity(tmpWriter.length());
+            bufWriter.writeBytes(tmpWriter.readFromStart());
         }
     }
 
@@ -1549,16 +1545,30 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public OutputStream(Buffer buf) {
-        this(buf, null, null);
+    public OutputStream() {
+        this(BufferFactory.createWriteBuffer(), null, null);
     }
 
-    public OutputStream(Buffer buf, CodeConverters converters, GiopVersion giopVersion) {
-        buf_ = buf;
-        bufWriter = buf.writer;
+    public OutputStream(int initialBufferSize) {
+        this(BufferFactory.createWriteBuffer(initialBufferSize), null, null);
+    }
 
-        if (giopVersion != null)
-            giopVersion_ = giopVersion;
+    public OutputStream(CodeConverters converters, GiopVersion giopVersion) {
+        this(BufferFactory.createWriteBuffer(), converters, giopVersion);
+    }
+
+    public OutputStream(int initialBufferSize, CodeConverters converters, GiopVersion giopVersion) {
+        this(BufferFactory.createWriteBuffer(initialBufferSize), converters, giopVersion);
+    }
+
+    public OutputStream(BufferWriter bufWriter) {
+        this(bufWriter, null, null);
+    }
+
+    public OutputStream(BufferWriter bufferWriter, CodeConverters converters, GiopVersion giopVersion) {
+        bufWriter = bufferWriter;
+
+        if (giopVersion != null) giopVersion_ = giopVersion;
 
         charWriterRequired_ = false;
         charConversionRequired_ = false;
@@ -1584,31 +1594,27 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void close() {}
 
     boolean writtenBytesEqual(OutputStream that) {
-        return buf_.dataEquals(that.buf_);
+        return bufWriter.dataEquals(that.bufWriter);
     }
 
     public byte[] copyWrittenBytes() {
-        bufWriter.trim();
-        buf_.reader.rewindToStart();
-        return buf_.reader.copyRemainingBytes();
+        return bufWriter.trim().readFromStart().copyRemainingBytes();
     }
 
     public String writtenBytesToAscii() {
-        bufWriter.trim();
-        buf_.reader.rewindToStart();
-        return buf_.reader.remainingBytesToAscii();
+        return bufWriter.trim().readFromStart().remainingBytesToAscii();
     }
 
-    public Buffer _OB_buffer() {
-        return buf_;
+    public BufferReader getBufferReader() {
+        return bufWriter.readFromStart();
     }
 
-    public int _OB_pos() {
-        return buf_.pos_;
+    public int getPosition() {
+        return bufWriter.getPosition();
     }
 
-    public void _OB_pos(int pos) {
-        buf_.pos_ = pos;
+    public void setPosition(int pos) {
+        bufWriter.setPosition(pos);
     }
 
     public void markGiop_1_2_HeaderComplete() {

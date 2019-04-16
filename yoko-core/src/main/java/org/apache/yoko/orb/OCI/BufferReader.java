@@ -16,22 +16,18 @@
  */
 package org.apache.yoko.orb.OCI;
 
-public interface BufferReader {
-    void align2();
+import java.io.IOException;
+import java.io.OutputStream;
 
-    void align4();
-
-    void align8();
-
-    void align(int n);
+public interface BufferReader extends BufferFacet<BufferReader> {
 
     void align(AlignmentBoundary boundary);
 
-    void skipBytes(int n);
+    BufferReader skipBytes(int n);
 
-    void skipToEnd();
+    BufferReader skipToEnd();
 
-    void rewindToStart();
+    BufferReader rewindToStart();
 
     byte peekByte();
 
@@ -47,21 +43,19 @@ public interface BufferReader {
 
     char readChar_LE();
 
-    String dumpPosition();
-
+    /**
+     * Return the unread data in the buffer as a formatted string suitable for logging.
+     */
     String dumpRemainingData();
 
-    String dumpAllData();
-
-    String dumpAllDataWithPosition();
-
     /**
-     * Copy the available data to the provided writer
-     * @param writer
+     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
      */
-    void appendAvailableDataTo(Buffer.Writer writer);
+    String dumpAllDataWithPosition();
 
     byte[] copyRemainingBytes();
 
     String remainingBytesToAscii();
+
+    void writeTo(OutputStream out) throws IOException;
 }

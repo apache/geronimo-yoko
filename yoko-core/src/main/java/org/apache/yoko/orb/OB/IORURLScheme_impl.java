@@ -18,10 +18,8 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.util.HexConverter;
 import org.omg.CORBA.BAD_PARAM;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.MARSHAL;
 import org.omg.IOP.IOR;
@@ -57,8 +55,7 @@ public class IORURLScheme_impl extends LocalObject implements URLScheme {
             if (data == null)
                 throw new MARSHAL();
 
-            Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(data);
             in._OB_readEndian();
             IOR ior = IORHelper.read(in);
             ObjectFactory objectFactory = orbInstance_.getObjectFactory();

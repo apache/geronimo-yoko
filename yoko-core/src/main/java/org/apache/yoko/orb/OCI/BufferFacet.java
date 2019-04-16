@@ -14,26 +14,27 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package org.apache.yoko.orb.OCI;
 
-package org.apache.yoko.orb.OB;
+public interface BufferFacet<T extends BufferFacet> extends Cloneable {
+    int getPosition();
+    T setPosition(int p);
 
-import org.apache.yoko.orb.OCI.BufferReader;
+    T rewind(int n);
 
-public final class UnsentMessage {
-    private BufferReader bufReader;
-    public final Downcall down;
+    int available();
+    int length();
+    boolean isComplete();
+    T clone();
 
-    UnsentMessage(BufferReader bufferReader) {
-        this.down = null;
-        this.bufReader = bufferReader.clone().rewindToStart();
-    }
+    boolean dataEquals(BufferFacet<T> other);
+    /**
+     * Return all the data in the buffer as a formatted string suitable for logging.
+     */
+    String dumpAllData();
 
-    UnsentMessage(Downcall down) {
-        this.down = down;
-        this.bufReader = down.output().getBufferReader();
-    }
-
-    BufferReader getBufferReader() {
-        return bufReader.clone();
-    }
+    /**
+     * Return the cursor position in the buffer as a formatted string suitable for logging.
+     */
+    String dumpPosition();
 }

@@ -1,7 +1,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.UNKNOWN;
 import org.omg.CORBA.portable.UnknownException;
@@ -38,9 +37,7 @@ public class UnresolvedException extends UnknownException {
     }
 
     public SystemException resolve() {
-        Buffer buf = new Buffer(data);
-        try (InputStream in =
-                new InputStream(buf, false, converters, GIOP1_2)) {
+        try (InputStream in = new InputStream(data, false, converters, GIOP1_2)) {
             if (LOGGER.isLoggable(Level.FINE))
                 LOGGER.fine(String.format("Unpacking Unknown Exception Info%n%s", in.dumpRemainingData()));
             try {

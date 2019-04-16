@@ -104,7 +104,6 @@ import org.apache.yoko.orb.OBPortableInterceptor.TransientORTFactory_impl;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.OCI.AccFactoryRegistry;
 import org.apache.yoko.orb.OCI.AccFactoryRegistry_impl;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry_impl;
 import org.apache.yoko.orb.OCI.Plugin;
@@ -117,7 +116,6 @@ import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.GetSystemPropertyAction;
-import org.apache.yoko.util.HexConverter;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
@@ -1325,7 +1323,7 @@ public class ORB_impl extends ORBSingleton {
                 ior = delegate._OB_origIOR();
             }
 
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_writeEndian();
                 IORHelper.write(out, ior);
 
@@ -1648,7 +1646,7 @@ public class ORB_impl extends ORBSingleton {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
             if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-            OutputStream out = new OutputStream(new Buffer());
+            OutputStream out = new OutputStream();
             out._OB_ORBInstance(orbInstance_);
             return out;
         }

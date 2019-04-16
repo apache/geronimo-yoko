@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CustomMarshal;
@@ -50,6 +50,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection;
 import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
@@ -110,7 +111,7 @@ public final class ValueReader {
 
     private final InputStream in_;
 
-    private final Buffer buf_;
+    private final BufferReader buf_;
 
     private final Map<Integer, Serializable> instanceTable_;
 
@@ -360,41 +361,31 @@ public final class ValueReader {
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Reading header with tag value 0x%08x at %s", h.tag, in_.dumpPosition()));
 
-        //
         // Special cases are handled elsewhere
-        //
         Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
-        //
         // Check if the value is chunked
-        //
         h.state.chunked = (h.tag & 0x00000008) == 8;
 
-        //
         // Check for presence of codebase URL
-        //
         if ((h.tag & 0x00000001) == 1) {
-            //
             // Check for indirection tag
-            //
-            final int save = buf_.pos_;
+            final int save = buf_.getPosition();
             final int indTag = in_.read_long();
-            if (indTag == -1) {
+            if (indTag == -1) { // this is an indirection
                 final int offs = in_.read_long();
                 if (offs >= -4) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection, COMPLETED_NO);
                 }
-                final int tmp = buf_.pos_;
-                buf_.pos_ = (buf_.pos_ - 4) + offs;
-                if (buf_.pos_ < 0) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            COMPLETED_NO);
+                final int tmp = buf_.getPosition();
+                buf_.setPosition((buf_.getPosition() - 4) + offs);
+                if (buf_.getPosition() < 0) {
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection, COMPLETED_NO);
                 }
                 h.codebase = in_.read_string();
-                buf_.pos_ = tmp;
-            } else {
-                buf_.pos_ = save;
+                buf_.setPosition(tmp);
+            } else { // it wasn't an indirection so rewind
+                buf_.setPosition(save);
                 h.codebase = in_.read_string();
             }
             if (logger.isLoggable(Level.FINER))
@@ -419,62 +410,56 @@ public final class ValueReader {
             //
             // Check for indirection tag (indirected list)
             //
-            int saveList = buf_.pos_;
+            int saveList = buf_.getPosition();
             int indTag = in_.read_long();
             final boolean indList = (indTag == -1);
 
             if (indList) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            COMPLETED_NO);
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection, COMPLETED_NO);
                 }
-                saveList = buf_.pos_;
-                buf_.pos_ = (buf_.pos_ - 4) + offs;
-                if (buf_.pos_ < 0) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
-                            COMPLETED_NO);
+                saveList = buf_.getPosition();
+                buf_.setPosition((buf_.getPosition() - 4) + offs);
+                if (buf_.getPosition() < 0) {
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection, COMPLETED_NO);
                 }
             } else {
-                buf_.pos_ = saveList;
+                buf_.setPosition(saveList);
             }
 
             final int count = in_.read_long();
             h.ids = new String[count];
 
             for (int i = 0; i < count; i++) {
-                //
                 // Check for indirection tag (indirected list entry)
-                //
-                int saveRep = buf_.pos_;
+                int saveRep = buf_.getPosition();
                 indTag = in_.read_long();
                 if (indTag == -1) {
                     final int offs = in_.read_long();
                     if (offs > -4) {
-                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                        throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection,
                                 COMPLETED_NO);
                     }
-                    saveRep = buf_.pos_;
-                    buf_.pos_ = (buf_.pos_ - 4) + offs;
-                    if (buf_.pos_ < 0) {
-                        throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                    saveRep = buf_.getPosition();
+                    buf_.setPosition((buf_.getPosition() - 4) + offs);
+                    if (buf_.getPosition() < 0) {
+                        throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection,
                                 COMPLETED_NO);
                     }
                     h.ids[i] = in_.read_string();
-                    buf_.pos_ = saveRep;
+                    buf_.setPosition(saveRep);
                 } else {
-                    buf_.pos_ = saveRep;
+                    buf_.setPosition(saveRep);
                     h.ids[i] = in_.read_string();
                 }
                 if (logger.isLoggable(Level.FINER))
                     logger.finer(String.format("Value header respoitory id added \"%s\"", h.ids[i]));
             }
 
-            //
             // Restore buffer position (case of indirected list)
-            //
             if (indList) {
-                buf_.pos_ = saveList;
+                buf_.setPosition(saveList);
             }
         } else if ((h.tag & 0x00000006) == 2) {
             //
@@ -485,24 +470,24 @@ public final class ValueReader {
             //
             // Check for indirection tag
             //
-            int save = buf_.pos_;
+            int save = buf_.getPosition();
             final int indTag = in_.read_long();
             if (indTag == -1) {
                 final int offs = in_.read_long();
                 if (offs > -4) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection,
                             COMPLETED_NO);
                 }
-                save = buf_.pos_;
-                buf_.pos_ = (buf_.pos_ - 4) + offs;
-                if (buf_.pos_ < 0) {
-                    throw new MARSHAL(describeMarshal(MinorCodes.MinorReadInvalidIndirection), MinorCodes.MinorReadInvalidIndirection,
+                save = buf_.getPosition();
+                buf_.setPosition((buf_.getPosition() - 4) + offs);
+                if (buf_.getPosition() < 0) {
+                    throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection,
                             COMPLETED_NO);
                 }
                 id = in_.read_string();
-                buf_.pos_ = save;
+                buf_.setPosition(save);
             } else {
-                buf_.pos_ = save;
+                buf_.setPosition(save);
                 id = in_.read_string();
             }
 
@@ -515,7 +500,7 @@ public final class ValueReader {
         //
         // Record beginning of value data
         //
-        h.dataPos = buf_.pos_;
+        h.dataPos = buf_.getPosition();
 
         //
         // Add entry to header table
@@ -531,24 +516,22 @@ public final class ValueReader {
         if (logger.isLoggable(Level.FINEST))
             logger.finest(String.format(
                     "Reading new chunk.  Size value is 0x%x current nest is %d current position=0x%x",
-                    size, state.nestingLevel, buf_.pos_));
-        if ((size >= 0) && (size < 0x7fffff00)) // chunk size
-        {
-            state.chunkStart = buf_.pos_;
+                    size, state.nestingLevel, buf_.getPosition()));
+        if ((size >= 0) && (size < 0x7fffff00)) { // chunk size
+            state.chunkStart = buf_.getPosition();
             state.chunkSize = size;
-        } else if (size < 0) // end tag
-        {
-            buf_.pos_ -= 4; // rewind
-            state.chunkStart = buf_.pos_;
+        } else if (size < 0) {// end tag
+            buf_.rewind(4);
+            state.chunkStart = buf_.getPosition();
             state.chunkSize = 0;
         } else {
-            buf_.pos_ -= 4; // rewind
+            buf_.rewind(4);
             state.chunkStart = 0;
             state.chunkSize = 0;
         }
         if (logger.isLoggable(Level.FINEST))
             logger.finest(String.format("Chunk read.  start=0x%x, size=0x%x buffer position=0x%x",
-                    state.chunkStart, state.chunkSize, buf_.pos_));
+                    state.chunkStart, state.chunkSize, buf_.getPosition()));
     }
 
     private void initHeader(Header h) {
@@ -557,7 +540,7 @@ public final class ValueReader {
         //
         Assert._OB_assert((h.tag != 0) && (h.tag != -1));
 
-        h.headerPos = buf_.pos_ - 4; // adjust for alignment
+        h.headerPos = buf_.getPosition() - 4; // adjust for alignment
         h.state.copyFrom(chunkState_);
 
         //
@@ -581,7 +564,7 @@ public final class ValueReader {
         if (chunkState_.chunked) {
             if (logger.isLoggable(Level.FINE))
                 logger.fine(String.format("Skipping a chunked value.  nesting level=%d current position is 0x%x chunk end is 0x%x",
-                        chunkState_.nestingLevel, buf_.pos_, (chunkState_.chunkStart + chunkState_.chunkSize)));
+                        chunkState_.nestingLevel, buf_.getPosition(), (chunkState_.chunkStart + chunkState_.chunkSize)));
             //
             // At this point, the unmarshalling code has finished. However,
             // we may have a truncated value, or we may have unmarshalled a
@@ -597,10 +580,10 @@ public final class ValueReader {
             // Skip to the end of the current chunk (if necessary)
             //
             if (chunkState_.chunkStart > 0) {
-                buf_.pos_ = chunkState_.chunkStart;
+                buf_.setPosition(chunkState_.chunkStart);
                 in_._OB_skip(chunkState_.chunkSize);
                 if (logger.isLoggable(Level.FINEST))
-                    logger.finest(String.format("Skipping to end of current chunk.  New position is 0x%x", buf_.pos_));
+                    logger.finest(String.format("Skipping to end of current chunk.  New position is 0x%x", buf_.getPosition()));
             }
 
             chunkState_.chunkStart = 0;
@@ -625,7 +608,7 @@ public final class ValueReader {
                     level++;
                     final Header nest = new Header();
                     nest.tag = tag;
-                    nest.headerPos = buf_.pos_ - 4; // adjust for alignment
+                    nest.headerPos = buf_.getPosition() - 4; // adjust for alignment
                     nest.state.nestingLevel = level;
                     readHeader(nest);
                 } else if (tag >= 0) {
@@ -661,7 +644,7 @@ public final class ValueReader {
             // stream so that the outer value can read this tag.
             //
             if (tag > -chunkState_.nestingLevel) {
-                buf_.pos_ -= 4;
+                buf_.rewind(4);
             }
 
             chunkState_.nestingLevel--;
@@ -682,7 +665,7 @@ public final class ValueReader {
             if (logger.isLoggable(Level.FINEST))
                 logger.finest(String.format(
                         "Final chunk state is nesting level=%d current position is 0x%x chunk end is 0x%x",
-                        chunkState_.nestingLevel, buf_.pos_, (chunkState_.chunkStart + chunkState_.chunkSize)));
+                        chunkState_.nestingLevel, buf_.getPosition(), (chunkState_.chunkStart + chunkState_.chunkSize)));
         }
     }
 
@@ -700,7 +683,7 @@ public final class ValueReader {
 
     private Serializable readIndirection(CreationStrategy strategy) {
         final int offs = in_.read_long();
-        int pos = (buf_.pos_ - 4) + offs;
+        int pos = (buf_.getPosition() - 4) + offs;
         pos += 3; // adjust for alignment
         pos -= (pos & 0x3);
         final Integer posObj = pos;
@@ -718,14 +701,14 @@ public final class ValueReader {
         if (v != null) {
             return v;
         } else {
-            final int save = buf_.pos_;
+            final int save = buf_.getPosition();
 
             //
             // Check for indirection to null value
             //
-            buf_.pos_ = pos; // rewind to offset position
+            buf_.setPosition(pos); // rewind to offset position
             if (in_._OB_readLongUnchecked() == 0) {
-                buf_.pos_ = save;
+                buf_.setPosition(save);
                 // Can't put a null in a Hashtable
                 // instanceTable_.put(posObj, null);
                 return null;
@@ -748,13 +731,13 @@ public final class ValueReader {
              * RMI implementation to handle the indirection.
              */
             if (nest.isRMIValue()) {
-                buf_.pos_ = save;
+                buf_.setPosition(save);
                 throw new IndirectionException(pos);
             }
             //
             // Create the value
             //
-            buf_.pos_ = nest.dataPos;
+            buf_.setPosition(nest.dataPos);
             final ChunkState saveState = new ChunkState(chunkState_);
             chunkState_.copyFrom(nest.state);
             if (chunkState_.chunked) {
@@ -767,7 +750,7 @@ public final class ValueReader {
                 //
                 // Restore state
                 //
-                buf_.pos_ = save;
+                buf_.setPosition(save);
                 chunkState_.copyFrom(saveState);
             }
 
@@ -899,7 +882,7 @@ public final class ValueReader {
 
     public ValueReader(InputStream in) {
         in_ = in;
-        buf_ = in._OB_buffer();
+        buf_ = in.getBuffer();
         orbInstance_ = in._OB_ORBInstance();
         instanceTable_ = in.getOffsetMap();
         headerTable_ = new Hashtable<>(131);
@@ -1165,7 +1148,7 @@ public final class ValueReader {
 
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Read tag value 0x%08x", h.tag));
-        h.headerPos = buf_.pos_ - 4; // adjust for alignment
+        h.headerPos = buf_.getPosition() - 4; // adjust for alignment
         h.state.copyFrom(chunkState_);
 
         //
@@ -1186,7 +1169,7 @@ public final class ValueReader {
             // output stream, we use a table to map old positions to new ones
             //
             int offs = in_.read_long();
-            int oldPos = (buf_.pos_ - 4) + offs;
+            int oldPos = (buf_.getPosition() - 4) + offs;
             oldPos += 3; // adjust alignment to start of value
             oldPos -= (oldPos & 0x3);
 
@@ -1200,7 +1183,7 @@ public final class ValueReader {
             final Integer newPos = positionTable_.get(oldPos);
             if (newPos != null) {
                 out.write_long(h.tag);
-                offs = newPos - out._OB_pos();
+                offs = newPos - out.getPosition();
                 out.write_long(offs);
                 //
                 // TODO: The TypeCode may not necessarily reflect the
@@ -1221,7 +1204,7 @@ public final class ValueReader {
             //
             // Add valuetype to position map
             //
-            int outPos = out._OB_pos();
+            int outPos = out.getPosition();
             outPos += 3; // adjust alignment to start of value
             outPos -= (outPos & 0x3);
             positionTable_.put(pos, outPos);
@@ -1440,7 +1423,7 @@ public final class ValueReader {
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format(
                     "Reading an Any value of kind=%d from position 0x%x",
-                    origTC.kind().value(), buf_.pos_));
+                    origTC.kind().value(), buf_.getPosition()));
 
         //
         // Check if the Any contains an abstract interface
@@ -1499,7 +1482,7 @@ public final class ValueReader {
         // Save some state so that we can restore things prior to
         // remarshalling
         //
-        final int startPos = buf_.pos_;
+        final int startPos = buf_.getPosition();
         final ChunkState startState = new ChunkState(chunkState_);
 
         //
@@ -1513,10 +1496,10 @@ public final class ValueReader {
                 //
                 // Creation failed - restore our state and try remarshalling
                 //
-                buf_.pos_ = startPos;
+                buf_.setPosition(startPos);
                 chunkState_.copyFrom(startState);
 
-                try (OutputStream out = new OutputStream(new Buffer())) {
+                try (OutputStream out = new OutputStream()) {
                     out._OB_ORBInstance(orbInstance_);
                     remarshalValue(origTC, out);
                     final InputStream in = (InputStream) out.create_input_stream();
@@ -1601,11 +1584,11 @@ public final class ValueReader {
                 //
                 // Creation failed - restore our state and try remarshalling
                 //
-                buf_.pos_ = startPos;
+                buf_.setPosition(startPos);
                 chunkState_.copyFrom(startState);
 
                 final TypeCode t;
-                try (OutputStream out = new OutputStream(new Buffer())) {
+                try (OutputStream out = new OutputStream()) {
                     out._OB_ORBInstance(orbInstance_);
                     t = remarshalValue(origTC, out);
                     final InputStream in = (InputStream) out.create_input_stream();
@@ -1643,7 +1626,7 @@ public final class ValueReader {
         // If we've reached the end of the current chunk, then check
         // for the start of a new chunk
         //
-        if ((chunkState_.chunkStart > 0) && ((chunkState_.chunkStart + chunkState_.chunkSize) == buf_.pos_)) {
+        if ((chunkState_.chunkStart > 0) && ((chunkState_.chunkStart + chunkState_.chunkSize) == buf_.getPosition())) {
 //          logger.finest("Reading chunk from check chunk");
             readChunk(chunkState_);
         }

@@ -74,7 +74,7 @@ final public class Util {
             else
                 body.port = (short) port;
             body.object_key = profileInfo.key;
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_writeEndian();
                 ProfileBody_1_0Helper.write(out, body);
                 ior.profiles[0].profile_data = out.copyWrittenBytes();
@@ -90,7 +90,7 @@ final public class Util {
                 body.port = (short) port;
             body.object_key = profileInfo.key;
             body.components = profileInfo.components;
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_writeEndian();
                 ProfileBody_1_1Helper.write(out, body);
                 ior.profiles[0].profile_data = out.copyWrittenBytes();
@@ -112,8 +112,7 @@ final public class Util {
         // TODO: Internal error?
         Assert._OB_assert(profile < ior.profiles.length);
 
-        Buffer buf = new Buffer(ior.profiles[profile].profile_data);
-        InputStream in = new InputStream(buf, false, null, null);
+        InputStream in = new InputStream(ior.profiles[profile].profile_data);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper
                 .read(in);
@@ -153,8 +152,7 @@ final public class Util {
             //
             // Get the IIOP profile body
             //
-            Buffer buf = new Buffer(ior.profiles[i].profile_data);
-            InputStream in = new InputStream(buf, false, null, null);
+            InputStream in = new InputStream(ior.profiles[i].profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -204,8 +202,7 @@ final public class Util {
     private static boolean taggedComponentsMatch(TaggedComponent[] components, String host, short port, Codec codec, boolean matchLoopback) {
         for (final TaggedComponent component : components) {
             if (component.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                Buffer b = new Buffer(component.component_data);
-                InputStream s = new InputStream(b, false, null, null);
+                InputStream s = new InputStream(component.component_data);
                 s._OB_readEndian();
                 String altHost = s.read_string();
                 short altPort = s.read_ushort();
@@ -278,8 +275,7 @@ final public class Util {
         bodies1 = new ProfileBody_1_0[cnt1];
         for (p1 = 0, b1 = 0; p1 < ior1.profiles.length; p1++)
             if (ior1.profiles[p1].tag == TAG_INTERNET_IOP.value) {
-                Buffer buf = new Buffer(ior1.profiles[p1].profile_data);
-                InputStream in = new InputStream(buf, false, null, null);
+                InputStream in = new InputStream(ior1.profiles[p1].profile_data);
                 in._OB_readEndian();
                 bodies1[b1++] = ProfileBody_1_0Helper.read(in);
             }
@@ -293,8 +289,7 @@ final public class Util {
         bodies2 = new ProfileBody_1_0[cnt2];
         for (p2 = 0, b2 = 0; p2 < ior2.profiles.length; p2++)
             if (ior2.profiles[p2].tag == TAG_INTERNET_IOP.value) {
-                Buffer buf = new Buffer(ior2.profiles[p2].profile_data);
-                InputStream in = new InputStream(buf, false, null, null);
+                InputStream in = new InputStream(ior2.profiles[p2].profile_data);
                 in._OB_readEndian();
                 bodies2[b2++] = ProfileBody_1_0Helper.read(in);
             }
@@ -381,8 +376,7 @@ final public class Util {
             //
             // Get the first IIOP profile body
             //
-            Buffer buf = new Buffer(profile.profile_data);
-            InputStream in = new InputStream(buf, false, null, null);
+            InputStream in = new InputStream(profile.profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 

@@ -20,7 +20,7 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -28,7 +28,6 @@ import org.apache.yoko.util.Timeout;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.SystemException;
@@ -43,8 +42,6 @@ import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
 import javax.rmi.CORBA.ValueHandler;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -221,9 +218,8 @@ public class Upcall {
     }
 
     public void createOutputStream(int offset) {
-        Buffer buf = new Buffer(offset);
-        buf.reader.skipToEnd();
-        out_ = new OutputStream(buf, in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+        final GiopVersion giopVersion = GiopVersion.get(profileInfo_.major, profileInfo_.minor);
+        out_ = new OutputStream(BufferFactory.createWriteBuffer(offset).padAll(), in_._OB_codeConverters(), giopVersion);
     }
 
     public InputStream preUnmarshal() throws LocationForward {
@@ -294,7 +290,7 @@ public class Upcall {
             CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
 
 
-            try (OutputStream outCBC = new OutputStream(new Buffer())) {
+            try (OutputStream outCBC = new OutputStream()) {
                 outCBC._OB_writeEndian();
                 CodeBaseHelper.write(outCBC, codeBase);
 
@@ -328,9 +324,7 @@ public class Upcall {
             replySCL_.copyInto(scl);
             upcallReturn_.upcallBeginReply(this, scl);
         } else {
-            Buffer buf = new Buffer();
-            out_ = new OutputStream(buf, in_
-                    ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+            out_ = new OutputStream(in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
         out_._OB_ORBInstance(this.orbInstance());
         if (out_ != null) out_.setTimeout(timeout);
@@ -475,8 +469,7 @@ public class Upcall {
         try (CmsfOverride o = CmsfThreadLocal.override()) {
             final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
             CodeConverters codeConverters = new CodeConverters(null, null, null, outputWcharConverter);
-            Buffer buf = new Buffer();
-            try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
+            try (OutputStream os = new OutputStream(codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);
                 ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, os.copyWrittenBytes());

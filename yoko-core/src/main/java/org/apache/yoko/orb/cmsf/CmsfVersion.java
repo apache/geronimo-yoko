@@ -2,18 +2,13 @@ package org.apache.yoko.orb.cmsf;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
 import org.omg.IOP.RMICustomMaxStreamFormat;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TAG_RMI_CUSTOM_MAX_STREAM_FORMAT;
 import org.omg.IOP.TaggedComponent;
-
-import java.io.IOException;
-import java.util.Arrays;
 
 public enum CmsfVersion {
     CMSFv1(1), CMSFv2(2);
@@ -60,8 +55,7 @@ public enum CmsfVersion {
     static CmsfVersion readData(byte[] data) {
         if (data == null) return CMSFv1;
         int cmsf = 1;
-        Buffer buf = new Buffer(data);
-        try (InputStream in = new InputStream(buf, false)) {
+        try (InputStream in = new InputStream(data)) {
             in._OB_readEndian();
             cmsf = in.read_octet();
         } catch (Exception e) {
@@ -71,7 +65,7 @@ public enum CmsfVersion {
     }
     
     private static byte[] genData(byte value) {
-        try (OutputStream out = new OutputStream(new Buffer(2))) {
+        try (OutputStream out = new OutputStream(2)) {
             out._OB_writeEndian();
             out.write_octet(value);
             return out.copyWrittenBytes();

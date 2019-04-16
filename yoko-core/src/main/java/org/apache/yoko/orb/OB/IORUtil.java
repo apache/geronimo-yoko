@@ -17,7 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CONV_FRAME.CodeSetComponentInfo;
 import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
 import org.omg.CSI.ITTAbsent;
@@ -95,8 +94,7 @@ public final class IORUtil {
     }
     
     private static void describeCSISecMechList(TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data);
-        InputStream in = new InputStream(buf, false);
+        InputStream in = new InputStream(component.component_data);
         in._OB_readEndian();
         CompoundSecMechList info = CompoundSecMechListHelper.read(in);
         
@@ -208,8 +206,7 @@ public final class IORUtil {
     }
     
     private static void describeTLS_SEC_TRANS(TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data);
-        InputStream in = new InputStream(buf, false);
+        InputStream in = new InputStream(component.component_data);
         in._OB_readEndian();
         TLS_SEC_TRANS info = TLS_SEC_TRANSHelper.read(in);
         
@@ -225,8 +222,7 @@ public final class IORUtil {
     }
     
     private static void describeSECIOP_SEC_TRANS(TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data);
-        InputStream in = new InputStream(buf, false);
+        InputStream in = new InputStream(component.component_data);
         in._OB_readEndian();
         SECIOP_SEC_TRANS info = SECIOP_SEC_TRANSHelper.read(in);
         
@@ -246,8 +242,7 @@ public final class IORUtil {
     
     
     private static void describeCodeSets(TaggedComponent component, StringBuilder sb) {
-        Buffer buf = new Buffer(component.component_data);
-        InputStream in = new InputStream(buf, false);
+        InputStream in = new InputStream(component.component_data);
         in._OB_readEndian();
         CodeSetComponentInfo info = CodeSetComponentInfoHelper
                 .read(in);
@@ -469,8 +464,7 @@ public final class IORUtil {
 
         switch (component.tag) {
         case TAG_ORB_TYPE.value: {
-            Buffer buf = new Buffer(component.component_data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(component.component_data);
             in._OB_readEndian();
             int id = in.read_ulong();
             sb.append("Component: TAG_ORB_TYPE = ");
@@ -489,8 +483,7 @@ public final class IORUtil {
             break;
 
         case TAG_ALTERNATE_IIOP_ADDRESS.value: {
-            Buffer buf = new Buffer(component.component_data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(component.component_data);
             in._OB_readEndian();
             String host = in.read_string();
             short port = in.read_ushort();
@@ -579,8 +572,7 @@ public final class IORUtil {
             break;
 
         case TAG_JAVA_CODEBASE.value: {
-            Buffer buf = new Buffer(component.component_data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(component.component_data);
             in._OB_readEndian();
             String codebase = in.read_string();
             sb.append("Component: TAG_JAVA_CODEBASE = `");

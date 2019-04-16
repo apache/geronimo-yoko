@@ -19,7 +19,6 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -88,9 +87,8 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     // Start a downcall, returning a downcall emitter and an
     // OutputStream for marshalling a request
     //
-    public DowncallEmitter startDowncall(Downcall down,
-            OutputStreamHolder out) {
-        out.value = new OutputStream(new Buffer());
+    public DowncallEmitter startDowncall(Downcall down, OutputStreamHolder out) {
+        out.value = new OutputStream();
         return this;
     }
 

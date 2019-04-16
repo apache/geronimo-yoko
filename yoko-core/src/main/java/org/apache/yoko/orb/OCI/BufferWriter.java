@@ -18,19 +18,17 @@ package org.apache.yoko.orb.OCI;
 
 import org.omg.CORBA.portable.InputStream;
 
+import java.io.IOException;
 import java.util.logging.Logger;
 
-public interface BufferWriter {
-    void trim();
+public interface BufferWriter extends BufferFacet<BufferWriter> {
+    BufferWriter trim();
+
+    BufferReader readFromStart();
 
     void padAlign(AlignmentBoundary boundary);
 
-    /**
-     * Write some padding bytes.
-     * @param n the number of padding bytes to write, from 0 to 7
-     *
-     */
-    void pad(int n);
+    BufferWriter padAll();
 
     /**
      * Ensure there is space to write from the current position,
@@ -72,6 +70,8 @@ public interface BufferWriter {
      * @param reader
      */
     void writeBytes(BufferReader reader);
+
+    boolean readFrom(java.io.InputStream in) throws IOException;
 
     /**
      * Leaves a 4 byte space to write a length. When {@link SimplyCloseable#close()} is called,

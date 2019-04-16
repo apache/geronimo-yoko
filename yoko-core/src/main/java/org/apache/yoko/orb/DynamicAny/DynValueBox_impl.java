@@ -22,7 +22,6 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.TypeCodePackage.BadKind;
@@ -146,7 +145,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
         if (is_null())
             return new Any(orbInstance_, type_, null);
         else {
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_ORBInstance(orbInstance_);
                 _OB_marshal(out);
                 InputStream in = out.create_input_stream();
@@ -340,7 +339,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
         //
         // Peek at value tag
         //
-        int save = in._OB_pos();
+        int save = in.getPosition();
         int ind = 0;
         int tag = in.read_long();
 
@@ -353,10 +352,10 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
             // Indirection - rewind to offset
             //
             int offs = in.read_long();
-            ind = in._OB_pos(); // save position after offset
-            in._OB_pos(in._OB_pos() - 4 + offs);
+            ind = in.getPosition(); // save position after offset
+            in.setPosition(in.getPosition() - 4 + offs);
         } else
-            in._OB_pos(save); // restore tag position
+            in.setPosition(save); // restore tag position
 
         set_to_value();
 
@@ -374,7 +373,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
         // Restore position after indirection
         //
         if (ind != 0)
-            in._OB_pos(ind);
+            in.setPosition(ind);
 
         notifyParent();
     }

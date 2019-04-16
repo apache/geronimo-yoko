@@ -24,7 +24,6 @@ import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;
 import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
@@ -93,8 +92,7 @@ final class ConFactory_impl extends LocalObject implements
         //
         // Get the IIOP profile body
         //
-        Buffer buf = new Buffer(profile.profile_data);
-        InputStream in = new InputStream(buf);
+        InputStream in = new InputStream(profile.profile_data);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -156,8 +154,7 @@ final class ConFactory_impl extends LocalObject implements
             //
             // Get the IIOP profile body
             //
-            final Buffer buf = new Buffer(profile.profile_data);
-            final InputStream in = new InputStream(buf, false);
+            final InputStream in = new InputStream(profile.profile_data);
             in._OB_readEndian();
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
             boolean recordPortZero = false;
@@ -211,8 +208,7 @@ final class ConFactory_impl extends LocalObject implements
             final ConnectCB[] ccbs = info_._OB_getConnectCBSeq();
             for (TaggedComponent tc: components) {
                 if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                    final Buffer cbuf = new Buffer(tc.component_data);
-                    final InputStream cin = new InputStream(cbuf, false);
+                    final InputStream cin = new InputStream(tc.component_data);
                     cin._OB_readEndian();
                     final String host = cin.read_string();
                     final short s = cin.read_ushort();

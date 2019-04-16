@@ -22,7 +22,6 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OBPortableServer.POAPolicies;
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
 import org.apache.yoko.orb.OCI.Transport;
@@ -299,7 +298,7 @@ final class Acceptor_impl extends LocalObject implements
                 ior.value.profiles = profiles;
                 ior.value.profiles[len - 1] = new TaggedProfile();
                 ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream(new Buffer())) {
+                try (OutputStream out = new OutputStream()) {
                     out._OB_writeEndian();
                     ProfileBody_1_0Helper.write(out, body);
                     ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
@@ -338,7 +337,7 @@ final class Acceptor_impl extends LocalObject implements
                     ior.value.profiles = profiles;
                     ior.value.profiles[len - 1] = new TaggedProfile();
                     ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                    try (OutputStream out = new OutputStream(new Buffer())) {
+                    try (OutputStream out = new OutputStream()) {
                         out._OB_writeEndian();
                         ProfileBody_1_1Helper.write(out, body);
                         ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
@@ -368,7 +367,7 @@ final class Acceptor_impl extends LocalObject implements
                 for (int i = 1; i < hosts_.length; i++) {
                     TaggedComponent c = new TaggedComponent();
                     c.tag = TAG_ALTERNATE_IIOP_ADDRESS.value;
-                    try (OutputStream out = new OutputStream(new Buffer())) {
+                    try (OutputStream out = new OutputStream()) {
                         out._OB_writeEndian();
                         out.write_string(hosts_[i]);
                         out.write_ushort(body.port);
@@ -387,7 +386,7 @@ final class Acceptor_impl extends LocalObject implements
                 ior.value.profiles = profiles;
                 ior.value.profiles[len - 1] = new TaggedProfile();
                 ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream(new Buffer())) {
+                try (OutputStream out = new OutputStream()) {
                     out._OB_writeEndian();
                     ProfileBody_1_1Helper.write(out, body);
                     ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();

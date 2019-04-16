@@ -16,10 +16,12 @@
  */
 
 package org.apache.yoko.orb.OB;
- 
+
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
@@ -70,6 +72,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 //
@@ -508,13 +511,7 @@ public final class DowncallStub {
     // Prepare a polling request from a portable stub
     //
     // public org.apache.yoko.orb.CORBA.OutputStream
-    public CodeConverters setupPollingRequest(
-            ServiceContextListHolder sclHolder, OutputStreamHolder out)
-            throws FailureException {
-        //
-        // Create buffer to contain out marshalable data
-        //
-        Buffer buf = new Buffer();
+    public CodeConverters setupPollingRequest(ServiceContextListHolder sclHolder, OutputStreamHolder out) throws FailureException {
 
         //
         // Obtain information regarding our target
@@ -522,7 +519,7 @@ public final class DowncallStub {
         ProfileInfoHolder info = new ProfileInfoHolder();
         Client client = getClientProfilePair(info);
 
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client.codeConverters(), GIOP1_2);
+        out.value = new org.apache.yoko.orb.CORBA.OutputStream(client.codeConverters(), GIOP1_2);
 
         sclHolder.value = client.getAMIRouterSCL();
 
@@ -553,15 +550,14 @@ public final class DowncallStub {
         //
         // Create buffer to contain our marshalable data
         //
-        Buffer buf = new Buffer(12);
-        buf.writer.pad(12);
+        BufferWriter bufWriter = BufferFactory.createWriteBuffer(12).padAll();
 
         //
         // Obtain information regarding our target
         //
         Client client = getClientProfilePair(info);
 
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(buf, client.codeConverters(), GIOP1_2);
+        out.value = new org.apache.yoko.orb.CORBA.OutputStream(bufWriter, client.codeConverters(), GIOP1_2);
         ServiceContext[] scl = client.getAMIRouterSCL();
 
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, info.value);
@@ -575,10 +571,10 @@ public final class DowncallStub {
     }
 
     public void AMIRouterPostMarshal(GIOPOutgoingMessage outgoing, OutputStreamHolder out) {
-        int pos = out.value._OB_pos();
-        out.value._OB_pos(0);
+        int pos = out.value.getPosition();
+        out.value.setPosition(0);
         outgoing.writeMessageHeader(MsgType_1_1.Request, false, pos - 12);
-        out.value._OB_pos(pos);
+        out.value.setPosition(pos);
 
         //
         // The InvocationContext is associated with the OutputStream
@@ -771,11 +767,9 @@ public final class DowncallStub {
         payload.object_key = new byte[info.value.key.length];
         System.arraycopy(info.value.key, 0, payload.object_key, 0, info.value.key.length);
 
-        o._OB_pos(0);
-        Buffer buf = o._OB_buffer();
         MessageBody messageBody = new MessageBody();
         messageBody.byte_order = false; // Java is always false
-        messageBody.body = buf.reader.copyRemainingBytes();
+        messageBody.body = o.getBufferReader().copyRemainingBytes();
         payload.body = messageBody;
 
         //
@@ -915,7 +909,7 @@ public final class DowncallStub {
         // Create an output stream an write the PolicyValueSeq
         //
         if (invocPoliciesHolder.value != null) {
-            try (org.apache.yoko.orb.CORBA.OutputStream scOut = new org.apache.yoko.orb.CORBA.OutputStream(new Buffer())) {
+            try (org.apache.yoko.orb.CORBA.OutputStream scOut = new org.apache.yoko.orb.CORBA.OutputStream()) {
                 scOut._OB_writeEndian();
                 PolicyValueSeqHelper.write(scOut, invocPoliciesHolder.value);
                 invocPoliciesSC.context_data = scOut.copyWrittenBytes();
@@ -965,13 +959,13 @@ public final class DowncallStub {
         //
         messageBody.byte_order = false;
 
-        Buffer buf = tmpIn._OB_buffer();
-        buf.reader.align8();
+        BufferReader buf = tmpIn.getBuffer();
+        buf.align(EIGHT_BYTE_BOUNDARY);
 
         //
         // Copy in the rest of the message body
         //
-        messageBody.body = buf.reader.copyRemainingBytes();
+        messageBody.body = buf.copyRemainingBytes();
         requestMessage.body = messageBody;
 
         //

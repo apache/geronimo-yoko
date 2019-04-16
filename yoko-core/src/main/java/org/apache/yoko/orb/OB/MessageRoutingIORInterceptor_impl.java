@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.LocalObject;
 import org.omg.IOP.TAG_MESSAGE_ROUTERS;
@@ -57,7 +56,7 @@ final public class MessageRoutingIORInterceptor_impl extends LocalObject impleme
         routerComponent.tag = TAG_MESSAGE_ROUTERS.value;
 
         // Create an OutputStream and write all of the router IORs
-        try (OutputStream routerOut = new OutputStream(new Buffer())) {
+        try (OutputStream routerOut = new OutputStream()) {
             routerOut._OB_writeEndian();
 
             // This list actually needs to be written in reverse order
@@ -91,7 +90,7 @@ final public class MessageRoutingIORInterceptor_impl extends LocalObject impleme
 
         // Create an OutputStream and write all of the policies
         //
-        try (OutputStream policyOut = new OutputStream(new Buffer())) {
+        try (OutputStream policyOut = new OutputStream()) {
             policyOut._OB_writeEndian();
             PolicyValueSeqHelper.write(policyOut, policiesHolder.value);
 

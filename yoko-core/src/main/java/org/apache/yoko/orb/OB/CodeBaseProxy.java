@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
@@ -88,9 +87,7 @@ public class CodeBaseProxy extends LocalObject implements CodeBase {
     private CodeBase getCodeBase(ORBInstance orb) {
         
         if (codebase == null || getorb(codebase) != orb.getORB()) {
-
-            Buffer buf = new Buffer(ctx.context_data);
-            InputStream in = new InputStream(buf);
+            InputStream in = new InputStream(ctx.context_data);
             in._OB_ORBInstance(orb);
             in._OB_readEndian();
             org.omg.CORBA.Object obj = in.read_Object();

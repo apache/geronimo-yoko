@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OBMessaging;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_CONTEXT;
@@ -339,8 +338,7 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     // is used for unmarshalling the exception.
     //
     public InputStream _OB_inputStream() {
-        Buffer buf = new Buffer(marshaled_exception);
-        return new InputStream(buf, false, null, GIOP1_2);
+        return new InputStream(marshaled_exception, false, null, GIOP1_2);
     }
 
     //

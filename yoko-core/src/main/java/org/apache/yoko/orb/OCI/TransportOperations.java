@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -73,23 +73,7 @@ public interface TransportOperations {
      *
      * @exception COMM_FAILURE In case of an error.
      **/
-    void receive(Buffer buf, boolean block);
-
-    /**
-     * Similar to <code>receive</code>, but it signals a connection
-     * loss by returning <code>FALSE</code> instead of raising
-     * <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     * @param block If set to <code>TRUE</code>, the operation blocks
-     * until the buffer is full. If set to <code>FALSE</code>, the
-     * operation fills as much of the buffer as possible without
-     * blocking.
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     * @exception COMM_FAILURE In case of an error.
-     **/
-    boolean receive_detect(Buffer buf, boolean block);
+    void receive(BufferWriter buf, boolean block);
 
     /**
      * Sends a buffer's contents.
@@ -101,7 +85,7 @@ public interface TransportOperations {
      * data as possible without blocking.
      * @exception COMM_FAILURE In case of an error.
      **/
-    void send(Buffer buf, boolean block);
+    void send(BufferReader buf, boolean block);
 
     /**
      * Similar to <code>send</code>, but it signals a connection loss
@@ -117,7 +101,7 @@ public interface TransportOperations {
      * detected, <code>TRUE</code> otherwise.
      * @exception COMM_FAILURE In case of an error.
      **/
-    boolean send_detect(Buffer buf, boolean block);
+    boolean send_detect(BufferReader buf, boolean block);
 
     /**
      * Similar to <code>send</code>, but it is possible
@@ -130,7 +114,7 @@ public interface TransportOperations {
      * timeout is equivalent to calling <code>send(buf, FALSE)</code>.
      * @exception COMM_FAILURE In case of an error.
      **/
-    void send_timeout(Buffer buf, int timeout);
+    void send_timeout(BufferReader buf, int timeout);
 
     /**
      * Returns the information object associated with

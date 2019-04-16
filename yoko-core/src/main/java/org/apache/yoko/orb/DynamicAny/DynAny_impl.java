@@ -25,7 +25,6 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.BooleanSeqHelper;
@@ -1000,7 +999,7 @@ abstract class DynAny_impl extends LocalObject implements
             throw new TypeMismatch();
 
         DynAny_impl impl = (DynAny_impl) comp;
-        try (OutputStream out = new OutputStream(new Buffer())) {
+        try (OutputStream out = new OutputStream()) {
             out._OB_ORBInstance(orbInstance_);
             impl._OB_marshal(out);
             InputStream in = out.create_input_stream();

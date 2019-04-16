@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -20,7 +20,6 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.ORBInstance;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;
@@ -32,7 +31,7 @@ final class CDRCodec extends LocalObject implements Codec {
     private ORBInstance orbInstance_;
 
     public byte[] encode(org.omg.CORBA.Any data) {
-        try (OutputStream out = new OutputStream(new Buffer())) {
+        try (OutputStream out = new OutputStream()) {
             out._OB_ORBInstance(orbInstance_);
             out._OB_writeEndian();
             out.write_any(data);
@@ -40,23 +39,20 @@ final class CDRCodec extends LocalObject implements Codec {
         }
     }
 
-    public org.omg.CORBA.Any decode(byte[] data)
-            throws FormatMismatch {
+    public org.omg.CORBA.Any decode(byte[] data) throws FormatMismatch {
         try {
-            Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(data);
             in._OB_ORBInstance(orbInstance_);
             in._OB_readEndian();
 
             return in.read_any();
         } catch (MARSHAL ex) {
-            throw (FormatMismatch)new
-                FormatMismatch().initCause(ex);
+            throw (FormatMismatch)new FormatMismatch().initCause(ex);
         }
     }
 
     public byte[] encode_value(org.omg.CORBA.Any data) {
-        try (OutputStream out = new OutputStream(new Buffer())) {
+        try (OutputStream out = new OutputStream()) {
             out._OB_ORBInstance(orbInstance_);
             out._OB_writeEndian();
             data.write_value(out);
@@ -65,12 +61,10 @@ final class CDRCodec extends LocalObject implements Codec {
     }
 
     public org.omg.CORBA.Any decode_value(byte[] data, TypeCode tc) throws FormatMismatch, TypeMismatch {
-        if (tc == null)
-            throw new TypeMismatch();
+        if (tc == null) throw new TypeMismatch();
 
         try {
-            Buffer buf = new Buffer(data);
-            InputStream in = new InputStream(buf, false);
+            InputStream in = new InputStream(data);
             in._OB_ORBInstance(orbInstance_);
             in._OB_readEndian();
 

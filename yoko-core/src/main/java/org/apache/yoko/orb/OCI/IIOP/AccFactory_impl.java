@@ -23,7 +23,6 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.InvalidParam;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
@@ -199,8 +198,7 @@ final class AccFactory_impl extends LocalObject implements
                 //
                 // Extract the 1_0 profile body
                 //
-                Buffer buf = new Buffer(ior.value.profiles[profile].profile_data);
-                InputStream in = new InputStream(buf, false, null, null);
+                InputStream in = new InputStream(ior.value.profiles[profile].profile_data);
                 in._OB_readEndian();
                 ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -225,7 +223,7 @@ final class AccFactory_impl extends LocalObject implements
                 //
                 // Remarshal the new body
                 //
-                try (OutputStream out = new OutputStream(new Buffer())) {
+                try (OutputStream out = new OutputStream()) {
                     out._OB_writeEndian();
                     ProfileBody_1_0Helper.write(out, body);
 

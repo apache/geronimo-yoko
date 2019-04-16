@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConFactoryRegistryHelper;
@@ -65,8 +64,7 @@ public class IORDump {
             if (ior.profiles[i].tag == TAG_MULTIPLE_COMPONENTS.value) {
                 sb.append("multiple components");
 
-                Buffer buf = new Buffer(ior.profiles[i].profile_data);
-                InputStream in = new InputStream(buf);
+                InputStream in = new InputStream(ior.profiles[i].profile_data);
                 in._OB_readEndian();
 
                 int cnt = in.read_ulong();
@@ -118,8 +116,7 @@ public class IORDump {
         }
 
         byte[] data = HexConverter.asciiToOctets(ref, 4);
-        Buffer buf = new Buffer(data);
-        InputStream in = new InputStream(buf);
+        InputStream in = new InputStream(data);
 
         boolean endian = in.read_boolean();
         in._OB_swap(endian);

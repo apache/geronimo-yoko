@@ -21,7 +21,8 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -679,9 +680,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
 
             // Send back locate reply message
-            Buffer buf = new Buffer(12);
-            buf.writer.pad(12);
-            try (OutputStream out = new OutputStream(buf)) {
+            try (OutputStream out = new OutputStream(BufferFactory.createWriteBuffer(12).padAll())) {
                 ProfileInfo profileInfo = new ProfileInfo();
                 profileInfo.major = msg.version().major;
                 profileInfo.minor = msg.version().minor;
@@ -697,10 +696,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 // LOC_SYSTEM_EXCEPTION,
                 // LOC_NEEDS_ADDRESSING_MODE
                 //
-                int pos = out._OB_pos();
-                out._OB_pos(0);
+                int pos = out.getPosition();
+                out.setPosition(0);
                 outgoing.writeMessageHeader(LocateReply, false, pos - 12);
-                out._OB_pos(pos);
+                out.setPosition(pos);
 
                 //
                 // A locate request is treated just like an upcall
@@ -710,7 +709,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 //
                 // Send the locate reply
                 //
-                sendUpcallReply(out._OB_buffer());
+                sendUpcallReply(out.getBufferReader());
             }
         } catch (SystemException ex) {
             processException(State.Error, ex, false);
@@ -916,7 +915,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** transmits a reply back once the upcall completes */
-    private void sendUpcallReply(Buffer buf) {
+    private void sendUpcallReply(BufferReader bufferReader) {
         synchronized (this) {
             //
             // no need to do anything if we are closed
@@ -933,7 +932,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // add this message to the message Queue
             //
-            messageQueue_.add(orbInstance_, buf);
+            messageQueue_.add(orbInstance_, bufferReader);
         }
 
         //
@@ -1137,8 +1136,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_,
                 out, profileInfo);
 
-        int pos = out._OB_pos();
-        out._OB_pos(0);
+        int pos = out.getPosition();
+        out.setPosition(0);
         try {
             outgoing.writeMessageHeader(Reply, false, pos - 12);
         } catch (SystemException ex) {
@@ -1149,7 +1148,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             _OB_assert(ex);
         }
 
-        sendUpcallReply(out._OB_buffer());
+        sendUpcallReply(out.getBufferReader());
     }
 
     /** start populating the reply with a user exception */

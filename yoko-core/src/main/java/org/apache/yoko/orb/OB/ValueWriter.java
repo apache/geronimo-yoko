@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.DataOutputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferWriter;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.CompletionStatus;
@@ -45,7 +45,7 @@ final public class ValueWriter {
     private final OutputStream out_;
 
     /** The Buffer */
-    private final Buffer buf_;
+    private final BufferWriter bufWriter;
 
     /** Are we currently writing chunks? */
     private boolean chunked_ = false;
@@ -106,10 +106,6 @@ final public class ValueWriter {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Private and protected methods
-    // ------------------------------------------------------------------
-
     private boolean checkIndirection(Serializable value) {
         Integer pos = instanceTable_.get(value);
         if (pos != null) {
@@ -118,10 +114,10 @@ final public class ValueWriter {
             //
             out_.write_long(-1);
             int p = pos;
-            // Align
+            // Align p on a four-byte boundary
             p += 3;
             p -= p & 0x3;
-            int off = p - buf_.pos_;
+            int off = p - bufWriter.getPosition();
             out_.write_long(off);
             return true;
         }
@@ -132,37 +128,26 @@ final public class ValueWriter {
     private void beginChunk() {
         Assert._OB_assert(chunked_);
 
-        //
         // Write a placeholder for the chunk size
-        //
         out_.write_long(0);
 
-        //
         // Remember the position of the placeholder
-        //
-        chunkSizePos_ = buf_.pos_ - 4;
+        chunkSizePos_ = bufWriter.getPosition() - 4;
     }
 
     private void endChunk() {
         Assert._OB_assert(chunked_);
 
-        //
-        // If chunkSizePos_ > 0, then there is a chunk whose size needs to
-        // be updated
-        //
+        // If chunkSizePos_ > 0, then there is a chunk whose size needs to be updated
         if (chunkSizePos_ > 0) {
-            //
             // Compute size of chunk
-            //
-            int size = buf_.pos_ - (chunkSizePos_ + 4);
+            int size = bufWriter.getPosition() - (chunkSizePos_ + 4);
 
-            //
             // Update chunk size
-            //
-            int savePos = buf_.pos_;
-            buf_.pos_ = chunkSizePos_;
+            int savePos = bufWriter.getPosition();
+            bufWriter.setPosition(chunkSizePos_);
             out_.write_long(size);
-            buf_.pos_ = savePos;
+            bufWriter.setPosition(savePos);
 
             chunkSizePos_ = 0;
         }
@@ -226,9 +211,9 @@ final public class ValueWriter {
     // Public methods
     // ------------------------------------------------------------------
 
-    public ValueWriter(OutputStream out) {
+    public ValueWriter(OutputStream out, BufferWriter bufferWriter) {
         out_ = out;
-        buf_ = out._OB_buffer();
+        bufWriter = bufferWriter;
         chunked_ = false;
         nestingLevel_ = 0;
         needChunk_ = false;
@@ -390,7 +375,7 @@ final public class ValueWriter {
         // special-case string
         if (value instanceof String) {
             //out_._OB_align(4);
-            int pos = out_._OB_pos();
+            int pos = bufWriter.getPosition();
             WStringValueHelper.write (out_, (String)value);
             instanceTable_.put (value, pos);
             return;
@@ -424,7 +409,7 @@ final public class ValueWriter {
             }
 
             if (repValue instanceof String) {
-                int pos = out_._OB_pos();
+                int pos = bufWriter.getPosition();
                 WStringValueHelper.write (out_, (String)repValue);
                 instanceTable_.put (repValue, pos);
                 // we record the original value position so that another attempt to write out 
@@ -557,7 +542,7 @@ final public class ValueWriter {
         //
 
         out_.write_long(tag);
-        int startPos = buf_.pos_ - 4; // start of value
+        int startPos = bufWriter.getPosition() - 4; // start of value
 
         // write codebase if present
         if ((tag & 0x00000001) == 1) {
@@ -566,10 +551,10 @@ final public class ValueWriter {
             Integer pos = codebaseTable_.get(codebase);
             if (pos != null) {
                 out_.write_long(-1);
-                int off = pos - buf_.pos_;
+                int off = pos - bufWriter.getPosition();
                 out_.write_long(off);
             } else {
-                codebaseTable_.put(codebase, buf_.pos_);
+                codebaseTable_.put(codebase, bufWriter.getPosition());
                 out_.write_string(codebase);
             }
         }
@@ -585,17 +570,17 @@ final public class ValueWriter {
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos - buf_.pos_;
+                int off = pos - bufWriter.getPosition();
                 out_.write_long(off);
             } else {
-                idListTable_.put(key, buf_.pos_);
+                idListTable_.put(key, bufWriter.getPosition());
                 out_.write_long(ids.length);
                 for (String id : ids) {
                     //
                     // Add this ID to the history list, if necessary
                     //
                     if (!idTable_.containsKey(id))
-                        idTable_.put(id, buf_.pos_);
+                        idTable_.put(id, bufWriter.getPosition());
                     out_.write_string(id);
                 }
             }
@@ -612,13 +597,13 @@ final public class ValueWriter {
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos - buf_.pos_;
+                int off = pos - bufWriter.getPosition();
                 out_.write_long(off);
             } else {
                 //
                 // Remember ID in history at current position
                 //
-                idTable_.put(ids[0], buf_.pos_);
+                idTable_.put(ids[0], bufWriter.getPosition());
                 out_.write_string(ids[0]);
             }
         }
@@ -641,12 +626,12 @@ final public class ValueWriter {
             // this value coterminates with a nested value, so we increment
             // the last end tag rather than write a new one
             //
-            if (lastEndTagPos_ > 0 && buf_.pos_ == lastEndTagPos_ + 4) {
+            if (lastEndTagPos_ > 0 && bufWriter.getPosition() == lastEndTagPos_ + 4) {
                 //
                 // Increment last end tag
                 //
                 lastTag_++;
-                buf_.pos_ = lastEndTagPos_; // same as "buf_.pos_ -= 4;"
+                bufWriter.setPosition(lastEndTagPos_); // same as "buf_.pos_ -= 4;"
                 out_.write_long(lastTag_);
             } else {
                 endChunk();
@@ -657,7 +642,7 @@ final public class ValueWriter {
                 lastTag_ = -nestingLevel_;
                 out_.write_long(lastTag_);
                 if (nestingLevel_ > 1)
-                    lastEndTagPos_ = buf_.pos_ - 4;
+                    lastEndTagPos_ = bufWriter.getPosition() - 4;
             }
 
             //

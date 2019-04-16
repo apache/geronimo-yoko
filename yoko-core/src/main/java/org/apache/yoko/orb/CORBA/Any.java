@@ -16,10 +16,10 @@
  */
 
 package org.apache.yoko.orb.CORBA;
- 
+
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.DATA_CONVERSION;
@@ -106,10 +106,6 @@ final public class Any extends org.omg.CORBA.Any {
             throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
         if (!allowNull && value_ == null)
             throw new BAD_OPERATION(describeBadOperation(MinorNullValueNotAllowed), MinorNullValueNotAllowed, COMPLETED_NO);
-    }
-
-    private boolean compare(Buffer buf1, Buffer buf2) {
-        return buf1.dataEquals(buf2);
     }
 
     private void setType(org.omg.CORBA.TypeCode tc) {
@@ -229,7 +225,7 @@ final public class Any extends org.omg.CORBA.Any {
         case _tk_union:
         case _tk_sequence:
         case _tk_array: {
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_ORBInstance(orbInstance_);
                 out.write_InputStream(in, origType_);
                 value_ = out.create_input_stream();
@@ -453,17 +449,13 @@ final public class Any extends org.omg.CORBA.Any {
         case _tk_union:
         case _tk_sequence:
         case _tk_array: {
-            Buffer buf1 = ((InputStream) value_)._OB_buffer();
-            Buffer buf2 = ((InputStream) any.value_)._OB_buffer();
-            return compare(buf1, buf2);
+            return compareValuesAsInputStreams(this, any);
         }
 
         case _tk_value:
         case _tk_value_box: {
             if (value_ instanceof InputStream && any.value_ instanceof InputStream) {
-                Buffer buf1 = ((InputStream) value_)._OB_buffer();
-                Buffer buf2 = ((InputStream) any.value_)._OB_buffer();
-                return compare(buf1, buf2);
+                return compareValuesAsInputStreams(this, any);
             } else
                 return false;
         }
@@ -472,9 +464,7 @@ final public class Any extends org.omg.CORBA.Any {
             if (value_ instanceof org.omg.CORBA.Object && any.value_ instanceof org.omg.CORBA.Object) {
                 return extract_Object()._is_equivalent(any.extract_Object());
             } else if (value_ instanceof InputStream && any.value_ instanceof InputStream) {
-                Buffer buf1 = ((InputStream) value_)._OB_buffer();
-                Buffer buf2 = ((InputStream) any.value_)._OB_buffer();
-                return compare(buf1, buf2);
+                return compareValuesAsInputStreams(this, any);
             }
             return false;
         }
@@ -488,6 +478,12 @@ final public class Any extends org.omg.CORBA.Any {
         }
 
         return false; // The compiler needs this
+    }
+
+    private static boolean compareValuesAsInputStreams(Any any1, Any any2) {
+        BufferReader buf1 = ((InputStream) any1.value_).getBuffer();
+        BufferReader buf2 = ((InputStream) any2.value_).getBuffer();
+        return buf1.dataEquals(buf2);
     }
 
     public synchronized org.omg.CORBA.TypeCode type() {
@@ -669,7 +665,7 @@ final public class Any extends org.omg.CORBA.Any {
         // Spec says that calling create_output_stream and
         // writing to the any will update the state of the
         // last streamable object, if present.
-        OutputStream out = new OutputStream(new Buffer());
+        OutputStream out = new OutputStream();
         out._OB_ORBInstance(orbInstance_);
         return out;
     }
@@ -678,7 +674,7 @@ final public class Any extends org.omg.CORBA.Any {
         if (value_ instanceof InputStream) {
             return new InputStream(((InputStream) value_));
         } else {
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_ORBInstance(orbInstance_);
                 write_value(out);
                 return out.create_input_stream();

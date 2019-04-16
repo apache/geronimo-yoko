@@ -23,7 +23,6 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
@@ -272,7 +271,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
         if (is_null())
             return new Any(orbInstance_, type_, null);
         else {
-            try (OutputStream out = new OutputStream(new Buffer())) {
+            try (OutputStream out = new OutputStream()) {
                 out._OB_ORBInstance(orbInstance_);
 
                 if (dynValueWriter != null)
@@ -503,7 +502,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
                 // We need to do this here because it may be refered by
                 // some of the components of this instance (even indirectly).
                 //
-                int startPos = out._OB_buffer().pos_;
+                int startPos = out.getPosition();
                 dynValueWriter.indexValue(this, startPos);
 
                 short mod = origType_.type_modifier();
@@ -531,7 +530,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
         //
         // Peek at value tag
         //
-        int save = in._OB_pos();
+        int save = in.getPosition();
         int ind = 0;
         int tag = in.read_long();
 
@@ -544,10 +543,10 @@ final class DynValue_impl extends DynValueCommon_impl implements
             // Indirection - rewind to offset
             //
             int offs = in.read_long();
-            ind = in._OB_pos(); // save position after offset
-            in._OB_pos(in._OB_pos() - 4 + offs);
+            ind = in.getPosition(); // save position after offset
+            in.setPosition(in.getPosition() - 4 + offs);
         } else
-            in._OB_pos(save); // restore tag position
+            in.setPosition(save); // restore tag position
 
         set_to_value();
 
@@ -585,9 +584,9 @@ final class DynValue_impl extends DynValueCommon_impl implements
         // skipped chunks indicates ValueType more derivated than this one,
         // and that truncation has occured
         //
-        int pos_before = in._OB_pos();
+        int pos_before = in.getPosition();
         in._OB_endValue();
-        int pos_after = in._OB_pos();
+        int pos_after = in.getPosition();
 
         if (pos_after != pos_before && dynValueReader_ != null) {
             dynValueReader_.mustTruncate = true;
@@ -597,7 +596,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
         // Restore position after indirection
         //
         if (ind != 0)
-            in._OB_pos(ind);
+            in.setPosition(ind);
 
         notifyParent();
     }

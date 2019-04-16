@@ -23,7 +23,6 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
@@ -178,7 +177,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
     public synchronized org.omg.CORBA.Any to_any() {
         if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-        try (OutputStream out = new OutputStream(new Buffer())) {
+        try (OutputStream out = new OutputStream()) {
             out._OB_ORBInstance(orbInstance_);
 
             _OB_marshal(out);
@@ -221,7 +220,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
         //
         DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_, factory_);
 
-        try (OutputStream out = new OutputStream(new Buffer())) {
+        try (OutputStream out = new OutputStream()) {
             out._OB_ORBInstance(orbInstance_);
             _OB_marshal(out, dynValueWriter);
 

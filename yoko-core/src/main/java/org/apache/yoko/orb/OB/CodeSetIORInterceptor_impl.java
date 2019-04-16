@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.omg.CONV_FRAME.CodeSetComponent;
 import org.omg.CONV_FRAME.CodeSetComponentInfo;
 import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
@@ -62,12 +61,11 @@ public final class CodeSetIORInterceptor_impl extends LocalObject implements IOR
         // Any insertion/extraction operators would have to be
         // generated unnecessarily
         //
-        Buffer buf = new Buffer();
-        OutputStream out = new OutputStream(buf);
+        OutputStream out = new OutputStream();
         out._OB_writeEndian();
         CodeSetComponentInfoHelper.write(out, codeSetInfo);
 
-            component.component_data = out.copyWrittenBytes();
+        component.component_data = out.copyWrittenBytes();
 
         try {
             info.add_ior_component(component);

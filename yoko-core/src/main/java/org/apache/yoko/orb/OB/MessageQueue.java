@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferReader;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CORBA.SystemException;
 
@@ -38,9 +38,9 @@ public class MessageQueue {
     private final Vector<Downcall> pending_ = new Vector<>();
 
     // Add new unsent buffer
-    public void add(ORBInstance orbInstance, Buffer buf) {
+    public void add(ORBInstance orbInstance, BufferReader bufferReader) {
         // Add new message to the message buffers
-        unsent_.addElement(new UnsentMessage(buf));
+        unsent_.addElement(new UnsentMessage(bufferReader));
     }
 
     // Add new unsent downcall
@@ -50,8 +50,8 @@ public class MessageQueue {
             // Save stream position and rewind
             OutputStream out = down.output();
 
-            int pos = out._OB_pos();
-            out._OB_pos(0);
+            int pos = out.getPosition();
+            out.setPosition(0);
 
             // Write message header
             ProfileInfo profileInfo = down.profileInfo();
@@ -64,7 +64,7 @@ public class MessageQueue {
                 outgoing.writeMessageHeader(Request, false, pos - 12);
 
             // Restore stream position
-            out._OB_pos(pos);
+            out.setPosition(pos);
         } catch (SystemException ex) {
             _OB_assert(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
@@ -74,8 +74,8 @@ public class MessageQueue {
     }
 
     // retrieve the first buffer in the queue
-    public Buffer getFirstUnsentBuffer() {
-        return unsent_.isEmpty() ? null : unsent_.firstElement().buf;
+    public BufferReader getFirstUnsentBuffer() {
+        return unsent_.isEmpty() ? null : unsent_.firstElement().getBufferReader();
     }
 
     // Move the first unsent downcall to the list of pending downcalls
