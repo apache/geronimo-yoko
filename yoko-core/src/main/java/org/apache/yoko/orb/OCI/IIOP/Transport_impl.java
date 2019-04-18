@@ -18,8 +18,8 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.BufferReader;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
@@ -168,13 +168,13 @@ final public class Transport_impl extends LocalObject implements
         }
     }
 
-    public void receive(BufferWriter bufWriter, boolean block) {
+    public void receive(WriteBuffer writeBuffer, boolean block) {
         setBlock(block);
 
-        logger.fine("receiving a buffer of " + bufWriter.available() + " from " + socket_ + " using transport " + this);
-        while (!bufWriter.isComplete()) {
+        logger.fine("receiving a buffer of " + writeBuffer.available() + " from " + socket_ + " using transport " + this);
+        while (!writeBuffer.isComplete()) {
             try {
-                if (!bufWriter.readFrom(in_))
+                if (!writeBuffer.readFrom(in_))
                     throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
             } catch (InterruptedIOException ex) {
                 logger.log(Level.FINE, "Received interrupted exception", ex); 
@@ -193,14 +193,14 @@ final public class Transport_impl extends LocalObject implements
         }
     }
 
-    public void send(BufferReader bufReader, boolean block) {
+    public void send(ReadBuffer readBuffer, boolean block) {
         setBlock(block);
         
-        logger.fine("Sending buffer of size " + bufReader.available() + " to " + socket_);
+        logger.fine("Sending buffer of size " + readBuffer.available() + " to " + socket_);
         
-        while (!bufReader.isComplete()) {
+        while (!readBuffer.isComplete()) {
             try {
-                bufReader.writeTo(out_);
+                readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
                     return;
@@ -214,12 +214,12 @@ final public class Transport_impl extends LocalObject implements
         }
     }
 
-    public boolean send_detect(BufferReader buf, boolean block) {
+    public boolean send_detect(ReadBuffer readBuffer, boolean block) {
         setBlock(block);
 
-        while (!buf.isComplete()) {
+        while (!readBuffer.isComplete()) {
             try {
-                buf.writeTo(out_);
+                readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
                     return true;
@@ -231,20 +231,20 @@ final public class Transport_impl extends LocalObject implements
         return true;
     }
 
-    public void send_timeout(BufferReader buf, int t) {
+    public void send_timeout(ReadBuffer readBuffer, int t) {
         if (t < 0)
             throw new InternalError();
 
         if (t == 0) {
-            send(buf, false);
+            send(readBuffer, false);
             return;
         }
 
         setSoTimeout(t);
 
-        while (!buf.isComplete()) {
+        while (!readBuffer.isComplete()) {
             try {
-                buf.writeTo(out_);
+                readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 return;
             } catch (IOException ex) {

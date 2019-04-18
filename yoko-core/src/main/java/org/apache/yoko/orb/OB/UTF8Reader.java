@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding;
@@ -26,8 +26,8 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeDataConversion;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class UTF8Reader extends CodeSetReader {
-    public char read_char(BufferReader bufferReader) throws DATA_CONVERSION {
-        byte first = bufferReader.readByte();
+    public char read_char(ReadBuffer readBuffer) throws DATA_CONVERSION {
+        byte first = readBuffer.readByte();
 
         //
         // Direct mapping for characters < 0x80
@@ -44,12 +44,12 @@ final class UTF8Reader extends CodeSetReader {
             // 4 free bits
             value = (char) (first & 0x0f);
 
-            if ((bufferReader.peekByte() & 0xc0) != 0x80) {
+            if ((readBuffer.peekByte() & 0xc0) != 0x80) {
                 throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
             }
 
             value <<= 6;
-            value |= bufferReader.readByte() & 0x3f;
+            value |= readBuffer.readByte() & 0x3f;
         }
         //
         // 16 bit overflow
@@ -58,18 +58,18 @@ final class UTF8Reader extends CodeSetReader {
             throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Overflow), MinorUTF8Overflow, COMPLETED_NO);
         }
 
-        if ((bufferReader.peekByte() & 0xc0) != 0x80) {
+        if ((readBuffer.peekByte() & 0xc0) != 0x80) {
             throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
         }
 
         value <<= 6;
-        value |= bufferReader.readByte() & 0x3f;
+        value |= readBuffer.readByte() & 0x3f;
 
         return value;
     }
 
-    public char read_wchar(BufferReader bufferReader, int len) throws DATA_CONVERSION {
-        return read_char(bufferReader);
+    public char read_wchar(ReadBuffer readBuffer, int len) throws DATA_CONVERSION {
+        return read_char(readBuffer);
     }
 
     public int count_wchar(char first) {

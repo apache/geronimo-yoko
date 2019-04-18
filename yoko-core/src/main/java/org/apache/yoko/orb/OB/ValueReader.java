@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CustomMarshal;
@@ -111,7 +111,7 @@ public final class ValueReader {
 
     private final InputStream in_;
 
-    private final BufferReader buf_;
+    private final ReadBuffer buf_;
 
     private final Map<Integer, Serializable> instanceTable_;
 

@@ -22,7 +22,7 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.BufferFactory;
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -915,7 +915,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** transmits a reply back once the upcall completes */
-    private void sendUpcallReply(BufferReader bufferReader) {
+    private void sendUpcallReply(ReadBuffer readBuffer) {
         synchronized (this) {
             //
             // no need to do anything if we are closed
@@ -932,7 +932,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // add this message to the message Queue
             //
-            messageQueue_.add(orbInstance_, bufferReader);
+            messageQueue_.add(orbInstance_, readBuffer);
         }
 
         //

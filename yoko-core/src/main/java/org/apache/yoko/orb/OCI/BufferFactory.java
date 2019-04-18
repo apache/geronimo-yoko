@@ -18,15 +18,15 @@
 
  public enum BufferFactory {;
 
-     public static BufferReader createReadBuffer(byte[] data) {
+     public static ReadBuffer createReadBuffer(byte[] data) {
          return new Buffer(data).readFromStart();
      }
 
-     public static BufferWriter createWriteBuffer() {
+     public static WriteBuffer createWriteBuffer() {
          return new Buffer().writeFromStart();
      }
 
-     public static BufferWriter createWriteBuffer(int initialBufferSize) {
+     public static WriteBuffer createWriteBuffer(int initialBufferSize) {
          return new Buffer(initialBufferSize).writeFromStart();
      }
  }

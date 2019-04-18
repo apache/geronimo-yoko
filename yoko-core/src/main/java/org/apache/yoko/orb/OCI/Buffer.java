@@ -37,15 +37,15 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 final class Buffer {
-    private transient byte[] data; // The octet buffer
+    private byte[] data; // The octet buffer
     private int length; // The requested size of the buffer
 
-    BufferReader readFromStart() {
-        return new Reader();
+    ReadBuffer readFromStart() {
+        return new Read();
     }
 
-    BufferWriter writeFromStart() {
-        return new Writer();
+    WriteBuffer writeFromStart() {
+        return new Write();
     }
 
     /**
@@ -53,7 +53,7 @@ final class Buffer {
      * @param extra the number of additional bytes required beyond the end of the buffer.
      * @return <code>true</code> iff an existing buffer was insufficient
      */
-    private boolean addLength(int extra) {
+    private boolean growBy(int extra) {
         _OB_assert(extra >= 0);
         length += extra;
 
@@ -130,7 +130,7 @@ final class Buffer {
         private static final byte[] PADDING = new byte[1<<PADDING_POWER];
         static { Arrays.fill(PADDING, PAD_BYTE); }
 
-        static void pad(Writer w, int n) {
+        static void pad(Write w, int n) {
             // write as many full copies of PADDING as required
             for (int i = n >> PADDING_POWER; i > 0; i--) w.writeBytes(PADDING);
             // write any remaining bytes of PADDING
@@ -139,7 +139,7 @@ final class Buffer {
     }
 
     @SuppressWarnings("unchecked")
-    private class Facet<T extends BufferFacet> implements BufferFacet<T> {
+    private abstract class Facet<T extends BufferFacet> implements BufferFacet<T> {
         int position = 0;
         @Override
         final public int getPosition() { return position; }
@@ -191,27 +191,27 @@ final class Buffer {
         }
     }
 
-    private final class Reader extends Facet<BufferReader> implements BufferReader {
+    private final class Read extends Facet<ReadBuffer> implements ReadBuffer {
         @Override
         public void align(AlignmentBoundary boundary) {
             position = boundary.newIndex(position);
         }
 
         @Override
-        public BufferReader skipBytes(int n) {
+        public ReadBuffer skipBytes(int n) {
             if (position + n > length) throw new IndexOutOfBoundsException();
             position = position + n;
             return this;
         }
 
         @Override
-        public BufferReader skipToEnd() {
+        public ReadBuffer skipToEnd() {
             position = length;
             return this;
         }
 
         @Override
-        public BufferReader rewindToStart() {
+        public ReadBuffer rewindToStart() {
             position = 0;
             return this;
         }
@@ -296,16 +296,16 @@ final class Buffer {
     }
 
     @SuppressWarnings({"PointlessBitwiseExpression", "OctalInteger"})
-    private final class Writer extends Facet<BufferWriter> implements BufferWriter {
+    private final class Write extends Facet<WriteBuffer> implements WriteBuffer {
         @Override
-        public BufferWriter trim() {
+        public WriteBuffer trim() {
             length = position;
             return this;
         }
 
         @Override
-        public BufferReader readFromStart() {
-            return new Reader();
+        public ReadBuffer readFromStart() {
+            return new Read();
         }
 
         @Override
@@ -328,7 +328,7 @@ final class Buffer {
         }
 
         @Override
-        public BufferWriter padAll() {
+        public WriteBuffer padAll() {
             Padding.pad(this, length);
             return this;
         }
@@ -343,7 +343,7 @@ final class Buffer {
         @Override
         public boolean ensureAvailable(int size) {
             final int shortfall = size - available();
-            return shortfall > 0 && addLength(shortfall);
+            return shortfall > 0 && growBy(shortfall);
         }
 
         @Override
@@ -407,9 +407,9 @@ final class Buffer {
         }
 
         @Override
-        public void writeBytes(BufferReader reader) {
+        public void writeBytes(ReadBuffer reader) {
             ensureAvailable(reader.available());
-            Reader rdr = (Reader) reader;
+            Read rdr = (Read) reader;
             writeBytes(rdr.data(), rdr.getPosition(), rdr.available());
         }
 
@@ -431,7 +431,7 @@ final class Buffer {
             return new LengthWriter(logger);
         }
 
-        @SuppressWarnings("PointlessBitwiseExpression")
+        @SuppressWarnings({"PointlessBitwiseExpression", "PointlessArithmeticExpression"})
         private final class LengthWriter implements SimplyCloseable {
             final Logger logger;
             final int index;
@@ -440,7 +440,7 @@ final class Buffer {
                 this.logger = logger;
                 this.index = position;
                 this.logger.finest("Writing a gap value for a length at offset " + index);
-                Padding.pad(Writer.this, 4);
+                Padding.pad(Write.this, 4);
             }
 
             public void close() {

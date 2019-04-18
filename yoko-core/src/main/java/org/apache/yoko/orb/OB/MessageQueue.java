@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CORBA.SystemException;
 
@@ -38,9 +38,9 @@ public class MessageQueue {
     private final Vector<Downcall> pending_ = new Vector<>();
 
     // Add new unsent buffer
-    public void add(ORBInstance orbInstance, BufferReader bufferReader) {
+    public void add(ORBInstance orbInstance, ReadBuffer readBuffer) {
         // Add new message to the message buffers
-        unsent_.addElement(new UnsentMessage(bufferReader));
+        unsent_.addElement(new UnsentMessage(readBuffer));
     }
 
     // Add new unsent downcall
@@ -74,7 +74,7 @@ public class MessageQueue {
     }
 
     // retrieve the first buffer in the queue
-    public BufferReader getFirstUnsentBuffer() {
+    public ReadBuffer getFirstUnsentBuffer() {
         return unsent_.isEmpty() ? null : unsent_.firstElement().getBufferReader();
     }
 

@@ -17,17 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;
 
-    public void write_char(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
-        bufferWriter.writeByte(v & 0xff);
+    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        writeBuffer.writeByte(v & 0xff);
     }
 
-    public void write_wchar(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
         //
         // we don't support surrogate paired characters
         //
@@ -38,14 +38,14 @@ final class UTF16Writer extends CodeSetWriter {
         // need to escape it with the Big Endian BOM
         //
         if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
-            bufferWriter.writeByte(0xFE);
-            bufferWriter.writeByte(0xFF);
+            writeBuffer.writeByte(0xFE);
+            writeBuffer.writeByte(0xFF);
         }
 
         //
         // we always write our UTF-16 characters in Big Endian format
         //
-        bufferWriter.writeChar(v);
+        writeBuffer.writeChar(v);
 
         //
         // turn off the FIRST_CHAR flag

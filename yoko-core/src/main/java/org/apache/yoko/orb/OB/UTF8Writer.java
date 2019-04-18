@@ -17,28 +17,28 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 final class UTF8Writer extends CodeSetWriter {
-    public void write_char(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
+    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
         if ((int) v < 0x80) {
             // Direct mapping (7 bits) for characters < 0x80
-            bufferWriter.writeByte(v);
+            writeBuffer.writeByte(v);
         } else if ((int) v <= 0x7ff) {
             // 5 free bits (%110xxxxx | %vvvvv)
-            bufferWriter.writeByte((v >>> 6) | 0xc0);
-            bufferWriter.writeByte((v & 0x3f) | 0x80);
+            writeBuffer.writeByte((v >>> 6) | 0xc0);
+            writeBuffer.writeByte((v & 0x3f) | 0x80);
         } else if ((int) v <= 0xffff) {
             // 4 free bits (%1110xxxx | %vvvv)
-            bufferWriter.writeByte((v >>> 12) | 0xe0);
-            bufferWriter.writeByte(((v >>> 6) & 0x3f) | 0x80);
-            bufferWriter.writeByte((v & 0x3f) | 0x80);
+            writeBuffer.writeByte((v >>> 12) | 0xe0);
+            writeBuffer.writeByte(((v >>> 6) & 0x3f) | 0x80);
+            writeBuffer.writeByte((v & 0x3f) | 0x80);
         } else throw new DATA_CONVERSION();
     }
 
-    public void write_wchar(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
-        write_char(bufferWriter, v);
+    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        write_char(writeBuffer, v);
     }
 
     public int count_wchar(char value) {

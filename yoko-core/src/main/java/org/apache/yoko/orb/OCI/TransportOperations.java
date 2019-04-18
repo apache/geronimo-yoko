@@ -65,7 +65,7 @@ public interface TransportOperations {
 
     /**
      * Receives a buffer's contents.
-     * @param buf The buffer to fill.
+     * @param writeBuffer The buffer to fill.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the buffer is full. If set to <code>FALSE</code>, the
      * operation fills as much of the buffer as possible without
@@ -73,26 +73,26 @@ public interface TransportOperations {
      *
      * @exception COMM_FAILURE In case of an error.
      **/
-    void receive(BufferWriter buf, boolean block);
+    void receive(WriteBuffer writeBuffer, boolean block);
 
     /**
      * Sends a buffer's contents.
      *
-     * @param buf The buffer to send.
+     * @param readBuffer The buffer to send.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the buffer has completely been sent. If set to
      * <code>FALSE</code>, the operation sends as much of the buffer's
      * data as possible without blocking.
      * @exception COMM_FAILURE In case of an error.
      **/
-    void send(BufferReader buf, boolean block);
+    void send(ReadBuffer readBuffer, boolean block);
 
     /**
      * Similar to <code>send</code>, but it signals a connection loss
      * by returning <code>FALSE</code> instead of raising
      * <code>COMM_FAILURE</code>.
      *
-     * @param buf The buffer to fill.
+     * @param readBuffer The buffer to fill.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the entire buffer has been sent. If set to
      * <code>FALSE</code>, the operation sends as much of the buffer's
@@ -101,7 +101,7 @@ public interface TransportOperations {
      * detected, <code>TRUE</code> otherwise.
      * @exception COMM_FAILURE In case of an error.
      **/
-    boolean send_detect(BufferReader buf, boolean block);
+    boolean send_detect(ReadBuffer readBuffer, boolean block);
 
     /**
      * Similar to <code>send</code>, but it is possible
@@ -109,12 +109,12 @@ public interface TransportOperations {
      * there was a timeout by checking if the buffer has
      * been sent completely.
      *
-     * @param buf The buffer to send.
+     * @param readBuffer The buffer to send.
      * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>send(buf, FALSE)</code>.
+     * timeout is equivalent to calling <code>send(readBuffer, FALSE)</code>.
      * @exception COMM_FAILURE In case of an error.
      **/
-    void send_timeout(BufferReader buf, int timeout);
+    void send_timeout(ReadBuffer readBuffer, int timeout);
 
     /**
      * Returns the information object associated with

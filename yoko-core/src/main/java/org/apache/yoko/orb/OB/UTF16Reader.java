@@ -17,19 +17,19 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 
 final class UTF16Reader extends CodeSetReader {
     private int Flags_ = 0;
 
-    public char read_char(BufferReader bufferReader) {
-        return (char) (bufferReader.readByte() & 0xff);
+    public char read_char(ReadBuffer readBuffer) {
+        return (char) (readBuffer.readByte() & 0xff);
     }
 
-    public char read_wchar(BufferReader bufferReader, int len) {
+    public char read_wchar(ReadBuffer readBuffer, int len) {
         // read the first wchar assuming big endian
-        char v = (char) ((bufferReader.readByte() & 0xff) << 8);
-        v |= (char) ((bufferReader.readByte() & 0xff));
+        char v = (char) ((readBuffer.readByte() & 0xff) << 8);
+        v |= (char) ((readBuffer.readByte() & 0xff));
 
         //
         // check if this was a BOM
@@ -39,15 +39,15 @@ final class UTF16Reader extends CodeSetReader {
             //
             // it was a big endian BOM
             //
-            v = (char) ((bufferReader.readByte() & 0xff) << 8);
-            v |= (char) ((bufferReader.readByte() & 0xff));
+            v = (char) ((readBuffer.readByte() & 0xff) << 8);
+            v |= (char) ((readBuffer.readByte() & 0xff));
         } else if (((Flags_ & CodeSetReader.FIRST_CHAR) != 0)
                 && (v == (char) 0xFFFE)) {
             //
             // it was a little endian BOM
             //
-            v = (char) ((bufferReader.readByte() & 0xff));
-            v |= (char) ((bufferReader.readByte() & 0xff) << 8);
+            v = (char) ((readBuffer.readByte() & 0xff));
+            v |= (char) ((readBuffer.readByte() & 0xff) << 8);
 
             //
             // enable the little endian reader flag

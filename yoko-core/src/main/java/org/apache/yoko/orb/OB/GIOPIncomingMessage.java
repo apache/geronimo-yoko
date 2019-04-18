@@ -18,8 +18,8 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.BufferReader;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
@@ -83,27 +83,27 @@ final public class GIOPIncomingMessage {
 
         private final MsgType_1_1 type;
 
-        private final BufferWriter buf;
+        private final WriteBuffer writeBuffer;
 
-        public Fragment(byte major, byte minor, boolean littleEndian, Integer reqId, MsgType_1_1 type, BufferWriter buf) {
+        public Fragment(byte major, byte minor, boolean littleEndian, Integer reqId, MsgType_1_1 type, WriteBuffer writeBuffer) {
             this.version = new Version(major, minor);
             this.littleEndian = littleEndian;
             this.reqId = reqId;
             this.type = type;
-            this.buf = buf;
+            this.writeBuffer = writeBuffer;
         }
 
         /**
          * Add the bytes from a following fragment.
-         * The bufferReader should be positioned at the start of the fragment body.
+         * The readBuffer should be positioned at the start of the fragment body.
          */
-        void addFragment(ORBInstance orbInstance, BufferReader bufferReader) {
-            if (maxMessageSize_ > 0 && buf.length() + bufferReader.available() > maxMessageSize_) {
+        void addFragment(ORBInstance orbInstance, ReadBuffer readBuffer) {
+            if (maxMessageSize_ > 0 && writeBuffer.length() + readBuffer.available() > maxMessageSize_) {
                 String msg = "incoming fragment exceeds maximum message size (" + maxMessageSize_ + ")";
                 orbInstance_.getLogger().warning(msg);
                 throw new IMP_LIMIT(describeImpLimit(MinorMessageSizeLimit), MinorMessageSizeLimit, COMPLETED_NO);
             }
-            buf.writeBytes(bufferReader);
+            writeBuffer.writeBytes(readBuffer);
         }
     }
 
@@ -189,7 +189,7 @@ final public class GIOPIncomingMessage {
         return result;
     }
 
-    void extractHeader(BufferReader br) {
+    void extractHeader(ReadBuffer br) {
         InputStream in = new InputStream(br, false);
         in_ = null;
 
@@ -262,7 +262,7 @@ final public class GIOPIncomingMessage {
      * @param writer the buffer containing the message — to be owned by this object
      * @return true iff the message was complete
      */
-    boolean consumeBuffer(BufferWriter writer) {
+    boolean consumeBuffer(WriteBuffer writer) {
         // Handle initial fragmented message
         if (fragmentToFollow && type_ != MsgType_1_1.Fragment) {
             startNewFragmentedMessage(writer);
@@ -284,7 +284,7 @@ final public class GIOPIncomingMessage {
         return true;
     }
 
-    private boolean consumeFragment(BufferReader reader) {
+    private boolean consumeFragment(ReadBuffer reader) {
         // Fragment not supported in GIOP 1.0
         if (version_.minor < 1) throw new COMM_FAILURE(describeCommFailure(MinorFragment), MinorFragment, COMPLETED_MAYBE);
 
@@ -304,12 +304,12 @@ final public class GIOPIncomingMessage {
         // include the message header.  We need to adjust this for
         // fragmented messages otherwise we risk not detecting the
         // correct end of the buffer.
-        size_ = complete.buf.length() - 12;
-        readEntireMessage(complete.buf.readFromStart());
+        size_ = complete.writeBuffer.length() - 12;
+        readEntireMessage(complete.writeBuffer.readFromStart());
         return true;
     }
 
-    private Fragment handleFollowingFragmentGiop11(BufferReader reader) {
+    private Fragment handleFollowingFragmentGiop11(ReadBuffer reader) {
         // If there was no previous fragment, we cannot process this fragment
         if (lastFragment_ == null) throw new COMM_FAILURE(describeCommFailure(MinorFragment), MinorFragment, COMPLETED_MAYBE);
         // Append buffer to existing data. We need to skip the header data
@@ -320,7 +320,7 @@ final public class GIOPIncomingMessage {
 
         // If we haven't read the request ID yet, then try to get it now
         if (lastFragment_.reqId == null) {
-            InputStream reqIn = new InputStream(lastFragment_.buf.readFromStart(), 12, swap());
+            InputStream reqIn = new InputStream(lastFragment_.writeBuffer.readFromStart(), 12, swap());
             try {
                 skipServiceContextList(reqIn);
                 lastFragment_.reqId = reqIn.read_ulong();
@@ -335,7 +335,7 @@ final public class GIOPIncomingMessage {
         try { return lastFragment_; } finally { lastFragment_ = null; }
     }
 
-    private Fragment handleFollowingFragmentGiop12(BufferReader reader) {
+    private Fragment handleFollowingFragmentGiop12(ReadBuffer reader) {
         Fragment complete;
         // GIOP 1.2 defines the FragmentHeader message header, to allow
         // interleaving of Fragment messages for different requests
@@ -367,7 +367,7 @@ final public class GIOPIncomingMessage {
         //  maybe rig up each entry with a TTL set to request timeout
     }
 
-    private void processCancelRequest(BufferReader reader) {
+    private void processCancelRequest(ReadBuffer reader) {
         readEntireMessage(reader);
 
         // Check if cancelled message corresponds to a fragment
@@ -385,11 +385,11 @@ final public class GIOPIncomingMessage {
         in_._OB_reset();
     }
 
-    private void readEntireMessage(BufferReader reader) {
+    private void readEntireMessage(ReadBuffer reader) {
         in_ = new InputStream(reader, 12, swap());
     }
 
-    private void startNewFragmentedMessage(BufferWriter writer) {
+    private void startNewFragmentedMessage(WriteBuffer writer) {
         if (version_.minor < 1) {
             throw new COMM_FAILURE(describeCommFailure(MinorFragment), MinorFragment, COMPLETED_MAYBE);
         } else if (version_.minor == 1) {
@@ -399,7 +399,7 @@ final public class GIOPIncomingMessage {
         }
     }
 
-    private void startNewGiop11FragmentedMessage(BufferWriter writer) {
+    private void startNewGiop11FragmentedMessage(WriteBuffer writer) {
         // In GIOP 1.1, fragments are only supported for request and reply messages
         if (type_ != MsgType_1_1.Request && type_ != MsgType_1_1.Reply)
             throw new COMM_FAILURE(describeCommFailure(MinorFragment), MinorFragment, COMPLETED_MAYBE);
@@ -424,7 +424,7 @@ final public class GIOPIncomingMessage {
         lastFragment_ = new Fragment(version_.major, version_.minor, littleEndian, reqId, type_, writer);
     }
 
-    private void startNewGiop12FragmentedMessage(BufferWriter writer) {
+    private void startNewGiop12FragmentedMessage(WriteBuffer writer) {
         // In GIOP 1.2, fragments are only supported for request,
         // reply, locate request and locate reply messages
         if (type_ != MsgType_1_1.Request

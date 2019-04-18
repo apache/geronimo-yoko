@@ -19,15 +19,15 @@ package org.apache.yoko.orb.OCI;
 import java.io.IOException;
 import java.io.OutputStream;
 
-public interface BufferReader extends BufferFacet<BufferReader> {
+public interface ReadBuffer extends BufferFacet<ReadBuffer> {
 
     void align(AlignmentBoundary boundary);
 
-    BufferReader skipBytes(int n);
+    ReadBuffer skipBytes(int n);
 
-    BufferReader skipToEnd();
+    ReadBuffer skipToEnd();
 
-    BufferReader rewindToStart();
+    ReadBuffer rewindToStart();
 
     byte peekByte();
 

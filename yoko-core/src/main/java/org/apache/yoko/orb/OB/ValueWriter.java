@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.DataOutputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.CompletionStatus;
@@ -39,13 +39,17 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.IdentityHashMap;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
 final public class ValueWriter {
 
     /** The OutputStream */
     private final OutputStream out_;
 
     /** The Buffer */
-    private final BufferWriter bufWriter;
+    private final WriteBuffer writeBuffer;
 
     /** Are we currently writing chunks? */
     private boolean chunked_ = false;
@@ -117,7 +121,7 @@ final public class ValueWriter {
             // Align p on a four-byte boundary
             p += 3;
             p -= p & 0x3;
-            int off = p - bufWriter.getPosition();
+            int off = p - writeBuffer.getPosition();
             out_.write_long(off);
             return true;
         }
@@ -132,7 +136,7 @@ final public class ValueWriter {
         out_.write_long(0);
 
         // Remember the position of the placeholder
-        chunkSizePos_ = bufWriter.getPosition() - 4;
+        chunkSizePos_ = writeBuffer.getPosition() - 4;
     }
 
     private void endChunk() {
@@ -141,13 +145,13 @@ final public class ValueWriter {
         // If chunkSizePos_ > 0, then there is a chunk whose size needs to be updated
         if (chunkSizePos_ > 0) {
             // Compute size of chunk
-            int size = bufWriter.getPosition() - (chunkSizePos_ + 4);
+            int size = writeBuffer.getPosition() - (chunkSizePos_ + 4);
 
             // Update chunk size
-            int savePos = bufWriter.getPosition();
-            bufWriter.setPosition(chunkSizePos_);
+            int savePos = writeBuffer.getPosition();
+            writeBuffer.setPosition(chunkSizePos_);
             out_.write_long(size);
-            bufWriter.setPosition(savePos);
+            writeBuffer.setPosition(savePos);
 
             chunkSizePos_ = 0;
         }
@@ -211,18 +215,18 @@ final public class ValueWriter {
     // Public methods
     // ------------------------------------------------------------------
 
-    public ValueWriter(OutputStream out, BufferWriter bufferWriter) {
-        out_ = out;
-        bufWriter = bufferWriter;
-        chunked_ = false;
-        nestingLevel_ = 0;
-        needChunk_ = false;
-        chunkSizePos_ = 0;
-        lastEndTagPos_ = 0;
-        instanceTable_ = new IdentityHashMap<>(131);
-        idTable_ = new Hashtable<>(131);
-        idListTable_ = new Hashtable<>(131);
-        codebaseTable_ = new Hashtable<>(3);
+    public ValueWriter(OutputStream out, WriteBuffer writeBuffer) {
+        this.out_ = out;
+        this.writeBuffer = writeBuffer;
+        this.chunked_ = false;
+        this.nestingLevel_ = 0;
+        this.needChunk_ = false;
+        this.chunkSizePos_ = 0;
+        this.lastEndTagPos_ = 0;
+        this.instanceTable_ = new IdentityHashMap<>(131);
+        this.idTable_ = new Hashtable<>(131);
+        this.idListTable_ = new Hashtable<>(131);
+        this.codebaseTable_ = new Hashtable<>(3);
     }
 
     public void writeValue(Serializable value, String id) {
@@ -375,7 +379,7 @@ final public class ValueWriter {
         // special-case string
         if (value instanceof String) {
             //out_._OB_align(4);
-            int pos = bufWriter.getPosition();
+            int pos = writeBuffer.getPosition();
             WStringValueHelper.write (out_, (String)value);
             instanceTable_.put (value, pos);
             return;
@@ -409,7 +413,7 @@ final public class ValueWriter {
             }
 
             if (repValue instanceof String) {
-                int pos = bufWriter.getPosition();
+                int pos = writeBuffer.getPosition();
                 WStringValueHelper.write (out_, (String)repValue);
                 instanceTable_.put (repValue, pos);
                 // we record the original value position so that another attempt to write out 
@@ -476,11 +480,7 @@ final public class ValueWriter {
             // Raise MARSHAL if no Helper was found
             //
             if (helper == null)
-                throw new MARSHAL(MinorCodes
-                        .describeMarshal(MinorCodes.MinorNoValueFactory)
-                        + ": no helper for valuebox",
-                        MinorCodes.MinorNoValueFactory,
-                        CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": no helper for valuebox", MinorNoValueFactory, COMPLETED_NO);
 
             //
             // Setup header
@@ -542,7 +542,7 @@ final public class ValueWriter {
         //
 
         out_.write_long(tag);
-        int startPos = bufWriter.getPosition() - 4; // start of value
+        int startPos = writeBuffer.getPosition() - 4; // start of value
 
         // write codebase if present
         if ((tag & 0x00000001) == 1) {
@@ -551,10 +551,10 @@ final public class ValueWriter {
             Integer pos = codebaseTable_.get(codebase);
             if (pos != null) {
                 out_.write_long(-1);
-                int off = pos - bufWriter.getPosition();
+                int off = pos - writeBuffer.getPosition();
                 out_.write_long(off);
             } else {
-                codebaseTable_.put(codebase, bufWriter.getPosition());
+                codebaseTable_.put(codebase, writeBuffer.getPosition());
                 out_.write_string(codebase);
             }
         }
@@ -570,17 +570,17 @@ final public class ValueWriter {
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos - bufWriter.getPosition();
+                int off = pos - writeBuffer.getPosition();
                 out_.write_long(off);
             } else {
-                idListTable_.put(key, bufWriter.getPosition());
+                idListTable_.put(key, writeBuffer.getPosition());
                 out_.write_long(ids.length);
                 for (String id : ids) {
                     //
                     // Add this ID to the history list, if necessary
                     //
                     if (!idTable_.containsKey(id))
-                        idTable_.put(id, bufWriter.getPosition());
+                        idTable_.put(id, writeBuffer.getPosition());
                     out_.write_string(id);
                 }
             }
@@ -597,13 +597,13 @@ final public class ValueWriter {
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos - bufWriter.getPosition();
+                int off = pos - writeBuffer.getPosition();
                 out_.write_long(off);
             } else {
                 //
                 // Remember ID in history at current position
                 //
-                idTable_.put(ids[0], bufWriter.getPosition());
+                idTable_.put(ids[0], writeBuffer.getPosition());
                 out_.write_string(ids[0]);
             }
         }
@@ -626,12 +626,12 @@ final public class ValueWriter {
             // this value coterminates with a nested value, so we increment
             // the last end tag rather than write a new one
             //
-            if (lastEndTagPos_ > 0 && bufWriter.getPosition() == lastEndTagPos_ + 4) {
+            if (lastEndTagPos_ > 0 && writeBuffer.getPosition() == lastEndTagPos_ + 4) {
                 //
                 // Increment last end tag
                 //
                 lastTag_++;
-                bufWriter.setPosition(lastEndTagPos_); // same as "buf_.pos_ -= 4;"
+                writeBuffer.setPosition(lastEndTagPos_); // same as "buf_.pos_ -= 4;"
                 out_.write_long(lastTag_);
             } else {
                 endChunk();
@@ -642,7 +642,7 @@ final public class ValueWriter {
                 lastTag_ = -nestingLevel_;
                 out_.write_long(lastTag_);
                 if (nestingLevel_ > 1)
-                    lastEndTagPos_ = bufWriter.getPosition() - 4;
+                    lastEndTagPos_ = writeBuffer.getPosition() - 4;
             }
 
             //

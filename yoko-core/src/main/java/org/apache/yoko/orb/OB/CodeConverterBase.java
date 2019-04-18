@@ -17,8 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferReader;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 import java.util.Objects;
@@ -91,20 +91,20 @@ abstract public class CodeConverterBase {
         return Objects.hash(sourceCodeSet, destinationCodeSet);
     }
 
-    final public char read_char(BufferReader bufferReader) throws DATA_CONVERSION {
-        return reader_.read_char(bufferReader);
+    final public char read_char(ReadBuffer readBuffer) throws DATA_CONVERSION {
+        return reader_.read_char(readBuffer);
     }
 
-    public char read_wchar(BufferReader bufferReader, int len) throws DATA_CONVERSION {
-        return reader_.read_wchar(bufferReader, len);
+    public char read_wchar(ReadBuffer readBuffer, int len) throws DATA_CONVERSION {
+        return reader_.read_wchar(readBuffer, len);
     }
 
-    public void write_char(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
-        writer_.write_char(bufferWriter, v);
+    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        writer_.write_char(writeBuffer, v);
     }
 
-    public void write_wchar(BufferWriter bufferWriter, char v) throws DATA_CONVERSION {
-        writer_.write_wchar(bufferWriter, v);
+    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        writer_.write_wchar(writeBuffer, v);
     }
 
     public int read_count_wchar(char v) {

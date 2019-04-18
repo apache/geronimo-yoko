@@ -25,8 +25,8 @@ import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.AlignmentBoundary;
 import org.apache.yoko.orb.OCI.BufferFactory;
-import org.apache.yoko.orb.OCI.BufferReader;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.SimplyCloseable;
 import org.apache.yoko.util.Timeout;
@@ -109,7 +109,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private ORBInstance orbInstance_; // Java only
 
-    private final BufferWriter bufWriter;
+    private final WriteBuffer writeBuffer;
 
     private GiopVersion giopVersion_ = GIOP1_0;
 
@@ -137,7 +137,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private SimplyCloseable recordLength() {
         addCapacity(4, FOUR_BYTE_BOUNDARY);
-        return bufWriter.recordLength(LOGGER);
+        return writeBuffer.recordLength(LOGGER);
     }
 
     private void writeTypeCodeImpl(org.omg.CORBA.TypeCode tc, Map<org.omg.CORBA.TypeCode, Integer> history) {
@@ -190,12 +190,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         Integer indirectionPos = (Integer) history.get(tc);
         if (indirectionPos != null) {
             write_long(-1);
-            int offs = indirectionPos - bufWriter.getPosition();
+            int offs = indirectionPos - writeBuffer.getPosition();
             LOGGER.finest("Writing an indirect type code for offset " + offs);
             write_long(offs);
         } else {
             write_ulong(tc.kind().value());
-            Integer oldPos = bufWriter.getPosition() - 4;
+            Integer oldPos = writeBuffer.getPosition() - 4;
 
             try {
                 switch (tc.kind().value()) {
@@ -394,7 +394,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private ValueWriter valueWriter() {
-        if (valueWriter_ == null) valueWriter_ = new ValueWriter(this, bufWriter);
+        if (valueWriter_ == null) valueWriter_ = new ValueWriter(this, writeBuffer);
         return valueWriter_;
     }
 
@@ -408,12 +408,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // to write new data. We must first check if we need to start a
             // chunk, which may result in a recursive call to addCapacity().
             //
-            if (bufWriter.isComplete() && valueWriter_ != null) {
+            if (writeBuffer.isComplete() && valueWriter_ != null) {
                 checkBeginChunk();
             }
 
             // If there isn't enough room, then reallocate the buffer
-            final boolean resized = bufWriter.ensureAvailable(size);
+            final boolean resized = writeBuffer.ensureAvailable(size);
             if (resized) checkTimeout();
         }
     }
@@ -434,7 +434,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         // to write new data. We must first check if we need to start a
         // chunk, which may result in a recursive call to addCapacity().
         //
-        if (bufWriter.isComplete() && valueWriter_ != null) {
+        if (writeBuffer.isComplete() && valueWriter_ != null) {
             checkBeginChunk();
         }
 
@@ -444,7 +444,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
 
         // If there isn't enough room, then reallocate the buffer
-        final boolean resized = bufWriter.ensureAvailable(size, boundary);
+        final boolean resized = writeBuffer.ensureAvailable(size, boundary);
         if (resized) checkTimeout();
     }
 
@@ -469,7 +469,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_boolean(boolean value) {
         addCapacity(1);
-        bufWriter.writeByte(value ? 1 : 0);
+        writeBuffer.writeByte(value ? 1 : 0);
     }
 
     public void write_char(char value) {
@@ -484,9 +484,9 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             value = converter.convert(value);
 
         if (charWriterRequired_)
-            converter.write_char(bufWriter, value);
+            converter.write_char(writeBuffer, value);
         else
-            bufWriter.writeByte(value);
+            writeBuffer.writeByte(value);
     }
 
     public void write_wchar(char value) {
@@ -541,7 +541,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write using the writer
                 //
-                converter.write_wchar(bufWriter, value);
+                converter.write_wchar(writeBuffer, value);
             }
                 break;
 
@@ -564,7 +564,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the actual character
                 //
-                converter.write_wchar(bufWriter, value);
+                converter.write_wchar(writeBuffer, value);
             }
                 break;
             }
@@ -583,7 +583,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write 2-byte character in big endian
                 //
-                bufWriter.writeChar(value);
+                writeBuffer.writeChar(value);
             }
                 break;
 
@@ -601,12 +601,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 //
                 // write the octet length at the start
                 //
-                bufWriter.writeByte(2);
+                writeBuffer.writeByte(2);
 
                 //
                 // write the character in big endian format
                 //
-                bufWriter.writeChar(value);
+                writeBuffer.writeChar(value);
             }
                 break;
             }
@@ -615,12 +615,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_octet(byte value) {
         addCapacity(1);
-        bufWriter.writeByte(value);
+        writeBuffer.writeByte(value);
     }
 
     public void write_short(short value) {
         addCapacity(2, TWO_BYTE_BOUNDARY);
-        bufWriter.writeShort(value);
+        writeBuffer.writeShort(value);
     }
 
     public void write_ushort(short value) {
@@ -629,7 +629,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_long(int value) {
         addCapacity(4, FOUR_BYTE_BOUNDARY);
-        bufWriter.writeInt(value);
+        writeBuffer.writeInt(value);
     }
 
     public void write_ulong(int value) {
@@ -638,7 +638,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     public void write_longlong(long value) {
         addCapacity(8, EIGHT_BYTE_BOUNDARY);
-        bufWriter.writeLong(value);
+        writeBuffer.writeLong(value);
     }
 
     public void write_ulonglong(long value) {
@@ -664,18 +664,18 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             write_ulong(capacity); // writes the length and ensures a two-byte boundary alignment
             addCapacity(capacity);
             if (charConversionRequired_) {
-                for (char c: arr) bufWriter.writeByte(converter.convert(checkChar(c)));
+                for (char c: arr) writeBuffer.writeByte(converter.convert(checkChar(c)));
             } else {
-                for (char c: arr) bufWriter.writeByte(checkChar(c));
+                for (char c: arr) writeBuffer.writeByte(checkChar(c));
             }
             // write null terminator
-            bufWriter.writeByte(0);
+            writeBuffer.writeByte(0);
         } else {
             // We don't know how much space each character will require: each char could take up to four bytes.
             // To avoid re-allocation, create a large enough temporary buffer up front.
             // NOTE: we need to use a temporary buffer to count the bytes reliably, because
             // chunking can add bytes other than just the chars to be written.
-            final BufferWriter tmpWriter = BufferFactory.createWriteBuffer(4 + value.length() * 4 + 1);
+            final WriteBuffer tmpWriter = BufferFactory.createWriteBuffer(4 + value.length() * 4 + 1);
             if (charConversionRequired_) {
                 for (char c : arr) converter.write_char(tmpWriter, converter.convert(checkChar(c)));
             } else {
@@ -689,7 +689,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             write_ulong(tmpWriter.length());
             // and write the contents
             addCapacity(tmpWriter.length());
-            bufWriter.writeBytes(tmpWriter.readFromStart());
+            writeBuffer.writeBytes(tmpWriter.readFromStart());
         }
     }
 
@@ -761,7 +761,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     //
                     // write the character
                     //
-                    converter.write_wchar(bufWriter, v);
+                    converter.write_wchar(writeBuffer, v);
                 }
             } else {
                 //
@@ -781,7 +781,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     //
                     // write character in big endian format
                     //
-                    bufWriter.writeChar(v);
+                    writeBuffer.writeChar(v);
                 }
             }
         }
@@ -800,7 +800,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length);
 
             for (int i = offset; i < offset + length; i++)
-                bufWriter.writeByte(value[i] ? 1 : 0);
+                writeBuffer.writeByte(value[i] ? 1 : 0);
         }
     }
 
@@ -813,7 +813,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                     if (value[i] > 255)
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
-                    bufWriter.writeByte(value[i]);
+                    writeBuffer.writeByte(value[i]);
                 }
             } else {
                 final CodeConverterBase converter = codeConverters_.outputCharConverter;
@@ -829,11 +829,11 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                         throw new DATA_CONVERSION("char value exceeds 255: " + (int) value[i]);
 
                     if (bothRequired)
-                        converter.write_char(bufWriter, converter.convert(value[i]));
+                        converter.write_char(writeBuffer, converter.convert(value[i]));
                     else if (charWriterRequired_)
-                        converter.write_char(bufWriter, value[i]);
+                        converter.write_char(writeBuffer, value[i]);
                     else
-                        bufWriter.writeByte(converter.convert(value[i]));
+                        writeBuffer.writeByte(converter.convert(value[i]));
                 }
             }
         }
@@ -847,7 +847,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void write_octet_array(byte[] value, int offset, int length) {
         if (length <= 0) return;
         addCapacity(length);
-        bufWriter.writeBytes(value, offset, length);
+        writeBuffer.writeBytes(value, offset, length);
     }
 
     public void write_short_array(short[] value, int offset, int length) {
@@ -855,7 +855,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 2, TWO_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                bufWriter.writeShort(value[i]);
+                writeBuffer.writeShort(value[i]);
             }
         }
     }
@@ -869,7 +869,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 4, FOUR_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                bufWriter.writeInt(value[i]);
+                writeBuffer.writeInt(value[i]);
             }
         }
     }
@@ -883,7 +883,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             addCapacity(length * 8, EIGHT_BYTE_BOUNDARY);
 
             for (int i = offset; i < offset + length; i++) {
-                bufWriter.writeLong(value[i]);
+                writeBuffer.writeLong(value[i]);
             }
         }
     }
@@ -899,7 +899,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 int v = Float.floatToIntBits(value[i]);
 
-                bufWriter.writeInt(v);
+                writeBuffer.writeInt(v);
             }
         }
     }
@@ -911,7 +911,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             for (int i = offset; i < offset + length; i++) {
                 long v = Double.doubleToLongBits(value[i]);
 
-                bufWriter.writeLong(v);
+                writeBuffer.writeLong(v);
             }
         }
     }
@@ -1537,13 +1537,8 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
 
     private void readFrom(org.omg.CORBA.portable.InputStream in, int length) {
         addCapacity(length);
-        bufWriter.readFrom(in);
+        writeBuffer.readFrom(in);
     }
-
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
 
     public OutputStream() {
         this(BufferFactory.createWriteBuffer(), null, null);
@@ -1561,12 +1556,12 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         this(BufferFactory.createWriteBuffer(initialBufferSize), converters, giopVersion);
     }
 
-    public OutputStream(BufferWriter bufWriter) {
-        this(bufWriter, null, null);
+    public OutputStream(WriteBuffer writeBuffer) {
+        this(writeBuffer, null, null);
     }
 
-    public OutputStream(BufferWriter bufferWriter, CodeConverters converters, GiopVersion giopVersion) {
-        bufWriter = bufferWriter;
+    public OutputStream(WriteBuffer writeBuffer, CodeConverters converters, GiopVersion giopVersion) {
+        this.writeBuffer = writeBuffer;
 
         if (giopVersion != null) giopVersion_ = giopVersion;
 
@@ -1594,27 +1589,27 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     public void close() {}
 
     boolean writtenBytesEqual(OutputStream that) {
-        return bufWriter.dataEquals(that.bufWriter);
+        return writeBuffer.dataEquals(writeBuffer);
     }
 
     public byte[] copyWrittenBytes() {
-        return bufWriter.trim().readFromStart().copyRemainingBytes();
+        return writeBuffer.trim().readFromStart().copyRemainingBytes();
     }
 
     public String writtenBytesToAscii() {
-        return bufWriter.trim().readFromStart().remainingBytesToAscii();
+        return writeBuffer.trim().readFromStart().remainingBytesToAscii();
     }
 
-    public BufferReader getBufferReader() {
-        return bufWriter.readFromStart();
+    public ReadBuffer getBufferReader() {
+        return writeBuffer.readFromStart();
     }
 
     public int getPosition() {
-        return bufWriter.getPosition();
+        return writeBuffer.getPosition();
     }
 
     public void setPosition(int pos) {
-        bufWriter.setPosition(pos);
+        writeBuffer.setPosition(pos);
     }
 
     public void markGiop_1_2_HeaderComplete() {

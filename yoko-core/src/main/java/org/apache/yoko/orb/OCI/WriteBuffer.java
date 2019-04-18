@@ -21,14 +21,14 @@ import org.omg.CORBA.portable.InputStream;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-public interface BufferWriter extends BufferFacet<BufferWriter> {
-    BufferWriter trim();
+public interface WriteBuffer extends BufferFacet<WriteBuffer> {
+    WriteBuffer trim();
 
-    BufferReader readFromStart();
+    ReadBuffer readFromStart();
 
     void padAlign(AlignmentBoundary boundary);
 
-    BufferWriter padAll();
+    WriteBuffer padAll();
 
     /**
      * Ensure there is space to write from the current position,
@@ -69,7 +69,7 @@ public interface BufferWriter extends BufferFacet<BufferWriter> {
      * Write the available bytes from <code>reader</code>.
      * @param reader
      */
-    void writeBytes(BufferReader reader);
+    void writeBytes(ReadBuffer reader);
 
     boolean readFrom(java.io.InputStream in) throws IOException;
 

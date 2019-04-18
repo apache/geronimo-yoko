@@ -20,8 +20,8 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
 import org.apache.yoko.orb.OCI.BufferFactory;
-import org.apache.yoko.orb.OCI.BufferReader;
-import org.apache.yoko.orb.OCI.BufferWriter;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
@@ -550,14 +550,14 @@ public final class DowncallStub {
         //
         // Create buffer to contain our marshalable data
         //
-        BufferWriter bufWriter = BufferFactory.createWriteBuffer(12).padAll();
+        WriteBuffer writeBuffer = BufferFactory.createWriteBuffer(12).padAll();
 
         //
         // Obtain information regarding our target
         //
         Client client = getClientProfilePair(info);
 
-        out.value = new org.apache.yoko.orb.CORBA.OutputStream(bufWriter, client.codeConverters(), GIOP1_2);
+        out.value = new org.apache.yoko.orb.CORBA.OutputStream(writeBuffer, client.codeConverters(), GIOP1_2);
         ServiceContext[] scl = client.getAMIRouterSCL();
 
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, info.value);
@@ -959,13 +959,13 @@ public final class DowncallStub {
         //
         messageBody.byte_order = false;
 
-        BufferReader buf = tmpIn.getBuffer();
-        buf.align(EIGHT_BYTE_BOUNDARY);
+        ReadBuffer rbuf = tmpIn.getBuffer();
+        rbuf.align(EIGHT_BYTE_BOUNDARY);
 
         //
         // Copy in the rest of the message body
         //
-        messageBody.body = buf.copyRemainingBytes();
+        messageBody.body = rbuf.copyRemainingBytes();
         requestMessage.body = messageBody;
 
         //

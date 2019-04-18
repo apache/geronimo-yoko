@@ -17,23 +17,23 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 
 public final class UnsentMessage {
-    private BufferReader bufReader;
+    private final ReadBuffer readBuffer;
     public final Downcall down;
 
-    UnsentMessage(BufferReader bufferReader) {
+    UnsentMessage(ReadBuffer readBuffer) {
         this.down = null;
-        this.bufReader = bufferReader.clone().rewindToStart();
+        this.readBuffer = readBuffer.clone().rewindToStart();
     }
 
     UnsentMessage(Downcall down) {
         this.down = down;
-        this.bufReader = down.output().getBufferReader();
+        this.readBuffer = down.output().getBufferReader();
     }
 
-    BufferReader getBufferReader() {
-        return bufReader.clone();
+    ReadBuffer getBufferReader() {
+        return readBuffer.clone();
     }
 }

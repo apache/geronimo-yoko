@@ -19,7 +19,7 @@ package org.apache.yoko.orb.CORBA;
 
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
-import org.apache.yoko.orb.OCI.BufferReader;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.DATA_CONVERSION;
@@ -481,8 +481,8 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     private static boolean compareValuesAsInputStreams(Any any1, Any any2) {
-        BufferReader buf1 = ((InputStream) any1.value_).getBuffer();
-        BufferReader buf2 = ((InputStream) any2.value_).getBuffer();
+        ReadBuffer buf1 = ((InputStream) any1.value_).getBuffer();
+        ReadBuffer buf2 = ((InputStream) any2.value_).getBuffer();
         return buf1.dataEquals(buf2);
     }
 
