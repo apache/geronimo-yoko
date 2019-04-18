@@ -17,15 +17,15 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 public abstract class CodeSetWriter {
     public final static int FIRST_CHAR = 22;
 
-    abstract void write_char(OutputStream out, char v) throws DATA_CONVERSION;
+    abstract void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION;
 
-    abstract void write_wchar(OutputStream out, char v) throws DATA_CONVERSION;
+    abstract void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION;
 
     abstract int count_wchar(char v);
 

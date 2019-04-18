@@ -2,7 +2,6 @@ package org.apache.yoko;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.junit.Assert;
 import org.junit.Before;
@@ -72,14 +71,14 @@ public class JavaValueTest {
     }
 
     private void finishWriting() {
-        System.out.println(out._OB_buffer());
+        System.out.println(out.getBufferReader().dumpAllData());
         in = (InputStream) out.create_input_stream();
         out = null;
     }
 
     @Before
     public void setupStreams() {
-        out = new OutputStream(new Buffer(), null, GiopVersion.GIOP1_2);
+        out = new OutputStream(null, GiopVersion.GIOP1_2);
     }
 
     @Test

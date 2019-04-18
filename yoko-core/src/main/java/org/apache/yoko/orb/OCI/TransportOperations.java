@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,11 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
-import org.apache.yoko.orb.OCI.Buffer;
+import org.omg.CORBA.COMM_FAILURE;
 
-//
-// IDL:orb.yoko.apache.org/OCI/Transport:1.0
-//
 /**
  *
  * The interface for a Transport object, which provides operations
@@ -34,57 +31,12 @@ import org.apache.yoko.orb.OCI.Buffer;
  * @see Acceptor
  *
  **/
+public interface TransportOperations {
 
-public interface TransportOperations
-{
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/id:1.0
-    //
-    /** The plugin id. */
-
-    String
-    id();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/tag:1.0
-    //
-    /** The profile id tag. */
-
-    int
-    tag();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/mode:1.0
-    //
     /** The send/receive capabilities of this Transport. */
+    SendReceiveMode mode();
 
-    SendReceiveMode
-    mode();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/handle:1.0
-    //
     /**
-     *
-     * The "handle" for this Transport. The handle may <em>only</em>
-     * be used to determine whether the Transport object is ready to
-     * send or to receive data, e.g., with <code>select()</code> on
-     * Unix-based operating systems. All other uses (e.g., calls to
-     * <code>read()</code>, <code>write()</code>,
-     * <code>close()</code>) are strictly non-compliant. A handle
-     * value of -1 indicates that the protocol plug-in does not
-     * support "selectable" Transports.
-     *
-     **/
-
-    int
-    handle();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/close:1.0
-    //
-    /**
-     *
      * Closes the Transport. After calling <code>close</code>, no
      * operations on this Transport object and its associated
      * TransportInfo object may be called. To ensure that no messages
@@ -97,17 +49,10 @@ public interface TransportOperations
      * lost.
      *
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    void close();
 
-    void
-    close();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/shutdown:1.0
-    //
     /**
-     *
      * Shutdown the Transport. Upon a successful shutdown, threads
      * blocking in the <code>receive</code> operations will return or
      * throw an exception. After calling <code>shutdown</code>, no
@@ -115,218 +60,67 @@ public interface TransportOperations
      * fully close the Transport, <code>close</code> must be called.
      *
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    void shutdown();
 
-    void
-    shutdown();
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/receive:1.0
-    //
     /**
-     *
      * Receives a buffer's contents.
-     *
-     * @param buf The buffer to fill.
-     *
+     * @param writeBuffer The buffer to fill.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the buffer is full. If set to <code>FALSE</code>, the
      * operation fills as much of the buffer as possible without
      * blocking.
      *
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    void receive(WriteBuffer writeBuffer, boolean block);
 
-    void
-    receive(Buffer buf,
-            boolean block);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/receive_detect:1.0
-    //
     /**
-     *
-     * Similar to <code>receive</code>, but it signals a connection
-     * loss by returning <code>FALSE</code> instead of raising
-     * <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     *
-     * @param block If set to <code>TRUE</code>, the operation blocks
-     * until the buffer is full. If set to <code>FALSE</code>, the
-     * operation fills as much of the buffer as possible without
-     * blocking.
-     *
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     *
-     * @exception COMM_FAILURE In case of an error.
-     *
-     **/
-
-    boolean
-    receive_detect(Buffer buf,
-                   boolean block);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/receive_timeout:1.0
-    //
-    /**
-     *
-     * Similar to <code>receive</code>, but it is
-     * possible to specify a timeout. On return the caller can test
-     * whether there was a timeout by checking if the buffer has
-     * been filled completely.
-     *
-     * @param buf The buffer to fill.
-     *
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>receive(buf, FALSE)</code>.
-     *
-     * @exception COMM_FAILURE In case of an error.
-     *
-     **/
-
-    void
-    receive_timeout(Buffer buf,
-                    int timeout);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/receive_timeout_detect:1.0
-    //
-    /**
-     *
-     * Similar to <code>receive_timeout</code>, but it signals a
-     * connection loss by returning <code>FALSE</code> instead of
-     * raising <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     *
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>receive(buf, FALSE)</code>.
-     *
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     *
-     * @exception COMM_FAILURE In case of an error.
-     *
-     **/
-
-    boolean
-    receive_timeout_detect(Buffer buf,
-                           int timeout);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/send:1.0
-    //
-    /**
-     *
      * Sends a buffer's contents.
      *
-     * @param buf The buffer to send.
-     *
+     * @param readBuffer The buffer to send.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the buffer has completely been sent. If set to
      * <code>FALSE</code>, the operation sends as much of the buffer's
      * data as possible without blocking.
-     *
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    void send(ReadBuffer readBuffer, boolean block);
 
-    void
-    send(Buffer buf,
-         boolean block);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/send_detect:1.0
-    //
     /**
-     *
      * Similar to <code>send</code>, but it signals a connection loss
      * by returning <code>FALSE</code> instead of raising
      * <code>COMM_FAILURE</code>.
      *
-     * @param buf The buffer to fill.
-     *
+     * @param readBuffer The buffer to fill.
      * @param block If set to <code>TRUE</code>, the operation blocks
      * until the entire buffer has been sent. If set to
      * <code>FALSE</code>, the operation sends as much of the buffer's
      * data as possible without blocking.
-     *
      * @return <code>FALSE</code> if a connection loss is
      * detected, <code>TRUE</code> otherwise.
-     *
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    boolean send_detect(ReadBuffer readBuffer, boolean block);
 
-    boolean
-    send_detect(Buffer buf,
-                boolean block);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/send_timeout:1.0
-    //
     /**
-     *
      * Similar to <code>send</code>, but it is possible
      * to specify a timeout. On return the caller can test whether
      * there was a timeout by checking if the buffer has
      * been sent completely.
      *
-     * @param buf The buffer to send.
-     *
+     * @param readBuffer The buffer to send.
      * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>send(buf, FALSE)</code>.
-     *
+     * timeout is equivalent to calling <code>send(readBuffer, FALSE)</code>.
      * @exception COMM_FAILURE In case of an error.
-     *
      **/
+    void send_timeout(ReadBuffer readBuffer, int timeout);
 
-    void
-    send_timeout(Buffer buf,
-                 int timeout);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/send_timeout_detect:1.0
-    //
     /**
-     *
-     * Similar to <code>send_timeout</code>, but it signals a
-     * connection loss by returning <code>FALSE</code> instead of
-     * raising <code>COMM_FAILURE</code>.
-     *
-     * @param buf The buffer to fill.
-     *
-     * @param timeout The timeout value in milliseconds. A zero
-     * timeout is equivalent to calling <code>send(buf, FALSE)</code>.
-     *
-     * @return <code>FALSE</code> if a connection loss is
-     * detected, <code>TRUE</code> otherwise.
-     *
-     * @exception COMM_FAILURE In case of an error.
-     *
-     **/
-
-    boolean
-    send_timeout_detect(Buffer buf,
-                        int timeout);
-
-    //
-    // IDL:orb.yoko.apache.org/OCI/Transport/get_info:1.0
-    //
-    /**
-     *
      * Returns the information object associated with
      * the Transport.
      *
      * @return The Transport information object.
-     *
      **/
-
-    TransportInfo
-    get_info();
+    TransportInfo get_info();
 }

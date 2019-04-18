@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,7 +18,9 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
@@ -36,9 +38,16 @@ import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
-import static org.apache.yoko.orb.OB.MinorCodes.*;
-import static org.apache.yoko.orb.OCI.SendReceiveMode.*;
-import static org.omg.CORBA.CompletionStatus.*;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit;
+import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
+import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
+import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class GIOPConnectionThreaded extends GIOPConnection {
     private static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
@@ -145,25 +154,26 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 //
                 // Send a MessageError message
                 //
-                Buffer buf = new Buffer(12);
-                OutputStream out = new OutputStream(buf);
+                try (OutputStream out = new OutputStream(12)) {
 
-                ProfileInfo profileInfo = new ProfileInfo();
+                    ProfileInfo profileInfo = new ProfileInfo();
 
-                synchronized (this) {
-                    profileInfo.major = giopVersion_.major;
-                    profileInfo.minor = giopVersion_.minor;
+                    synchronized (this) {
+                        profileInfo.major = giopVersion_.major;
+                        profileInfo.minor = giopVersion_.minor;
+                    }
+
+                    GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+
+                    outgoing.writeMessageHeader(MsgType_1_1.MessageError, false, 0);
+                    out.setPosition(0);
+
+                    synchronized (sendMutex_) {
+                        final ReadBuffer readBuffer = out.getBufferReader();
+                        transport_.send(readBuffer, true);
+                        _OB_assert(readBuffer.isComplete());
+                    }
                 }
-
-                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
-
-                outgoing.writeMessageHeader(MsgType_1_1.MessageError, false, 0);
-                out._OB_pos(0);
-
-                synchronized (sendMutex_) {
-                    transport_.send(out._OB_buffer(), true);
-                }
-                _OB_assert(out._OB_buffer().is_full());
             } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 return;
@@ -203,17 +213,17 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // send a CloseConnection if we can
         //
         if (canSendCloseConnection()) {
-            Buffer buf = new Buffer(12);
-            OutputStream out = new OutputStream(buf);
+            try (OutputStream out = new OutputStream(12)) {
 
-            ProfileInfo profileInfo = new ProfileInfo();
-            profileInfo.major = giopVersion_.major;
-            profileInfo.minor = giopVersion_.minor;
+                ProfileInfo profileInfo = new ProfileInfo();
+                profileInfo.major = giopVersion_.major;
+                profileInfo.minor = giopVersion_.minor;
 
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
-            outgoing.writeMessageHeader(MsgType_1_1.CloseConnection, false, 0);
+                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+                outgoing.writeMessageHeader(MsgType_1_1.CloseConnection, false, 0);
 
-            messageQueue_.add(orbInstance_, out._OB_buffer());
+                messageQueue_.add(orbInstance_, out.getBufferReader());
+            }
         } else {
             logger.fine("could not send close connection message");
         }
@@ -289,10 +299,10 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         // Its possible the CloseConnection message got sent
                         // via another means.
                         //
-                        Buffer buf = messageQueue_.getFirstUnsentBuffer();
-                        if (buf != null) {
+                        ReadBuffer readBuffer = messageQueue_.getFirstUnsentBuffer();
+                        if (readBuffer != null) {
                             synchronized (sendMutex_) {
-                                transport_.send(buf, true);
+                                transport_.send(readBuffer, true);
                             }
 
                             messageQueue_.moveFirstUnsentToPending();
@@ -345,47 +355,38 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         
         logger.fine("Receiving incoming message " + this); 
         GIOPIncomingMessage inMsg = new GIOPIncomingMessage(orbInstance_);
-        Buffer buf = null;
 
         while (true) {
-            //
             // Setup the incoming message buffer
-            //
-            _OB_assert(buf == null);
-            buf = new Buffer(12);
+            WriteBuffer writer = BufferFactory.createWriteBuffer(12);
 
-            //
             // Receive header, blocking, detect connection loss
-            //
             try {
-                logger.fine("Reading message header"); 
-                transport_.receive(buf, true);
-                _OB_assert(buf.is_full());
+                logger.fine("Reading message header");
+                transport_.receive(writer, true);
+                _OB_assert(writer.isComplete());
             } catch (SystemException ex) {
                 processException(State.Closed, ex, false);
                 break;
             }
 
-            //
             // Header is complete
-            //
             try {
-                inMsg.extractHeader(buf);
+                inMsg.extractHeader(writer.readFromStart());
                 logger.fine("Header received for message of size " + inMsg.size());
-                buf.realloc(12 + inMsg.size());
+                // grow the buffer
+                writer.ensureAvailable(inMsg.size());
             } catch (SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
             }
 
-            if (!buf.is_full()) {
-                //
+            if (!writer.isComplete()) {
                 // Receive body, blocking
-                //
                 try {
                     logger.fine("Receiving message body of size " + inMsg.size()); 
-                    transport_.receive(buf, true);
-                    _OB_assert(buf.is_full());
+                    transport_.receive(writer, true);
+                    _OB_assert(writer.isComplete());
                 } catch (SystemException ex) {
                     processException(State.Closed, ex, false);
                     break;
@@ -393,40 +394,28 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             }
             if (logger.isLoggable(Level.FINE)) {
                 logger.fine("Message body received ");
-                int currentpos = buf.pos_;
-                buf.pos_ = 0;
-                logger.fine("Received message are: \n" + buf.dumpData());
-                buf.pos_ = currentpos;
+                logger.fine("Received message are: \n" + writer.dumpAllData());
             }
 
-            //
-            // pause thread if necessary
-            //
             pauseThread();
 
-            //
             // If we are not in StateActive or StateClosing, stop this
             // thread. We do *not* stop this thread if we are in
             // StateClosing, since we must continue to read data from
             // the Transport to make sure that no messages can get
             // lost upon close, and to make sure that CloseConnection
             // messages from the peer are processed.
-            //
             synchronized (this) {
                 if ((enabledOps_ & AccessOp.Read) == 0) {
                     break;
                 }
             }
 
-            //
             // the upcall to invoke
-            // 
             Upcall upcall = null;
 
             try {
-                Buffer bufCopy = buf;
-                buf = null;
-                if (inMsg.consumeBuffer(bufCopy)) {
+                if (inMsg.consumeBuffer(writer)) {
                     upcall = processMessage(inMsg);
                 }
             } catch (SystemException ex) {
@@ -434,37 +423,26 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 break;
             }
 
-            // 
             // A valid upcall means we have a full message and not just
             // a fragment or error, so we can proceed to invoke it
-            // 
             if (upcall != null) {
                 logger.fine("Processing message using upcall " + upcall.getClass().getName()); 
-                // 
                 // in the BiDir case, this upcall could result in a
                 // nested call back and forth. This requires a new
                 // receiverThread to handle the reply (the invocation of
                 // the upcall doesn't return back into a receiving state
                 // until the function processing is done)
-                //
                 boolean haveBidirSCL = transport_.get_info().received_bidir_SCL();
 
-                //
                 // if we have received a bidirectional SCL then we need
-                // to spawn a new thread to handle nested calls (just in
-                // case)
-                // 
-                if (haveBidirSCL) {
-                    addReceiverThread();
-                }
+                // to spawn a new thread to handle nested calls (just in case)
+                if (haveBidirSCL) addReceiverThread();
 
                 upcall.invoke();
 
-                //
                 // if we've spawned a new thread to handle nested calls
                 // then we can quit this thread because we know another
                 // will be ready to take over anyway
-                // 
                 if (haveBidirSCL) {
                     break;
                 }
@@ -562,10 +540,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // now we can start sending off the messages
             // 
             while (true) {
-                //
                 // Get a message to send from the unsent queue
-                //
-                Buffer buf;
+                ReadBuffer readBuffer;
                 Downcall nextDown;
 
                 synchronized (this) {
@@ -575,7 +551,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
 
                     _OB_assert(messageQueue_.hasUnsent());
 
-                    buf = messageQueue_.getFirstUnsentBuffer();
+                    readBuffer = messageQueue_.getFirstUnsentBuffer();
                     nextDown = messageQueue_.moveFirstUnsentToPending();
                 }
 
@@ -585,21 +561,15 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 try {
                     synchronized (sendMutex_) {
                         if (t <= 0) {
-                            //
                             // Send buffer, blocking
-                            //
-                            transport_.send(buf, true);
-                            _OB_assert(buf.is_full());
+                            transport_.send(readBuffer, true);
+                            _OB_assert(readBuffer.isComplete());
                         } else {
-                            //
                             // Send buffer, with timeout
-                            //
-                            transport_.send_timeout(buf, t);
+                            transport_.send_timeout(readBuffer, t);
 
-                            // 
                             // Timeout?
-                            // 
-                            if (!buf.is_full()) {
+                            if (!readBuffer.isComplete()) {
                                 throw new NO_RESPONSE();
                             }
                         }
@@ -609,21 +579,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     return true;
                 }
 
-                //
-                // a message should be sent by now so we have to
-                // mark it as sent for the GIOPClient
-                //
+                // a message should be sent by now so we have to mark it as sent for the GIOPClient
                 if (!(msgSentMarked || nextDown == null || nextDown.operation().equals("_locate"))) {
                     msgSentMarked = true;
                     properties_ |= Property.RequestSent;
                     // debug
                     if (logger.isLoggable(Level.FINE)) {
-                        int currentpos = buf.pos_;
-                        buf.pos_ = 0;
-                        logger.fine(String.format(
-                                "Sent message in blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                msgcount, buf.len_, buf.dumpData()));
-                        buf.pos_ = currentpos;
+                        logger.fine(String.format("Sent message in blocking at msgcount=%d, size=%d, the message piece is: %n%s",
+                                msgcount, readBuffer.length(), readBuffer.dumpRemainingData()));
                         msgcount++;
                     }
                 }
@@ -637,17 +600,13 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
 
                     _OB_assert(messageQueue_.hasUnsent());
 
-                    //
                     // get the first message to send
-                    //
-                    Buffer buf = messageQueue_.getFirstUnsentBuffer();
+                    ReadBuffer readBuffer = messageQueue_.getFirstUnsentBuffer();
 
-                    //
                     // send this buffer, non-blocking
-                    //
                     try {
                         synchronized (sendMutex_) {
-                            transport_.send(buf, false);
+                            transport_.send(readBuffer, false);
                         }
                     } catch (SystemException ex) {
                         processException(State.Closed, ex, false);
@@ -658,7 +617,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     // if the buffer isn't full, it hasn't been sent because
                     // the call would have blocked.
                     //
-                    if (!buf.is_full())
+                    if (!readBuffer.isComplete())
                         return false;
 
                     //
@@ -673,14 +632,9 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
                             properties_ |= Property.RequestSent;
-                            // debug
                             if (logger.isLoggable(Level.FINE)) {
-                                int currentpos = buf.pos_;
-                                buf.pos_ = 0;
-                                logger.fine(String.format(
-                                        "Sent message in non-blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                        msgcount, buf.len_, buf.dumpData()));
-                                buf.pos_ = currentpos;
+                                logger.fine(String.format("Sent message in non-blocking at msgcount=%d, size=%d, the message piece is: %n%s",
+                                        msgcount, readBuffer.length(), readBuffer.dumpRemainingData()));
                                 msgcount++;
                             }
                         }
@@ -804,7 +758,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // now send off any queued messages
         // 
         while (true) {
-            Buffer buf;
+            ReadBuffer readBuffer;
             Downcall dummy;
 
             try {
@@ -815,8 +769,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     if (!messageQueue_.hasUnsent())
                         break;
 
-                    buf = messageQueue_.getFirstUnsentBuffer();
-                    buf.pos(0);
+                    readBuffer = messageQueue_.getFirstUnsentBuffer();
+                    readBuffer.rewindToStart();
                     dummy = messageQueue_.moveFirstUnsentToPending();
                 }
 
@@ -824,17 +778,14 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // make sure no two threads are sending at once
                 // 
                 synchronized (sendMutex_) {
-                    transport_.send(buf, true);
+                    transport_.send(readBuffer, true);
                 }
 
-                //
-                // check if the buffer is full
+                // check if the buffer has been read to the end
                 // Some of the OCI plugins (bidir for example) will
                 // simply return instead of throwing an exception if the
                 // send fails
-                //
-                if (!buf.is_full())
-                    throw new COMM_FAILURE(describeCommFailure(MinorSend), MinorSend, COMPLETED_NO);
+                if (!readBuffer.isComplete()) throw new COMM_FAILURE(describeCommFailure(MinorSend), MinorSend, COMPLETED_NO);
 
                 //
                 // mark the message sent flag

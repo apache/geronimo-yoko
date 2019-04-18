@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -21,12 +21,26 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CORBA.TypeCodePackage.Bounds;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
+import org.omg.DynamicAny.DynAnyPackage.InvalidValue;
+import org.omg.DynamicAny.DynAnyPackage.TypeMismatch;
+import org.omg.DynamicAny.DynEnum;
+import org.omg.DynamicAny.DynEnumHelper;
+import org.omg.DynamicAny.DynUnion;
+import org.omg.DynamicAny.DynUnionHelper;
 
-final class DynUnion_impl extends DynAny_impl implements
-        org.omg.DynamicAny.DynUnion {
-    private org.omg.DynamicAny.DynAny disc_;
+final class DynUnion_impl extends DynAny_impl implements DynUnion {
+    private DynAny disc_;
 
-    private org.omg.DynamicAny.DynAny member_;
+    private DynAny member_;
 
     private int index_;
 
@@ -40,18 +54,18 @@ final class DynUnion_impl extends DynAny_impl implements
 
     private boolean ignoreDiscChange_;
 
-    org.apache.yoko.orb.DynamicAny.DynValueReader dynValueReader_;
+    private final DynValueReader dynValueReader_;
 
-    DynUnion_impl(org.omg.DynamicAny.DynAnyFactory factory,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.TypeCode type) {
+    DynUnion_impl(DynAnyFactory factory,
+                  ORBInstance orbInstance,
+                  org.omg.CORBA.TypeCode type) {
         this(factory, orbInstance, type, null);
     }
 
-    DynUnion_impl(org.omg.DynamicAny.DynAnyFactory factory,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.TypeCode type,
-            org.apache.yoko.orb.DynamicAny.DynValueReader dynValueReader) {
+    DynUnion_impl(DynAnyFactory factory,
+                  ORBInstance orbInstance,
+                  org.omg.CORBA.TypeCode type,
+                  DynValueReader dynValueReader) {
         super(factory, orbInstance, type);
 
         dynValueReader_ = dynValueReader;
@@ -84,22 +98,17 @@ final class DynUnion_impl extends DynAny_impl implements
                     .member_type(selectedMember_);
 
             if (dynValueReader_ != null) {
-                org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
-                        ._OB_getOrigType(memberType);
+                org.omg.CORBA.TypeCode origTC = TypeCode._OB_getOrigType(memberType);
 
-                if (origTC.kind().value() == org.omg.CORBA.TCKind._tk_value)
+                if (origTC.kind().value() == TCKind._tk_value)
                     member_ = null;
                 else
                     member_ = prepare(memberType, dynValueReader_, true);
             } else {
                 member_ = create(memberType, true);
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | TypeMismatch | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
@@ -107,7 +116,7 @@ final class DynUnion_impl extends DynAny_impl implements
     // Private and protected member implementations
     // ------------------------------------------------------------------
 
-    protected void childModified(org.omg.DynamicAny.DynAny p) {
+    protected void childModified(DynAny p) {
         //
         // We need to monitor the discriminator component. If it is modified,
         // then we need to initialize the active member appropriately. If
@@ -138,14 +147,13 @@ final class DynUnion_impl extends DynAny_impl implements
         try {
             long discValue;
 
-            if (discriminator_kind() == org.omg.CORBA.TCKind.tk_enum) {
-                org.omg.DynamicAny.DynEnum de = org.omg.DynamicAny.DynEnumHelper
-                        .narrow(disc_);
+            if (discriminator_kind() == TCKind.tk_enum) {
+                DynEnum de = DynEnumHelper.narrow(disc_);
                 discValue = de.get_as_ulong();
             } else {
                 DynAny_impl discImpl = (DynAny_impl) disc_;
                 org.omg.CORBA.Any discAny = discImpl._OB_currentAny();
-                org.apache.yoko.orb.OB.Assert._OB_assert(discAny != null);
+                Assert._OB_assert(discAny != null);
                 discValue = getDiscriminatorValue(discAny);
             }
 
@@ -178,14 +186,12 @@ final class DynUnion_impl extends DynAny_impl implements
             //
             if (selectedMember_ == origType_.member_count()
                     || !origType_.member_name(selectedMember_).equals(
-                            origType_.member_name(i))) {
+                    origType_.member_name(i))) {
                 member_ = create(origType_.member_type(i), true);
             }
             selectedMember_ = i;
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
@@ -195,52 +201,49 @@ final class DynUnion_impl extends DynAny_impl implements
             // Insert the default discriminator value
             //
             switch (discriminator_kind().value()) {
-            case org.omg.CORBA.TCKind._tk_boolean:
+            case TCKind._tk_boolean:
                 disc_.insert_boolean(val == 1);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_char:
+            case TCKind._tk_char:
                 disc_.insert_char((char) val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_short:
+            case TCKind._tk_short:
                 disc_.insert_short((short) val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_ushort:
+            case TCKind._tk_ushort:
                 disc_.insert_ushort((short) val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_long:
+            case TCKind._tk_long:
                 disc_.insert_long((int) val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_ulong:
+            case TCKind._tk_ulong:
                 disc_.insert_ulong((int) val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_longlong:
+            case TCKind._tk_longlong:
                 disc_.insert_longlong(val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_ulonglong:
+            case TCKind._tk_ulonglong:
                 disc_.insert_ulonglong(val);
                 break;
 
-            case org.omg.CORBA.TCKind._tk_enum: {
-                org.omg.DynamicAny.DynEnum e = org.omg.DynamicAny.DynEnumHelper
-                        .narrow(disc_);
+            case TCKind._tk_enum: {
+                DynEnum e = DynEnumHelper.narrow(disc_);
                 e.set_as_ulong((int) val);
                 break;
             }
 
             default:
-                org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported union type");
+                Assert._OB_assert("Unsupported union type");
             }
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (TypeMismatch | InvalidValue ex) {
+            Assert._OB_assert(ex);
         }
     }
 
@@ -248,39 +251,39 @@ final class DynUnion_impl extends DynAny_impl implements
         long result = 0;
 
         switch (discriminator_kind().value()) {
-        case org.omg.CORBA.TCKind._tk_boolean:
+        case TCKind._tk_boolean:
             result = any.extract_boolean() ? 1 : 0;
             break;
 
-        case org.omg.CORBA.TCKind._tk_char:
+        case TCKind._tk_char:
             result = any.extract_char();
             break;
 
-        case org.omg.CORBA.TCKind._tk_short:
+        case TCKind._tk_short:
             result = any.extract_short();
             break;
 
-        case org.omg.CORBA.TCKind._tk_ushort:
+        case TCKind._tk_ushort:
             result = any.extract_ushort();
             break;
 
-        case org.omg.CORBA.TCKind._tk_long:
+        case TCKind._tk_long:
             result = any.extract_long();
             break;
 
-        case org.omg.CORBA.TCKind._tk_ulong:
+        case TCKind._tk_ulong:
             result = any.extract_ulong();
             break;
 
-        case org.omg.CORBA.TCKind._tk_longlong:
+        case TCKind._tk_longlong:
             result = any.extract_longlong();
             break;
 
-        case org.omg.CORBA.TCKind._tk_ulonglong:
+        case TCKind._tk_ulonglong:
             result = any.extract_ulonglong();
             break;
 
-        case org.omg.CORBA.TCKind._tk_enum: {
+        case TCKind._tk_enum: {
             try {
                 Any a = (Any) any;
                 result = ((Integer) a.value()).longValue();
@@ -291,14 +294,14 @@ final class DynUnion_impl extends DynAny_impl implements
         }
 
         default:
-            org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported union type");
+            Assert._OB_assert("Unsupported union type");
         }
 
         return result;
     }
 
     private long findUnusedDiscriminator()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+            throws TypeMismatch {
         //
         // Find an unused value among the member labels
         //
@@ -306,58 +309,58 @@ final class DynUnion_impl extends DynAny_impl implements
         long min = 0, max = 0;
 
         switch (discriminator_kind().value()) {
-        case org.omg.CORBA.TCKind._tk_boolean:
+        case TCKind._tk_boolean:
             min = 0;
             max = 1;
             break;
 
-        case org.omg.CORBA.TCKind._tk_char:
+        case TCKind._tk_char:
             min = 0;
             max = 255;
             break;
 
-        case org.omg.CORBA.TCKind._tk_short:
+        case TCKind._tk_short:
             min = -32768;
             max = 32767;
             break;
 
-        case org.omg.CORBA.TCKind._tk_ushort:
+        case TCKind._tk_ushort:
             min = 0;
             max = 65535;
             break;
 
-        case org.omg.CORBA.TCKind._tk_long:
+        case TCKind._tk_long:
             min = Integer.MIN_VALUE;
             max = Integer.MAX_VALUE;
             break;
 
-        case org.omg.CORBA.TCKind._tk_ulong:
+        case TCKind._tk_ulong:
             min = 0;
             max = Integer.MAX_VALUE;
             break;
 
-        case org.omg.CORBA.TCKind._tk_longlong:
+        case TCKind._tk_longlong:
             min = Long.MIN_VALUE;
             max = Long.MAX_VALUE;
             break;
 
-        case org.omg.CORBA.TCKind._tk_ulonglong:
+        case TCKind._tk_ulonglong:
             min = 0;
             max = Long.MAX_VALUE;
             break;
 
-        case org.omg.CORBA.TCKind._tk_enum: {
+        case TCKind._tk_enum: {
             try {
                 min = 0;
                 max = (origDiscTC_.member_count() - 1);
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (BadKind ex) {
+                Assert._OB_assert(ex);
             }
             break;
         }
 
-        default:                            
-            org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported union type");
+        default:
+            Assert._OB_assert("Unsupported union type");
         }
 
         for (long i = max; i >= min; i--) {
@@ -373,23 +376,23 @@ final class DynUnion_impl extends DynAny_impl implements
         //
         // No value found
         //
-        throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+        throw new TypeMismatch();
     }
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public synchronized void assign(org.omg.DynamicAny.DynAny dyn_any)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void assign(DynAny dyn_any)
+            throws TypeMismatch {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return;
 
         if (!dyn_any.type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         DynUnion_impl impl = (DynUnion_impl) dyn_any;
 
@@ -411,36 +414,35 @@ final class DynUnion_impl extends DynAny_impl implements
     }
 
     public synchronized void from_any(org.omg.CORBA.Any value)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+            throws TypeMismatch,
+            InvalidValue {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         //
         // Convert value to an ORBacus Any - the JDK implementation
         // of TypeCode.equivalent() raises NO_IMPLEMENT
         //
-        Any val = null;
+        Any val;
         try {
             val = (Any) value;
         } catch (ClassCastException ex) {
             try {
                 val = new Any(value);
             } catch (NullPointerException e) {
-                throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                    org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+                throw (InvalidValue)new
+                        InvalidValue().initCause(e);
             }
         }
 
         if (!val._OB_type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
-        org.omg.CORBA.portable.InputStream in = null;
+        org.omg.CORBA.portable.InputStream in;
         try {
             in = val.create_input_stream();
         } catch (NullPointerException e) {
-            throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+            throw (InvalidValue)new InvalidValue().initCause(e);
         }
 
         _OB_unmarshal((InputStream) in);
@@ -451,30 +453,20 @@ final class DynUnion_impl extends DynAny_impl implements
     }
 
     public synchronized org.omg.CORBA.Any to_any() {
-        return to_any(null);
-    }
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-    public synchronized org.omg.CORBA.Any to_any(DynValueWriter dynValueWriter) {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
-
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        OutputStream out = new OutputStream(buf);
+        OutputStream out = new OutputStream();
         out._OB_ORBInstance(orbInstance_);
 
-        if (dynValueWriter != null)
-            _OB_marshal(out, dynValueWriter);
-        else
-            _OB_marshal(out);
+        _OB_marshal(out);
 
-        InputStream in = (InputStream) out.create_input_stream();
-        Any result = new Any(orbInstance_, type_, in);
-        return result;
+        InputStream in = out.create_input_stream();
+        return new Any(orbInstance_, type_, in);
     }
 
-    public synchronized boolean equal(org.omg.DynamicAny.DynAny dyn_any) {
+    public synchronized boolean equal(DynAny dyn_any) {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return true;
@@ -485,8 +477,7 @@ final class DynUnion_impl extends DynAny_impl implements
         if (component_count() != dyn_any.component_count())
             return false;
 
-        org.omg.DynamicAny.DynUnion du = org.omg.DynamicAny.DynUnionHelper
-                .narrow(dyn_any);
+        DynUnion du = DynUnionHelper.narrow(dyn_any);
 
         if (!disc_.equal(du.get_discriminator()))
             return false;
@@ -496,49 +487,37 @@ final class DynUnion_impl extends DynAny_impl implements
                 if (!member_.equal(du.member()))
                     return false;
             }
-        } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InvalidValue ex) {
+            Assert._OB_assert(ex);
         }
 
         return true;
     }
 
-    public synchronized org.omg.DynamicAny.DynAny copy() {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+    public synchronized DynAny copy() {
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-        DynValueReader dynValueReader = new DynValueReader(orbInstance_,
-                factory_, false);
+        DynValueReader dynValueReader = new DynValueReader(orbInstance_, factory_, false);
 
-        DynUnion_impl result = new DynUnion_impl(factory_, orbInstance_, type_,
-                dynValueReader);
+        DynUnion_impl result = new DynUnion_impl(factory_, orbInstance_, type_, dynValueReader);
 
         try {
             result.set_discriminator(disc_);
 
             if (member_ != null) {
-                org.omg.CORBA.TypeCode memberType = origType_
-                        .member_type(selectedMember_);
+                org.omg.CORBA.TypeCode memberType = origType_.member_type(selectedMember_);
 
-                org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
-                        ._OB_getOrigType(memberType);
+                org.omg.CORBA.TypeCode origTC = TypeCode._OB_getOrigType(memberType);
 
-                if (origTC.kind().value() == org.omg.CORBA.TCKind._tk_value) {
-                    org.apache.yoko.orb.OB.Assert
-                            ._OB_assert(result.member_ == null);
+                if (origTC.kind().value() == TCKind._tk_value) {
+                    Assert._OB_assert(result.member_ == null);
                     result.member_ = member_.copy();
                 } else {
                     result.member().assign(member_);
                 }
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | InvalidValue | TypeMismatch | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return result;
@@ -579,32 +558,30 @@ final class DynUnion_impl extends DynAny_impl implements
             return 2;
     }
 
-    public synchronized org.omg.DynamicAny.DynAny current_component()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized DynAny current_component() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (index_ < 0)
             return null;
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(index_ < 2);
+        Assert._OB_assert(index_ < 2);
 
         if (index_ == 0)
             return disc_;
         else {
-            org.apache.yoko.orb.OB.Assert._OB_assert(member_ != null);
+            Assert._OB_assert(member_ != null);
             return member_;
         }
     }
 
-    public synchronized org.omg.DynamicAny.DynAny get_discriminator() {
+    public synchronized DynAny get_discriminator() {
         return disc_;
     }
 
-    public synchronized void set_discriminator(org.omg.DynamicAny.DynAny d)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void set_discriminator(DynAny d) throws TypeMismatch {
         if (!d.type().equivalent(origDiscTC_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         if (!d.equal(disc_)) {
             //
@@ -617,10 +594,9 @@ final class DynUnion_impl extends DynAny_impl implements
         }
     }
 
-    public synchronized void set_to_default_member()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void set_to_default_member() throws TypeMismatch {
         if (defaultMember_ == -1)
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         //
         // Reset the discriminator to select the default member. The
@@ -632,10 +608,9 @@ final class DynUnion_impl extends DynAny_impl implements
         notifyParent();
     }
 
-    public synchronized void set_to_no_active_member()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void set_to_no_active_member() throws TypeMismatch {
         if (defaultMember_ != -1)
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         //
         // Reset the discriminator to an unused value. The current
@@ -652,45 +627,38 @@ final class DynUnion_impl extends DynAny_impl implements
         return (member_ == null);
     }
 
-    public synchronized org.omg.CORBA.TCKind discriminator_kind() {
+    public synchronized TCKind discriminator_kind() {
         return origDiscTC_.kind();
     }
 
-    public synchronized org.omg.DynamicAny.DynAny member()
-            throws org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized DynAny member() throws InvalidValue {
         if (member_ == null)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         return member_;
     }
 
-    public synchronized String member_name()
-            throws org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized String member_name() throws InvalidValue {
         if (member_ == null)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         try {
             return origType_.member_name(selectedMember_);
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return null; // The compiler needs this
     }
 
-    public synchronized org.omg.CORBA.TCKind member_kind()
-            throws org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized TCKind member_kind() throws InvalidValue {
         if (member_ == null)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         try {
             return origType_.member_type(selectedMember_).kind();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return null; // The compiler needs this
@@ -709,7 +677,7 @@ final class DynUnion_impl extends DynAny_impl implements
     }
 
     synchronized void _OB_marshal(OutputStream out,
-            DynValueWriter dynValueWriter) {
+                                  DynValueWriter dynValueWriter) {
         DynAny_impl impl = (DynAny_impl) disc_;
         impl._OB_marshal(out);
 
@@ -731,28 +699,25 @@ final class DynUnion_impl extends DynAny_impl implements
 
         try {
             memberType = origType_.member_type(selectedMember_);
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-            return;
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
             return;
         }
 
-        org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
+        org.omg.CORBA.TypeCode origTC = TypeCode
                 ._OB_getOrigType(memberType);
 
-        if ((origTC.kind().value() == org.omg.CORBA.TCKind._tk_value)
+        if ((origTC.kind().value() == TCKind._tk_value)
                 && (dynValueReader_ != null)) {
             //
             // Create DynValue components
             //
-            org.apache.yoko.orb.OB.Assert._OB_assert(member_ == null);
+            Assert._OB_assert(member_ == null);
 
             try {
                 member_ = dynValueReader_.readValue(in, memberType);
-            } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (InconsistentTypeCode ex) {
+                Assert._OB_assert(ex);
                 return;
             }
 
@@ -768,7 +733,7 @@ final class DynUnion_impl extends DynAny_impl implements
 
     synchronized Any _OB_currentAny() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         DynAny_impl p = null;
 
@@ -776,7 +741,7 @@ final class DynUnion_impl extends DynAny_impl implements
             p = (DynAny_impl) disc_;
         else if (index_ == 1) // member
         {
-            org.apache.yoko.orb.OB.Assert._OB_assert(member_ != null);
+            Assert._OB_assert(member_ != null);
             p = (DynAny_impl) member_;
         }
 

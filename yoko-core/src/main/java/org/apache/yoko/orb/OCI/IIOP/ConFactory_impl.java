@@ -24,9 +24,10 @@ import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;
 import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
@@ -53,10 +54,10 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.ConFactory {
+final class ConFactory_impl extends LocalObject implements
+        ConFactory {
     // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(org.apache.yoko.orb.OCI.ConFactory.class.getName());
+    static final Logger logger = Logger.getLogger(ConFactory.class.getName());
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
 
     private final boolean keepAlive_; // The keepalive flag
@@ -91,8 +92,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
         //
         // Get the IIOP profile body
         //
-        Buffer buf = new Buffer(profile.profile_data);
-        InputStream in = new InputStream(buf);
+        InputStream in = new InputStream(profile.profile_data);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -154,8 +154,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             //
             // Get the IIOP profile body
             //
-            final Buffer buf = new Buffer(profile.profile_data);
-            final InputStream in = new InputStream(buf, 0, false);
+            final InputStream in = new InputStream(profile.profile_data);
             in._OB_readEndian();
             final ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
             boolean recordPortZero = false;
@@ -209,8 +208,7 @@ final class ConFactory_impl extends org.omg.CORBA.LocalObject implements
             final ConnectCB[] ccbs = info_._OB_getConnectCBSeq();
             for (TaggedComponent tc: components) {
                 if (tc.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                    final Buffer cbuf = new Buffer(tc.component_data);
-                    final InputStream cin = new InputStream(cbuf, 0, false);
+                    final InputStream cin = new InputStream(tc.component_data);
                     cin._OB_readEndian();
                     final String host = cin.read_string();
                     final short s = cin.read_ushort();

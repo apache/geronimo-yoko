@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -18,7 +18,16 @@
 package org.apache.yoko.orb.OCI;
 
 import org.apache.yoko.orb.OB.IORUtil;
+import org.apache.yoko.util.HexConverter;
+import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.NO_MEMORY;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.io.OutputStream;
+import java.util.Arrays;
+import java.util.logging.Logger;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -27,147 +36,425 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
-public final class Buffer {
-    private int max_; // The maximum size of the buffer
+final class Buffer {
+    private byte[] data; // The octet buffer
+    private int length; // The requested size of the buffer
 
-    public byte[] data_; // The octet buffer
-
-    public int len_; // The requested size of the buffer
-
-    public int pos_; // The position counter
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
-
-    public byte[] data() {
-        return data_;
+    ReadBuffer readFromStart() {
+        return new Read();
     }
 
-    public int length() {
-        return len_;
-    }
-
-    public int rest_length() {
-        return len_ - pos_;
-    }
-
-    public int pos() {
-        return pos_;
-    }
-
-    public void pos(int pos) {
-        pos_ = pos;
-    }
-
-    public void advance(int delta) {
-        pos_ += delta;
-    }
-
-    public boolean is_full() {
-        return pos_ >= len_;
+    WriteBuffer writeFromStart() {
+        return new Write();
     }
 
     /**
-     * Return the data in the buffer as a formatted string suitable for
-     * logging.
-     *
-     * @return The string value of the data.
+     * Extend the current buffer.
+     * @param extra the number of additional bytes required beyond the end of the buffer.
+     * @return <code>true</code> iff an existing buffer was insufficient
      */
-    public String dumpData()
-    {
-        StringBuilder dump = new StringBuilder();
-        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_));
+    private boolean growBy(int extra) {
+        _OB_assert(extra >= 0);
+        length += extra;
 
-        IORUtil.dump_octets(data_, pos_, rest_length(), dump);
-        return dump.toString();
+        // the existing buffer might be big enough
+        if (length <= data.length) {
+            return false;
+        }
+        // ok, we need a bigger buffer
+        data = copyOf(data, computeNewBufferSize(length));
+        return true;
     }
 
-    // ------------------------------------------------------------------
-    // Additional Yoko specific functions
-    // ------------------------------------------------------------------
+    private int computeNewBufferSize(int len) {
+        // use an allocation threshold of 4 megabytes
+        final int MAX_OVERALLOC = 4 * 1024 * 1024;
+        // double the existing capacity, unless over a threshold
+        final int minAlloc = data.length + min(data.length, MAX_OVERALLOC);
+        // allow more if requested length is greater
+        return max(len, minAlloc);
+    }
 
-    private void alloc(int len) {
-        max_ = len;
-        len_ = len;
+    /**
+     * Create a Buffer with initial length zero.
+     */
+    public Buffer() {
+        // since we expect a write operation to follow, allocate a small buffer up front
+        this(newBytes(16), 0);
+    }
+    public Buffer(byte[] data) {
+        this(data, data.length);
+    }
+
+    /**
+     * Create a Buffer with <code>len</code> bytes available for writing.
+     */
+    public Buffer(int len) {
+        this(newBytes(len), len);
+    }
+    private Buffer(byte[] data, int len) {
+        this.data = data;
+        this.length = len;
+    }
+
+    private static byte[] copyOf(byte[] data, int length) {
         try {
-            data_ = new byte[max_];
-        } catch (OutOfMemoryError ex) {
+            return Arrays.copyOf(data, length);
+        } catch (OutOfMemoryError oom) {
             throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
-        pos_ = 0;
     }
 
-    public void realloc(int len) {
-        if (data_ == null)
-            alloc(len);
-        else {
-            _OB_assert(len >= len_);
-            if (len <= max_)
-                len_ = len;
-            else {
-                final int MAX_OVERALLOC = 4 * 1024 * 1024; // 4 megabytes!
-                // we will look for double the existing capacity, or a smaller increment if it is over a threshold
-                final int minAlloc = min(max_ * 2, max_ + MAX_OVERALLOC);
-                // we might need more if the new length is greater than this minimum new allocation
-                final int newMax = max(len, minAlloc);
-                byte[] newData = null;
-                try {
-                    newData = new byte[newMax];
-                } catch (OutOfMemoryError ex) {
-                    throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
-                }
-                System.arraycopy(data_, 0, newData, 0, len_);
-                data_ = newData;
-                len_ = len;
-                max_ = newMax;
-            }
+    private static byte[] newBytes(int len) {
+        try {
+            // allocate only multiples of 16 so we can pad without checking
+            return new byte[(len + 0xFF) & ~0xFF];
+        } catch (OutOfMemoryError oom) {
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
-    }
-
-    public void data(byte[] data, int len) {
-        data_ = data;
-        len_ = len;
-        max_ = len;
-        pos_ = 0;
-    }
-
-    public void consume(Buffer buf) {
-        data_ = buf.data_;
-        len_ = buf.len_;
-        max_ = buf.max_;
-        pos_ = buf.pos_;
-        buf.data_ = null;
-        buf.len_ = 0;
-        buf.max_ = 0;
-        buf.pos_ = 0;
-    }
-
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
-
-    public Buffer() {}
-
-    public Buffer(byte[] data) {
-        data_ = data;
-        len_ = data.length;
-        max_ = data.length;
-        pos_ = 0;
-    }
-
-    public Buffer(int len) {
-        alloc(len);
     }
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        int pos = pos_, len = len_;
-        IORUtil.dump_octets(data_, 0, pos, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos));
-        IORUtil.dump_octets(data_, pos, len_ - pos, sb);
-        return sb.toString();
+        return readFromStart().dumpAllDataWithPosition();
+    }
+
+    enum Padding {;
+        static final byte PAD_BYTE = (byte) 0xBD;
+        /**
+         * The base 2 log of the width of our padding array.
+         * The array size must be a power of 2, so that bitwise
+         * operations can be used in place of arithmetic operations.
+         */
+        private static final int PADDING_POWER = 5;
+        private static final byte[] PADDING = new byte[1<<PADDING_POWER];
+        static { Arrays.fill(PADDING, PAD_BYTE); }
+
+        static void pad(Write w, int n) {
+            // write as many full copies of PADDING as required
+            for (int i = n >> PADDING_POWER; i > 0; i--) w.writeBytes(PADDING);
+            // write any remaining bytes of PADDING
+            w.writeBytes(PADDING, 0, n & ((1 << PADDING_POWER) - 1));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private abstract class Facet<T extends BufferFacet> implements BufferFacet<T> {
+        int position = 0;
+        @Override
+        final public int getPosition() { return position; }
+        @Override
+        public T setPosition(int p) { position = p; return (T)this; }
+        @Override
+        public T rewind(int n) { position -= n; return (T)this;}
+        @Override
+        final public int available() { return length - position; }
+        @Override
+        final public int length() { return length; }
+        @Override
+        final public boolean isComplete() { return position >= length; }
+        @Override
+        public T clone() {
+            try {
+                return (T)super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new INTERNAL(e.getMessage());
+            }
+        }
+
+        byte[] data() { return data; }
+
+        @Override
+        public boolean dataEquals(BufferFacet<T> other) {
+            if (this == other) return true;
+            if (other == null || getClass() != other.getClass()) return false;
+            final Facet<T> that = (Facet<T>) other;
+            if (this.length() != that.length()) return false;
+            final byte[] thisdata = data;
+            final byte[] thatdata = that.data();
+            if (thisdata == thatdata) return true;
+            for (int i = 0; i < length(); i++) if(thisdata[i] != thatdata[i]) return false;
+            return true;
+        }
+
+        @Override
+        public String dumpPosition() {
+            return String.format("position=0x%x", position);
+        }
+
+        @Override
+        public String dumpAllData() {
+            StringBuilder dump = new StringBuilder();
+            dump.append(String.format("Buffer len=0x%x All buffer data=%n%n", length));
+            IORUtil.dump_octets(data, 0, length(), dump);
+            return dump.toString();
+        }
+    }
+
+    private final class Read extends Facet<ReadBuffer> implements ReadBuffer {
+        @Override
+        public void align(AlignmentBoundary boundary) {
+            position = boundary.newIndex(position);
+        }
+
+        @Override
+        public ReadBuffer skipBytes(int n) {
+            if (position + n > length) throw new IndexOutOfBoundsException();
+            position = position + n;
+            return this;
+        }
+
+        @Override
+        public ReadBuffer skipToEnd() {
+            position = length;
+            return this;
+        }
+
+        @Override
+        public ReadBuffer rewindToStart() {
+            position = 0;
+            return this;
+        }
+
+        @Override
+        public byte peekByte() {
+            return data[position];
+        }
+
+        @Override
+        public byte readByte() {
+            return data[position++];
+        }
+
+        @Override
+        public char readByteAsChar() {
+            return (char) data[position++];
+        }
+
+        @Override
+        public void readBytes(byte[] value, int offset, int length) {
+            if (available() < length) throw new IndexOutOfBoundsException();
+
+            System.arraycopy(data, position, value, offset, length);
+            position += length;
+        }
+
+        @Override
+        public char peekChar() {
+            return (char)((data[position] << 8) | (data[position + 1] & 0xff));
+        }
+
+        @Override
+        public char readChar() {
+            return (char) ((data[position++] << 8) | (data[position++] & 0xff));
+        }
+
+        @Override
+        public char readChar_LE() {
+            return (char) ((data[position++] & 0xff) | (data[position++] << 8));
+        }
+
+        @Override
+        public String dumpRemainingData() {
+            StringBuilder dump = new StringBuilder();
+            dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", position, length));
+
+            IORUtil.dump_octets(data, position, available(), dump);
+            return dump.toString();
+        }
+
+        @Override
+        public String dumpAllDataWithPosition() {
+            StringBuilder sb = new StringBuilder();
+            IORUtil.dump_octets(data, 0, position, sb);
+            sb.append(String.format("------------------ pos = 0x%08X -------------------%n", position));
+            IORUtil.dump_octets(data, position, available(), sb);
+            return sb.toString();
+        }
+
+        @Override
+        public byte[] copyRemainingBytes() {
+            return copyOf(data, available());
+        }
+
+        @Override
+        public String remainingBytesToAscii() {
+            return HexConverter.octetsToAscii(data, available());
+        }
+
+        @Override
+        public void writeTo(OutputStream out) throws IOException {
+            try {
+                out.write(data, position, available());
+                out.flush();
+                position = length;
+            } catch (InterruptedIOException ex) {
+                position += ex.bytesTransferred;
+                throw ex;
+            }
+        }
+    }
+
+    @SuppressWarnings({"PointlessBitwiseExpression", "OctalInteger"})
+    private final class Write extends Facet<WriteBuffer> implements WriteBuffer {
+        @Override
+        public WriteBuffer trim() {
+            length = position;
+            return this;
+        }
+
+        @Override
+        public ReadBuffer readFromStart() {
+            return new Read();
+        }
+
+        @Override
+        public void padAlign(AlignmentBoundary boundary) {
+            padGap(boundary.gap(position));
+        }
+
+        private void padGap(int gap) {
+            switch (gap) {
+            case 7: writeByte(Padding.PAD_BYTE);
+            case 6: writeByte(Padding.PAD_BYTE);
+            case 5: writeByte(Padding.PAD_BYTE);
+            case 4: writeByte(Padding.PAD_BYTE);
+            case 3: writeByte(Padding.PAD_BYTE);
+            case 2: writeByte(Padding.PAD_BYTE);
+            case 1: writeByte(Padding.PAD_BYTE);
+            case 0: break;
+            default: Padding.pad(this, gap);
+            }
+        }
+
+        @Override
+        public WriteBuffer padAll() {
+            Padding.pad(this, length);
+            return this;
+        }
+
+        @Override
+        public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
+            final int gap = boundary.gap(position);
+            try { return ensureAvailable(gap + size); }
+            finally { padGap(gap); }
+        }
+
+        @Override
+        public boolean ensureAvailable(int size) {
+            final int shortfall = size - available();
+            return shortfall > 0 && growBy(shortfall);
+        }
+
+        @Override
+        public void writeBytes(byte[] bytes) {
+            writeBytes(bytes, 0, bytes.length);
+        }
+
+        @Override
+        public void writeBytes(byte[] bytes, int offset, int length) {
+            System.arraycopy(bytes, 0, data, position, length);
+            position += length;
+        }
+
+        @Override
+        public void readFrom(org.omg.CORBA.portable.InputStream source) {
+            final int length = available();
+            source.read_octet_array(data, position, length);
+            position += length;
+        }
+
+        @Override
+        public void writeByte(int i) {
+            data[position++] = (byte)i;
+        }
+
+        @Override
+        public void writeByte(byte b) {
+            data[position++] = b;
+        }
+
+        @Override
+        public void writeChar(char value) {
+            data[position++] = (byte) (value >> 010);
+            data[position++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeShort(short value) {
+            data[position++] = (byte) (value >> 010);
+            data[position++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeInt(int value) {
+            data[position++] = (byte) (value >> 030);
+            data[position++] = (byte) (value >> 020);
+            data[position++] = (byte) (value >> 010);
+            data[position++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeLong(long value) {
+            data[position++] = (byte) (value >> 070);
+            data[position++] = (byte) (value >> 060);
+            data[position++] = (byte) (value >> 050);
+            data[position++] = (byte) (value >> 040);
+            data[position++] = (byte) (value >> 030);
+            data[position++] = (byte) (value >> 020);
+            data[position++] = (byte) (value >> 010);
+            data[position++] = (byte) (value >> 000);
+        }
+
+        @Override
+        public void writeBytes(ReadBuffer reader) {
+            ensureAvailable(reader.available());
+            Read rdr = (Read) reader;
+            writeBytes(rdr.data(), rdr.getPosition(), rdr.available());
+        }
+
+        @Override
+        public boolean readFrom(InputStream in) throws IOException {
+            try {
+                int result = in.read(data, position, available());
+                if (result <= 0) return false;
+                position += result;
+                return true;
+            } catch (InterruptedIOException ex) {
+                position += ex.bytesTransferred;
+                throw ex;
+            }
+        }
+
+        @Override
+        public SimplyCloseable recordLength(Logger logger) {
+            return new LengthWriter(logger);
+        }
+
+        @SuppressWarnings({"PointlessBitwiseExpression", "PointlessArithmeticExpression"})
+        private final class LengthWriter implements SimplyCloseable {
+            final Logger logger;
+            final int index;
+
+            private LengthWriter(Logger logger) {
+                this.logger = logger;
+                this.index = position;
+                this.logger.finest("Writing a gap value for a length at offset " + index);
+                Padding.pad(Write.this, 4);
+            }
+
+            public void close() {
+                writeLength();
+            }
+
+            private void writeLength() {
+                final int length = position - (index + 4);
+                data[index + 0] = (byte) (length >> 030);
+                data[index + 1] = (byte) (length >> 020);
+                data[index + 2] = (byte) (length >> 010);
+                data[index + 3] = (byte) (length >> 000);
+                logger.finest("Wrote a length value of " + length + " at offset " + index);
+            }
+        }
     }
 }

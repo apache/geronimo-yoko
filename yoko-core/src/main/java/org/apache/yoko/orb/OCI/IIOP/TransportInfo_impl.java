@@ -21,7 +21,6 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.CLIENT_SIDE;
 import org.apache.yoko.orb.OCI.SERVER_SIDE;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
@@ -83,8 +82,6 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         return desc;
     }
 
-    public Socket getSocket() {return socket;}
-
     public String addr() {return socket.getLocalAddress().getHostAddress();}
 
     public short port() {return (short)socket.getLocalPort();}
@@ -111,26 +108,20 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
             BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
             biDirCtxt.listen_points = listenMap_.getListenPoints();
 
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(
-                    buf);
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
 
-            out._OB_writeEndian();
-            BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+                // Fill in the bidir service context
+                ServiceContext context = new ServiceContext();
+                context.context_id = BI_DIR_IIOP.value;
+                context.context_data = out.copyWrittenBytes();
 
-            //
-            // Fill in the bidir service context
-            //
-            ServiceContext context = new ServiceContext();
-            context.context_id = BI_DIR_IIOP.value;
-            context.context_data = buf.data();
-
-            //
-            // Create and fill the return context list
-            //
-            scl = new ServiceContext[1];
-            scl[0] = context;
-            return scl;
+                // Create and fill the return context list
+                scl = new ServiceContext[1];
+                scl[0] = context;
+                return scl;
+            }
         }
 
         //
@@ -144,13 +135,10 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     public void handle_service_contexts(ServiceContext[] contexts) {
         for (ServiceContext context : contexts) {
             if (context.context_id == BI_DIR_IIOP.value) {
-                Buffer buf = new Buffer(context.context_data);
-                InputStream in = new InputStream(buf, 0, false);
+                InputStream in = new InputStream(context.context_data);
                 in._OB_readEndian();
 
-                //
                 // unmarshal the octets back to the bidir format
-                //
                 BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
 
                 //
@@ -197,11 +185,7 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         return false;
     }
 
-    public synchronized ListenPoint[] _OB_getListenPoints() {
-        return listenPoints_;
-    }
-
-    public synchronized void _OB_setListenPoints(ListenPoint[] lp) {
+    private synchronized void _OB_setListenPoints(ListenPoint[] lp) {
         listenPoints_ = lp;
     }
 

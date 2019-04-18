@@ -17,15 +17,16 @@
 
 package org.omg.GIOP;
 
-//
 // IDL:omg.org/GIOP/MsgType_1_1:1.0
-//
-/***/
 
-public class MsgType_1_1 implements org.omg.CORBA.portable.IDLEntity
-{
-    private static MsgType_1_1 [] values_ = new MsgType_1_1[8];
-    private int value_;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.portable.IDLEntity;
+
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+public class MsgType_1_1 implements IDLEntity {
+    private static final MsgType_1_1 [] values_ = new MsgType_1_1[8];
+    private final int value_;
 
     public final static int _Request = 0;
     public final static MsgType_1_1 Request = new MsgType_1_1(_Request);
@@ -44,32 +45,23 @@ public class MsgType_1_1 implements org.omg.CORBA.portable.IDLEntity
     public final static int _Fragment = 7;
     public final static MsgType_1_1 Fragment = new MsgType_1_1(_Fragment);
 
-    protected
-    MsgType_1_1(int value)
-    {
+    private MsgType_1_1(int value) {
         values_[value] = this;
         value_ = value;
     }
 
-    public int
-    value()
+    public int value()
     {
         return value_;
     }
 
-    public static MsgType_1_1
-    from_int(int value)
-    {
-        if(value < values_.length)
-            return values_[value];
-        else
-            throw new org.omg.CORBA.BAD_PARAM("Value (" + value  + ") out of range", 25, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+    public static MsgType_1_1 from_int(int value) {
+        if (value >= values_.length) throw new BAD_PARAM("Value (" + value + ") out of range", 25, COMPLETED_NO);
+        return values_[value];
     }
 
-    private java.lang.Object
-    readResolve()
-        throws java.io.ObjectStreamException
-    {
+    private Object
+    readResolve() {
         return from_int(value());
     }
 }

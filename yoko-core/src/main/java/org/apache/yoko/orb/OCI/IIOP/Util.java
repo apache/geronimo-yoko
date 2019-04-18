@@ -19,8 +19,8 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Net;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
@@ -35,9 +35,18 @@ import org.omg.CSIIOP.TLS_SEC_TRANSHelper;
 import org.omg.CSIIOP.TransportAddress;
 import org.omg.IIOP.ProfileBody_1_0;
 import org.omg.IIOP.ProfileBody_1_0Helper;
-import org.omg.IOP.*;
+import org.omg.IIOP.ProfileBody_1_1;
+import org.omg.IIOP.ProfileBody_1_1Helper;
+import org.omg.IIOP.Version;
+import org.omg.IOP.Codec;
 import org.omg.IOP.CodecPackage.FormatMismatch;
 import org.omg.IOP.CodecPackage.TypeMismatch;
+import org.omg.IOP.IOR;
+import org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS;
+import org.omg.IOP.TAG_INTERNET_IOP;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedComponentHelper;
+import org.omg.IOP.TaggedProfile;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -52,29 +61,27 @@ final public class Util {
     static public IOR createIOR(String host, int port, String id, ProfileInfo profileInfo) {
         IOR ior = new IOR();
         ior.type_id = id;
-        ior.profiles = new org.omg.IOP.TaggedProfile[1];
-        ior.profiles[0] = new org.omg.IOP.TaggedProfile();
+        ior.profiles = new TaggedProfile[1];
+        ior.profiles[0] = new TaggedProfile();
         ior.profiles[0].tag = TAG_INTERNET_IOP.value;
 
         if (profileInfo.major == 1 && profileInfo.minor == 0) {
             ProfileBody_1_0 body = new ProfileBody_1_0();
-            body.iiop_version = new org.omg.IIOP.Version((byte) 1, (byte) 0);
+            body.iiop_version = new Version((byte) 1, (byte) 0);
             body.host = host;
             if (port >= 0x8000)
                 body.port = (short) (port - 0xffff - 1);
             else
                 body.port = (short) port;
             body.object_key = profileInfo.key;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            ProfileBody_1_0Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                ProfileBody_1_0Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         } else {
-            org.omg.IIOP.ProfileBody_1_1 body = new org.omg.IIOP.ProfileBody_1_1();
-            body.iiop_version = new org.omg.IIOP.Version(profileInfo.major,
+            ProfileBody_1_1 body = new ProfileBody_1_1();
+            body.iiop_version = new Version(profileInfo.major,
                     profileInfo.minor);
             body.host = host;
             if (port >= 0x8000)
@@ -83,13 +90,11 @@ final public class Util {
                 body.port = (short) port;
             body.object_key = profileInfo.key;
             body.components = profileInfo.components;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            org.omg.IIOP.ProfileBody_1_1Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                ProfileBody_1_1Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         }
 
         return ior;
@@ -105,10 +110,9 @@ final public class Util {
                 break;
 
         // TODO: Internal error?
-        org.apache.yoko.orb.OB.Assert._OB_assert(profile < ior.profiles.length);
+        Assert._OB_assert(profile < ior.profiles.length);
 
-        Buffer buf = new Buffer(ior.profiles[profile].profile_data);
-        InputStream in = new InputStream(buf, 0, false, null, null);
+        InputStream in = new InputStream(ior.profiles[profile].profile_data);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper
                 .read(in);
@@ -148,8 +152,7 @@ final public class Util {
             //
             // Get the IIOP profile body
             //
-            Buffer buf = new Buffer(ior.profiles[i].profile_data);
-            InputStream in = new InputStream(buf, 0, false, null, null);
+            InputStream in = new InputStream(ior.profiles[i].profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -199,8 +202,7 @@ final public class Util {
     private static boolean taggedComponentsMatch(TaggedComponent[] components, String host, short port, Codec codec, boolean matchLoopback) {
         for (final TaggedComponent component : components) {
             if (component.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                Buffer b = new Buffer(component.component_data);
-                InputStream s = new InputStream(b, 0, false, null, null);
+                InputStream s = new InputStream(component.component_data);
                 s._OB_readEndian();
                 String altHost = s.read_string();
                 short altPort = s.read_ushort();
@@ -273,8 +275,7 @@ final public class Util {
         bodies1 = new ProfileBody_1_0[cnt1];
         for (p1 = 0, b1 = 0; p1 < ior1.profiles.length; p1++)
             if (ior1.profiles[p1].tag == TAG_INTERNET_IOP.value) {
-                Buffer buf = new Buffer(ior1.profiles[p1].profile_data);
-                InputStream in = new InputStream(buf, 0, false, null, null);
+                InputStream in = new InputStream(ior1.profiles[p1].profile_data);
                 in._OB_readEndian();
                 bodies1[b1++] = ProfileBody_1_0Helper.read(in);
             }
@@ -288,8 +289,7 @@ final public class Util {
         bodies2 = new ProfileBody_1_0[cnt2];
         for (p2 = 0, b2 = 0; p2 < ior2.profiles.length; p2++)
             if (ior2.profiles[p2].tag == TAG_INTERNET_IOP.value) {
-                Buffer buf = new Buffer(ior2.profiles[p2].profile_data);
-                InputStream in = new InputStream(buf, 0, false, null, null);
+                InputStream in = new InputStream(ior2.profiles[p2].profile_data);
                 in._OB_readEndian();
                 bodies2[b2++] = ProfileBody_1_0Helper.read(in);
             }
@@ -376,8 +376,7 @@ final public class Util {
             //
             // Get the first IIOP profile body
             //
-            Buffer buf = new Buffer(profile.profile_data);
-            InputStream in = new InputStream(buf, 0, false, null, null);
+            InputStream in = new InputStream(profile.profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 

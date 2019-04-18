@@ -21,7 +21,8 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -75,6 +76,14 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD;
+import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD_PERM;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_NEEDS_ADDRESSING_MODE;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_SYSTEM_EXCEPTION;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD_PERM;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_HERE;
+import static org.omg.GIOP.LocateStatusType_1_2._UNKNOWN_OBJECT;
 import static org.omg.GIOP.MsgType_1_1.LocateReply;
 import static org.omg.GIOP.MsgType_1_1.Reply;
 import static org.omg.GIOP.MsgType_1_1._CancelRequest;
@@ -263,7 +272,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     String msg = "receiving transmission code sets";
                     msg += "\nchar code set: ";
                     if (codeConverters_.inputCharConverter != null)
-                        msg += codeConverters_.inputCharConverter.getFrom().description;
+                        msg += codeConverters_.inputCharConverter.getSourceCodeSet().description;
                     else {
                         if (alienCs == 0)
                             msg += "none";
@@ -274,7 +283,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     }
                     msg += "\nwchar code set: ";
                     if (codeConverters_.inputWcharConverter != null)
-                        msg += codeConverters_.inputWcharConverter.getFrom().description;
+                        msg += codeConverters_.inputWcharConverter.getSourceCodeSet().description;
                     else {
                         if (alienWcs == 0)
                             msg += "none";
@@ -668,51 +677,40 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             IORHolder ior = new IORHolder();
             int val = oaInterface_.findByKey(key, ior);
-            LocateStatusType_1_2 status = LocateStatusType_1_2
-                    .from_int(val);
+            LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
 
-            //
             // Send back locate reply message
-            //
-            Buffer buf = new Buffer(
-                    12);
-            buf.pos(12);
-            OutputStream out = new OutputStream(
-                    buf);
-            ProfileInfo profileInfo = new ProfileInfo();
-            profileInfo.major = msg.version().major;
-            profileInfo.minor = msg.version().minor;
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(
-                    orbInstance_, out, profileInfo);
-            outgoing.writeLocateReplyHeader(reqId, status);
+            try (OutputStream out = new OutputStream(BufferFactory.createWriteBuffer(12).padAll())) {
+                ProfileInfo profileInfo = new ProfileInfo();
+                profileInfo.major = msg.version().major;
+                profileInfo.minor = msg.version().minor;
+                GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out, profileInfo);
+                outgoing.writeLocateReplyHeader(reqId, status);
 
-            //
-            // If the reply status is OBJECT_FORWARD or
-            // OBJECT_FORWARD_PERM the IOR is appended to the end of the
-            // LocateReply.
-            //
-            if (status == LocateStatusType_1_2.OBJECT_FORWARD || status == LocateStatusType_1_2.OBJECT_FORWARD_PERM)
-                IORHelper.write(out, ior.value);
+                // If the reply status is OBJECT_FORWARD or OBJECT_FORWARD_PERM
+                // the IOR is appended to the end of the LocateReply.
+                if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
 
-            //
-            // TODO:
-            // LOC_SYSTEM_EXCEPTION,
-            // LOC_NEEDS_ADDRESSING_MODE
-            //
-            int pos = out._OB_pos();
-            out._OB_pos(0);
-            outgoing.writeMessageHeader(LocateReply, false, pos - 12);
-            out._OB_pos(pos);
+                //
+                // TODO:
+                // LOC_SYSTEM_EXCEPTION,
+                // LOC_NEEDS_ADDRESSING_MODE
+                //
+                int pos = out.getPosition();
+                out.setPosition(0);
+                outgoing.writeMessageHeader(LocateReply, false, pos - 12);
+                out.setPosition(pos);
 
-            //
-            // A locate request is treated just like an upcall
-            //
-            upcallsInProgress_++;
+                //
+                // A locate request is treated just like an upcall
+                //
+                upcallsInProgress_++;
 
-            //
-            // Send the locate reply
-            //
-            sendUpcallReply(out._OB_buffer());
+                //
+                // Send the locate reply
+                //
+                sendUpcallReply(out.getBufferReader());
+            }
         } catch (SystemException ex) {
             processException(State.Error, ex, false);
         }
@@ -757,15 +755,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         Logger logger = orbInstance_.getLogger();
 
         switch (status.value.value()) {
-            case LocateStatusType_1_2._UNKNOWN_OBJECT:
+            case _UNKNOWN_OBJECT:
                 down.setSystemException(new OBJECT_NOT_EXIST());
                 break;
 
-            case LocateStatusType_1_2._OBJECT_HERE:
+            case _OBJECT_HERE:
                 down.setNoException(in);
                 break;
 
-            case LocateStatusType_1_2._OBJECT_FORWARD:
+            case _OBJECT_FORWARD:
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, false);
@@ -783,7 +781,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 }
                 break;
 
-            case LocateStatusType_1_2._OBJECT_FORWARD_PERM:
+            case _OBJECT_FORWARD_PERM:
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, true);
@@ -802,7 +800,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
                 break;
 
-            case LocateStatusType_1_2._LOC_SYSTEM_EXCEPTION:
+            case _LOC_SYSTEM_EXCEPTION:
                 try {
                     SystemException ex = SystemExceptionHelper.read(in);
                     down.setSystemException(ex);
@@ -813,7 +811,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
                 break;
 
-            case LocateStatusType_1_2._LOC_NEEDS_ADDRESSING_MODE:
+            case _LOC_NEEDS_ADDRESSING_MODE:
                 // TODO: implement
                 processException(State.Error, new NO_IMPLEMENT(), false);
                 break;
@@ -917,7 +915,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** transmits a reply back once the upcall completes */
-    private void sendUpcallReply(Buffer buf) {
+    private void sendUpcallReply(ReadBuffer readBuffer) {
         synchronized (this) {
             //
             // no need to do anything if we are closed
@@ -934,7 +932,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // add this message to the message Queue
             //
-            messageQueue_.add(orbInstance_, buf);
+            messageQueue_.add(orbInstance_, readBuffer);
         }
 
         //
@@ -1138,8 +1136,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_,
                 out, profileInfo);
 
-        int pos = out._OB_pos();
-        out._OB_pos(0);
+        int pos = out.getPosition();
+        out.setPosition(0);
         try {
             outgoing.writeMessageHeader(Reply, false, pos - 12);
         } catch (SystemException ex) {
@@ -1150,7 +1148,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             _OB_assert(ex);
         }
 
-        sendUpcallReply(out._OB_buffer());
+        sendUpcallReply(out.getBufferReader());
     }
 
     /** start populating the reply with a user exception */

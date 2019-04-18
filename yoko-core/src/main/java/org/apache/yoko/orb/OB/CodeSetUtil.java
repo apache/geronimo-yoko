@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CONV_FRAME.CodeSetComponent;
 import org.omg.CONV_FRAME.CodeSetComponentInfo;
@@ -211,9 +210,7 @@ final public class CodeSetUtil {
     //
     static boolean checkForCodeSetInfo(TaggedComponent comp, CodeSetComponentInfoHolder info) {
         if (comp.tag == TAG_CODE_SETS.value) {
-            Buffer buf = new Buffer(comp.component_data);
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(comp.component_data);
             in._OB_readEndian();
             info.value = CodeSetComponentInfoHelper.read(in);
             return true;
@@ -226,8 +223,7 @@ final public class CodeSetUtil {
     // Extract codeset context from service context
     //
     static void extractCodeSetContext(ServiceContext context, CodeSetContextHolder ctx) {
-        Buffer buf = new Buffer(context.context_data);
-        InputStream in = new InputStream(buf, 0, false);
+        InputStream in = new InputStream(context.context_data);
         in._OB_readEndian();
         ctx.value = CodeSetContextHelper.read(in);
     }

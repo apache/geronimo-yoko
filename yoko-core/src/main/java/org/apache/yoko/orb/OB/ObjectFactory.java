@@ -17,98 +17,58 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
+import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.CORBA.StubForObject;
+import org.apache.yoko.orb.CORBA.StubForRemote;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.IOP.IOR;
+
 import java.util.logging.Logger;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.omg.CORBA.CompletionStatus.*;
+
 public final class ObjectFactory {
-    static final Logger logger = Logger.getLogger(ObjectFactory.class.getName());
-    
+    private static final Logger logger = Logger.getLogger(ObjectFactory.class.getName());
     private boolean destroy_; // True if destroy() was called
-
-    ORBInstance orbInstance_; // The ORBInstance object
-
-    org.omg.CORBA.PolicyManager policyManager_; // The PolicyManager object
-
-    // ----------------------------------------------------------------------
-    // ObjectFactory private and protected member implementations
-    // ----------------------------------------------------------------------
-
-    protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
-
-        super.finalize();
-    }
-
-    // ----------------------------------------------------------------------
-    // ObjectFactory package member implementations
-    // ----------------------------------------------------------------------
+    private ORBInstance orbInstance_; // The ORBInstance object
+    private PolicyManager policyManager_; // The PolicyManager object
 
     void destroy() {
         Assert._OB_assert(!destroy_);
         destroy_ = true;
-
-        //
-        // Set the ORBInstance object to nil
-        //
         orbInstance_ = null;
-
-        //
-        // Set the PolicyManager object to nil
-        //
         policyManager_ = null;
     }
-
-    // ----------------------------------------------------------------------
-    // ObjectFactory public member implementations
-    // ----------------------------------------------------------------------
 
     public void setORBInstance(ORBInstance orbInstance) {
         orbInstance_ = orbInstance;
     }
 
-    public void setPolicyManager(org.omg.CORBA.PolicyManager policyManager) {
+    public void setPolicyManager(PolicyManager policyManager) {
         policyManager_ = policyManager;
     }
 
-    public org.omg.CORBA.Object createObject(org.omg.IOP.IOR ior) {
-        //
+    public org.omg.CORBA.Object createObject(IOR ior) {
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
-        //
-        if (destroy_) {
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-        }
+        if (destroy_) throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
-        //
         // Check for nil object reference
-        //
-        if (ior.type_id.length() == 0 && ior.profiles.length == 0) {
-            return null;
-        }
+        if (ior.type_id.isEmpty() && ior.profiles.length == 0) return null;
 
         logger.fine("Creating an object of type " + ior.type_id); 
         
-        //
         // Create new delegate, set policies and change delegate
-        //
         RefCountPolicyList policyList = new RefCountPolicyList(policies());
-        org.apache.yoko.orb.CORBA.Delegate p = new org.apache.yoko.orb.CORBA.Delegate(
-                orbInstance_, ior, ior, policyList);
+        Delegate p = new Delegate(orbInstance_, ior, ior, policyList);
 
-        //
         // Create new object, set the delegate and return
-        //
-        org.omg.CORBA.portable.ObjectImpl obj;
-        
-        if(ior.type_id.startsWith("RMI")) {
-        	obj = new org.apache.yoko.orb.CORBA.StubForRemote();
-        }
-        else {
-        	obj = new org.apache.yoko.orb.CORBA.StubForObject();
-        }
+        ObjectImpl obj = ior.type_id.startsWith("RMI") ? new StubForRemote() : new StubForObject();
         obj._set_delegate(p);
         return obj;
     }
@@ -118,8 +78,7 @@ public final class ObjectFactory {
         return orbInstance_.getURLRegistry().parse_url(ior);
     }
 
-    public org.omg.CORBA.Policy[] policies() {
-        int[] ts = new int[0];
-        return policyManager_.get_policy_overrides(ts);
+    public Policy[] policies() {
+        return policyManager_.get_policy_overrides(new int[0]);
     }
 }

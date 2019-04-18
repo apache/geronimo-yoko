@@ -20,7 +20,7 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OCI.BufferFactory;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -28,7 +28,6 @@ import org.apache.yoko.util.Timeout;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.SystemException;
@@ -43,8 +42,6 @@ import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
 import javax.rmi.CORBA.ValueHandler;
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -221,20 +218,15 @@ public class Upcall {
     }
 
     public void createOutputStream(int offset) {
-        Buffer buf = new Buffer(
-                offset);
-        buf.pos(offset);
-        out_ = new OutputStream(buf, in_
-                ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+        final GiopVersion giopVersion = GiopVersion.get(profileInfo_.major, profileInfo_.minor);
+        out_ = new OutputStream(BufferFactory.createWriteBuffer(offset).padAll(), in_._OB_codeConverters(), giopVersion);
     }
 
-    public InputStream preUnmarshal()
-            throws LocationForward {
+    public InputStream preUnmarshal() throws LocationForward {
         return in_;
     }
 
-    public void unmarshalEx(SystemException ex)
-            throws LocationForward {
+    public void unmarshalEx(SystemException ex) throws LocationForward {
         throw ex;
     }
 
@@ -261,12 +253,12 @@ public class Upcall {
             CodeConverters conv = codeConverters();
 
             if (conv.outputCharConverter != null)
-                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
+                ctx.char_data = conv.outputCharConverter.getDestinationCodeSet().rgy_value;
             else
                 ctx.char_data = CodeSetDatabase.ISOLATIN1;
 
             if (conv.outputWcharConverter != null)
-                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
+                ctx.wchar_data = conv.outputWcharConverter.getDestinationCodeSet().rgy_value;
             else
                 ctx.wchar_data = orbInstance_.getNativeWcs();
 
@@ -298,19 +290,15 @@ public class Upcall {
             CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
 
 
-            Buffer buf = new Buffer();
-            OutputStream outCBC = new OutputStream(
-                    buf);
-            outCBC._OB_writeEndian();
-            CodeBaseHelper.write(outCBC, codeBase);
+            try (OutputStream outCBC = new OutputStream()) {
+                outCBC._OB_writeEndian();
+                CodeBaseHelper.write(outCBC, codeBase);
 
-            codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = SendingContextRunTime.value;
+                codeBaseSC_ = new ServiceContext();
+                codeBaseSC_.context_id = SendingContextRunTime.value;
 
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeBaseSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
+            }
         }
         //
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
@@ -336,9 +324,7 @@ public class Upcall {
             replySCL_.copyInto(scl);
             upcallReturn_.upcallBeginReply(this, scl);
         } else {
-            Buffer buf = new Buffer();
-            out_ = new OutputStream(buf, in_
-                    ._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
+            out_ = new OutputStream(in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
         out_._OB_ORBInstance(this.orbInstance());
         if (out_ != null) out_.setTimeout(timeout);
@@ -355,7 +341,7 @@ public class Upcall {
 //                    String msg = "sending transmission code sets";
 //                    msg += "\nchar code set: ";
 //                    if (conv.outputCharConverter != null)
-//                        msg += conv.outputCharConverter.getTo().description;
+//                        msg += conv.outputCharConverter.getDestinationCodeSet().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
 //                                .forRegistryId(orbInstance_.getNativeCs());
@@ -363,7 +349,7 @@ public class Upcall {
 //                    }
 //                    msg += "\nwchar code set: ";
 //                    if (conv.outputWcharConverter != null)
-//                        msg += conv.outputWcharConverter.getTo().description;
+//                        msg += conv.outputWcharConverter.getDestinationCodeSet().description;
 //                    else {
 //                        CodeSetInfo info = CodeSetDatabase.instance()
 //                                .forRegistryId(orbInstance_.getNativeWcs());
@@ -483,15 +469,12 @@ public class Upcall {
         try (CmsfOverride o = CmsfThreadLocal.override()) {
             final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
             CodeConverters codeConverters = new CodeConverters(null, null, null, outputWcharConverter);
-            Buffer buf = new Buffer();
-            try (OutputStream os = new OutputStream(buf, codeConverters, GIOP1_2)) {
+            try (OutputStream os = new OutputStream(codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);
-                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, Arrays.copyOf(buf.data(), buf.length()));
+                ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, os.copyWrittenBytes());
                 scl.add(sc);
             }
-        } catch (IOException e) {
-            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
         }
     }
 

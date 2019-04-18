@@ -21,25 +21,38 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CORBA.TypeCodePackage.Bounds;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
+import org.omg.DynamicAny.DynAnyPackage.InvalidValue;
+import org.omg.DynamicAny.DynAnyPackage.TypeMismatch;
+import org.omg.DynamicAny.DynStruct;
+import org.omg.DynamicAny.NameDynAnyPair;
+import org.omg.DynamicAny.NameValuePair;
 
-final class DynStruct_impl extends DynAny_impl implements
-        org.omg.DynamicAny.DynStruct {
-    private org.omg.DynamicAny.DynAny[] components_;
+final class DynStruct_impl extends DynAny_impl implements DynStruct {
+    private DynAny[] components_;
 
     private int index_;
 
-    org.apache.yoko.orb.DynamicAny.DynValueReader dynValueReader_;
+    private DynValueReader dynValueReader_;
 
-    DynStruct_impl(org.omg.DynamicAny.DynAnyFactory factory,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.TypeCode type) {
+    DynStruct_impl(DynAnyFactory factory,
+                   ORBInstance orbInstance,
+                   org.omg.CORBA.TypeCode type) {
         super(factory, orbInstance, type);
 
         dynValueReader_ = null;
 
         try {
             int count = origType_.member_count();
-            components_ = new org.omg.DynamicAny.DynAny[count];
+            components_ = new DynAny[count];
 
             for (int i = 0; i < count; i++)
                 components_[i] = create(origType_.member_type(i), true);
@@ -48,31 +61,29 @@ final class DynStruct_impl extends DynAny_impl implements
                 index_ = -1;
             else
                 index_ = 0;
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
-    DynStruct_impl(org.omg.DynamicAny.DynAnyFactory factory,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.TypeCode type,
-            org.apache.yoko.orb.DynamicAny.DynValueReader dynValueReader) {
+    DynStruct_impl(DynAnyFactory factory,
+                   ORBInstance orbInstance,
+                   org.omg.CORBA.TypeCode type,
+                   DynValueReader dynValueReader) {
         super(factory, orbInstance, type);
 
         dynValueReader_ = dynValueReader;
 
         try {
             int count = origType_.member_count();
-            components_ = new org.omg.DynamicAny.DynAny[count];
+            components_ = new DynAny[count];
 
             for (int i = 0; i < count; i++) {
                 org.omg.CORBA.TypeCode memberType = origType_.member_type(i);
-                org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
+                org.omg.CORBA.TypeCode origTC = TypeCode
                         ._OB_getOrigType(memberType);
 
-                if ((origTC.kind().value() == org.omg.CORBA.TCKind._tk_value)
+                if ((origTC.kind().value() == TCKind._tk_value)
                         && (dynValueReader_ != null)) {
                     components_[i] = null;
                 } else {
@@ -84,10 +95,8 @@ final class DynStruct_impl extends DynAny_impl implements
                 index_ = -1;
             else
                 index_ = 0;
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
@@ -95,23 +104,22 @@ final class DynStruct_impl extends DynAny_impl implements
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public synchronized void assign(org.omg.DynamicAny.DynAny dyn_any)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void assign(DynAny dyn_any) throws TypeMismatch {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return;
 
         if (!dyn_any.type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(components_.length == dyn_any
+        Assert._OB_assert(components_.length == dyn_any
                 .component_count());
 
         dyn_any.rewind();
-        for (int i = 0; i < components_.length; i++) {
-            components_[i].assign(dyn_any.current_component());
+        for (DynAny dynAny : components_) {
+            dynAny.assign(dyn_any.current_component());
             dyn_any.next();
         }
 
@@ -124,36 +132,36 @@ final class DynStruct_impl extends DynAny_impl implements
     }
 
     public synchronized void from_any(org.omg.CORBA.Any value)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+            throws TypeMismatch,
+            InvalidValue {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         //
         // Convert value to an ORBacus Any - the JDK implementation
         // of TypeCode.equivalent() raises NO_IMPLEMENT
         //
-        Any val = null;
+        Any val;
         try {
             val = (Any) value;
         } catch (ClassCastException ex) {
             try {
                 val = new Any(value);
             } catch (NullPointerException e) {
-                throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                    org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+                throw (InvalidValue)new
+                    InvalidValue().initCause(e);
             }
         }
 
         if (!val._OB_type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
-        org.omg.CORBA.portable.InputStream in = null;
+        org.omg.CORBA.portable.InputStream in;
         try {
             in = val.create_input_stream();
         } catch (NullPointerException e) {
-            throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+            throw (InvalidValue)new
+                InvalidValue().initCause(e);
         }
 
         _OB_unmarshal((InputStream) in);
@@ -167,30 +175,21 @@ final class DynStruct_impl extends DynAny_impl implements
     }
 
     public synchronized org.omg.CORBA.Any to_any() {
-        return to_any(null);
-    }
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-    public synchronized org.omg.CORBA.Any to_any(DynValueWriter dynValueWriter) {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+        try (OutputStream out = new OutputStream()) {
+            out._OB_ORBInstance(orbInstance_);
 
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-
-        if (dynValueWriter != null)
-            _OB_marshal(out, dynValueWriter);
-        else
             _OB_marshal(out);
 
-        InputStream in = (InputStream) out.create_input_stream();
-        Any result = new Any(orbInstance_, type_, in);
-        return result;
+            InputStream in = out.create_input_stream();
+            return new Any(orbInstance_, type_, in);
+        }
     }
 
-    public synchronized boolean equal(org.omg.DynamicAny.DynAny dyn_any) {
+    public synchronized boolean equal(DynAny dyn_any) {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return true;
@@ -200,45 +199,41 @@ final class DynStruct_impl extends DynAny_impl implements
 
         dyn_any.rewind();
         try {
-            for (int i = 0; i < components_.length; i++) {
-                if (!components_[i].equal(dyn_any.current_component()))
-                    return false;
+            for (DynAny dynAny : components_) {
+                if (!dynAny.equal(dyn_any.current_component())) return false;
                 dyn_any.next();
             }
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
+        } catch (TypeMismatch ex) {
             return false;
         }
 
         return true;
     }
 
-    public synchronized org.omg.DynamicAny.DynAny copy() {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+    public synchronized DynAny copy() {
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
         //
         // Marshal this. The DynValueWriter keeps track of DynValue instances.
         // They will be referenced again during demarshalling, thus
         // maintaining DynValue equality between the original and the copy.
         //
-        DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_,
-                factory_);
+        DynValueWriter dynValueWriter = new DynValueWriter(orbInstance_, factory_);
 
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        OutputStream out = new OutputStream(buf);
-        out._OB_ORBInstance(orbInstance_);
-        _OB_marshal(out, dynValueWriter);
+        try (OutputStream out = new OutputStream()) {
+            out._OB_ORBInstance(orbInstance_);
+            _OB_marshal(out, dynValueWriter);
 
-        dynValueReader_ = dynValueWriter.getReader();
+            dynValueReader_ = dynValueWriter.getReader();
 
-        org.omg.DynamicAny.DynAny result = prepare(type_, dynValueReader_,
-                false);
-        DynAny_impl impl = (DynAny_impl) result;
+            DynAny result = prepare(type_, dynValueReader_, false);
+            DynAny_impl impl = (DynAny_impl) result;
 
-        InputStream in = (InputStream) out.create_input_stream();
-        impl._OB_unmarshal(in);
+            InputStream in = out.create_input_stream();
+            impl._OB_unmarshal(in);
 
-        return result;
+            return result;
+        }
     }
 
     public synchronized boolean seek(int index) {
@@ -269,13 +264,12 @@ final class DynStruct_impl extends DynAny_impl implements
         return components_.length;
     }
 
-    public synchronized org.omg.DynamicAny.DynAny current_component()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized DynAny current_component() throws TypeMismatch {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (components_.length == 0) // empty exception
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         if (index_ == -1)
             return null;
@@ -284,76 +278,70 @@ final class DynStruct_impl extends DynAny_impl implements
     }
 
     public synchronized String current_member_name()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+            throws TypeMismatch,
+            InvalidValue {
         if (components_.length == 0) // empty exception
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         if (index_ < 0)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         String result = null;
 
         try {
             result = origType_.member_name(index_);
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return result;
     }
 
-    public synchronized org.omg.CORBA.TCKind current_member_kind()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized TCKind current_member_kind()
+            throws TypeMismatch,
+            InvalidValue {
         if (components_.length == 0) // empty exception
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         if (index_ < 0)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
-        org.omg.CORBA.TCKind result = null;
+        TCKind result = null;
 
         try {
             org.omg.CORBA.TypeCode memberTC = origType_.member_type(index_);
             org.omg.CORBA.TypeCode origMemberTC = TypeCode
                     ._OB_getOrigType(memberTC);
             result = origMemberTC.kind();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return result;
     }
 
-    public synchronized org.omg.DynamicAny.NameValuePair[] get_members() {
-        org.omg.DynamicAny.NameValuePair[] result = new org.omg.DynamicAny.NameValuePair[components_.length];
+    public synchronized NameValuePair[] get_members() {
+        NameValuePair[] result = new NameValuePair[components_.length];
 
         try {
             for (int i = 0; i < components_.length; i++) {
-                result[i] = new org.omg.DynamicAny.NameValuePair();
+                result[i] = new NameValuePair();
                 result[i].id = origType_.member_name(i);
                 result[i].value = components_[i].to_any();
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return result;
     }
 
     public synchronized void set_members(
-            org.omg.DynamicAny.NameValuePair[] value)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+            NameValuePair[] value)
+            throws TypeMismatch,
+            InvalidValue {
         if (value.length != components_.length)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         //
         // Prior to modifying our components, validate the supplied
@@ -367,7 +355,7 @@ final class DynStruct_impl extends DynAny_impl implements
 
                 if (value[i].id.length() > 0 && name.length() > 0
                         && !value[i].id.equals(name))
-                    throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+                    throw new TypeMismatch();
 
                 //
                 // The JDK ORB's implementation of TypeCode doesn't
@@ -382,7 +370,7 @@ final class DynStruct_impl extends DynAny_impl implements
                 org.omg.CORBA.TypeCode valueType = values[i]._OB_type();
                 org.omg.CORBA.TypeCode memberType = components_[i].type();
                 if (!valueType.equivalent(memberType))
-                    throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+                    throw new TypeMismatch();
             }
 
             for (int i = 0; i < components_.length; i++)
@@ -394,37 +382,33 @@ final class DynStruct_impl extends DynAny_impl implements
                 index_ = 0;
 
             notifyParent();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
-    public synchronized org.omg.DynamicAny.NameDynAnyPair[] get_members_as_dyn_any() {
-        org.omg.DynamicAny.NameDynAnyPair[] result = new org.omg.DynamicAny.NameDynAnyPair[components_.length];
+    public synchronized NameDynAnyPair[] get_members_as_dyn_any() {
+        NameDynAnyPair[] result = new NameDynAnyPair[components_.length];
 
         try {
             for (int i = 0; i < components_.length; i++) {
-                result[i] = new org.omg.DynamicAny.NameDynAnyPair();
+                result[i] = new NameDynAnyPair();
                 result[i].id = origType_.member_name(i);
                 result[i].value = components_[i];
             }
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
 
         return result;
     }
 
     public synchronized void set_members_as_dyn_any(
-            org.omg.DynamicAny.NameDynAnyPair[] value)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+            NameDynAnyPair[] value)
+            throws TypeMismatch,
+            InvalidValue {
         if (value.length != components_.length)
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         //
         // Prior to modifying our components, validate the supplied
@@ -437,12 +421,12 @@ final class DynStruct_impl extends DynAny_impl implements
 
                 if (value[i].id.length() > 0 && name.length() > 0
                         && !value[i].id.equals(name))
-                    throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+                    throw new TypeMismatch();
 
                 org.omg.CORBA.TypeCode valueType = value[i].value.type();
                 org.omg.CORBA.TypeCode memberType = components_[i].type();
                 if (!valueType.equivalent(memberType))
-                    throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+                    throw new TypeMismatch();
             }
 
             for (int i = 0; i < components_.length; i++)
@@ -454,10 +438,8 @@ final class DynStruct_impl extends DynAny_impl implements
                 index_ = 0;
 
             notifyParent();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-        } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind | Bounds ex) {
+            Assert._OB_assert(ex);
         }
     }
 
@@ -471,22 +453,22 @@ final class DynStruct_impl extends DynAny_impl implements
 
     synchronized void _OB_marshal(OutputStream out,
             DynValueWriter dynValueWriter) {
-        if (origType_.kind() == org.omg.CORBA.TCKind.tk_except) {
+        if (origType_.kind() == TCKind.tk_except) {
             try {
                 out.write_string(origType_.id());
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (BadKind ex) {
+                Assert._OB_assert(ex);
             }
         }
 
-        for (int i = 0; i < components_.length; i++) {
-            DynAny_impl impl = (DynAny_impl) components_[i];
+        for (DynAny dynAny : components_) {
+            DynAny_impl impl = (DynAny_impl) dynAny;
             impl._OB_marshal(out, dynValueWriter);
         }
     }
 
     synchronized void _OB_unmarshal(InputStream in) {
-        if (origType_.kind() == org.omg.CORBA.TCKind.tk_except) {
+        if (origType_.kind() == TCKind.tk_except) {
             in.read_string();
         }
 
@@ -495,29 +477,26 @@ final class DynStruct_impl extends DynAny_impl implements
 
             try {
                 memberType = origType_.member_type(i);
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-                return;
-            } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (BadKind | Bounds ex) {
+                Assert._OB_assert(ex);
                 return;
             }
 
-            org.omg.CORBA.TypeCode origTC = org.apache.yoko.orb.CORBA.TypeCode
+            org.omg.CORBA.TypeCode origTC = TypeCode
                     ._OB_getOrigType(memberType);
 
-            if ((origTC.kind().value() == org.omg.CORBA.TCKind._tk_value)
+            if ((origTC.kind().value() == TCKind._tk_value)
                     && (dynValueReader_ != null)) {
                 //
                 // Create DynValue components
                 //
-                org.apache.yoko.orb.OB.Assert
+                Assert
                         ._OB_assert(components_[i] == null);
 
                 try {
                     components_[i] = dynValueReader_.readValue(in, memberType);
-                } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                } catch (InconsistentTypeCode ex) {
+                    Assert._OB_assert(ex);
                     return;
                 }
 
@@ -537,7 +516,7 @@ final class DynStruct_impl extends DynAny_impl implements
 
     synchronized Any _OB_currentAny() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (index_ >= 0 && index_ <= components_.length) {
             DynAny_impl impl = (DynAny_impl) components_[index_];

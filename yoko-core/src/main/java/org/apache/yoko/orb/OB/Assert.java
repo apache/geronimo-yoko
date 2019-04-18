@@ -27,16 +27,16 @@ final public class Assert {
         if (!b)
             throw new AssertionFailed(reason);
     }
-    
-    public static void _OB_assert(String reason) {
+
+    public static AssertionFailed _OB_assert(String reason) {
         throw new AssertionFailed(reason);
     }
     
-    public static void _OB_assert(Throwable ex) {
+    public static AssertionFailed _OB_assert(Throwable ex) {
         throw new AssertionFailed(ex);
     }
     
-    public static void _OB_assert(String reason, Throwable ex) {
+    public static AssertionFailed _OB_assert(String reason, Throwable ex) {
         throw new AssertionFailed(reason, ex);
     }
 }

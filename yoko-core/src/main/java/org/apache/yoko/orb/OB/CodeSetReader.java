@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 public abstract class CodeSetReader {
@@ -25,9 +25,9 @@ public abstract class CodeSetReader {
 
     public final static int FIRST_CHAR = 2;
 
-    abstract char read_char(InputStream in) throws DATA_CONVERSION;
+    abstract char read_char(ReadBuffer readBuffer) throws DATA_CONVERSION;
 
-    abstract char read_wchar(InputStream in, int len) throws DATA_CONVERSION;
+    abstract char read_wchar(ReadBuffer readBuffer, int len) throws DATA_CONVERSION;
 
     abstract int count_wchar(char value);
 

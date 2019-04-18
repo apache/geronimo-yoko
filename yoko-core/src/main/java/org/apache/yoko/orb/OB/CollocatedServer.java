@@ -19,7 +19,6 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INITIALIZE;
@@ -34,22 +33,21 @@ import org.omg.IOP.ServiceContext;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final public class CollocatedServer extends Server implements UpcallReturn {
-    static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
+    private static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
     //
     // The next request ID and the corresponding mutex
     //
     private int nextRequestId_;
 
-    private Object nextRequestIdMutex_ = new Object();
+    private final Object nextRequestIdMutex_ = new Object();
 
     //
     // The call map
     //
-    private Hashtable callMap_;
+    private final Hashtable callMap_;
 
     //
     // True if destroy() was called
@@ -64,7 +62,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     //
     // The object adapter interface
     //
-    private OAInterface oaInterface_;
+    private final OAInterface oaInterface_;
 
     // ----------------------------------------------------------------------
     // CollocatedServer private and protected member implementations
@@ -175,7 +173,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 try {
                     logger.fine("Waiting for hold to be released"); 
                     wait();
-                } catch (InterruptedException ex) {
+                } catch (InterruptedException ignored) {
                 }
             }
 
@@ -193,8 +191,6 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             int reqId = down.requestId();
             String op = down.operation();
             OutputStream out = down.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
             ServiceContext[] requestSCL = down.getRequestSCL();
 
             //
@@ -204,13 +200,11 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 IORHolder ior = new IORHolder();
                 switch (oaInterface_.findByKey(profileInfo.key, ior)) {
                 case OAInterface.UNKNOWN_OBJECT:
-                    down
-                            .setSystemException(new OBJECT_NOT_EXIST());
+                    down.setSystemException(new OBJECT_NOT_EXIST());
                     break;
 
                 case OAInterface.OBJECT_HERE:
-                    InputStream in = new InputStream(
-                            buf, 0, false);
+                    InputStream in = new InputStream(out.getBufferReader());
                     down.setNoException(in);
                     break;
 
@@ -233,7 +227,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 //
                 // Put the Downcall in the call map
                 //
-                callMap_.put(new Integer(reqId), down);
+                callMap_.put(reqId, down);
 
                 //
                 // From here on, we consider the Downcall as pending
@@ -241,8 +235,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setPending();
 
                 up = oaInterface_.createUpcall(this, profileInfo, null, reqId,
-                        op, new InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestSCL);
             } else {
                 //
                 // This is a oneway call, and if there was no exception so
@@ -251,8 +244,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setNoException(null);
 
                 up = oaInterface_.createUpcall(null, profileInfo, null, reqId,
-                        op, new InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestSCL);
             }
         }
 
@@ -264,10 +256,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         //
         up.invoke();
 
-        if (down.responseExpected())
-            return false;
-        else
-            return true;
+        return !down.responseExpected();
     }
 
     public boolean receive(Downcall down, boolean block) {
@@ -285,7 +274,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             return down.waitUntilCompleted(block);
         } catch (SystemException ex) {
             synchronized (this) {
-                callMap_.remove(new Integer(down.requestId()));
+                callMap_.remove(down.requestId());
                 down.setFailureException(ex);
                 return true;
             }
@@ -324,8 +313,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
 
         if (replySCL.length > 0) {
             synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(new Integer(upcall
-                        .requestId()));
+                Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
                 //
                 // Might be null if the request timed out or destroyed
@@ -338,7 +326,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
 
     public synchronized void upcallEndReply(Upcall upcall) {
         Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+                .get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
@@ -346,12 +334,9 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         if (down != null) // Might be null if the request timed out
         {
             OutputStream out = upcall.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(out.getBufferReader());
             down.setNoException(in);
-            callMap_.remove(new Integer(down.requestId()));
+            callMap_.remove(down.requestId());
         }
     }
 
@@ -361,7 +346,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
 
         if (replySCL.length > 0) {
             synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(new Integer(upcall.requestId()));
+                Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
                 //
                 // Might be null if the request timed out or destroyed
@@ -373,20 +358,16 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     }
 
     public synchronized void upcallEndUserException(Upcall upcall) {
-        Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
         //
         if (down != null) {
             OutputStream out = upcall.output();
-            Buffer buf = new Buffer();
-            buf.consume(out._OB_buffer());
-            InputStream in = new InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(out.getBufferReader());
             down.setUserException(in);
-            callMap_.remove(new Integer(down.requestId()));
+            callMap_.remove(down.requestId());
         }
     }
 
@@ -430,7 +411,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
 
     public synchronized void upcallSystemException(Upcall upcall, SystemException ex, ServiceContext[] replySCL) {
         Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+                .get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
@@ -439,13 +420,13 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             if (replySCL.length > 0)
                 down.setReplySCL(replySCL);
             down.setSystemException(ex);
-            callMap_.remove(new Integer(down.requestId()));
+            callMap_.remove(down.requestId());
         }
     }
 
     public synchronized void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContext[] replySCL) {
         Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+                .get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
@@ -454,7 +435,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             if (replySCL.length > 0)
                 down.setReplySCL(replySCL);
             down.setLocationForward(ior, perm);
-            callMap_.remove(new Integer(down.requestId()));
+            callMap_.remove(down.requestId());
         }
     }
 

@@ -375,9 +375,9 @@ public class Downcall {
     public final String unmarshalExceptionId() {
         try (AutoLock lock = stateLock.getReadLock()) {
             Assert._OB_assert(state == State.USER_EXCEPTION);
-            int pos = in_._OB_pos();
+            int pos = in_.getPosition();
             String id = in_.read_string();
-            in_._OB_pos(pos);
+            in_.setPosition(pos);
             return id;
         }
     }
