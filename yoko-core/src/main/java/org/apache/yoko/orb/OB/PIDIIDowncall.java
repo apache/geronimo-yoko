@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -25,23 +25,11 @@ import org.omg.CORBA.NamedValue;
 import org.omg.IOP.IOR;
 
 public class PIDIIDowncall extends PIDowncall {
-    //
-    // Argument, result and exception list description provided by the
-    // DII
-    //
     protected NVList args_;
 
     protected NamedValue result_;
 
     protected ExceptionList exceptionList_;
-
-    // ----------------------------------------------------------------------
-    // PIDIIDowncall private and protected member implementations
-    // ----------------------------------------------------------------------
-
-    // ----------------------------------------------------------------------
-    // PIDIIDowncall public member implementations
-    // ----------------------------------------------------------------------
 
     public PIDIIDowncall(ORBInstance orbInstance, Client client,
             ProfileInfo profileInfo,
@@ -49,19 +37,14 @@ public class PIDIIDowncall extends PIDowncall {
             IOR IOR, IOR origIOR, PIManager piManager,
             NVList args, NamedValue result,
             ExceptionList exceptions) {
-        super(orbInstance, client, profileInfo, policies, op, resp, IOR,
-                origIOR, piManager);
+        super(orbInstance, client, profileInfo, policies, op, resp, IOR, origIOR, piManager);
         args_ = args;
         result_ = result;
         exceptionList_ = exceptions;
     }
 
-    public OutputStream preMarshal()
-            throws LocationForward, FailureException {
-        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
-                IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,
-                replySCL_, args_, result_, exceptionList_);
-
+    public OutputStream preMarshal() throws LocationForward, FailureException {
+        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_, IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_, replySCL_, args_, result_, exceptionList_);
         return preMarshalBase(); // Equivalent to Downcall::preMarshal()
     }
 }

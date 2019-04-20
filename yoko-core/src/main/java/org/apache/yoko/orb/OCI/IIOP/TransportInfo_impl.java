@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -44,11 +44,6 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     private final Origin origin;
     private final ListenerMap listenMap_;
     private volatile ListenPoint[] listenPoints_ = null;
-
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public String id() {
         return PLUGIN_ID.value;
@@ -96,10 +91,8 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
 
         for (Policy policy : policies) {
             if (policy.policy_type() == BIDIRECTIONAL_POLICY_TYPE.value) {
-                BidirectionalPolicy p = BidirectionalPolicyHelper
-                        .narrow(policy);
-                if (p.value() == BOTH.value)
-                    bHaveBidir = true;
+                BidirectionalPolicy p = BidirectionalPolicyHelper.narrow(policy);
+                if (p.value() == BOTH.value) bHaveBidir = true;
                 break;
             }
         }
@@ -156,10 +149,8 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     }
 
     public synchronized boolean endpoint_alias_match(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
-        //
         // we only deal with Connectors that are of our specific type,
         // namely IIOP connectors (and ConnectorInfos)
-        //
         ConnectorInfo_impl infoImpl;
         try {
             infoImpl = (ConnectorInfo_impl) connInfo;
@@ -167,12 +158,9 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
             return false;
         }
 
-        //
         // compare the endpoint information in this connector with the
         // various endpoint inforamtion in our listenMap_
-        //
-        if (listenPoints_ == null)
-            return false;
+        if (listenPoints_ == null) return false;
 
         short port = infoImpl.remote_port();
         String host = infoImpl.remote_addr();
@@ -189,16 +177,11 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         listenPoints_ = lp;
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
     private TransportInfo_impl(Socket socket, Origin origin, ListenerMap lm) {
         this.socket = socket;
         this.origin = origin;
         listenMap_ = lm;
     }
-
 
     // client-side constructor
     TransportInfo_impl(Transport_impl transport, ListenerMap lm) {

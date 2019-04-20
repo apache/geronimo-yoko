@@ -360,10 +360,8 @@ public final class Util {
         }
     }
 
-    public static void insertException(Any any, Exception ex) {
-        // Find the helper class for the exception and use it to insert
-        // the exception into the any
-
+    public static Any insertException(Any any, Exception ex) {
+        // Find the helper class for the exception and use it to insert the exception into the any
         try {
             Class exClass = ex.getClass();
             String helper = exClass.getName() + "Helper";
@@ -377,6 +375,7 @@ public final class Util {
         } catch (NoSuchMethodException | InvocationTargetException | IllegalArgumentException | IllegalAccessException e) {
             Assert._OB_assert(ex);
         }
+        return any;
     }
 
     static ClassLoader getContextClassLoader () {

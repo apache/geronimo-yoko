@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -23,42 +23,25 @@ import org.omg.CORBA.TypeCode;
 import org.omg.IOP.IOR;
 
 public class PIArgsDowncall extends PIDowncall {
-    //
-    // Argument, result and exception list description provided by the
-    // static stubs
-    //
     protected ParameterDesc[] argDesc_;
-
     protected ParameterDesc retDesc_;
-
     protected TypeCode[] exceptionTC_;
-
-    // ----------------------------------------------------------------------
-    // PIArgsDowncall private and protected member implementations
-    // ----------------------------------------------------------------------
-
-    // ----------------------------------------------------------------------
-    // PIArgsDowncall public member implementations
-    // ----------------------------------------------------------------------
 
     public PIArgsDowncall(ORBInstance orbInstance, Client client,
             ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp,
             IOR IOR, IOR origIOR,
-            /**/PIManager piManager, ParameterDesc[] argDesc,
+            PIManager piManager, ParameterDesc[] argDesc,
             ParameterDesc retDesc, TypeCode[] exceptionTC) {
-        super(orbInstance, client, profileInfo, policies, op, resp, IOR,
-                origIOR, piManager);
+        super(orbInstance, client, profileInfo, policies, op, resp, IOR, origIOR, piManager);
         argDesc_ = argDesc;
         retDesc_ = retDesc;
         exceptionTC_ = exceptionTC;
     }
 
-    public OutputStream preMarshal()
-            throws LocationForward, FailureException {
-        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
-                IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,
-                replySCL_, argDesc_, retDesc_, exceptionTC_);
+    public OutputStream preMarshal() throws LocationForward, FailureException {
+        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_, IOR_, origIOR_,
+                profileInfo_, policies_.value, requestSCL_, replySCL_, argDesc_, retDesc_, exceptionTC_);
 
         return preMarshalBase(); // Equivalent to Downcall::preMarshal()
     }

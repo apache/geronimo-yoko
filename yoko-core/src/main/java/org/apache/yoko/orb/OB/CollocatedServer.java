@@ -400,11 +400,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             // ex._OB_marshal(out);
             Assert._OB_assert(false);
         } catch (SystemException e) {
-            try {
-                upcall.marshalEx(e);
-            } catch (LocationForward f) {
-                Assert._OB_assert(ex); // shouldn't happen
-            }
+            upcall.marshalEx(e);
         }
         upcallEndUserException(upcall);
     }

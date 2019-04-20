@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.orb.OB.Assert;
+
 //
 // This class is used to control the POA
 //
@@ -72,7 +74,7 @@ class POAControl {
                 //
                 try {
                     wait();
-                } catch (InterruptedException ex) {
+                } catch (InterruptedException ignored) {
                 }
             }
             return false;
@@ -94,12 +96,10 @@ class POAControl {
     synchronized boolean incrementRequestCount() {
         if (state_ != DestroyNotCalled) {
             while (state_ != DestroyCompleted) {
-                //
                 // wait for the destroy to complete
-                //
                 try {
                     wait();
-                } catch (InterruptedException ex) {
+                } catch (InterruptedException ignored) {
                 }
             }
             return false;
@@ -118,7 +118,7 @@ class POAControl {
     // DestroyPending then wake any waiting threads and return true.
     //
     synchronized boolean decrementRequestCount() {
-        org.apache.yoko.orb.OB.Assert._OB_assert(requests_ > 0);
+        Assert._OB_assert(requests_ > 0);
         requests_--;
 
         //
@@ -127,8 +127,7 @@ class POAControl {
         //
         if (requests_ == 0) {
             notifyAll();
-            if (state_ == DestroyPending)
-                return true;
+            return state_ == DestroyPending;
         }
         return false;
     }
@@ -144,7 +143,7 @@ class POAControl {
             //
             try {
                 wait();
-            } catch (InterruptedException ex) {
+            } catch (InterruptedException ignored) {
             }
         }
 

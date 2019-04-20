@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,8 +17,13 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TypeCode;
+import org.omg.Dynamic.Parameter;
+
 abstract class ArgumentStrategy {
-    protected org.omg.CORBA.ORB orb_; // Java only
+    protected final ORB orb_;
 
     //
     // Are arguments available?
@@ -40,7 +45,7 @@ abstract class ArgumentStrategy {
     //
     protected boolean exceptNeverAvail_;
 
-    ArgumentStrategy(org.omg.CORBA.ORB orb) {
+    ArgumentStrategy(ORB orb) {
         orb_ = orb;
         argsAvail_ = false;
         resultAvail_ = false;
@@ -51,22 +56,22 @@ abstract class ArgumentStrategy {
     //
     // Get the arguments
     //
-    abstract org.omg.Dynamic.Parameter[] arguments();
+    abstract Parameter[] arguments();
 
     //
     // Get the exceptions
     //
-    abstract org.omg.CORBA.TypeCode[] exceptions();
+    abstract TypeCode[] exceptions();
 
     //
     // Get the result
     //
-    abstract org.omg.CORBA.Any result();
+    abstract Any result();
 
     //
     // Set the result (server side only)
     //
-    abstract void setResult(org.omg.CORBA.Any any);
+    abstract void setResult(Any any);
 
     //
     // Are the args available?

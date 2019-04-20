@@ -113,22 +113,6 @@ public final class PIUpcall extends Upcall {
         return super.preMarshal();
     }
 
-    //
-    // NOTE: Not used in Java
-    //
-    public void setUserException(UserException ex) {
-        try {
-            piManager_.serverSendException(requestInfo_, false, ex);
-        } catch (SystemException e) {
-            setSystemException(e);
-            return;
-        } catch (LocationForward e) {
-            setLocationForward(e.ior, e.perm);
-            return;
-        }
-        super.setUserException(ex);
-    }
-
     public void setUserException(Any any) {
         try {
             UnknownUserException uex = new UnknownUserException(

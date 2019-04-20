@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,13 +17,11 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
-import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_PARAM;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.ORB;
@@ -37,114 +35,46 @@ import org.omg.PortableInterceptor.LOCATION_FORWARD;
 import org.omg.PortableInterceptor.RequestInfo;
 
 import java.util.Vector;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class RequestInfo_impl extends LocalObject implements
-        RequestInfo {
-// the real logger backing instance.  We use the interface class as the locator
-static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
-    //
-    // The ORB (Java only)
-    //
-    protected ORB orb_;
+import static org.apache.yoko.orb.OB.Assert.*;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
-    //
-    // The Request ID
-    //
-    protected int id_;
-
-    //
-    // The operation name
-    //
-    protected String op_;
-
-    //
-    // Is this method oneway?
-    //
-    protected boolean responseExpected_;
-
-    //
-    // ORBacus proprietary status flags
-    //
+public class RequestInfo_impl extends LocalObject implements RequestInfo {
+    static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
+    private final int id;
+    private final boolean requestIsOneWay;
     protected final static short NO_REPLY_SC = -2;
-
     protected final static short NO_REPLY = -1;
+    protected final ORB orb;
+    protected final ORBInstance orbInstance;
+    protected final String operationName;
+    protected final Policy[] policies;
+    protected final Vector requestSCL_;
+    protected final Vector replySCL_;
+    protected final Current_impl piCurrent;
 
-    //
-    // The reply status
-    //
-    protected short status_;
+    protected short replyStatus;
+    protected IOR forwardReference; // only when status_ == LOCATION_FORWARD[_PERM]
+    protected ArgumentStrategy argStrategy;
+    protected Exception receivedException; // only when status_ == [SYSTEM|USER]_EXCEPTION)
+    protected String receivedId;
+    protected Any[] requestSlotData;
+    protected boolean currentNeedsPopping;
 
-    //
-    // The forward reference (if status_ == LOCATION_FORWARD[_PERM]
-    //
-    protected IOR forwardReference_;
-
-    //
-    // The ORB instance
-    //
-    protected ORBInstance orbInstance_;
-
-    //
-    // The policies
-    //
-    protected Policy[] policies_;
-
-    //
-    // The argument strategy
-    //
-    protected ArgumentStrategy argStrategy_;
-
-    //
-    // The Request and Reply service context lists
-    //
-    protected Vector requestSCL_;
-
-    protected Vector replySCL_;
-
-    //
-    // ReceivedException (status_ == [SYSTEM|USER]_EXCEPTION)
-    //
-    protected Exception receivedException_;
-
-    protected String receivedId_;
-
-    //
-    // Slot data for the request
-    //
-    protected Any[] slots_;
-
-    //
-    // A pointer to the PortableInterceptor::Current implementation
-    //
-    protected Current_impl current_;
-
-    //
-    // Does the slot data need to be popped in the current
-    // implementation?
-    //
-    protected boolean popCurrent_;
-
-    // ------------------------------------------------------------------
-    // Private member implementations
-    // ------------------------------------------------------------------
-
-    private ServiceContext copyServiceContext(
-            ServiceContext sc) {
+    private ServiceContext copyServiceContext(ServiceContext sc) {
         ServiceContext result = new ServiceContext();
         result.context_id = sc.context_id;
         result.context_data = new byte[sc.context_data.length];
-        System.arraycopy(sc.context_data, 0, result.context_data, 0,
-                sc.context_data.length);
+        System.arraycopy(sc.context_data, 0, result.context_data, 0, sc.context_data.length);
         return result;
     }
 
-    // ------------------------------------------------------------------
-    // Protected member implementations
-    // ------------------------------------------------------------------
-
-    protected ServiceContext getServiceContext(Vector l, int id) {
+    private ServiceContext getServiceContext(Vector l, int id) {
         for (int i = 0; i < l.size(); i++) {
             ServiceContext sc = (ServiceContext) l.elementAt(i);
             if (sc.context_id == id) {
@@ -152,12 +82,7 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
             }
         }
 
-        throw new BAD_PARAM(
-                MinorCodes
-                        .describeBadParam(MinorCodes.MinorInvalidServiceContextId)
-                        + ": " + id,
-                MinorCodes.MinorInvalidServiceContextId,
-                CompletionStatus.COMPLETED_NO);
+        throw new BAD_PARAM(describeBadParam(MinorInvalidServiceContextId) + ": " + id, MinorInvalidServiceContextId, COMPLETED_NO);
     }
 
     protected void addServiceContext(Vector l, ServiceContext sc, boolean addReplace) {
@@ -169,26 +94,16 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         for (int i = 0; i < l.size(); i++) {
             ServiceContext c = (ServiceContext) l.elementAt(i);
             if (c.context_id == sc.context_id) {
-                if (!addReplace) {
-                    throw new BAD_INV_ORDER(
-                            MinorCodes
-                                    .describeBadInvOrder(MinorCodes.MinorServiceContextExists)
-                                    + ": " + sc.context_id,
-                            MinorCodes.MinorServiceContextExists,
-                            CompletionStatus.COMPLETED_NO);
+                if (addReplace) {
+                    l.setElementAt(copyServiceContext(sc), i);
+                    return;
                 }
-                l.setElementAt(copyServiceContext(sc), i);
-                return;
+                throw new BAD_INV_ORDER(describeBadInvOrder(MinorServiceContextExists) + ": " + sc.context_id, MinorServiceContextExists, COMPLETED_NO);
             }
         }
         l.addElement(copyServiceContext(sc));
     }
 
-    // ------------------------------------------------------------------
-    // Standard IDL to Java mapping
-    // ------------------------------------------------------------------
-
-    //
     // The ID uniquely identifies an active request/reply sequence.
     //
     // Client side:
@@ -200,12 +115,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
-    //
     public int request_id() {
-        return id_;
+        return id;
     }
 
-    //
     // The operation being invoked.
     //
     // Client side:
@@ -217,12 +130,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
-    //
     public String operation() {
-        return op_;
+        return operationName;
     }
 
-    //
     // A Dynamic::ParameterList containing the arguments on the operation
     // being invoked.
     //
@@ -237,12 +148,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: no send_other: no
     //
     // TODO: verify server side against final document
-    //
     public Parameter[] arguments() {
-        return argStrategy_.arguments();
+        return argStrategy.arguments();
     }
 
-    //
     // A Dynamic::ExceptionList containing the exceptions that this invocation
     // may raise.
     //
@@ -257,12 +166,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: no send_other: no
     //
     // TODO: verify server side against final document
-    //
     public TypeCode[] exceptions() {
-        return argStrategy_.exceptions();
+        return argStrategy.exceptions();
     }
 
-    //
     // A Dynamic::ContextList describing the contexts that may be passed
     // on this invocation.
     //
@@ -277,12 +184,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: no send_other: no
     //
     // TODO: verify server side against final document
-    //
     public String[] contexts() {
         throw new NO_IMPLEMENT(); // TODO: Implement
     }
 
-    //
     // A Dynamic::Context describing the contexts being send on the
     // request.
     //
@@ -297,12 +202,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: no send_other: no
     //
     // TODO: verify server side against final document
-    //
     public String[] operation_context() {
         throw new NO_IMPLEMENT(); // TODO: Implement
     }
 
-    //
     // The result of the method invocation. tk_void if the result type is
     // void
     //
@@ -315,12 +218,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // receive_request_service_contexts: no receive_request: no
     // send_reply: yes send_exception: no send_other: no
-    //
     public Any result() {
-        return argStrategy_.result();
+        return argStrategy.result();
     }
 
-    //
     // Indicates whether there is a response expected for this request.
     //
     // Client side:
@@ -332,12 +233,10 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
-    //
     public boolean response_expected() {
-        return responseExpected_;
+        return !requestIsOneWay;
     }
 
-    //
     // Indicates whether there is a response expected for this request.
     //
     // Client side:
@@ -372,14 +271,13 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         // This cannot be called in send_poll, send_request or
         // receive_request_service_context, receive_request
         //
-        if (status_ < 0) {
+        if (replyStatus < 0) {
             throw new BAD_INV_ORDER(
-                    MinorCodes
-                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
                     MinorCodes.MinorInvalidPICall,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
         }
-        return status_;
+        return replyStatus;
     }
 
     //
@@ -400,16 +298,15 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
         // This can only be called if the status is location forward
         // or location forward perm
         //
-        if (status_ != LOCATION_FORWARD.value) {
+        if (replyStatus != LOCATION_FORWARD.value) {
             throw new BAD_INV_ORDER(
-                    MinorCodes
-                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
                     MinorCodes.MinorInvalidPICall,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
         }
 
-        Assert._OB_assert(forwardReference_ != null);
-        return orbInstance_.getObjectFactory().createObject(forwardReference_);
+        _OB_assert(forwardReference != null);
+        return orbInstance.getObjectFactory().createObject(forwardReference);
     }
 
     //
@@ -427,15 +324,15 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     //
     public Any get_slot(int id)
             throws InvalidSlot {
-        if (id >= slots_.length) {
+        if (id >= requestSlotData.length) {
             throw new InvalidSlot();
         }
         
-        logger.fine("getting slot " + id + " for operation " + op_); 
+        logger.fine("getting slot " + id + " for operation " + operationName);
 
-        Any result = orb_.create_any();
-        if (slots_[id] != null) {
-            result.read_value(slots_[id].create_input_stream(), slots_[id].type());
+        Any result = orb.create_any();
+        if (requestSlotData[id] != null) {
+            result.read_value(requestSlotData[id].create_input_stream(), requestSlotData[id].type());
         }
         return result;
     }
@@ -471,58 +368,53 @@ static final Logger logger = Logger.getLogger(RequestInfo_impl.class.getName());
     // send_reply: yes send_exception: yes send_other: yes
     //
     public ServiceContext get_reply_service_context(int id) {
-        if (status_ < 0) {
+        if (replyStatus < 0) {
             throw new BAD_INV_ORDER(
-                    MinorCodes
-                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall),
+                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
                     MinorCodes.MinorInvalidPICall,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
         }
         return getServiceContext(replySCL_, id);
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
 
-    //
-    // No argument information available
-    //
     protected RequestInfo_impl(ORB orb, int id, String op,
                                boolean responseExpected, Vector requestSCL,
                                Vector replySCL,
                                ORBInstance orbInstance,
                                Policy[] policies, Current_impl current) {
-        orb_ = orb; // Java only
-
-        id_ = id;
-        op_ = op;
-        responseExpected_ = responseExpected;
-        orbInstance_ = orbInstance;
-        policies_ = policies;
-        requestSCL_ = requestSCL;
-        replySCL_ = replySCL;
-        current_ = current;
+        this.orb = orb;
+        this.id = id;
+        this.operationName = op;
+        this.requestIsOneWay = !responseExpected;
+        this.orbInstance = orbInstance;
+        this.policies = policies;
+        this.requestSCL_ = requestSCL;
+        this.replySCL_ = replySCL;
+        this.piCurrent = current;
     }
 
     public void _OB_setReplyStatus(short status) {
-        status_ = status;
+        replyStatus = status;
     }
 
     public void _OB_setForwardReference(IOR ior) {
-        Assert
-                ._OB_assert(status_ == LOCATION_FORWARD.value);
-        forwardReference_ = ior;
+        _OB_assert(replyStatus == LOCATION_FORWARD.value);
+        forwardReference = ior;
     }
 
     public void _OB_setReceivedException(Exception ex, String id) {
-        //
-        // id may be null
-        //
-        // TODO:
-        // org.apache.yoko.orb.OB.Assert._OB_assert(receivedException_ == null);
-        receivedException_ = ex;
-        receivedId_ = id;
+        receivedException = ex;
+        receivedId = id;
+    }
+
+    /**
+     * If a set of slots was provided to the Current implementation then the slots have to be popped
+     */
+    void popCurrent() {
+        if (currentNeedsPopping) {
+            currentNeedsPopping = false;
+            piCurrent._OB_popSlotData();
+        }
     }
 }
