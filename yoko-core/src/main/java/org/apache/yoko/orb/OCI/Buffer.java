@@ -126,16 +126,10 @@ final class Buffer {
          * The array size must be a power of 2, so that bitwise
          * operations can be used in place of arithmetic operations.
          */
-        private static final int PADDING_POWER = 5;
-        private static final byte[] PADDING = new byte[1<<PADDING_POWER];
+        static final int PADDING_POWER = 5;
+        static final byte[] PADDING = new byte[1<<PADDING_POWER];
         static { Arrays.fill(PADDING, PAD_BYTE); }
 
-        static void pad(Write w, int n) {
-            // write as many full copies of PADDING as required
-            for (int i = n >> PADDING_POWER; i > 0; i--) w.writeBytes(PADDING);
-            // write any remaining bytes of PADDING
-            w.writeBytes(PADDING, 0, n & ((1 << PADDING_POWER) - 1));
-        }
     }
 
     @SuppressWarnings("unchecked")
@@ -297,6 +291,27 @@ final class Buffer {
 
     @SuppressWarnings({"PointlessBitwiseExpression", "OctalInteger"})
     private final class Write extends Facet<WriteBuffer> implements WriteBuffer {
+        private void pad(int n) {
+            // fastpath for n < 8
+            final byte padByte = Padding.PAD_BYTE;
+            switch (n) {
+            case 7: writeByte(padByte);
+            case 6: writeByte(padByte);
+            case 5: writeByte(padByte);
+            case 4: writeByte(padByte);
+            case 3: writeByte(padByte);
+            case 2: writeByte(padByte);
+            case 1: writeByte(padByte);
+            case 0: return;
+            }
+            // write as many full copies of PADDING as required
+            final int paddingPower = Padding.PADDING_POWER;
+            final byte[] padding = Padding.PADDING;
+            for (int i = n >> paddingPower; i > 0; i--) writeBytes(padding);
+            // write any remaining bytes of PADDING
+            writeBytes(padding, 0, n & ((1 << paddingPower) - 1));
+        }
+
         @Override
         public WriteBuffer trim() {
             length = position;
@@ -310,26 +325,12 @@ final class Buffer {
 
         @Override
         public void padAlign(AlignmentBoundary boundary) {
-            padGap(boundary.gap(position));
-        }
-
-        private void padGap(int gap) {
-            switch (gap) {
-            case 7: writeByte(Padding.PAD_BYTE);
-            case 6: writeByte(Padding.PAD_BYTE);
-            case 5: writeByte(Padding.PAD_BYTE);
-            case 4: writeByte(Padding.PAD_BYTE);
-            case 3: writeByte(Padding.PAD_BYTE);
-            case 2: writeByte(Padding.PAD_BYTE);
-            case 1: writeByte(Padding.PAD_BYTE);
-            case 0: break;
-            default: Padding.pad(this, gap);
-            }
+            this.pad(boundary.gap(position));
         }
 
         @Override
         public WriteBuffer padAll() {
-            Padding.pad(this, length);
+            this.pad(length);
             return this;
         }
 
@@ -337,7 +338,9 @@ final class Buffer {
         public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
             final int gap = boundary.gap(position);
             try { return ensureAvailable(gap + size); }
-            finally { padGap(gap); }
+            finally {
+                this.pad(gap);
+            }
         }
 
         @Override
@@ -440,7 +443,7 @@ final class Buffer {
                 this.logger = logger;
                 this.index = position;
                 this.logger.finest("Writing a gap value for a length at offset " + index);
-                Padding.pad(Write.this, 4);
+                Write.this.pad(4);
             }
 
             public void close() {
