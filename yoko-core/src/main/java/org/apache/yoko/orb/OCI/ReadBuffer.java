@@ -16,46 +16,120 @@
  */
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.orb.OB.IORUtil;
+import org.apache.yoko.util.HexConverter;
+
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.io.OutputStream;
 
-public interface ReadBuffer extends BufferFacet<ReadBuffer> {
+public final class ReadBuffer extends Buffer<ReadBuffer>{
+    private final Core core;
 
-    void align(AlignmentBoundary boundary);
+    ReadBuffer(Core core) { this.core = core; }
 
-    ReadBuffer skipBytes(int n);
+    @Override
+    public int length() {
+        return core.length;
+    }
 
-    ReadBuffer skipToEnd();
+    @Override
+    boolean dataEquals0(ReadBuffer that) {
+        return this.core.dataEquals(that.core);
+    }
 
-    ReadBuffer rewindToStart();
+    public byte peekByte() {
+        return core.data[position];
+    }
 
-    byte peekByte();
+    public byte readByte() {
+        return core.data[position++];
+    }
 
-    byte readByte();
+    public char readByteAsChar() {
+        return (char) core.data[position++];
+    }
 
-    char readByteAsChar();
+    public void readBytes(byte[] buffer, int offset, int length) {
+        if (available() < length) throw new IndexOutOfBoundsException();
+        System.arraycopy(core.data, position, buffer, offset, length);
+        position += length;
+    }
 
-    void readBytes(byte[] value, int offset, int length);
+    public void readBytes(WriteBuffer buffer) {
+        buffer.writeBytes(core.data, position, available());
+    }
 
-    char peekChar();
+    public byte[] copyRemainingBytes() {
+        return copyOf(core.data, available());
+    }
 
-    char readChar();
+    public char peekChar() {
+        return (char)((core.data[position] << 8) | (core.data[position + 1] & 0xff));
+    }
 
-    char readChar_LE();
+    public char readChar() {
+        return (char) ((core.data[position++] << 8) | (core.data[position++] & 0xff));
+    }
 
-    /**
-     * Return the unread data in the buffer as a formatted string suitable for logging.
-     */
-    String dumpRemainingData();
+    public char readChar_LE() {
+        return (char) ((core.data[position++] & 0xff) | (core.data[position++] << 8));
+    }
 
-    /**
-     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
-     */
-    String dumpAllDataWithPosition();
+    public String remainingBytesToAscii() {
+        return HexConverter.octetsToAscii(core.data, available());
+    }
 
-    byte[] copyRemainingBytes();
+    @Override
+    void dumpData(StringBuilder dump) {
+        core.dumpTo(dump);
+    }
 
-    String remainingBytesToAscii();
+    public String dumpRemainingData() {
+        StringBuilder dump = new StringBuilder();
+        dump.append(String.format("Core pos=0x%x Core len=0x%x Remaining core data=%n%n", position, core.length));
+        IORUtil.dump_octets(core.data, position, available(), dump);
+        return dump.toString();
+    }
 
-    void writeTo(OutputStream out) throws IOException;
+    public String dumpAllDataWithPosition() {
+        StringBuilder sb = new StringBuilder();
+        IORUtil.dump_octets(core.data, 0, position, sb);
+        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", position));
+        IORUtil.dump_octets(core.data, position, available(), sb);
+        return sb.toString();
+    }
+
+    public ReadBuffer writeTo(OutputStream out) throws IOException {
+        try {
+            out.write(core.data, position, available());
+            out.flush();
+            position = core.length;
+            return this;
+        } catch (InterruptedIOException ex) {
+            position += ex.bytesTransferred;
+            throw ex;
+        }
+    }
+
+    public ReadBuffer rewindToStart() {
+        position = 0;
+        return this;
+    }
+
+    public ReadBuffer align(AlignmentBoundary boundary) {
+        position = boundary.newIndex(position);
+        return this;
+    }
+
+    public ReadBuffer skipBytes(int n) {
+        if (position + n > core.length) throw new IndexOutOfBoundsException();
+        position = position + n;
+        return this;
+    }
+
+    public ReadBuffer skipToEnd() {
+        position = core.length;
+        return this;
+    }
 }

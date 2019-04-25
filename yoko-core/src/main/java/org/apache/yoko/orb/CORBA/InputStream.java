@@ -25,7 +25,7 @@ import org.apache.yoko.orb.OB.ObjectFactory;
 import org.apache.yoko.orb.OB.TypeCodeCache;
 import org.apache.yoko.orb.OB.ValueReader;
 import org.apache.yoko.orb.OCI.AlignmentBoundary;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
@@ -1487,7 +1487,7 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public InputStream(byte[] data, boolean swap, CodeConverters codeConverters, GiopVersion giopVersion) {
-        this(BufferFactory.createReadBuffer(data), swap, codeConverters, giopVersion);
+        this(Buffer.createReadBuffer(data), swap, codeConverters, giopVersion);
     }
 
     public InputStream(ReadBuffer readBuffer, int offs, boolean swap) {
@@ -1503,7 +1503,7 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public InputStream(byte[] data) {
-        this(BufferFactory.createReadBuffer(data));
+        this(Buffer.createReadBuffer(data));
     }
 
     public void _OB_codeConverters(CodeConverters converters, GiopVersion giopVersion) {

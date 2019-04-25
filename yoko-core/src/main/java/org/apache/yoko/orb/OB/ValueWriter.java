@@ -22,7 +22,6 @@ import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;

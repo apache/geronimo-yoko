@@ -20,7 +20,7 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -386,7 +386,7 @@ final class GIOPClient extends Client {
             }
 
             ProfileInfo profileInfo = down.profileInfo();
-            out.value = new OutputStream(BufferFactory.createWriteBuffer(12).padAll(), codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
+            out.value = new OutputStream(Buffer.createWriteBuffer(12).padAll(), codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
 
             // Create GIOP outgoing message
             GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, profileInfo);

@@ -20,7 +20,7 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -219,7 +219,7 @@ public class Upcall {
 
     public void createOutputStream(int offset) {
         final GiopVersion giopVersion = GiopVersion.get(profileInfo_.major, profileInfo_.minor);
-        out_ = new OutputStream(BufferFactory.createWriteBuffer(offset).padAll(), in_._OB_codeConverters(), giopVersion);
+        out_ = new OutputStream(Buffer.createWriteBuffer(offset).padAll(), in_._OB_codeConverters(), giopVersion);
     }
 
     public InputStream preUnmarshal() throws LocationForward {

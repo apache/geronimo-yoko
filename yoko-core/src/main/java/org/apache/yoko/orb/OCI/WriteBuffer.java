@@ -16,19 +16,150 @@
  */
 package org.apache.yoko.orb.OCI;
 
-import org.omg.CORBA.portable.InputStream;
-
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.util.Arrays;
 import java.util.logging.Logger;
 
-public interface WriteBuffer extends BufferFacet<WriteBuffer> {
-    WriteBuffer trim();
+@SuppressWarnings({"PointlessBitwiseExpression", "OctalInteger"})
+public final class WriteBuffer extends Buffer<WriteBuffer> {
+    private static final byte PAD_BYTE = (byte) 0xBD;
+    /**
+     * The base 2 log of the size of our padding array.
+     * The array size must be a power of 2, so that bitwise
+     * operations can be used in place of arithmetic operations.
+     */
+    private static final int PADDING_POWER = 5;
+    private static final byte[] PADDING = new byte[1<<PADDING_POWER];
+    static { Arrays.fill(PADDING, PAD_BYTE); }
 
-    ReadBuffer readFromStart();
+    private final Core core;
 
-    void padAlign(AlignmentBoundary boundary);
+    WriteBuffer(Core core) { this.core = core; }
 
-    WriteBuffer padAll();
+    @Override
+    public int length() {
+        return core.length;
+    }
+
+    @Override
+    boolean dataEquals0(WriteBuffer that) {
+        return this.core.dataEquals(that.core);
+    }
+
+    public boolean readFrom(InputStream in) throws IOException {
+        try {
+            int result = in.read(core.data, position, available());
+            if (result <= 0) return false;
+            position += result;
+            return true;
+        } catch (InterruptedIOException ex) {
+            position += ex.bytesTransferred;
+            throw ex;
+        }
+    }
+
+    public WriteBuffer readFrom(org.omg.CORBA.portable.InputStream source) {
+        final int length = available();
+        source.read_octet_array(core.data, position, length);
+        position += length;
+        return this;
+    }
+
+    public WriteBuffer writeBytes(byte[] bytes) {
+        return writeBytes(bytes, 0, bytes.length);
+    }
+
+    public WriteBuffer writeBytes(byte[] bytes, int offset, int length) {
+        System.arraycopy(bytes, 0, core.data, position, length);
+        position += length;
+        return this;
+    }
+
+    public WriteBuffer writeByte(int i) {
+        core.data[position++] = (byte)i;
+        return this;
+    }
+
+    public WriteBuffer writeByte(byte b) {
+        core.data[position++] = b;
+        return this;
+    }
+
+    public WriteBuffer writeChar(char value) {
+        core.data[position++] = (byte) (value >> 010);
+        core.data[position++] = (byte) (value >> 000);
+        return this;
+    }
+
+    public WriteBuffer writeShort(short value) {
+        core.data[position++] = (byte) (value >> 010);
+        core.data[position++] = (byte) (value >> 000);
+        return this;
+    }
+
+    public WriteBuffer writeInt(int value) {
+        core.data[position++] = (byte) (value >> 030);
+        core.data[position++] = (byte) (value >> 020);
+        core.data[position++] = (byte) (value >> 010);
+        core.data[position++] = (byte) (value >> 000);
+        return this;
+    }
+
+    public WriteBuffer writeLong(long value) {
+        core.data[position++] = (byte) (value >> 070);
+        core.data[position++] = (byte) (value >> 060);
+        core.data[position++] = (byte) (value >> 050);
+        core.data[position++] = (byte) (value >> 040);
+        core.data[position++] = (byte) (value >> 030);
+        core.data[position++] = (byte) (value >> 020);
+        core.data[position++] = (byte) (value >> 010);
+        core.data[position++] = (byte) (value >> 000);
+        return this;
+    }
+
+    /**
+     * Leaves a 4 byte space to write a length. When {@link SimplyCloseable#close()} is called,
+     * the number of intervening bytes is written as a length to the remembered location.
+     * @param logger the logger to use to log the operations - must not be null
+     */
+    public SimplyCloseable recordLength(final Logger logger) {
+        final int lengthPosition = position;
+        logger.finest("Writing a gap value for a length at offset " + lengthPosition);
+        pad(4);
+        return new SimplyCloseable() {
+            public void close() {
+                final int length = position - (lengthPosition + 4);
+                core.data[lengthPosition + 0] = (byte) (length >> 030);
+                core.data[lengthPosition + 1] = (byte) (length >> 020);
+                core.data[lengthPosition + 2] = (byte) (length >> 010);
+                core.data[lengthPosition + 3] = (byte) (length >> 000);
+                logger.finest("Wrote a length value of " + length + " at offset " + lengthPosition);
+            }
+        };
+    }
+
+    private WriteBuffer pad(int n) {
+        // fastpath for n < 8
+        final byte padByte = PAD_BYTE;
+        switch (n) {
+        case 7: writeByte(padByte);
+        case 6: writeByte(padByte);
+        case 5: writeByte(padByte);
+        case 4: writeByte(padByte);
+        case 3: writeByte(padByte);
+        case 2: writeByte(padByte);
+        case 1: writeByte(padByte);
+        case 0: break;
+        default:
+            // write as many full copies of PADDING as required
+            for (int i = n >> PADDING_POWER; i > 0; i--) writeBytes(PADDING);
+            // write any remaining bytes of PADDING
+            writeBytes(PADDING, 0, n & ((1 << PADDING_POWER) - 1));
+        }
+        return this;
+    }
 
     /**
      * Ensure there is space to write from the current position,
@@ -38,45 +169,41 @@ public interface WriteBuffer extends BufferFacet<WriteBuffer> {
      * @param align the size of boundary to align on (in bytes)
      * @return <code>true</code> iff an existing buffer had to be resized
      */
-    boolean ensureAvailable(int size, AlignmentBoundary boundary);
+    public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
+        final int gap = boundary.gap(position);
+        try { return ensureAvailable(gap + size); }
+        finally { this.pad(gap); }
+    }
 
     /**
      * Ensure there is space to write from the current position.
      * @param size the number of bytes to be written
      * @return <code>true</code> iff an existing buffer had to be resized
      */
-    boolean ensureAvailable(int size);
+    public boolean ensureAvailable(int size) {
+        final int shortfall = size - available();
+        return shortfall > 0 && core.growBy(shortfall);
+    }
 
-    void writeBytes(byte[] bytes);
+    public WriteBuffer padAlign(AlignmentBoundary boundary) {
+        return pad(boundary.gap(position));
+    }
 
-    void writeBytes(byte[] bytes, int offset, int length);
+    public WriteBuffer padAll() {
+        return pad(core.length);
+    }
 
-    void readFrom(InputStream source);
+    public WriteBuffer trim() {
+        core.length = position;
+        return this;
+    }
 
-    void writeByte(int i);
+    public ReadBuffer readFromStart() {
+        return new ReadBuffer(core);
+    }
 
-    void writeByte(byte b);
-
-    void writeChar(char value);
-
-    void writeShort(short value);
-
-    void writeInt(int value);
-
-    void writeLong(long value);
-
-    /**
-     * Write the available bytes from <code>reader</code>.
-     * @param reader
-     */
-    void writeBytes(ReadBuffer reader);
-
-    boolean readFrom(java.io.InputStream in) throws IOException;
-
-    /**
-     * Leaves a 4 byte space to write a length. When {@link SimplyCloseable#close()} is called,
-     * the number of intervening bytes is written as a length to the remembered location.
-     * @param logger the logger to use to log the operations - must not be null
-     */
-    SimplyCloseable recordLength(Logger logger);
+    @Override
+    void dumpData(StringBuilder dump) {
+        core.dumpTo(dump);
+    }
 }

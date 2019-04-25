@@ -103,7 +103,8 @@ final public class GIOPIncomingMessage {
                 orbInstance_.getLogger().warning(msg);
                 throw new IMP_LIMIT(describeImpLimit(MinorMessageSizeLimit), MinorMessageSizeLimit, COMPLETED_NO);
             }
-            writeBuffer.writeBytes(readBuffer);
+            writeBuffer.ensureAvailable(readBuffer.available());
+            readBuffer.readBytes(writeBuffer);
         }
     }
 

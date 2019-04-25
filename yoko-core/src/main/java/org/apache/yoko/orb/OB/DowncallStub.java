@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
@@ -550,7 +550,7 @@ public final class DowncallStub {
         //
         // Create buffer to contain our marshalable data
         //
-        WriteBuffer writeBuffer = BufferFactory.createWriteBuffer(12).padAll();
+        WriteBuffer writeBuffer = Buffer.createWriteBuffer(12).padAll();
 
         //
         // Obtain information regarding our target
