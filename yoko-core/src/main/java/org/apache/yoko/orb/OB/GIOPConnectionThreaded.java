@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -358,7 +358,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
 
         while (true) {
             // Setup the incoming message buffer
-            WriteBuffer writer = BufferFactory.createWriteBuffer(12);
+            WriteBuffer writer = Buffer.createWriteBuffer(12);
 
             // Receive header, blocking, detect connection loss
             try {

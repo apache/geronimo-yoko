@@ -21,7 +21,7 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -680,7 +680,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
 
             // Send back locate reply message
-            try (OutputStream out = new OutputStream(BufferFactory.createWriteBuffer(12).padAll())) {
+            try (OutputStream out = new OutputStream(Buffer.createWriteBuffer(12).padAll())) {
                 ProfileInfo profileInfo = new ProfileInfo();
                 profileInfo.major = msg.version().major;
                 profileInfo.minor = msg.version().minor;

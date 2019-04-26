@@ -24,7 +24,7 @@ import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OB.ValueWriter;
 import org.apache.yoko.orb.OCI.AlignmentBoundary;
-import org.apache.yoko.orb.OCI.BufferFactory;
+import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -675,7 +675,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // To avoid re-allocation, create a large enough temporary buffer up front.
             // NOTE: we need to use a temporary buffer to count the bytes reliably, because
             // chunking can add bytes other than just the chars to be written.
-            final WriteBuffer tmpWriter = BufferFactory.createWriteBuffer(4 + value.length() * 4 + 1);
+            final WriteBuffer tmpWriter = Buffer.createWriteBuffer(4 + value.length() * 4 + 1);
             if (charConversionRequired_) {
                 for (char c : arr) converter.write_char(tmpWriter, converter.convert(checkChar(c)));
             } else {
@@ -689,7 +689,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             write_ulong(tmpWriter.length());
             // and write the contents
             addCapacity(tmpWriter.length());
-            writeBuffer.writeBytes(tmpWriter.readFromStart());
+            tmpWriter.readFromStart().readBytes(writeBuffer);
         }
     }
 
@@ -1541,19 +1541,19 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     public OutputStream() {
-        this(BufferFactory.createWriteBuffer(), null, null);
+        this(Buffer.createWriteBuffer(), null, null);
     }
 
     public OutputStream(int initialBufferSize) {
-        this(BufferFactory.createWriteBuffer(initialBufferSize), null, null);
+        this(Buffer.createWriteBuffer(initialBufferSize), null, null);
     }
 
     public OutputStream(CodeConverters converters, GiopVersion giopVersion) {
-        this(BufferFactory.createWriteBuffer(), converters, giopVersion);
+        this(Buffer.createWriteBuffer(), converters, giopVersion);
     }
 
     public OutputStream(int initialBufferSize, CodeConverters converters, GiopVersion giopVersion) {
-        this(BufferFactory.createWriteBuffer(initialBufferSize), converters, giopVersion);
+        this(Buffer.createWriteBuffer(initialBufferSize), converters, giopVersion);
     }
 
     public OutputStream(WriteBuffer writeBuffer) {
