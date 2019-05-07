@@ -21,7 +21,7 @@ import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
-import org.apache.yoko.orb.OB.ParameterDesc;
+import org.apache.yoko.orb.OB.PIDowncall;
 import org.apache.yoko.orb.OB.Util;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.util.CollectionExtras;
@@ -32,15 +32,11 @@ import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_PARAM;
-import org.omg.CORBA.ExceptionList;
 import org.omg.CORBA.INV_POLICY;
 import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.NVList;
-import org.omg.CORBA.NamedValue;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.SystemException;
-import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.UnknownUserException;
 import org.omg.CORBA.portable.ObjectImpl;
 import org.omg.IOP.IOR;
@@ -56,7 +52,6 @@ import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import org.omg.PortableInterceptor.USER_EXCEPTION;
 
 import java.util.List;
-import java.util.Vector;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
@@ -243,81 +238,22 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
     // send_request: yes send_poll: no receive_reply: no
     // receive_exception: no receive_other: no
     public void add_request_service_context(ServiceContext sc, boolean addReplace) {
-        //
-        // This isn't valid in any call other than send_request (note that
-        // send_poll isn't currently implemented)
-        //
-        if (replyStatus >= 0)
-            throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
+        // This isn't valid in any call other than send_request (note that send_poll isn't currently implemented)
+        if (replyStatus >= 0) throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
 
         addServiceContext(requestSCL_, sc, addReplace);
     }
 
-    private ClientRequestInfo_impl(ORB orb, int id, String op,
-                                   boolean responseExpected, IOR ior,
-                                   IOR originalIor,
-                                   ProfileInfo profileInfo,
-                                   Policy[] policies,
-                                   Vector requestSCL,
-                                   Vector replySCL,
-                                   ORBInstance orbInstance, Current_impl current,
-                                   ArgumentStrategy argumentStrategy) {
-        super(orb, id, op, responseExpected, requestSCL, replySCL, orbInstance, policies, current);
-        this.effectiveIor = ior;
-        this.originalIor = originalIor;
-        this.profileInfo = profileInfo;
+    public ClientRequestInfo_impl(ORB orb, ORBInstance orbInstance, Current_impl current, PIDowncall dc) {
+        super(orb, orbInstance, current, dc);
+        this.effectiveIor = dc.effectiveIor;
+        this.originalIor = dc.originalIor;
+        this.profileInfo = dc.profileInfo();
         this.newThreadScopePICurrentSlotData = piCurrent._OB_newSlotTable();
         this.replyStatus = NO_REPLY;
-        this.argStrategy = argumentStrategy;
+        this.argStrategy = dc.createArgumentStrategy(orb);
     }
 
-    /**
-     * Construct a ClientRequestInfo for a request without any arguments.
-     */
-    public ClientRequestInfo_impl(ORB orb, int id, String op,
-                                  boolean responseExpected, IOR ior,
-                                  IOR originalIor,
-                                  ProfileInfo profileInfo,
-                                  Policy[] policies,
-                                  Vector requestSCL,
-                                  Vector replySCL,
-                                  ORBInstance orbInstance, Current_impl current) {
-        this(orb, id, op, responseExpected, ior, originalIor, profileInfo, policies, requestSCL, replySCL, orbInstance, current, new ArgumentStrategyNull(orb));
-    }
-
-    /**
-     * Construct a ClientRequestInfo for a request with DII-style arguments.
-     */
-    public ClientRequestInfo_impl(ORB orb, int id, String op,
-                                  boolean responseExpected, IOR ior,
-                                  IOR originalIor,
-                                  ProfileInfo profileInfo,
-                                  Policy[] policies,
-                                  Vector requestSCL,
-                                  Vector replySCL,
-                                  ORBInstance orbInstance,
-                                  Current_impl current, NVList args,
-                                  NamedValue result,
-                                  ExceptionList exceptions) {
-        this(orb, id, op, responseExpected, ior, originalIor, profileInfo, policies, requestSCL, replySCL, orbInstance, current, new ArgumentStrategyDII(orb, args, result, exceptions));
-    }
-
-    /**
-     * Construct a ClientRequestInfo for a request with SII-style arguments.
-     */
-    public ClientRequestInfo_impl(ORB orb, int id, String op,
-                                  boolean responseExpected, IOR ior,
-                                  IOR originalIor,
-                                  ProfileInfo profileInfo,
-                                  Policy[] policies, Vector requestSCL,
-                                  Vector replySCL,
-                                  ORBInstance orbInstance,
-                                  Current_impl current,
-                                  ParameterDesc[] argDesc,
-                                  ParameterDesc retDesc,
-                                  TypeCode[] exceptionTC) {
-        this(orb, id, op, responseExpected, ior, originalIor, profileInfo, policies, requestSCL, replySCL, orbInstance, current, new ArgumentStrategySII(orb, argDesc, retDesc, exceptionTC));
-    }
 
     public void _OB_request(List<ClientRequestInterceptor> interceptors) throws LocationForward {
         // The PICurrent needs a new set of slot data

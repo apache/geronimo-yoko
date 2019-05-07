@@ -17,12 +17,27 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.orb.OB.PIArgsDowncall;
+import org.apache.yoko.orb.OB.PIDIIDowncall;
+import org.apache.yoko.orb.OB.PIVoidDowncall;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.TypeCode;
 import org.omg.Dynamic.Parameter;
 
-abstract class ArgumentStrategy {
+public abstract class ArgumentStrategy {
+    public static ArgumentStrategy create(ORB orb, PIVoidDowncall downcall) {
+        return new ArgumentStrategyNull(orb);
+    }
+
+    public static ArgumentStrategy create(ORB orb, PIArgsDowncall pad) {
+        return new ArgumentStrategySII(orb, pad.argDesc_, pad.retDesc_, pad.exceptionTC_);
+    }
+
+    public static ArgumentStrategy create(ORB orb, PIDIIDowncall pdd) {
+        return new ArgumentStrategyDII(orb, pdd.args_, pdd.result_, pdd.exceptionList_);
+    }
+
     protected final ORB orb_;
 
     //

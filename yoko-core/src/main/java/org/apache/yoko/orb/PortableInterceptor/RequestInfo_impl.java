@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.Downcall;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
@@ -37,7 +37,8 @@ import org.omg.PortableInterceptor.RequestInfo;
 import java.util.Vector;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert.*;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
@@ -103,7 +104,6 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         }
         l.addElement(copyServiceContext(sc));
     }
-
     // The ID uniquely identifies an active request/reply sequence.
     //
     // Client side:
@@ -273,8 +273,8 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         //
         if (replyStatus < 0) {
             throw new BAD_INV_ORDER(
-                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
-                    MinorCodes.MinorInvalidPICall,
+                    describeBadInvOrder(MinorInvalidPICall),
+                    MinorInvalidPICall,
                     COMPLETED_NO);
         }
         return replyStatus;
@@ -300,8 +300,8 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         //
         if (replyStatus != LOCATION_FORWARD.value) {
             throw new BAD_INV_ORDER(
-                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
-                    MinorCodes.MinorInvalidPICall,
+                    describeBadInvOrder(MinorInvalidPICall),
+                    MinorInvalidPICall,
                     COMPLETED_NO);
         }
 
@@ -369,14 +369,14 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     //
     public ServiceContext get_reply_service_context(int id) {
         if (replyStatus < 0) {
-            throw new BAD_INV_ORDER(
-                    describeBadInvOrder(MinorCodes.MinorInvalidPICall),
-                    MinorCodes.MinorInvalidPICall,
-                    COMPLETED_NO);
+            throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
         }
         return getServiceContext(replySCL_, id);
     }
 
+    public RequestInfo_impl(ORB orb, ORBInstance orbInstance, Current_impl current, Downcall dc) {
+        this(orb, dc.requestId(), dc.operation(), dc.responseExpected(), dc.requestSCL_, dc.replySCL_, orbInstance, dc.policies().value, current);
+    }
 
     protected RequestInfo_impl(ORB orb, int id, String op,
                                boolean responseExpected, Vector requestSCL,

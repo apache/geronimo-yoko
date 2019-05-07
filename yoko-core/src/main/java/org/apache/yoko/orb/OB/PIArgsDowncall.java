@@ -19,13 +19,15 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.PortableInterceptor.ArgumentStrategy;
+import org.omg.CORBA.ORB;
 import org.omg.CORBA.TypeCode;
 import org.omg.IOP.IOR;
 
 public class PIArgsDowncall extends PIDowncall {
-    protected ParameterDesc[] argDesc_;
-    protected ParameterDesc retDesc_;
-    protected TypeCode[] exceptionTC_;
+    public final ParameterDesc[] argDesc_;
+    public final ParameterDesc retDesc_;
+    public final TypeCode[] exceptionTC_;
 
     public PIArgsDowncall(ORBInstance orbInstance, Client client,
             ProfileInfo profileInfo,
@@ -39,10 +41,8 @@ public class PIArgsDowncall extends PIDowncall {
         exceptionTC_ = exceptionTC;
     }
 
-    public OutputStream preMarshal() throws LocationForward, FailureException {
-        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_, IOR_, origIOR_,
-                profileInfo_, policies_.value, requestSCL_, replySCL_, argDesc_, retDesc_, exceptionTC_);
-
-        return preMarshalBase(); // Equivalent to Downcall::preMarshal()
+    @Override
+    public ArgumentStrategy createArgumentStrategy(ORB orb) {
+        return ArgumentStrategy.create(orb, this);
     }
 }

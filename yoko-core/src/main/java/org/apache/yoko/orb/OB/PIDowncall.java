@@ -20,7 +20,9 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.PortableInterceptor.ArgumentStrategy;
 import org.apache.yoko.util.concurrent.AutoLock;
+import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.UNKNOWN;
 import org.omg.CORBA.UNKNOWNHelper;
@@ -33,10 +35,10 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException;
 import static org.apache.yoko.orb.OB.MinorCodes.describeUnknown;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 
-public class PIDowncall extends Downcall {
-    protected final IOR IOR_;
+public abstract class PIDowncall extends Downcall {
+    public final IOR effectiveIor;
 
-    protected final IOR origIOR_;
+    public final IOR originalIor;
 
     protected final PIManager piManager_;
 
@@ -99,16 +101,17 @@ public class PIDowncall extends Downcall {
             IOR IOR, IOR origIOR,
             PIManager piManager) {
         super(orbInstance, client, profileInfo, policies, op, resp);
-        IOR_ = IOR;
-        origIOR_ = origIOR;
+        effectiveIor = IOR;
+        originalIor = origIOR;
         piManager_ = piManager;
     }
 
-    public OutputStream preMarshal() throws LocationForward, FailureException {
-        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_, IOR_,
-                origIOR_, profileInfo_, policies_.value, requestSCL_, replySCL_);
+    public final OutputStream preMarshal() throws LocationForward, FailureException {
+        requestInfo_ = piManager_.clientSendRequest(this);
         return super.preMarshal();
     }
+
+    public abstract ArgumentStrategy createArgumentStrategy(ORB orb);
 
     public void postUnmarshal() throws LocationForward, FailureException {
         try (AutoLock lock = stateLock.getReadLock()) {

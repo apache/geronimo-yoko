@@ -194,8 +194,7 @@ public final class DowncallStub {
     //
     // Operations to create new Downcall objects
     //
-    public Downcall createDowncall(String op, boolean resp)
-            throws FailureException {
+    public Downcall createDowncall(String op, boolean resp) throws FailureException {
         ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
         Assert._OB_assert(client != null);
@@ -206,7 +205,7 @@ public final class DowncallStub {
 
         PIManager piManager = orbInstance_.getPIManager();
         if (piManager.haveClientInterceptors()) {
-            return new PIDowncall(orbInstance_, client, profile.value, policies_, op, resp, IOR_, origIOR_, piManager);
+            return new PIVoidDowncall(orbInstance_, client, profile.value, policies_, op, resp, IOR_, origIOR_, piManager);
         } else {
             return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
         }

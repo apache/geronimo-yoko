@@ -98,9 +98,9 @@ public class Downcall {
     protected IOR forwardIOR_;
 
     /** The request and reply service contexts */
-    protected Vector<ServiceContext> requestSCL_ = new Vector<>();
+    public Vector<ServiceContext> requestSCL_ = new Vector<>();
 
-    protected Vector<ServiceContext> replySCL_ = new Vector<>();
+    public Vector<ServiceContext> replySCL_ = new Vector<>();
 
     // ----------------------------------------------------------------------
     // Downcall private and protected member implementations
@@ -240,8 +240,7 @@ public class Downcall {
             replySCL_.setElementAt(scl[i], i);
     }
 
-    public OutputStream preMarshal()
-            throws LocationForward, FailureException {
+    public OutputStream preMarshal() throws LocationForward, FailureException {
         return preMarshalBase();
     }
 

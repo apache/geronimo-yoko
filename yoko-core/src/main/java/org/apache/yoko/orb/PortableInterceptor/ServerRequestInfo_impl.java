@@ -61,11 +61,13 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
 import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
 import static org.apache.yoko.orb.OB.MinorCodes.describeUnknown;
+import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
 import static org.apache.yoko.util.CollectionExtras.removeInReverse;
-import static org.omg.CORBA.CompletionStatus.*;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 
 final public class ServerRequestInfo_impl extends RequestInfo_impl implements ServerRequestInfoExt {
-    private final List<ServerRequestInterceptor> interceptors = new Vector<>();
+    private final List<ServerRequestInterceptor> interceptors = newSynchronizedList();
     private final byte[] adapterId;
     private final byte[] objectId;
     private final ObjectReferenceTemplate adapterTemplate;

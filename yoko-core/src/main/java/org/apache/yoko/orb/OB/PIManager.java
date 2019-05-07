@@ -17,16 +17,13 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl;
 import org.apache.yoko.orb.PortableInterceptor.Current_impl;
 import org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.ExceptionList;
 import org.omg.CORBA.InvalidPolicies;
 import org.omg.CORBA.NVList;
-import org.omg.CORBA.NamedValue;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
@@ -58,6 +55,7 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.util.CollectionExtras.allOf;
 import static org.apache.yoko.util.CollectionExtras.filterByType;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
@@ -122,21 +120,21 @@ final public class PIManager {
     }
 
     public void registerPolicyFactory(int type, PolicyFactory factory) {
-        Assert._OB_assert(orbInstance != null);
+        _OB_assert(orbInstance != null);
         orbInstance.getPolicyFactoryManager().registerPolicyFactory(type, factory, false);
     }
 
     public void setORBInstance(ORBInstance orbInstance) {
         this.orbInstance = orbInstance;
 
-        Assert._OB_assert(current == null);
+        _OB_assert(current == null);
         current = new Current_impl(orb);
 
         InitialServiceManager ism = this.orbInstance.getInitialServiceManager();
         try {
             ism.addInitialReference("PICurrent", current);
         } catch (InvalidName ex) {
-            Assert._OB_assert(ex);
+            _OB_assert(ex);
         }
     }
 
@@ -154,58 +152,16 @@ final public class PIManager {
                 Policy[] pl = {new InterceptorPolicy_impl(false)};
                 pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
             } catch (InvalidName | InvalidPolicies ex) {
-                Assert._OB_assert(ex);
+                _OB_assert(ex);
             }
         }
 
         allOrbInitializersHaveBeenInvoked = true;
     }
 
-    // No argument information available
-    ClientRequestInfo clientSendRequest(String op, boolean responseExpected, IOR IOR, IOR origIOR,
-            ProfileInfo profileInfo, Policy[] policies, Vector requestSCL, Vector replySCL) throws LocationForward {
-        Assert._OB_assert(current != null);
-        ClientRequestInfo_impl info = new ClientRequestInfo_impl(orb, nextID(), op, responseExpected, IOR, origIOR,
-                profileInfo, policies, requestSCL, replySCL, orbInstance, current);
-
+    ClientRequestInfo clientSendRequest(PIDowncall downcall) throws LocationForward {
+        ClientRequestInfo_impl info = new ClientRequestInfo_impl(orb, orbInstance, current, downcall);
         info._OB_request(clientRequestInterceptors);
-
-        return info;
-    }
-
-    // DII style
-    ClientRequestInfo clientSendRequest(String op,
-            boolean responseExpected, IOR IOR,
-            IOR origIOR,
-            ProfileInfo profileInfo,
-            Policy[] policies, Vector requestSCL,
-            Vector replySCL, NVList args,
-            NamedValue result,
-            ExceptionList exceptions) throws LocationForward {
-        Assert._OB_assert(current != null);
-        ClientRequestInfo_impl info = new ClientRequestInfo_impl(orb, nextID(), op, responseExpected, IOR, origIOR,
-                profileInfo, policies, requestSCL, replySCL, orbInstance, current, args, result, exceptions);
-
-        info._OB_request(clientRequestInterceptors);
-
-        return info;
-    }
-
-    // SII style
-    ClientRequestInfo clientSendRequest(String op,
-                                        boolean responseExpected, IOR IOR,
-                                        IOR origIOR,
-                                        ProfileInfo profileInfo,
-                                        Policy[] policies, Vector requestSCL,
-                                        Vector replySCL, ParameterDesc[] argDesc,
-                                        ParameterDesc retDesc, TypeCode[] exceptionTC)
-            throws LocationForward {
-        Assert._OB_assert(current != null);
-        ClientRequestInfo_impl info = new ClientRequestInfo_impl(orb, nextID(), op, responseExpected, IOR, origIOR,
-                profileInfo, policies, requestSCL, replySCL, orbInstance, current, argDesc, retDesc, exceptionTC);
-
-        info._OB_request(clientRequestInterceptors);
-
         return info;
     }
 
@@ -237,7 +193,7 @@ final public class PIManager {
             byte[] objectId,
             ObjectReferenceTemplate adapterTemplate,
             Vector in, Vector out, TransportInfo transportInfo) {
-        Assert._OB_assert(current != null);
+        _OB_assert(current != null);
         return new ServerRequestInfo_impl(orb, nextID(), op, responseExpected, policies, adapterId,
                 objectId, adapterTemplate, in, out, orbInstance, current, transportInfo);
     }
