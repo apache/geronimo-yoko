@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.CLIENT_SIDE;
@@ -44,11 +45,6 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     private final Origin origin;
     private final ListenerMap listenMap_;
     private volatile ListenPoint[] listenPoints_ = null;
-
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public String id() {
         return PLUGIN_ID.value;
@@ -90,76 +86,48 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
 
     public short remote_port() {return (short)socket.getPort();}
 
-    public ServiceContext[] get_service_contexts(Policy[] policies) {
-        ServiceContext[] scl;
-        boolean bHaveBidir = false;
-
+    public ServiceContexts get_service_contexts(Policy[] policies) {
         for (Policy policy : policies) {
             if (policy.policy_type() == BIDIRECTIONAL_POLICY_TYPE.value) {
-                BidirectionalPolicy p = BidirectionalPolicyHelper
-                        .narrow(policy);
-                if (p.value() == BOTH.value)
-                    bHaveBidir = true;
-                break;
+                BidirectionalPolicy p = BidirectionalPolicyHelper.narrow(policy);
+                if (p.value() == BOTH.value) {
+                    BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
+                    biDirCtxt.listen_points = listenMap_.getListenPoints();
+
+                    try (OutputStream out = new OutputStream()) {
+                        out._OB_writeEndian();
+                        BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+                        // Create and fill the return context list
+                        return ServiceContexts.unmodifiable(new ServiceContext(BI_DIR_IIOP.value, out.copyWrittenBytes()));
+                    }
+                }
             }
         }
 
-        if (bHaveBidir) {
-            BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
-            biDirCtxt.listen_points = listenMap_.getListenPoints();
-
-            try (OutputStream out = new OutputStream()) {
-                out._OB_writeEndian();
-                BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
-
-                // Fill in the bidir service context
-                ServiceContext context = new ServiceContext();
-                context.context_id = BI_DIR_IIOP.value;
-                context.context_data = out.copyWrittenBytes();
-
-                // Create and fill the return context list
-                scl = new ServiceContext[1];
-                scl[0] = context;
-                return scl;
-            }
-        }
-
-        //
-        // we don't have a bidir service context so return an array of
-        // length 0
-        //
-        scl = new ServiceContext[0];
-        return scl;
+        // we don't have a bidir service context so return an array of length 0
+        return ServiceContexts.EMPTY;
     }
 
-    public void handle_service_contexts(ServiceContext[] contexts) {
-        for (ServiceContext context : contexts) {
-            if (context.context_id == BI_DIR_IIOP.value) {
-                InputStream in = new InputStream(context.context_data);
-                in._OB_readEndian();
+    public void handle_service_contexts(ServiceContexts contexts) {
+        ServiceContext context = contexts.get(BI_DIR_IIOP.value);
+        if (context == null) return;
+        InputStream in = new InputStream(context.context_data);
+        in._OB_readEndian();
 
-                // unmarshal the octets back to the bidir format
-                BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
+        // unmarshal the octets back to the bidir format
+        BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
 
-                //
-                // save the listening points in the transport
-                //
-                _OB_setListenPoints(biDirCtxt.listen_points);
-
-                break;
-            }
-        }
+        // save the listening points in the transport
+        _OB_setListenPoints(biDirCtxt.listen_points);
     }
 
-    public synchronized boolean received_bidir_SCL() {
+    public synchronized boolean received_bidir_service_context() {
         return listenPoints_ != null && (listenPoints_.length > 0);
     }
 
     public synchronized boolean endpoint_alias_match(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
-        //
         // we only deal with Connectors that are of our specific type,
         // namely IIOP connectors (and ConnectorInfos)
-        //
         ConnectorInfo_impl infoImpl;
         try {
             infoImpl = (ConnectorInfo_impl) connInfo;
@@ -167,12 +135,9 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
             return false;
         }
 
-        //
         // compare the endpoint information in this connector with the
         // various endpoint inforamtion in our listenMap_
-        //
-        if (listenPoints_ == null)
-            return false;
+        if (listenPoints_ == null) return false;
 
         short port = infoImpl.remote_port();
         String host = infoImpl.remote_addr();
@@ -189,16 +154,11 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         listenPoints_ = lp;
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
     private TransportInfo_impl(Socket socket, Origin origin, ListenerMap lm) {
         this.socket = socket;
         this.origin = origin;
         listenMap_ = lm;
     }
-
 
     // client-side constructor
     TransportInfo_impl(Transport_impl transport, ListenerMap lm) {

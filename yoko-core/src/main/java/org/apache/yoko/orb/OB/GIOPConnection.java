@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -19,13 +19,14 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -52,7 +53,6 @@ import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 import org.omg.IOP.IORHolder;
 import org.omg.IOP.ServiceContext;
-import org.omg.IOP.ServiceContextListHolder;
 import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
@@ -218,85 +218,65 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     protected ACMTask acmTask_ = null;
 
-    // ----------------------------------------------------------------
-    // Protected methods
-    // ----------------------------------------------------------------
-
-    //
     // check if its compliant for this connection to send a
     // CloseConnection message to its peer
-    //
     synchronized protected boolean canSendCloseConnection() {
-        //
         // any GIOP versioned server can send a CloseConnection
-        //
-        if ((properties_ & Property.ServerEnabled) != 0)
-            return true;
+        if ((properties_ & Property.ServerEnabled) != 0) return true;
 
-        //
-        // anything >= than GIOP 1.2 can send a CloseConnection
-        //
-        if (giopVersion_.major > 1
-                || (giopVersion_.major == 1 && giopVersion_.minor >= 2))
-            return true;
+        // anything >= GIOP 1.2 can send a CloseConnection
+        if (giopVersion_.major > 1 || (giopVersion_.major == 1 && giopVersion_.minor >= 2)) return true;
 
-        //
         // otherwise we can't send it
-        //
         return false;
     }
 
-    /** read the codeset information from the SCL */
-    private void readCodeConverters(ServiceContext[] scl) {
-        if (codeConverters_ != null)
-            return;
+    /** read the codeset information from the service contexts */
+    private void readCodeConverters(ServiceContexts contexts) {
+        if (codeConverters_ != null) return;
+        ServiceContext cssc = contexts.get(CodeSets.value);
+        if (cssc == null) return;
+        CodeSetContextHolder codeSetContextH = new CodeSetContextHolder();
+        CodeSetUtil.extractCodeSetContext(cssc, codeSetContextH);
+        CodeSetContext codeSetContext = codeSetContextH.value;
 
-        for (ServiceContext aScl : scl) {
-            if (aScl.context_id == CodeSets.value) {
-                CodeSetContextHolder codeSetContextH = new CodeSetContextHolder();
-                CodeSetUtil.extractCodeSetContext(aScl, codeSetContextH);
-                CodeSetContext codeSetContext = codeSetContextH.value;
+        final int nativeCs = orbInstance_.getNativeCs();
+        final int alienCs = codeSetContext.char_data;
+        final int nativeWcs = orbInstance_.getNativeWcs();
+        final int alienWcs = codeSetContext.wchar_data;
+        final CodeConverterBase inputCharConverter = getConverter(nativeCs, alienCs);
+        final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
+        final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
+        final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
+        codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
 
-                final int nativeCs = orbInstance_.getNativeCs();
-                final int alienCs = codeSetContext.char_data;
-                final int nativeWcs = orbInstance_.getNativeWcs();
-                final int alienWcs = codeSetContext.wchar_data;
-                final CodeConverterBase inputCharConverter = getConverter(nativeCs, alienCs);
-                final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
-                final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
-                final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
-                codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
-
-                CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-                if (coreTraceLevels.traceConnections() >= 2) {
-                    String msg = "receiving transmission code sets";
-                    msg += "\nchar code set: ";
-                    if (codeConverters_.inputCharConverter != null)
-                        msg += codeConverters_.inputCharConverter.getSourceCodeSet().description;
-                    else {
-                        if (alienCs == 0)
-                            msg += "none";
-                        else {
-                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeCs);
-                            msg += info != null ? info.description : null;
-                        }
-                    }
-                    msg += "\nwchar code set: ";
-                    if (codeConverters_.inputWcharConverter != null)
-                        msg += codeConverters_.inputWcharConverter.getSourceCodeSet().description;
-                    else {
-                        if (alienWcs == 0)
-                            msg += "none";
-                        else {
-                            CodeSetInfo info = CodeSetInfo.forRegistryId(nativeWcs);
-                            msg += info != null ? info.description : null;
-                        }
-                    }
-
-                    orbInstance_.getLogger().trace("incoming", msg);
+        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
+        if (coreTraceLevels.traceConnections() >= 2) {
+            String msg = "receiving transmission code sets";
+            msg += "\nchar code set: ";
+            if (codeConverters_.inputCharConverter != null) {
+                msg += codeConverters_.inputCharConverter.getSourceCodeSet().description;
+            } else {
+                if (alienCs == 0) {
+                    msg += "none";
+                } else {
+                    CodeSetInfo info = CodeSetInfo.forRegistryId(nativeCs);
+                    msg += info != null ? info.description : null;
                 }
-                break;
             }
+            msg += "\nwchar code set: ";
+            if (codeConverters_.inputWcharConverter != null) {
+                msg += codeConverters_.inputWcharConverter.getSourceCodeSet().description;
+            } else {
+                if (alienWcs == 0) {
+                    msg += "none";
+                } else {
+                    CodeSetInfo info = CodeSetInfo.forRegistryId(nativeWcs);
+                    msg += info != null ? info.description : null;
+                }
+            }
+
+            orbInstance_.getLogger().trace("incoming", msg);
         }
     }
 
@@ -305,16 +285,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
      * @return true iff an OAInterface is found
      */
     private boolean setOAInterface(ProfileInfo pi) {
-        //
         // Release the old OAInterface
-        //
         oaInterface_ = null;
 
-        //
         // make sure we're allowed to do server processing as well as
         // being bidir enabled. A server's OAInterface should not
         // change whereas a bidir client would need to change regularly
-        //
         _OB_assert((properties_ & Property.CreatedByClient) != 0);
         _OB_assert((properties_ & Property.ServerEnabled) != 0);
         _OB_assert(orbInstance_ != null);
@@ -328,8 +304,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             try {
                 POAManager_impl poamanImpl = (POAManager_impl) poaManager;
 
-                OAInterface oaImpl = poamanImpl
-                        ._OB_getOAInterface();
+                OAInterface oaImpl = poamanImpl._OB_getOAInterface();
 
                 IORHolder refIOR = new IORHolder();
                 if (oaImpl.findByKey(pi.key, refIOR) == OAInterface.OBJECT_HERE) {
@@ -355,19 +330,13 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             String msg = "closing connection\n";
             msg += info.describe();
 
-            if (initiatedClosure)
-                orbInstance_.getLogger().trace("outgoing", msg);
-            else
-                orbInstance_.getLogger().trace("incoming", msg);
-
+            orbInstance_.getLogger().trace(initiatedClosure ? "outgoing" : "incoming", msg);
         }
     }
 
     /** main entry point into message processing - delegate to a specific methods */
     protected Upcall processMessage(GIOPIncomingMessage msg) {
-        //
         // update the version of GIOP found
-        //
         synchronized (this) {
             if (msg.version().major > giopVersion_.major) {
                 giopVersion_.major = msg.version().major;
@@ -378,9 +347,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             }
         }
 
-        //
         // hand off message type processing
-        //
         switch (msg.type().value()) {
             case _Reply:
                 processReply(msg);
@@ -436,17 +403,16 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             return null;
         }
 
-        if (state_ != State.Active)
-            return null;
+        if (state_ != State.Active) return null;
 
         int reqId;
         BooleanHolder response = new BooleanHolder();
         StringHolder op = new StringHolder();
-        ServiceContextListHolder scl = new ServiceContextListHolder();
+        ServiceContexts contexts = new ServiceContexts();
         TargetAddressHolder target = new TargetAddressHolder();
 
         try {
-            reqId = msg.readRequestHeader(response, target, op, scl);
+            reqId = msg.readRequestHeader(response, target, op, contexts);
             if (target.value.discriminator() != KeyAddr.value) {
                 processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 return null;
@@ -456,9 +422,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             return null;
         }
 
-        //
         // Setup upcall data
-        //
         org.omg.GIOP.Version version = msg.version();
 
         ProfileInfo profileInfo = new ProfileInfo();
@@ -468,49 +432,38 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         InputStream in = msg.input();
 
-        //
         // We have some decision making to do here if BiDir is
         // enabled:
         // - If this is a client then make sure to properly
         // evaluate the message and obtain the correct OAInterface
         // to create the upcalls
         // - If this is a server then take the listen points from
-        // the SCL (if the POA has the BiDir policy enabled) and
-        // store them in this' transport for connection reuse
-        //
+        // the service contexts (if the POA has the BiDir policy enabled)
+        // and store them in this' transport for connection reuse
         if ((properties_ & Property.CreatedByClient) != 0) {
             if (!!!setOAInterface(profileInfo)) {
-                //
                 // we can't find an appropriate OAInterface in order
                 // to direct the upcall so we must simply not handle
                 // this request
-                //
                 return null;
             }
         }
 
-        //
-        // Parse the SCL, examining it for various codeset info
-        //
-        readCodeConverters(scl.value);
+        // Parse the service contexts for various codeset info
+        readCodeConverters(contexts);
         in._OB_codeConverters(codeConverters_, GiopVersion.get(version.major, version.minor));
 
-        //
         // read in the peer's sending context runtime object
-        //
-        assignSendingContextRuntime(in, scl.value);
+        assignSendingContextRuntime(in, contexts);
 
-        //
         // New upcall will be started
-        //
-        if (response.value)
-            upcallsInProgress_++;
+        if (response.value) upcallsInProgress_++;
 
         orbInstance_.getLogger().debug("Processing request reqId=" + reqId + " op=" + op.value);
 
         return oaInterface_.createUpcall(
                 response.value ? upcallReturnInterface() : null, profileInfo,
-                transport_.get_info(), reqId, op.value, in, scl.value);
+                transport_.get_info(), reqId, op.value, in, contexts);
     }
 
     /** process a reply message */
@@ -522,10 +475,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         int reqId;
         ReplyStatusType_1_2Holder status = new ReplyStatusType_1_2Holder();
-        ServiceContextListHolder scl = new ServiceContextListHolder();
+        ServiceContexts contexts = new ServiceContexts();
 
         try {
-            reqId = msg.readReplyHeader(status, scl);
+            reqId = msg.readReplyHeader(status, contexts);
         } catch (SystemException ex) {
             processException(State.Error, ex, false);
             return;
@@ -540,13 +493,11 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             return;
         }
 
-        down.setReplySCL(scl.value);
+        down.setReplyContexts(contexts);
         InputStream in = msg.input();
 
-        //
         // read in the peer's sending context runtime object
-        //
-        assignSendingContextRuntime(in, scl.value);
+        assignSendingContextRuntime(in, contexts);
 
         orbInstance_.getLogger().debug("Processing reply for reqId=" + reqId + " status=" + status.value.value());
 
@@ -562,7 +513,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             case ReplyStatusType_1_2._SYSTEM_EXCEPTION: {
                 try {
                     SystemException ex = Util.unmarshalSystemException(in);
-                    ex = convertToUnknownExceptionIfAppropriate(ex, in, scl.value);
+                    ex = convertToUnknownExceptionIfAppropriate(ex, in, contexts);
                     down.setSystemException(ex);
                 } catch (SystemException ex) {
                     processException(State.Error, ex, false);
@@ -605,25 +556,16 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         }
     }
 
-    private SystemException convertToUnknownExceptionIfAppropriate(SystemException ex, InputStream is,
-                                                                   ServiceContext[] scl) {
-        if (ex instanceof UNKNOWN) {
-            for (ServiceContext sc : scl) {
-                if (sc.context_id == UnknownExceptionInfo.value) {
-                    return new UnresolvedException((UNKNOWN) ex, sc.context_data, is);
-                }
-            }
-        }
-        return ex;
+    private SystemException convertToUnknownExceptionIfAppropriate(SystemException ex, InputStream is, ServiceContexts contexts) {
+        if (!(ex instanceof UNKNOWN)) return ex;
+        ServiceContext sc = contexts.get(UnknownExceptionInfo.value);
+        if (sc == null) return ex;
+        return new UnresolvedException((UNKNOWN) ex, sc.context_data, is);
     }
 
-    private void assignSendingContextRuntime(InputStream in, ServiceContext[] scl) {
-        if (serverRuntime_ == null) {
-            serverRuntime_ = Util.getSendingContextRuntime (orbInstance_, scl);
-        }
-
+    private void assignSendingContextRuntime(InputStream in, ServiceContexts contexts) {
+        if (serverRuntime_ == null) serverRuntime_ = Util.getSendingContextRuntime(orbInstance_, contexts);
         in.__setSendingContextRuntime(serverRuntime_);
-
     }
 
     /** process a LocateRequest message */
@@ -1081,7 +1023,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** start populating the reply data */
-    public void upcallBeginReply(Upcall upcall, ServiceContext[] scl) {
+    public void upcallBeginReply(Upcall upcall, ServiceContexts contexts) {
         upcall.createOutputStream(12);
         OutputStream out = upcall.output();
         ProfileInfo profileInfo = upcall.profileInfo();
@@ -1091,7 +1033,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         try {
             synchronized (this) {
-                outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.NO_EXCEPTION, scl);
+                outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.NO_EXCEPTION, contexts);
             }
         } catch (SystemException ex) {
             //
@@ -1152,8 +1094,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** start populating the reply with a user exception */
-    public void upcallBeginUserException(Upcall upcall,
-                                         ServiceContext[] scl) {
+    public void upcallBeginUserException(Upcall upcall, ServiceContexts contexts) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1163,7 +1104,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         int reqId = upcall.requestId();
 
         try {
-            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, scl);
+            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
         } catch (SystemException ex) {
             //
             // Nothing may go wrong here, otherwise we might have a
@@ -1179,8 +1120,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** populate and send the reply with a UserException */
-    public void upcallUserException(Upcall upcall,
-                                    UserException ex, ServiceContext[] scl) {
+    public void upcallUserException(Upcall upcall, UserException ex, ServiceContexts contexts) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1191,7 +1131,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         int reqId = upcall.requestId();
 
         try {
-            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, scl);
+            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
 
             //
             // Cannot marshal the exception without the Helper
@@ -1210,7 +1150,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** populate and end the reply with a system exception */
-    public void upcallSystemException(Upcall upcall, SystemException ex, ServiceContext[] scl) {
+    public void upcallSystemException(Upcall upcall, SystemException ex, ServiceContexts contexts) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1223,7 +1163,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // with for problem determination.
 
             orbInstance_.getLogger().debug("upcall exception", ex);
-            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, scl);
+            outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, contexts);
             Util.marshalSystemException(out, ex);
         } catch (SystemException e) {
             //
@@ -1237,7 +1177,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** prepare the reply for location forwarding */
-    public void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContext[] scl) {
+    public void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContexts contexts) {
         upcall.createOutputStream(12);
 
         OutputStream out = upcall.output();
@@ -1248,7 +1188,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         int reqId = upcall.requestId();
         ReplyStatusType_1_2 status = perm ? ReplyStatusType_1_2.LOCATION_FORWARD_PERM : ReplyStatusType_1_2.LOCATION_FORWARD;
         try {
-            outgoing.writeReplyHeader(reqId, status, scl);
+            outgoing.writeReplyHeader(reqId, status, contexts);
             Logger logger = orbInstance_.getLogger();
 
             if (logger.isDebugEnabled()) {

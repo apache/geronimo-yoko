@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OBPortableServer;
 
 import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.DispatchRequest_impl;
 import org.apache.yoko.orb.OB.DispatchStrategy;
@@ -74,7 +75,6 @@ import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA_2_3.ORB;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHolder;
-import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TaggedProfile;
 import org.omg.MessageRouting.InvalidState;
 import org.omg.MessageRouting.Router;
@@ -1620,73 +1620,56 @@ final public class POA_impl extends LocalObject implements POA {
     // Create the upcall object for a method invocation
     //
     Upcall _OB_createUpcall(byte[] oid,
-            UpcallReturn upcallReturn,
-            ProfileInfo profileInfo,
-            TransportInfo transportInfo, int requestId,
-            String op, InputStream in,
-            ServiceContext[] requestSCL)
-            throws LocationForward {
-        Upcall upcall = null;
-
-        //
+                            UpcallReturn upcallReturn,
+                            ProfileInfo profileInfo,
+                            TransportInfo transportInfo, int requestId,
+                            String op, InputStream in,
+                            ServiceContexts requestContexts) throws LocationForward {
         // Increment the outstanding request count
-        //
-        if (poaControl_.incrementRequestCount()) {
-            try {
-                //
-                // Create the upcall object
-                //
-                if (policies_.interceptorCallPolicy()) {
-                    PIManager piManager = orbInstance_
-                            .getPIManager();
+        if (!poaControl_.incrementRequestCount()) {return null;}
 
-                    if (piManager.haveServerInterceptors()) {
-                        PIUpcall piUpcall = new PIUpcall(
-                                orbInstance_, upcallReturn, profileInfo,
-                                transportInfo, requestId, op, in, requestSCL,
-                                piManager);
-                        upcall = piUpcall;
+        final Upcall upcall;
 
-                        //
-                        // Call the receive_request_service_contexts
-                        // interception point
-                        //
-                        piUpcall.receiveRequestServiceContexts(rawPolicies_,
-                                adapterId_, oid, adapterTemplate_);
+            //
+            // Create the upcall object
+            //
+            if (policies_.interceptorCallPolicy()) {
+                PIManager piManager = orbInstance_.getPIManager();
 
-                        piUpcall.contextSwitch();
-                    } else {
-                        upcall = new Upcall(
-                                orbInstance_, upcallReturn, profileInfo,
-                                transportInfo, requestId, op, in, requestSCL);
-                    }
+                if (piManager.haveServerInterceptors()) {
+                    PIUpcall piUpcall = new PIUpcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts, piManager);
+                    upcall = piUpcall;
+
+                    //
+                    // Call the receive_request_service_contexts
+                    // interception point
+                    //
+                    piUpcall.receiveRequestServiceContexts(rawPolicies_, adapterId_, oid, adapterTemplate_);
+
+                    piUpcall.contextSwitch();
                 } else {
-                    upcall = new Upcall(orbInstance_,
-                            upcallReturn, profileInfo, transportInfo,
-                            requestId, op, in, requestSCL);
+                    upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                 }
+            } else {
+                upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
+            }
 
-                DispatchRequest_impl dispatchRequestImpl = new DispatchRequest_impl(
-                        this, oid, upcall);
-
+            try {
+                DispatchRequest_impl dispatchRequestImpl = new DispatchRequest_impl(this, oid, upcall);
                 upcall.setDispatchInfo(dispatchRequestImpl, dispatchStrategy_);
             } catch (SystemException ex) {
                 upcall.setSystemException(ex);
                 _OB_decrementRequestCount();
-            } catch (LocationForward ex) {
-                upcall.setLocationForward(ex.ior, ex.perm);
-                _OB_decrementRequestCount();
             }
-        }
 
         //
         // If this POA has a BidirPolicy set to BOTH and we have
-        // received some listening points in the SCL (which implies that
-        // the client has the BidirPolicy as well), then we must make
-        // sure to map these in the transportInfo structure
+        // received some listening points in the service context
+        // (implying the client has the BidirPolicy as well),
+        // then we must map these in the transportInfo structure
         //
-        if (upcall != null)
-            _OB_handleBidirSCL(transportInfo, requestSCL);
+        if (upcall != null) _OB_handleBidirContext(transportInfo, requestContexts);
+
 
         return upcall;
     }
@@ -2024,15 +2007,9 @@ final public class POA_impl extends LocalObject implements POA {
         }
     }
 
-    private void _OB_handleBidirSCL(
-            TransportInfo transportInfo,
-            ServiceContext[] contexts) {
-        if (policies_.bidirPolicy() != BOTH.value) {
-            return;
-        }
-
-        if (transportInfo != null) {
-            transportInfo.handle_service_contexts(contexts);
-        }
+    private void _OB_handleBidirContext(TransportInfo transportInfo, ServiceContexts contexts) {
+        if (policies_.bidirPolicy() != BOTH.value) return;
+        if (transportInfo == null) return;
+        transportInfo.handle_service_contexts(contexts);
     }
 }

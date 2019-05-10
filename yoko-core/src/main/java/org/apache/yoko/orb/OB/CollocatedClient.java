@@ -19,12 +19,12 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
-import org.omg.IOP.ServiceContext;
 
 final public class CollocatedClient extends Client implements DowncallEmitter {
     //
@@ -145,7 +145,7 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
         return server_.sendReceive(down);
     }
 
-    public ServiceContext[] getAMIRouterSCL() {
+    public ServiceContexts getAMIRouterContexts() {
         return null;
     }
 }

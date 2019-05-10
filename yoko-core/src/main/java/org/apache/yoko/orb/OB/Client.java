@@ -18,12 +18,12 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
-import org.omg.IOP.ServiceContext;
 
 public abstract class Client {
     private int usage_; // The usage counter
@@ -98,13 +98,12 @@ public abstract class Client {
     // get a list of ServiceContexts that have to be sent on an AMI router
     // request
     //
-    public abstract ServiceContext[] getAMIRouterSCL();
+    public abstract ServiceContexts getAMIRouterContexts();
 
     //
     // Get all profiles that are usable with this client
     //
-    public abstract ProfileInfo[] getUsableProfiles(
-            IOR ior, Policy[] pl);
+    public abstract ProfileInfo[] getUsableProfiles(IOR ior, Policy[] pl);
 
     //
     // Get the OCI connector info
@@ -120,8 +119,7 @@ public abstract class Client {
     // Start a downcall, returning a downcall emitter and an
     // OutputStream for marshalling a request
     //
-    public abstract DowncallEmitter startDowncall(Downcall down,
-            OutputStreamHolder out);
+    public abstract DowncallEmitter startDowncall(Downcall down, OutputStreamHolder out);
 
     //
     // Checks whether this client is equal to another client

@@ -18,22 +18,22 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHolder;
-import org.omg.IOP.ServiceContext;
 
 public interface OAInterface {
     //
     // Create new Upcall object
     //
     Upcall createUpcall(UpcallReturn upcallReturn,
-            ProfileInfo profileInfo,
-            TransportInfo transportInfo, int requestId,
-            String op, InputStream in,
-            ServiceContext[] requestSCL);
+                        ProfileInfo profileInfo,
+                        TransportInfo transportInfo, int requestId,
+                        String op, InputStream in,
+                        ServiceContexts requestContexts);
 
     //
     // Determine if an object with the provided object key exists
