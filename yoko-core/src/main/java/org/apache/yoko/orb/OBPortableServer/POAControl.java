@@ -94,23 +94,19 @@ class POAControl {
     // is not destroyed, false otherwise.
     //
     synchronized boolean incrementRequestCount() {
-        if (state_ != DestroyNotCalled) {
-            while (state_ != DestroyCompleted) {
-                // wait for the destroy to complete
-                try {
-                    wait();
-                } catch (InterruptedException ignored) {
-                }
-            }
-            return false;
+        if (state_ == DestroyNotCalled) {//
+            // Reference successfully acquired, return true
+            requests_++;
+            return true;
         }
-
-        //
-        // Reference successfully acquired, return true
-        //
-        requests_++;
-
-        return true;
+        while (state_ != DestroyCompleted) {
+            // wait for the destroy to complete
+            try {
+                wait();
+            } catch (InterruptedException ignored) {
+            }
+        }
+        return false;
     }
 
     //

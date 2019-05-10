@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.IMP_LIMIT;
@@ -45,17 +46,14 @@ final public class GIOPOutgoingMessage {
     // GIOPOutgoingMessage private and protected member implementations
     // ----------------------------------------------------------------------
 
-    private void writeServiceContextList(ServiceContext[] scl) {
-        int len = scl.length;
+    private void writeServiceContextList(ServiceContexts contexts) {
+        int len = contexts.size();
         out_.write_ulong(len);
-        if (len > 0) {
-            for (int i = 0; i < len; i++) {
-                ServiceContext sc = scl[i];
-                out_.write_ulong(sc.context_id);
-                int n = sc.context_data.length;
-                out_.write_ulong(n);
-                out_.write_octet_array(sc.context_data, 0, n);
-            }
+        for (ServiceContext sc: contexts) {
+            out_.write_ulong(sc.context_id);
+            int n = sc.context_data.length;
+            out_.write_ulong(n);
+            out_.write_octet_array(sc.context_data, 0, n);
         }
     }
 
@@ -145,12 +143,11 @@ final public class GIOPOutgoingMessage {
         out_.write_ulong(size); // message_size
     }
 
-    void writeRequestHeader(int id, String op, boolean response,
-            ServiceContext[] scl) {
+    void writeRequestHeader(int id, String op, boolean response, ServiceContexts contexts) {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
-            writeServiceContextList(scl); // service_context
+            writeServiceContextList(contexts); // service_context
             out_.write_ulong(id); // request_id
             out_.write_boolean(response); // response_expected
 
@@ -213,7 +210,7 @@ final public class GIOPOutgoingMessage {
             out_.write_octet_array(op.getBytes(), 0, opLen);
             out_.write_octet((byte) 0); // nul terminator
 
-            writeServiceContextList(scl); // service_context
+            writeServiceContextList(contexts); // service_context
 
             //
             // For GIOP 1.2, the body (if any) must be aligned on an 8-octet
@@ -230,13 +227,13 @@ final public class GIOPOutgoingMessage {
         }
     }
 
-    void writeReplyHeader(int id, ReplyStatusType_1_2 status, ServiceContext[] scl) {
+    void writeReplyHeader(int id, ReplyStatusType_1_2 status, ServiceContexts contexts) {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
             Assert._OB_assert(status.value() <= ReplyStatusType_1_2._LOCATION_FORWARD);
 
-            writeServiceContextList(scl); // service_context
+            writeServiceContextList(contexts); // service_context
             out_.write_ulong(id); // request_id
             out_.write_ulong(status.value()); // reply_status
 
@@ -246,7 +243,7 @@ final public class GIOPOutgoingMessage {
         case 2: {
             out_.write_ulong(id); // request_id
             out_.write_ulong(status.value()); // reply_status
-            writeServiceContextList(scl); // service_context
+            writeServiceContextList(contexts); // service_context
 
             //
             // For GIOP 1.2, the body (if any) must be aligned on an 8-octet

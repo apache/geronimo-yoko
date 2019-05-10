@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Downcall;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.Any;
@@ -34,13 +35,11 @@ import org.omg.PortableInterceptor.InvalidSlot;
 import org.omg.PortableInterceptor.LOCATION_FORWARD;
 import org.omg.PortableInterceptor.RequestInfo;
 
-import java.util.Vector;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
@@ -55,8 +54,8 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     protected final ORBInstance orbInstance;
     protected final String operationName;
     protected final Policy[] policies;
-    protected final Vector requestSCL_;
-    protected final Vector replySCL_;
+    protected final ServiceContexts requestContexts;
+    protected final ServiceContexts replyContexts;
     protected final Current_impl piCurrent;
 
     protected short replyStatus;
@@ -67,43 +66,6 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     protected Any[] requestSlotData;
     protected boolean currentNeedsPopping;
 
-    private ServiceContext copyServiceContext(ServiceContext sc) {
-        ServiceContext result = new ServiceContext();
-        result.context_id = sc.context_id;
-        result.context_data = new byte[sc.context_data.length];
-        System.arraycopy(sc.context_data, 0, result.context_data, 0, sc.context_data.length);
-        return result;
-    }
-
-    private ServiceContext getServiceContext(Vector l, int id) {
-        for (int i = 0; i < l.size(); i++) {
-            ServiceContext sc = (ServiceContext) l.elementAt(i);
-            if (sc.context_id == id) {
-                return copyServiceContext(sc);
-            }
-        }
-
-        throw new BAD_PARAM(describeBadParam(MinorInvalidServiceContextId) + ": " + id, MinorInvalidServiceContextId, COMPLETED_NO);
-    }
-
-    protected void addServiceContext(Vector l, ServiceContext sc, boolean addReplace) {
-        //
-        // It would be possible to use a hashtable internally for this
-        // instead of a sequence. However, the additional overhead isn't
-        // worth the effort.
-        //
-        for (int i = 0; i < l.size(); i++) {
-            ServiceContext c = (ServiceContext) l.elementAt(i);
-            if (c.context_id == sc.context_id) {
-                if (addReplace) {
-                    l.setElementAt(copyServiceContext(sc), i);
-                    return;
-                }
-                throw new BAD_INV_ORDER(describeBadInvOrder(MinorServiceContextExists) + ": " + sc.context_id, MinorServiceContextExists, COMPLETED_NO);
-            }
-        }
-        l.addElement(copyServiceContext(sc));
-    }
     // The ID uniquely identifies an active request/reply sequence.
     //
     // Client side:
@@ -272,10 +234,7 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         // receive_request_service_context, receive_request
         //
         if (replyStatus < 0) {
-            throw new BAD_INV_ORDER(
-                    describeBadInvOrder(MinorInvalidPICall),
-                    MinorInvalidPICall,
-                    COMPLETED_NO);
+            throw newBadInvOrder();
         }
         return replyStatus;
     }
@@ -294,16 +253,8 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     // send_reply: no send_exception: no send_other: yes
     //
     public org.omg.CORBA.Object forward_reference() {
-        //
-        // This can only be called if the status is location forward
-        // or location forward perm
-        //
-        if (replyStatus != LOCATION_FORWARD.value) {
-            throw new BAD_INV_ORDER(
-                    describeBadInvOrder(MinorInvalidPICall),
-                    MinorInvalidPICall,
-                    COMPLETED_NO);
-        }
+        // This can only be called if the status is location forward or location forward perm
+        if (replyStatus != LOCATION_FORWARD.value) throw newBadInvOrder();
 
         _OB_assert(forwardReference != null);
         return orbInstance.getObjectFactory().createObject(forwardReference);
@@ -351,7 +302,9 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     // send_reply: yes send_exception: yes send_other: yes
     //
     public ServiceContext get_request_service_context(int id) {
-        return getServiceContext(requestSCL_, id);
+        ServiceContext ctx = requestContexts.get(id);
+        if (ctx == null) throw newBadParam(id);
+        return ctx;
     }
 
     //
@@ -368,19 +321,30 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     // send_reply: yes send_exception: yes send_other: yes
     //
     public ServiceContext get_reply_service_context(int id) {
-        if (replyStatus < 0) {
-            throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
-        }
-        return getServiceContext(replySCL_, id);
+        if (replyStatus < 0) throw newBadInvOrder();
+        ServiceContext result = replyContexts.get(id);
+        if (result == null) throw newBadParam(id);
+        return result;
+    }
+
+    private BAD_INV_ORDER newBadInvOrder() {
+        final int code = MinorInvalidPICall;
+        return new BAD_INV_ORDER(describeBadInvOrder(code), code, COMPLETED_NO);
+    }
+
+    private BAD_PARAM newBadParam(int id) {
+        final int code = MinorInvalidServiceContextId;
+        return new BAD_PARAM(describeBadParam(code) + ": " + id, code, COMPLETED_NO);
     }
 
     public RequestInfo_impl(ORB orb, ORBInstance orbInstance, Current_impl current, Downcall dc) {
-        this(orb, dc.requestId(), dc.operation(), dc.responseExpected(), dc.requestSCL_, dc.replySCL_, orbInstance, dc.policies().value, current);
+        this(orb, dc.requestId(), dc.operation(), dc.responseExpected(), dc.requestContexts, dc.replyContexts, orbInstance, dc.policies().value, current);
+
     }
 
     protected RequestInfo_impl(ORB orb, int id, String op,
-                               boolean responseExpected, Vector requestSCL,
-                               Vector replySCL,
+                               boolean responseExpected,
+                               ServiceContexts requestContexts, ServiceContexts replyContexts,
                                ORBInstance orbInstance,
                                Policy[] policies, Current_impl current) {
         this.orb = orb;
@@ -389,8 +353,8 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         this.requestIsOneWay = !responseExpected;
         this.orbInstance = orbInstance;
         this.policies = policies;
-        this.requestSCL_ = requestSCL;
-        this.replySCL_ = replySCL;
+        this.requestContexts = requestContexts;
+        this.replyContexts = replyContexts;
         this.piCurrent = current;
     }
 

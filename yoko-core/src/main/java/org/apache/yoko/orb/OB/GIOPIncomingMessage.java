@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.BooleanHolder;
@@ -35,7 +36,6 @@ import org.omg.GIOP.TargetAddress;
 import org.omg.GIOP.TargetAddressHolder;
 import org.omg.GIOP.Version;
 import org.omg.IOP.ServiceContext;
-import org.omg.IOP.ServiceContextListHolder;
 import org.omg.IOP.TaggedProfileHelper;
 
 import java.util.Map;
@@ -124,17 +124,19 @@ final public class GIOPIncomingMessage {
         }
     }
 
-    private void readServiceContextList(ServiceContextListHolder scl) {
-        int len = in_.read_ulong();
-        scl.value = new ServiceContext[len];
-        for (int i = 0; i < len; i++) {
-            scl.value[i] = new ServiceContext();
-            ServiceContext sc = scl.value[i];
-            sc.context_id = in_.read_ulong();
-            int datalen = in_.read_ulong();
-            sc.context_data = new byte[datalen];
-            in_.read_octet_array(sc.context_data, 0, datalen);
+    private void readServiceContextList(ServiceContexts contexts) {
+        for (int len = in_.read_ulong(); len > 0; len--) {
+            contexts.mutable().add(readServiceContext());
         }
+    }
+
+    private ServiceContext readServiceContext() {
+        ServiceContext sc = new ServiceContext();
+        sc.context_id = in_.read_ulong();
+        int datalen = in_.read_ulong();
+        sc.context_data = new byte[datalen];
+        in_.read_octet_array(sc.context_data, 0, datalen);
+        return sc;
     }
 
     private void readTargetAddress(TargetAddressHolder target) {
@@ -456,7 +458,7 @@ final public class GIOPIncomingMessage {
     int readRequestHeader(BooleanHolder response,
                           TargetAddressHolder target,
                           StringHolder op,
-                          ServiceContextListHolder scl) {
+                          ServiceContexts contexts) {
         _OB_assert(type_ == MsgType_1_1.Request);
 
         int id = 0;
@@ -465,7 +467,7 @@ final public class GIOPIncomingMessage {
         case 0: {
             int len;
 
-            readServiceContextList(scl); // service_context
+            readServiceContextList(contexts); // service_context
             id = in_.read_ulong(); // request_id
             response.value = in_.read_boolean(); // response_expected
 
@@ -497,7 +499,7 @@ final public class GIOPIncomingMessage {
         case 1: {
             int len;
 
-            readServiceContextList(scl); // service_context
+            readServiceContextList(contexts); // service_context
             id = in_.read_ulong(); // request_id
             response.value = in_.read_boolean(); // response_expected
             in_._OB_skip(3); // reserved
@@ -543,7 +545,7 @@ final public class GIOPIncomingMessage {
             op.value = new String(s, 0, len - 1);
             // op.value = in_.read_string(); // operation
 
-            readServiceContextList(scl); // service_context
+            readServiceContextList(contexts); // service_context
 
             //
             // For GIOP 1.2, the body (if present) must be aligned on
@@ -561,7 +563,7 @@ final public class GIOPIncomingMessage {
         return id;
     }
 
-    int readReplyHeader(ReplyStatusType_1_2Holder status, ServiceContextListHolder scl) {
+    int readReplyHeader(ReplyStatusType_1_2Holder status, ServiceContexts contexts) {
         _OB_assert(type_ == MsgType_1_1.Reply);
 
         int id = 0;
@@ -569,7 +571,7 @@ final public class GIOPIncomingMessage {
         switch (version_.minor) {
         case 0:
         case 1: {
-            readServiceContextList(scl); // service_context
+            readServiceContextList(contexts); // service_context
             id = in_.read_ulong(); // request_id
             // reply_status
             status.value = ReplyStatusType_1_2.from_int(in_.read_ulong());
@@ -585,7 +587,7 @@ final public class GIOPIncomingMessage {
             status.value = ReplyStatusType_1_2.from_int(in_.read_ulong());
             if (status.value.value() > ReplyStatusType_1_2._NEEDS_ADDRESSING_MODE)
                 throw new COMM_FAILURE(describeCommFailure(MinorUnknownMessage) + ": invalid reply status", MinorUnknownMessage, COMPLETED_MAYBE);
-            readServiceContextList(scl); // service_context
+            readServiceContextList(contexts); // service_context
 
             //
             // For GIOP 1.2, the body (if present) must be aligned on

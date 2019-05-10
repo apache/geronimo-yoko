@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl;
 import org.apache.yoko.orb.PortableInterceptor.Current_impl;
@@ -52,7 +53,6 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.Servant;
 
 import java.util.List;
-import java.util.Vector;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
@@ -192,10 +192,12 @@ final public class PIManager {
             byte[] adapterId,
             byte[] objectId,
             ObjectReferenceTemplate adapterTemplate,
-            Vector in, Vector out, TransportInfo transportInfo) {
+            ServiceContexts requestContexts,
+            ServiceContexts replyContexts,
+            TransportInfo transportInfo) {
         _OB_assert(current != null);
         return new ServerRequestInfo_impl(orb, nextID(), op, responseExpected, policies, adapterId,
-                objectId, adapterTemplate, in, out, orbInstance, current, transportInfo);
+                objectId, adapterTemplate, requestContexts, replyContexts, orbInstance, current, transportInfo);
     }
 
     void serverSetupServant(ServerRequestInfo info, Servant servant, POA poa) {

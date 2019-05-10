@@ -19,13 +19,14 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.ReadBuffer;
-import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
@@ -520,7 +521,7 @@ public final class DowncallStub {
 
         out.value = new org.apache.yoko.orb.CORBA.OutputStream(client.codeConverters(), GIOP1_2);
 
-        sclHolder.value = client.getAMIRouterSCL();
+        sclHolder.value = client.getAMIRouterContexts().toArray();
 
         //
         // Be sure to add the invocation context before returning
@@ -533,38 +534,29 @@ public final class DowncallStub {
         return client.codeConverters();
     }
 
-    //
     // Creates an output stream that holds an AMI router request. Note
     // that this needs to be done in two parts. The first (this method)
     // creates the initial stream and writes the request header. The
     // second will complete the request by writing the message header into
     // the stream (this needs to be done after we write the requests
     // parameters)
-    //
     public GIOPOutgoingMessage AMIRouterPreMarshal(String operation,
-            boolean responseExpected,
-            OutputStreamHolder out,
-            ProfileInfoHolder info)
-            throws FailureException {
-        //
+                                                   boolean responseExpected,
+                                                   OutputStreamHolder out,
+                                                   ProfileInfoHolder info) throws FailureException {
         // Create buffer to contain our marshalable data
-        //
         WriteBuffer writeBuffer = Buffer.createWriteBuffer(12).padAll();
 
-        //
         // Obtain information regarding our target
-        //
         Client client = getClientProfilePair(info);
 
         out.value = new org.apache.yoko.orb.CORBA.OutputStream(writeBuffer, client.codeConverters(), GIOP1_2);
-        ServiceContext[] scl = client.getAMIRouterSCL();
+        ServiceContexts contexts = client.getAMIRouterContexts();
 
         GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, info.value);
 
-        //
         // Put the request header into the stream
-        //
-        outgoing.writeRequestHeader(client.getNewRequestID(), operation, responseExpected, scl);
+        outgoing.writeRequestHeader(client.getNewRequestID(), operation, responseExpected, contexts);
 
         return outgoing;
     }

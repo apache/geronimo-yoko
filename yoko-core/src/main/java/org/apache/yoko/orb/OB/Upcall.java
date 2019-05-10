@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -42,7 +43,6 @@ import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
 import javax.rmi.CORBA.ValueHandler;
-import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -72,8 +72,8 @@ public class Upcall {
     // Holds the in/inout parameters
     private final InputStream in_;
 
-    protected final ServiceContext[] requestSCL_;
-    protected final Vector<ServiceContext> replySCL_ = new Vector<>();
+    protected final ServiceContexts requestContexts;
+    protected final ServiceContexts replyContexts;
     private DispatchRequest dispatchRequest_;
     private DispatchStrategy dispatchStrategy_;
     private Servant servant_;
@@ -94,22 +94,23 @@ public class Upcall {
     private final Timeout timeout;
 
     public Upcall(ORBInstance orbInstance, UpcallReturn upcallReturn, ProfileInfo profileInfo,
-            TransportInfo transportInfo, int requestId, String op, InputStream in, ServiceContext[] requestSCL) {
-        orbInstance_ = orbInstance;
-        upcallReturn_ = upcallReturn;
-        profileInfo_ = profileInfo;
-        transportInfo_ = transportInfo;
-        reqId_ = requestId;
-        op_ = op;
-        in_ = in;
-        requestSCL_ = requestSCL;
-        servant_ = null;
-        poa_ = null;
-        postinvokeCalled_ = false;
+            TransportInfo transportInfo, int requestId, String op, InputStream in, ServiceContexts requestContexts) {
+        this.orbInstance_ = orbInstance;
+        this.upcallReturn_ = upcallReturn;
+        this.profileInfo_ = profileInfo;
+        this.transportInfo_ = transportInfo;
+        this.reqId_ = requestId;
+        this.op_ = op;
+        this.in_ = in;
+        this.requestContexts = requestContexts;
+        this.replyContexts = new ServiceContexts();
+        this.servant_ = null;
+        this.poa_ = null;
+        this.postinvokeCalled_ = false;
 
-        userEx_ = false;
+        this.userEx_ = false;
 
-        logger.fine("Creating upcall request for operation " + op + " and request id " + requestId); 
+        logger.fine("Creating upcall request for operation " + op + " and request id " + requestId);
         in._OB_ORBInstance(orbInstance_);
 
         // get the reply timeout
@@ -183,8 +184,9 @@ public class Upcall {
     // initialize internal service contexts
     private void initServiceContexts() {
         if (codeBaseSC_ == null) {
-
+            // get the ValueHandler singleton
             ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
+
             CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
 
 
@@ -213,9 +215,7 @@ public class Upcall {
         // OutputStream to make the skeleton happy and avoid a crash.
         if (upcallReturn_ != null) {
             addUnsentConnectionServiceContexts();
-            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallBeginReply(this, scl);
+            upcallReturn_.upcallBeginReply(this, replyContexts);
         } else {
             out_ = new OutputStream(in_._OB_codeConverters(), GiopVersion.get(profileInfo_.major, profileInfo_.minor));
         }
@@ -225,11 +225,11 @@ public class Upcall {
     }
 
     private void addUnsentConnectionServiceContexts() {
-        if (!upcallReturn_.replySent() && (profileInfo_.major > 1 || profileInfo_.minor >= 1)) {
-            initServiceContexts();
-            Assert._OB_assert(codeBaseSC_ != null);
-            replySCL_.add(codeBaseSC_);
-        }
+        if (upcallReturn_.replySent()) return;
+        if (profileInfo_.major <= 1 && profileInfo_.minor < 1) return;
+        initServiceContexts();
+        Assert._OB_assert(codeBaseSC_ != null);
+        replyContexts.mutable().add(codeBaseSC_);
     }
 
     public void marshalEx(SystemException ex) {
@@ -244,9 +244,7 @@ public class Upcall {
 
     public void setUserException(Any any) {
         if (upcallReturn_ != null) {
-            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallBeginUserException(this, scl);
+            upcallReturn_.upcallBeginUserException(this, replyContexts);
             try {
                 any.write_value(out_);
             } catch (SystemException ex) {
@@ -265,9 +263,7 @@ public class Upcall {
     // skeleton, the exception will be null.
     public OutputStream beginUserException(UserException ex) {
         if (upcallReturn_ != null) {
-            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallBeginUserException(this, scl);
+            upcallReturn_.upcallBeginUserException(this, replyContexts);
             userEx_ = true;
             return out_;
         }
@@ -292,15 +288,13 @@ public class Upcall {
             userEx_ = false;
             if (ex instanceof UnknownException) {
                 // need to create service contexts for underlying exception
-                createUnknownExceptionServiceContexts((UnknownException)ex, replySCL_);
+                createUnknownExceptionServiceContexts((UnknownException)ex, replyContexts);
             }
-            ServiceContext[] scl = new ServiceContext[replySCL_.size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallSystemException(this, ex, scl);
+            upcallReturn_.upcallSystemException(this, ex, replyContexts);
         }
     }
 
-    private static void createUnknownExceptionServiceContexts(UnknownException ex, Vector<ServiceContext> scl) {
+    private static void createUnknownExceptionServiceContexts(UnknownException ex, ServiceContexts replyContexts) {
         final Throwable t = ex.originalEx;
         try (CmsfOverride o = CmsfThreadLocal.override()) {
             final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
@@ -309,19 +303,15 @@ public class Upcall {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);
                 ServiceContext sc = new ServiceContext(UnknownExceptionInfo.value, os.copyWrittenBytes());
-                scl.add(sc);
+                replyContexts.mutable().add(sc, false);
             }
         }
     }
 
     public void setLocationForward(IOR ior, boolean perm) {
-        if (upcallReturn_ != null) {
-            userEx_ = false; // Java only
-            ServiceContext[] scl = new ServiceContext[replySCL_
-                    .size()];
-            replySCL_.copyInto(scl);
-            upcallReturn_.upcallForward(this, ior, perm, scl);
-        }
+        if (upcallReturn_ == null) return;
+        userEx_ = false;
+        upcallReturn_.upcallForward(this, ior, perm, replyContexts);
     }
 
     public void contextSwitch() {

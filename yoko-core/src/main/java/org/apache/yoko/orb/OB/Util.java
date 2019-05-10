@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_CONTEXT;
@@ -388,13 +389,8 @@ public final class Util {
                 });
     }
 
-    public static CodeBase getSendingContextRuntime(ORBInstance orbInstance_, ServiceContext[] scl) {
-        for (ServiceContext serviceContext : scl) {
-            if (serviceContext.context_id == SendingContextRunTime.value) {
-                return new CodeBaseProxy(orbInstance_, serviceContext);
-            }
-        }
-
-        return null;
+    public static CodeBase getSendingContextRuntime(ORBInstance orbInstance_, ServiceContexts contexts) {
+        ServiceContext serviceContext = contexts.get(SendingContextRunTime.value);
+        return serviceContext == null ? null : new CodeBaseProxy(orbInstance_, serviceContext);
     }
 }

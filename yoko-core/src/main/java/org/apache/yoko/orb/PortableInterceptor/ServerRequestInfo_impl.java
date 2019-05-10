@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ParameterDesc;
@@ -52,7 +53,6 @@ import org.omg.PortableServer.Servant;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Vector;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
@@ -233,7 +233,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     public void add_reply_service_context(ServiceContext sc, boolean addReplace) {
-        addServiceContext(replySCL_, sc, addReplace);
+        replyContexts.mutable().add(sc, addReplace);
     }
 
     public ServerRequestInfo_impl(
@@ -245,10 +245,11 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
             byte[] adapterId,
             byte[] objectId,
             ObjectReferenceTemplate adapterTemplate,
-            Vector request, Vector reply,
+            ServiceContexts requestContexts,
+            ServiceContexts replyContexts,
             ORBInstance orbInstance, Current_impl current,
             TransportInfo transportInfo) {
-        super(orb, id, op, responseExpected, request, reply, orbInstance, policies, current);
+        super(orb, id, op, responseExpected, requestContexts, replyContexts, orbInstance, policies, current);
 
         this.adapterId = adapterId;
         this.objectId = objectId;

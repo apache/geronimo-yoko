@@ -17,8 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.omg.CORBA.Policy;
-import org.omg.IOP.ServiceContext;
 
 /**
  * Information on an OCI Transport object. Objects of this type must
@@ -68,7 +68,7 @@ public interface TransportInfoOperations {
      *
      * @return The service contexts for the given polices.
      */
-    ServiceContext[] get_service_contexts(Policy[] policies);
+    ServiceContexts get_service_contexts(Policy[] policies);
 
     /**
      * Handles service contexts that might be received during a
@@ -77,12 +77,12 @@ public interface TransportInfoOperations {
      *
      * @param contexts The service context list
      */
-    void handle_service_contexts(ServiceContext[] scl);
+    void handle_service_contexts(ServiceContexts contexts);
 
     /**
      * Queries whether this transport received a BiDir service context in a request.
      */
-    boolean received_bidir_SCL();
+    boolean received_bidir_service_context();
 
     /**
      * Uses the BiDir service context information for this transport to

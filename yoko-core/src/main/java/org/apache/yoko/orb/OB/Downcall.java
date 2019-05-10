@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.MutableServiceContexts;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.util.concurrent.AutoLock;
@@ -33,9 +35,10 @@ import org.omg.IOP.IOR;
 import org.omg.IOP.ServiceContext;
 import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
-import java.util.Vector;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+
+import static org.apache.yoko.util.ObjectFormatter.format;
 
 public class Downcall {
     /** The ORBInstance object */
@@ -98,9 +101,8 @@ public class Downcall {
     protected IOR forwardIOR_;
 
     /** The request and reply service contexts */
-    public Vector<ServiceContext> requestSCL_ = new Vector<>();
-
-    public Vector<ServiceContext> replySCL_ = new Vector<>();
+    public final ServiceContexts requestContexts = new ServiceContexts();
+    public final ServiceContexts replyContexts = new ServiceContexts();
 
     // ----------------------------------------------------------------------
     // Downcall private and protected member implementations
@@ -221,31 +223,28 @@ public class Downcall {
         return in_;
     }
 
-    public final ServiceContext[] getRequestSCL() {
-        ServiceContext[] scl = new ServiceContext[requestSCL_
-                .size()];
-        requestSCL_.copyInto(scl);
-        return scl;
+    public final ServiceContexts getRequestContexts() {
+        return requestContexts;
     }
 
-    public final void addToRequestSCL(ServiceContext sc) {
-        requestSCL_.addElement(sc);
+    public final void addToRequestContexts(ServiceContext sc) {
+        requestContexts.mutable().add(sc);
     }
 
-    public final void setReplySCL(ServiceContext[] scl) {
-        // Don't create a new Vector
-        Assert._OB_assert(replySCL_.size() == 0);
-        replySCL_.setSize(scl.length);
-        for (int i = 0; i < scl.length; i++)
-            replySCL_.setElementAt(scl[i], i);
+    public final void setReplyContexts(ServiceContexts contexts) {
+        if (!replyContexts.isEmpty() && logger_.isDebugEnabled()) {
+            logger_.debug("Expected empty reply contexts, but found " + replyContexts.size());
+            for (ServiceContext sc : contexts) logger_.debug("\t" + format(sc));
+        }
+        final MutableServiceContexts mutable = replyContexts.mutable();
+        for (ServiceContext sc: contexts) mutable.add(sc, true);
     }
 
     public OutputStream preMarshal() throws LocationForward, FailureException {
         return preMarshalBase();
     }
 
-    public final void marshalEx(SystemException ex)
-            throws LocationForward, FailureException {
+    public final void marshalEx(SystemException ex) throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
         Assert._OB_assert(false);

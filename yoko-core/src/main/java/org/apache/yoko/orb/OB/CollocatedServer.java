@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INITIALIZE;
@@ -29,7 +30,6 @@ import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.UserException;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHolder;
-import org.omg.IOP.ServiceContext;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -191,7 +191,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             int reqId = down.requestId();
             String op = down.operation();
             OutputStream out = down.output();
-            ServiceContext[] requestSCL = down.getRequestSCL();
+            ServiceContexts requestContexts = down.getRequestContexts();
 
             //
             // Is this a locate request?
@@ -235,7 +235,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setPending();
 
                 up = oaInterface_.createUpcall(this, profileInfo, null, reqId,
-                        op, new InputStream(out.getBufferReader()), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestContexts);
             } else {
                 //
                 // This is a oneway call, and if there was no exception so
@@ -244,7 +244,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setNoException(null);
 
                 up = oaInterface_.createUpcall(null, profileInfo, null, reqId,
-                        op, new InputStream(out.getBufferReader()), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestContexts);
             }
         }
 
@@ -307,91 +307,61 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         return oaInterface_.getUsableProfiles(ior, policies);
     }
 
-    public void upcallBeginReply(Upcall upcall,
-            ServiceContext[] replySCL) {
+    public void upcallBeginReply(Upcall upcall, ServiceContexts replyContexts) {
         upcall.createOutputStream(0);
+        if (replyContexts.isEmpty()) return;
+        synchronized (this) {
+            Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
-        if (replySCL.length > 0) {
-            synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(upcall.requestId());
-
-                //
-                // Might be null if the request timed out or destroyed
-                //
-                if (down != null)
-                    down.setReplySCL(replySCL);
-            }
+            //
+            // Might be null if the request timed out or destroyed
+            //
+            if (down != null) down.setReplyContexts(replyContexts);
         }
     }
 
     public synchronized void upcallEndReply(Upcall upcall) {
-        Downcall down = (Downcall) callMap_
-                .get(upcall.requestId());
-
-        //
-        // Might be null if the request timed out or destroyed
-        //
-        if (down != null) // Might be null if the request timed out
-        {
-            OutputStream out = upcall.output();
-            InputStream in = new InputStream(out.getBufferReader());
-            down.setNoException(in);
-            callMap_.remove(down.requestId());
-        }
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
+        if (down == null) return ; // Might be null if the request timed out
+        OutputStream out = upcall.output();
+        InputStream in = new InputStream(out.getBufferReader());
+        down.setNoException(in);
+        callMap_.remove(down.requestId());
     }
 
-    public void upcallBeginUserException(Upcall upcall,
-            ServiceContext[] replySCL) {
+    public void upcallBeginUserException(Upcall upcall, ServiceContexts replyContexts) {
         upcall.createOutputStream(0);
-
-        if (replySCL.length > 0) {
-            synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(upcall.requestId());
-
-                //
-                // Might be null if the request timed out or destroyed
-                //
-                if (down != null)
-                    down.setReplySCL(replySCL);
-            }
+        if (replyContexts.isEmpty()) return;
+        synchronized (this) {
+            Downcall down = (Downcall) callMap_.get(upcall.requestId());
+            // Might be null if the request timed out or destroyed
+            if (down != null) down.setReplyContexts(replyContexts);
         }
     }
 
     public synchronized void upcallEndUserException(Upcall upcall) {
         Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
-        //
         // Might be null if the request timed out or destroyed
-        //
-        if (down != null) {
-            OutputStream out = upcall.output();
-            InputStream in = new InputStream(out.getBufferReader());
-            down.setUserException(in);
-            callMap_.remove(down.requestId());
-        }
+        if (down == null) return;
+        OutputStream out = upcall.output();
+        InputStream in = new InputStream(out.getBufferReader());
+        down.setUserException(in);
+        callMap_.remove(down.requestId());
     }
 
     //
     // NOTE: Not used in Java
     //
-    public void upcallUserException(Upcall upcall, UserException ex, ServiceContext[] replySCL) {
+    public void upcallUserException(Upcall upcall, UserException ex, ServiceContexts replyContexts) {
         //
         // We marshal to preserve 100% location transparency. If we would
-        // set the exception in the Downcall directly as shown below, then
+        // set the exception in the Downcall directly, then
         // we wouldn't get an UNKNOWN exception if we're calling from the
         // DII without setting the exception TypeCode.
         //
 
-        /*
-         * synchronized(this) { Downcall down = (Downcall)callMap_.get(new
-         * Integer(upcall.requestId()));
-         *  // // Might be null if the request timed out or destroyed // if(down !=
-         * null) { if(replySCL.length > 0) down.setReplySCL(replySCL);
-         * down.setUserException(ex); callMap_.remove(new
-         * Integer(down.requestId()); } }
-         */
-
-        upcallBeginUserException(upcall, replySCL);
+        upcallBeginUserException(upcall, replyContexts);
         OutputStream out = upcall.output();
         try {
             //
@@ -405,31 +375,22 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         upcallEndUserException(upcall);
     }
 
-    public synchronized void upcallSystemException(Upcall upcall, SystemException ex, ServiceContext[] replySCL) {
-        Downcall down = (Downcall) callMap_
-                .get(upcall.requestId());
-
-        //
-        // Might be null if the request timed out or destroyed
-        //
-        if (down != null) {
-            if (replySCL.length > 0)
-                down.setReplySCL(replySCL);
-            down.setSystemException(ex);
-            callMap_.remove(down.requestId());
-        }
+    public synchronized void upcallSystemException(Upcall upcall, SystemException ex, ServiceContexts replyContexts) {
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
+        if (down == null) return; // Might be null if the request timed out or destroyed
+        down.setReplyContexts(replyContexts);
+        down.setSystemException(ex);
+        callMap_.remove(down.requestId());
     }
 
-    public synchronized void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContext[] replySCL) {
-        Downcall down = (Downcall) callMap_
-                .get(upcall.requestId());
+    public synchronized void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContexts replyContexts) {
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
         //
         if (down != null) {
-            if (replySCL.length > 0)
-                down.setReplySCL(replySCL);
+            down.setReplyContexts(replyContexts);
             down.setLocationForward(ior, perm);
             callMap_.remove(down.requestId());
         }

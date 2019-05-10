@@ -16,15 +16,11 @@
  */
 
 package org.apache.yoko.orb.OBPortableServer;
- 
-import java.util.Vector;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.BootManager_impl;
-import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.OAInterface;
@@ -45,8 +41,11 @@ import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.portable.OutputStream;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHolder;
-import org.omg.IOP.ServiceContext;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+
+import java.util.Vector;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 //
 // We don't need any sort of concurrency protection on this class
@@ -98,7 +97,7 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
             ProfileInfo profileInfo,
             TransportInfo transportInfo, int requestId,
             String op, InputStream in,
-            ServiceContext[] requestSCL) {
+            ServiceContexts requestContexts) {
         Upcall upcall = null;
         logger.fine("Creating upcall for operation " + op); 
         try {
@@ -122,9 +121,7 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
                     if (poa != null) {
                         logger.fine("Unable to locate POA " + data + " using POAManager " + poaManager_.get_id()); 
                         POA_impl poaImpl = (POA_impl) poa;
-                        upcall = poaImpl._OB_createUpcall(data.oid,
-                                upcallReturn, profileInfo, transportInfo,
-                                requestId, op, in, requestSCL);
+                        upcall = poaImpl._OB_createUpcall(data.oid, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                         //
                         // If _OB_createUpcall returns a nil Upcall object
                         // then we should retry since that means that the
@@ -153,9 +150,7 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
             //
             if (upcall == null) {
                 if (op.equals("_non_existent") || op.equals("_not_existent")) {
-                    upcall = new Upcall(orbInstance_,
-                            upcallReturn, profileInfo, transportInfo,
-                            requestId, op, in, requestSCL);
+                    upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                     upcall.preUnmarshal();
                     upcall.postUnmarshal();
                     upcall.postinvoke();
@@ -173,15 +168,11 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
             }
         } catch (SystemException ex) {
             logger.log(Level.FINE, "System exception creating upcall", ex); 
-            upcall = new Upcall(orbInstance_,
-                    upcallReturn, profileInfo, transportInfo, requestId, op,
-                    in, requestSCL);
+            upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
             upcall.setSystemException(ex);
         } catch (LocationForward ex) {
             logger.log(Level.FINE, "Location forward request creating upcall.", ex); 
-            upcall = new Upcall(orbInstance_,
-                    upcallReturn, profileInfo, transportInfo, requestId, op,
-                    in, requestSCL);
+            upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
             upcall.setLocationForward(ex.ior, ex.perm);
         }
 
@@ -221,16 +212,14 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
         return OAInterface.UNKNOWN_OBJECT;
     }
 
-    public ProfileInfo[] getUsableProfiles(
-            IOR ior, Policy[] policies) {
+    public ProfileInfo[] getUsableProfiles(IOR ior, Policy[] policies) {
         try {
             Acceptor[] acceptors = poaManager_
                     .get_acceptors();
 
             Vector seq = new Vector();
             for (int i = 0; i < acceptors.length; i++) {
-                ProfileInfo[] seq2 = acceptors[i]
-                        .get_local_profiles(ior);
+                ProfileInfo[] seq2 = acceptors[i].get_local_profiles(ior);
 
                 for (int j = 0; j < seq2.length; j++)
                     seq.addElement(seq2[j]);

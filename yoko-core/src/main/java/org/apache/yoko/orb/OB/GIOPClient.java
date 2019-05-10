@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.Connector;
@@ -283,15 +284,12 @@ final class GIOPClient extends Client {
     }
 
     // get a list of ServiceContexts that have to be sent on an AMI router request
-    public ServiceContext[] getAMIRouterSCL() {
+    public ServiceContexts getAMIRouterContexts() {
         // initialize the service contexts if they haven't already been
         initServiceContexts();
 
-        ServiceContext[] scl = new ServiceContext[1];
-        scl[0] = codeSetSC_;
-
         // return the list
-        return scl;
+        return ServiceContexts.unmodifiable(codeSetSC_);
     }
 
     /** Get all profiles that are usable with this client */
@@ -363,10 +361,10 @@ final class GIOPClient extends Client {
                 }
 
                 Assert._OB_assert(codeSetSC_ != null);
-                down.addToRequestSCL(codeSetSC_);
+                down.addToRequestContexts(codeSetSC_);
 
                 Assert._OB_assert(codeBaseSC_ != null);
-                down.addToRequestSCL(codeBaseSC_);
+                down.addToRequestContexts(codeBaseSC_);
 
             }
 
@@ -381,8 +379,8 @@ final class GIOPClient extends Client {
             if (validGIOPVersion && (down.policies().biDirMode == BOTH.value)) {
                 Transport t = connection.transport();
 
-                ServiceContext contexts[] = t.get_info().get_service_contexts(down.policies().value);
-                for (ServiceContext context : contexts) down.addToRequestSCL(context);
+                ServiceContexts contexts = t.get_info().get_service_contexts(down.policies().value);
+                for (ServiceContext context : contexts) down.addToRequestContexts(context);
             }
 
             ProfileInfo profileInfo = down.profileInfo();
@@ -395,7 +393,7 @@ final class GIOPClient extends Client {
             if (down.operation().equals("_locate"))
                 outgoing.writeLocateRequestHeader(down.requestId());
             else
-                outgoing.writeRequestHeader(down.requestId(), down.operation(), down.responseExpected(), down.getRequestSCL());
+                outgoing.writeRequestHeader(down.requestId(), down.operation(), down.responseExpected(), down.requestContexts);
 
             return connection.emitterInterface();
         } catch (SystemException ex) {

@@ -406,47 +406,43 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // lost upon close, and to make sure that CloseConnection
             // messages from the peer are processed.
             synchronized (this) {
-                if ((enabledOps_ & AccessOp.Read) == 0) {
-                    break;
-                }
+                if ((enabledOps_ & AccessOp.Read) == 0) break;
             }
 
             // the upcall to invoke
             Upcall upcall = null;
 
             try {
-                if (inMsg.consumeBuffer(writer)) {
-                    upcall = processMessage(inMsg);
-                }
+                if (inMsg.consumeBuffer(writer)) upcall = processMessage(inMsg);
+
             } catch (SystemException ex) {
                 processException(State.Error, ex, false);
                 break;
             }
 
+            if (upcall == null) {continue;}
+
             // A valid upcall means we have a full message and not just
             // a fragment or error, so we can proceed to invoke it
-            if (upcall != null) {
-                logger.fine("Processing message using upcall " + upcall.getClass().getName()); 
-                // in the BiDir case, this upcall could result in a
-                // nested call back and forth. This requires a new
-                // receiverThread to handle the reply (the invocation of
-                // the upcall doesn't return back into a receiving state
-                // until the function processing is done)
-                boolean haveBidirSCL = transport_.get_info().received_bidir_SCL();
+            logger.fine("Processing message using upcall " + upcall.getClass().getName());
+            // in the BiDir case, this upcall could result in a
+            // nested call back and forth. This requires a new
+            // receiverThread to handle the reply (the invocation of
+            // the upcall doesn't return back into a receiving state
+            // until the function processing is done)
+            boolean receivedBidirContext = transport_.get_info().received_bidir_service_context();
 
-                // if we have received a bidirectional SCL then we need
-                // to spawn a new thread to handle nested calls (just in case)
-                if (haveBidirSCL) addReceiverThread();
+            // if we have received a bidirectional context then we need
+            // to spawn a new thread to handle nested calls (just in case)
+            if (receivedBidirContext) addReceiverThread();
 
-                upcall.invoke();
+            upcall.invoke();
 
-                // if we've spawned a new thread to handle nested calls
-                // then we can quit this thread because we know another
-                // will be ready to take over anyway
-                if (haveBidirSCL) {
-                    break;
-                }
-            }
+            // if we've spawned a new thread to handle nested calls
+            // then we can quit this thread because we know another
+            // will be ready to take over anyway
+            if (receivedBidirContext) break;
+
         }
     }
 

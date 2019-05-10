@@ -241,7 +241,7 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
         // This isn't valid in any call other than send_request (note that send_poll isn't currently implemented)
         if (replyStatus >= 0) throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
 
-        addServiceContext(requestSCL_, sc, addReplace);
+        requestContexts.mutable().add(sc, addReplace);
     }
 
     public ClientRequestInfo_impl(ORB orb, ORBInstance orbInstance, Current_impl current, PIDowncall dc) {

@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.CLIENT_SIDE;
@@ -85,66 +86,42 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
 
     public short remote_port() {return (short)socket.getPort();}
 
-    public ServiceContext[] get_service_contexts(Policy[] policies) {
-        ServiceContext[] scl;
-        boolean bHaveBidir = false;
-
+    public ServiceContexts get_service_contexts(Policy[] policies) {
         for (Policy policy : policies) {
             if (policy.policy_type() == BIDIRECTIONAL_POLICY_TYPE.value) {
                 BidirectionalPolicy p = BidirectionalPolicyHelper.narrow(policy);
-                if (p.value() == BOTH.value) bHaveBidir = true;
-                break;
+                if (p.value() == BOTH.value) {
+                    BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
+                    biDirCtxt.listen_points = listenMap_.getListenPoints();
+
+                    try (OutputStream out = new OutputStream()) {
+                        out._OB_writeEndian();
+                        BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+                        // Create and fill the return context list
+                        return ServiceContexts.unmodifiable(new ServiceContext(BI_DIR_IIOP.value, out.copyWrittenBytes()));
+                    }
+                }
             }
         }
 
-        if (bHaveBidir) {
-            BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
-            biDirCtxt.listen_points = listenMap_.getListenPoints();
-
-            try (OutputStream out = new OutputStream()) {
-                out._OB_writeEndian();
-                BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
-
-                // Fill in the bidir service context
-                ServiceContext context = new ServiceContext();
-                context.context_id = BI_DIR_IIOP.value;
-                context.context_data = out.copyWrittenBytes();
-
-                // Create and fill the return context list
-                scl = new ServiceContext[1];
-                scl[0] = context;
-                return scl;
-            }
-        }
-
-        //
-        // we don't have a bidir service context so return an array of
-        // length 0
-        //
-        scl = new ServiceContext[0];
-        return scl;
+        // we don't have a bidir service context so return an array of length 0
+        return ServiceContexts.EMPTY;
     }
 
-    public void handle_service_contexts(ServiceContext[] contexts) {
-        for (ServiceContext context : contexts) {
-            if (context.context_id == BI_DIR_IIOP.value) {
-                InputStream in = new InputStream(context.context_data);
-                in._OB_readEndian();
+    public void handle_service_contexts(ServiceContexts contexts) {
+        ServiceContext context = contexts.get(BI_DIR_IIOP.value);
+        if (context == null) return;
+        InputStream in = new InputStream(context.context_data);
+        in._OB_readEndian();
 
-                // unmarshal the octets back to the bidir format
-                BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
+        // unmarshal the octets back to the bidir format
+        BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
 
-                //
-                // save the listening points in the transport
-                //
-                _OB_setListenPoints(biDirCtxt.listen_points);
-
-                break;
-            }
-        }
+        // save the listening points in the transport
+        _OB_setListenPoints(biDirCtxt.listen_points);
     }
 
-    public synchronized boolean received_bidir_SCL() {
+    public synchronized boolean received_bidir_service_context() {
         return listenPoints_ != null && (listenPoints_.length > 0);
     }
 
