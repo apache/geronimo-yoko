@@ -58,6 +58,11 @@ subprojects {
 
 /* Standard configuration for subprojects with tests */
 configure(testProjects) {
+  compileTestJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+  }
+
   // Not all sub projects have tests,
   // but it is cleaner and simpler to
   // standardise the test deps here.
