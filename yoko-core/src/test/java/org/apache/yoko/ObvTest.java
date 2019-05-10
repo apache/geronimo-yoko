@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,15 +16,17 @@
  */
 package org.apache.yoko;
 
-import java.io.File;
-
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import test.obv.Client;
+import test.obv.Server;
+
+import java.io.File;
 
 public class ObvTest extends TestCase {
-    private static String SERVER_CLASS = "test.obv.Server";
-    private static String CLIENT_CLASS = "test.obv.Client";
-    private static File waitForFile = new File("TestOBV.ref");
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
+    private static final File waitForFile = new File("TestOBV.ref");
         
     String[] serverArgs, clientArgs;
         

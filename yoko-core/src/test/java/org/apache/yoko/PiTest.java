@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,19 +16,22 @@
  */
 package org.apache.yoko;
 
+import junit.framework.TestSuite;
+import test.pi.Client;
+import test.pi.Collocated;
+import test.pi.Server;
+
 import java.io.File;
 
-import junit.framework.TestSuite;
-
 public class PiTest extends AbstractOrbTestBase {
-    private static final String SERVER_CLASS = "test.pi.Server";
-    private static final String CLIENT_CLASS = "test.pi.Client";
-    private static final String COLLOC_MAIN_CLASS = "test.pi.Collocated";
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
+    private static final Class<?> COLLOCATED_CLASS = Collocated.class;
     private static final File waitForFile = new File("TestInterface.ref");
         
     public static TestSuite suite() {
         TestSuite suite = AbstractMatrixOrbTestBase.generateTestSuite(SERVER_CLASS, CLIENT_CLASS, waitForFile);
-        suite.addTest(AbstractCollocTestBase.generateTestSuite(COLLOC_MAIN_CLASS, AbstractMatrixOrbTestBase.defaultServers));
+        suite.addTest(AbstractCollocatedTestBase.generateTestSuite(COLLOCATED_CLASS, AbstractMatrixOrbTestBase.SERVER_ORB_ARGS));
         return suite;
     }
 }

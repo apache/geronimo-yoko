@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,9 +16,12 @@
  */
 package org.apache.yoko;
 
+import test.ins.Client;
+import test.ins.Server;
+
 public class InsTest extends AbstractOrbTestBase {
-    private static final String SERVER_CLASS = "test.ins.Server";
-    private static final String CLIENT_CLASS = "test.ins.Client";
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
     public void testUrl() throws Exception {
         runServerClientTest(SERVER_CLASS, new String[] { "TestINS", "TestINS.ref" },
                             CLIENT_CLASS, new String[] { "1", "relfile:TestINS.ref"     });

@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -17,9 +16,12 @@
  */
 package org.apache.yoko;
 
+import test.retry.Client;
+import test.retry.Server;
+
 public class RetryTest extends AbstractOrbTestBase {
-    public static final String SERVER_CLASS = "test.retry.Server";
-    public static final String CLIENT_CLASS = "test.retry.Client";
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
     public void testRetry() throws Exception {
         setWaitForFile("Test.ref");
         runServerClientTest(SERVER_CLASS, CLIENT_CLASS);

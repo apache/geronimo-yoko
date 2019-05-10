@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,23 +16,30 @@
  */
 package org.apache.yoko;
 
+import test.types.TestAny;
+import test.types.TestConst;
+import test.types.TestDynAny;
+import test.types.TestPortableTypes;
+import test.types.TestTypeCode;
+import test.types.TestUnion;
+
 public class TypesTest extends AbstractOrbTestBase {
     public void testConst() throws Exception {
-	client.invokeMain("test.types.TestConst");
+	client.invokeMain(TestConst.class);
     }
     public void testTypeCode() throws Exception {
-	client.invokeMain("test.types.TestTypeCode");
+	client.invokeMain(TestTypeCode.class);
     }
     public void testAny() throws Exception {
-	client.invokeMain("test.types.TestAny");
+	client.invokeMain(TestAny.class);
     }
     public void testDynAny() throws Exception {
-	client.invokeMain("test.types.TestDynAny");
+	client.invokeMain(TestDynAny.class);
     }
     public void testPortableTypes() throws Exception {
-	client.invokeMain("test.types.TestPortableTypes");
+	client.invokeMain(TestPortableTypes.class);
     }
     public void testUnion() throws Exception {
-	client.invokeMain("test.types.TestUnion");
+	client.invokeMain(TestUnion.class);
     }
 }

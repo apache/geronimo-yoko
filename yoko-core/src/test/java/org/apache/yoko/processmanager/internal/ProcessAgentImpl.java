@@ -18,6 +18,8 @@
 
 package org.apache.yoko.processmanager.internal;
 
+import org.apache.yoko.osgi.ProviderLocator;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.rmi.RemoteException;
@@ -27,12 +29,10 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.yoko.osgi.ProviderLocator;
-
 public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgent {
     private static final long serialVersionUID = 1L;
     private String name;
-    private ProcessManagerRemoteIF processManager;
+    private ProcessManagerRemote processManager;
     protected ProcessAgentImpl() throws RemoteException {
         super();
     }
@@ -43,7 +43,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
     private int exitCode = 0;
     private Thread shutdownHook, mainThread;
     public String getName() { return name; }
-    private void init(String name, ProcessManagerRemoteIF processManager) {
+    private void init(String name, ProcessManagerRemote processManager) {
         this.name = name;
         this.processManager = processManager;
         this.mainThread = Thread.currentThread();
@@ -78,7 +78,7 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
         });
         Runtime.getRuntime().addShutdownHook(agent.shutdownHook);
 
-        ProcessManagerRemoteIF manager = (ProcessManagerRemoteIF) reg.lookup(processManagerName);
+        ProcessManagerRemote manager = (ProcessManagerRemote) reg.lookup(processManagerName);
         agent.init(agentName,manager);
 
         agent.waitForShutdown();
@@ -89,21 +89,17 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
         }
     }
 
-    public static void startLocalProcess(ProcessManagerRemoteIF manager, String agentName) throws Exception {
+    public static void startLocalProcess(ProcessManagerRemote manager, String agentName) throws Exception {
         new ProcessAgentImpl().init(agentName,manager);
     }
 
     private void waitForShutdown() {
         try {
-            while(true) {
-                if(shutdownCountDown.await(1000, TimeUnit.MILLISECONDS)) {
-                    break;
-                }
+            while(!shutdownCountDown.await(1000, TimeUnit.MILLISECONDS)) {
                 // Throws RemoteException if processManager is gone.
                 processManager.isAlive();
             }
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             // Parent process died.
             Runtime.getRuntime().removeShutdownHook(shutdownHook);
             System.exit(1);
@@ -116,11 +112,9 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
                 processManager.agentExited(this);
                 agentExited = true;
             }
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             e.printStackTrace();
         }
-        
     }
     
     public void exit(int exitCode) throws RemoteException {
@@ -141,11 +135,9 @@ public class ProcessAgentImpl extends UnicastRemoteObject implements ProcessAgen
             Class cl = ProviderLocator.loadClass(className, getClass(), loader);
             Method method = cl.getMethod(methodName, parameters);
             return method.invoke(null, args);
-        }
-        catch(InvocationTargetException e) {
+        } catch(InvocationTargetException e) {
             return e;
-        }
-        catch(Exception e) {
+        } catch(Exception e) {
             throw new Error(e);
         }
     }

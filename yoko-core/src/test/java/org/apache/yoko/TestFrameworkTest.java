@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -14,10 +13,6 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */
-
-/**
- * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
  */
 package org.apache.yoko;
 
@@ -48,57 +43,57 @@ public class TestFrameworkTest extends AbstractOrbTestBase {
     }
 
     public void testGoodClasses() throws Exception {
-        runServerClientTest(GoodServer.class.getName(), GoodClient.class.getName());
+        runServerClientTest(GoodServer.class, GoodClient.class);
     }
 
-    public void testBadClasses() throws Exception {
+    public void testBadClasses() {
         try {
-            runServerClientTest(BadServer.class.getName(), BadClient.class.getName());
+            runServerClientTest(BadServer.class, BadClient.class);
             fail("Should have thrown an exception");
         } catch (Exception e) {
             assertRootCause(Exception.class, e);
         }
     }
 
-    public void testWorseClasses() throws Exception {
+    public void testWorseClasses() {
         try {
-            runServerClientTest(WorseServer.class.getName(), WorseClient.class.getName());
+            runServerClientTest(WorseServer.class, WorseClient.class);
             fail("Should have thrown an error");
         } catch (Exception e) {
             assertRootCause(Error.class, e);
         }
     }
 
-    public void testBadServer() throws Exception {
+    public void testBadServer() {
         try {
-            runServerClientTest(BadServer.class.getName(), GoodClient.class.getName());
+            runServerClientTest(BadServer.class, GoodClient.class);
             fail("Should have thrown an exception");
         } catch (Exception e) {
             assertRootCause(Exception.class, e);
         }
     }
 
-    public void testWorseServer() throws Exception {
+    public void testWorseServer() {
         try {
-            runServerClientTest(WorseServer.class.getName(), GoodClient.class.getName());
+            runServerClientTest(WorseServer.class, GoodClient.class);
             fail("Should have thrown an error");
         } catch (Exception e) {
             assertRootCause(Error.class, e);
         }
     }
 
-    public void testBadClient() throws Exception {
+    public void testBadClient() {
         try {
-            runServerClientTest(GoodServer.class.getName(), BadClient.class.getName());
+            runServerClientTest(GoodServer.class, BadClient.class);
             fail("Should have thrown an exception");
         } catch (Exception e) {
             assertRootCause(Exception.class, e);
         }
     }
 
-    public void testWorseClient() throws Exception {
+    public void testWorseClient() {
         try {
-            runServerClientTest(GoodServer.class.getName(), WorseClient.class.getName());
+            runServerClientTest(GoodServer.class, WorseClient.class);
             fail("Should have thrown an error");
         } catch (Exception e) {
             assertRootCause(Error.class, e);
