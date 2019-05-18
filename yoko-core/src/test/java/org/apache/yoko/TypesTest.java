@@ -17,16 +17,12 @@
 package org.apache.yoko;
 
 import test.types.TestAny;
-import test.types.TestConst;
 import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
 
 public class TypesTest extends AbstractOrbTestBase {
-    public void testConst() throws Exception {
-	client.invokeMain(TestConst.class);
-    }
     public void testTypeCode() throws Exception {
 	client.invokeMain(TestTypeCode.class);
     }

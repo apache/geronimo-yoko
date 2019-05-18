@@ -4,6 +4,9 @@ dependencies {
 
   // compile against Yoko implementation
   compile project(":yoko-rmi-impl")
+
+  // use shared test utilities
+  testCompile project(":yoko-util").sourceSets.test.output
 }
 
 jar {

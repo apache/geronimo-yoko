@@ -46,11 +46,11 @@ public class JavaProcess {
         manager.registerProcess(this);
     }
 
-    public void addSystemProperty(String key, String value) {
+    public void addNewSystemProperty(String key, String value) {
         systemProperties.put(key, value);
     }
 
-    public void addSystemProperty(String key) {
+    public void copyExistingSystemProperty(String key) {
     	String val = System.getProperty(key);
     	if(val != null)
     		systemProperties.put(key, val);

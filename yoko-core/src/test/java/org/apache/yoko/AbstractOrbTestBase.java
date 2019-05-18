@@ -53,19 +53,19 @@ public class AbstractOrbTestBase extends TestCase {
     protected void setUp() throws Exception {
         ProcessManager processManager = new ProcessManager(Registry.REGISTRY_PORT);
         client = new JavaProcess("client", processManager);
-        client.addSystemProperty("java.endorsed.dirs");
+        client.copyExistingSystemProperty("java.endorsed.dirs");
         server = new JavaProcess("server", processManager);
-        server.addSystemProperty("java.endorsed.dirs");
+        server.copyExistingSystemProperty("java.endorsed.dirs");
         JavaProcess[] processes = new JavaProcess[] {server, client};
         for (JavaProcess process : processes) {
+            String prefix = process.getName() + ":";
             for (Entry<?, ?> entry : System.getProperties().entrySet()) {
                 String key = entry.getKey().toString();
-                if (key.startsWith(process.getName() + ":")) {
-                    int pos = key.indexOf(':') + 1;
-                    String property = key.substring(pos);
+                if (key.startsWith(prefix)) {
+                    String property = key.substring(prefix.length());
                     String value = entry.getValue().toString();
                     System.out.println("Adding (" + property + ", " + value + ")");
-                    process.addSystemProperty(property, value);
+                    process.addNewSystemProperty(property, value);
                 }
             }
         }
