@@ -16,26 +16,28 @@
  */
 package org.apache.yoko;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.Extension;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import test.parts.PartRunner;
+import test.parts.PartRunnerResolver;
 import test.types.TestAny;
 import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
 
-public class TypesTest extends AbstractOrbTestBase {
-    public void testTypeCode() throws Exception {
-	client.invokeMain(TestTypeCode.class);
-    }
-    public void testAny() throws Exception {
-	client.invokeMain(TestAny.class);
-    }
-    public void testDynAny() throws Exception {
-	client.invokeMain(TestDynAny.class);
-    }
-    public void testPortableTypes() throws Exception {
-	client.invokeMain(TestPortableTypes.class);
-    }
-    public void testUnion() throws Exception {
-	client.invokeMain(TestUnion.class);
-    }
+public class TypesTest {
+    @RegisterExtension
+    Extension ext = PartRunnerResolver.builder().useProcesses().build();
+    @Test
+    public void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }
+    @Test
+    public void testAny(PartRunner runner) { runner.forkMain(TestAny.class); }
+    @Test
+    public void testDynAny(PartRunner runner) { runner.forkMain(TestDynAny.class); }
+    @Test
+    public void testPortableTypes(PartRunner runner) { runner.forkMain(TestPortableTypes.class); }
+    @Test
+    public void testUnion(PartRunner runner) { runner.forkMain(TestUnion.class); }
 }

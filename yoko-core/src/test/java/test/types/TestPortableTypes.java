@@ -17,9 +17,11 @@
 
 package test.types;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.UserException;
 
 import java.util.Properties;
+
+import static org.junit.Assert.*;
 
 public class TestPortableTypes extends test.common.TestBase {
     private static void testTypeCode(org.omg.CORBA.ORB orb,
@@ -577,7 +579,7 @@ public class TestPortableTypes extends test.common.TestBase {
         return 0;
     }
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws UserException {
         //
         // Before we initialize the ORB, we ensure that there is
         // no ORBSingletonClass property defined in the system
@@ -607,20 +609,8 @@ public class TestPortableTypes extends test.common.TestBase {
             // Run tests
             //
             status = run(orb, args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 1;
+        } finally {
+            if (orb != null) orb.destroy();
         }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (org.omg.CORBA.SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

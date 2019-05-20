@@ -17,18 +17,56 @@
 
 package test.types;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyFactoryHelper;
+import org.omg.DynamicAny.DynArray;
+import org.omg.DynamicAny.DynArrayHelper;
+import org.omg.DynamicAny.DynEnum;
+import org.omg.DynamicAny.DynEnumHelper;
+import org.omg.DynamicAny.DynFixed;
+import org.omg.DynamicAny.DynFixedHelper;
+import org.omg.DynamicAny.DynSequence;
+import org.omg.DynamicAny.DynSequenceHelper;
+import org.omg.DynamicAny.DynStruct;
+import org.omg.DynamicAny.DynStructHelper;
+import org.omg.DynamicAny.DynUnion;
+import org.omg.DynamicAny.DynUnionHelper;
+import org.omg.DynamicAny.DynValue;
+import org.omg.DynamicAny.DynValueBox;
+import org.omg.DynamicAny.DynValueBoxHelper;
+import org.omg.DynamicAny.DynValueHelper;
+import org.omg.DynamicAny.NameDynAnyPair;
+import org.omg.DynamicAny.NameValuePair;
+import test.types.DynAnyTypes.TestAnySeqHelper;
+import test.types.DynAnyTypes.TestBoundedString10SeqHelper;
+import test.types.DynAnyTypes.TestBoundedStringHelper;
+import test.types.DynAnyTypes.TestEmptyException;
+import test.types.DynAnyTypes.TestEmptyExceptionHelper;
+import test.types.DynAnyTypes.TestShortSeqHelper;
+import test.types.DynAnyTypes.TestStringArrayHelper;
+import test.types.DynAnyTypes.TestStringBoxHelper;
+import test.types.DynAnyTypes.TestStruct;
+import test.types.DynAnyTypes.TestStructBoxHelper;
+import test.types.DynAnyTypes.TestStructHelper;
+import test.types.DynAnyTypes.TestValue1;
+import test.types.DynAnyTypes.TestValue1Helper;
+import test.types.DynAnyTypes.TestValue2;
+import test.types.DynAnyTypes.TestValue2Helper;
+import test.types.DynAnyTypes.TestValue3;
+import test.types.DynAnyTypes.TestValue3Helper;
+import test.types.DynAnyTypes.TestValue4;
+import test.types.DynAnyTypes.TestValue4Helper;
+import test.types.DynAnyTypes.TestValueStructHelper;
 
-import java.math.*;
+import java.math.BigDecimal;
 import java.util.Properties;
 
-import org.omg.CORBA.Any;
-import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.TCKind;
-import org.omg.CORBA.ORB;
-import org.omg.DynamicAny.*;
-
-import test.types.DynAnyTypes.*;
+import static org.junit.Assert.*;
 
 public class TestDynAny extends test.common.TestBase {
     //
@@ -5043,20 +5081,8 @@ public class TestDynAny extends test.common.TestBase {
             // Run tests
             //
             new TestDynAny(orb);
-        } catch (org.omg.CORBA.SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
+        } finally {
+            if (orb != null) orb.destroy();
         }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (org.omg.CORBA.SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }
