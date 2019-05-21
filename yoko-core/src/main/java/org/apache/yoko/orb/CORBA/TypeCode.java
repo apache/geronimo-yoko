@@ -873,8 +873,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         return length_;
     }
 
-    public org.omg.CORBA.TypeCode content_type()
-            throws BadKind {
+    public TypeCode content_type() throws BadKind {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
@@ -1001,11 +1000,19 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         return (TypeCode) _OB_getOrigType(this);
     }
 
-    static public org.omg.CORBA.TypeCode _OB_getOrigType(
-            org.omg.CORBA.TypeCode tc) {
+    static public org.omg.CORBA.TypeCode _OB_getOrigType(org.omg.CORBA.TypeCode tc) {
         try {
-            while (tc.kind() == TCKind.tk_alias)
-                tc = tc.content_type();
+            while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
+        } catch (BadKind ex) {
+            Assert._OB_assert(ex);
+        }
+
+        return tc;
+    }
+
+    static public TypeCode _OB_getOrigType(TypeCode tc) {
+        try {
+            while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
         } catch (BadKind ex) {
             Assert._OB_assert(ex);
         }
