@@ -26,87 +26,94 @@ import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.TypeCodePackage.Bounds;
 
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Vector;
 
 // Note: TypeCodes are (supposed to be) immutable, so I don't need thread synchronization
 final public class TypeCode extends org.omg.CORBA.TypeCode {
-    //
-    // TypeCode kind
-    //
     public TCKind kind_;
 
-    //
-    // tk_objref, tk_struct, tk_union, tk_enum, tk_alias, tk_value,
-    // tk_value_box, tk_native, tk_abstract_interface, tk_except,
-    // tk_local_interface
-    //
+    // tk_objref, tk_struct, tk_union, tk_enum, tk_alias, tk_value, tk_value_box, tk_native, tk_abstract_interface, tk_except, tk_local_interface
     public String id_;
-
     public String name_;
-
-    //
     // tk_struct, tk_union, tk_enum, tk_value, tk_except
-    //
     public String[] memberNames_;
-
-    //
     // tk_struct, tk_union, tk_value, tk_except
-    //
     public TypeCode[] memberTypes_;
-
-    //
     // tk_union
-    //
     public Any[] labels_;
-
-    //
     // tk_union
-    //
     public TypeCode discriminatorType_;
 
-    //
     // tk_string, tk_wstring, tk_sequence, tk_array
-    //
     public int length_;
 
-    //
     // tk_sequence, tk_array, tk_value_box, tk_alias
-    //
     public TypeCode contentType_;
 
-    //
     // tk_fixed
-    //
     public short fixedDigits_;
-
     public short fixedScale_;
 
-    //
     // tk_value
-    //
     public short[] memberVisibility_;
-
     public short typeModifier_;
 
     public TypeCode concreteBaseType_;
 
-    //
     // If recId_ is set, this is a placeholder recursive TypeCode that
     // was generated with create_recursive_tc(). If the placeholder
     // recursive TypeCode is already embedded, recType_ points to the
     // recursive TypeCode this placeholder delegates to.
-    //
     public String recId_;
 
     TypeCode recType_;
 
-    // ------------------------------------------------------------------
-    // Private member implementations
-    // ------------------------------------------------------------------
+    @Override
+    public String toString() {
+        return describe(new StringBuilder(), "").toString();
+    }
+
+    private StringBuilder describe(StringBuilder sb, String prefix) {
+        final String indent = prefix + "\t";
+        sb.append("TypeCode{\n");
+        if (kind_ != null) sb.append(indent).append("kind: ").append(kind_).append("\n");
+        if (id_ != null) sb.append(indent).append("id: ").append(id_).append("\n");
+        if (name_ != null) sb.append(indent).append("name: ").append(name_).append("\n");
+        if (recId_ != null) sb.append(indent).append("recursive id: ").append(recId_).append("\n");
+        if (typeModifier_ != 0) sb.append(indent).append("type modifier: ").append(typeModifier_).append("\n");
+        if (length_ != 0) sb.append(indent).append("length: ").append(length_).append("\n");
+        if (fixedDigits_ != 0) sb.append(indent).append("fixed digits: ").append(fixedDigits_).append("\n");
+        if (fixedScale_ != 0) sb.append(indent).append("fixed scale: ").append(fixedScale_).append("\n");
+        if (memberNames_ != null) {
+            int visCount = memberVisibility_ == null ? 0 : memberVisibility_.length;
+            if (memberTypes_ == null) {
+                sb.append(indent).append("members: ").append(Arrays.toString(memberNames_)).append("\n");
+            } else for (int i = 0; i < memberNames_.length; i++) {
+                TypeCode tc = i < memberTypes_.length ? memberTypes_[i] : null;
+                sb.append(indent).append(memberNames_[i]);
+                if (i < visCount) sb.append(" (visibility = ").append(memberVisibility_[i]).append(")");
+                appendTC(sb, ": ", tc, indent).append("\n");
+            }
+        }
+//        if (labels_ != null) sb.append(indent).append("labels: ").append(Arrays.toString(labels_)).append("\n");
+        if (recType_ != null) appendTC(sb, "recursive typecode: ", recType_, indent).append("\n");
+        if (discriminatorType_ != null) appendTC(sb, "discriminator type: ", discriminatorType_, indent).append("\n");
+        if (contentType_ != null) appendTC(sb, "content type: ", contentType_, indent).append("\n");
+        if (concreteBaseType_ != null) appendTC(sb, "concrete base type: ", concreteBaseType_, indent).append("\n");
+        return sb.append(prefix).append("}");
+    }
+
+    private static StringBuilder appendTC(StringBuilder sb, String prefix, TypeCode tc, String indent) {
+        sb.append(prefix);
+        if (tc == null) sb.append("typecode was null");
+        else tc.describe(sb, indent);
+        return sb;
+    }
 
     private boolean equivalentRecHelper(org.omg.CORBA.TypeCode t,
-            Vector history, Vector otherHistory) {
+                                        Vector history, Vector otherHistory) {
         if (t == null)
             return false;
 
