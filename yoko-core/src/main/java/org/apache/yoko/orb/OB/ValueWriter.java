@@ -14,7 +14,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.DataOutputStream;
@@ -24,6 +23,8 @@ import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.StringValueHelper;
+import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.WStringValueHelper;
@@ -41,6 +42,7 @@ import java.util.IdentityHashMap;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.CORBA.TCKind._tk_string;
 
 final public class ValueWriter {
 
@@ -163,12 +165,9 @@ final public class ValueWriter {
         final Class<?> valueClass = value.getClass();
 
         //Short-cuts
-        if (String.class == valueClass) {
-            return new WStringValueHelper();
-        } else if (!!!IDLEntity.class.isAssignableFrom(valueClass)) {
-            return null;
-        }
-        //
+        if (String.class == valueClass) return fastPathStringBoxHelper(type);
+        if (!!!IDLEntity.class.isAssignableFrom(valueClass)) return null;
+
         // First try constructing a class name based on the class of
         // the value. This will only work for primitive types, because
         // a distinct valuetype class is generated for boxed primitive
@@ -208,6 +207,19 @@ final public class ValueWriter {
         }
 
         return result;
+    }
+
+    private BoxedValueHelper fastPathStringBoxHelper(TypeCode type) {
+        // There are two ways we could have a string value:
+        // EITHER the boxed value is an IDL string
+        // OR the boxed value is a Java String.
+        // We can tell if it is an IDL String if the kind == _tk_string
+        try {
+            return (type.content_type().kind().value() == _tk_string) ? new StringValueHelper() : new WStringValueHelper();
+        } catch (NullPointerException|BadKind ignored) {
+            return new WStringValueHelper();
+        }
+
     }
 
     // ------------------------------------------------------------------
