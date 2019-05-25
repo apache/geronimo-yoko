@@ -14,8 +14,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package test.parts;
 
-package test.common;
+import java.io.Serializable;
 
-public class TestException extends RuntimeException {
+@FunctionalInterface
+public interface TestPart extends Serializable {
+    void run(UserBus bus) throws Throwable;
 }

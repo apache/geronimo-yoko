@@ -16,21 +16,27 @@
  */
 package org.apache.yoko;
 
+import junit.framework.TestSuite;
 
-import test.iiopplugin.Client;
-import test.iiopplugin.Server;
-
-public class IIOPPluginTest extends AbstractOrbTestBase {
-    private static final Class<?> SERVER_CLASS = Server.class;
-    private static final Class<?> CLIENT_CLASS = Client.class;
-    private static final String OUTPUT_FILE = "Test.ref";
-
-    public void setUp() throws Exception {
-        super.setUp();
-        setWaitForFile(OUTPUT_FILE);
+/** Test client and server using the same ORB */
+public final class AbstractCollocatedTestBase extends AbstractOrbTestBase {
+    private Class<?> mainClass;
+    private String[] args;
+    public AbstractCollocatedTestBase(String testName) {
+        super(testName);
     }
-    public void testLocal() throws Exception {
-        runServerClientTest(SERVER_CLASS, CLIENT_CLASS);
+    public void testCollocated() throws Exception {
+        client.invokeMain(mainClass, args);
+    }
+        
+    public static TestSuite generateTestSuite(Class<?> mainClass, String[][] args) {
+        TestSuite suite = new TestSuite();
+        for (String[] arg : args) {
+            AbstractCollocatedTestBase test = new AbstractCollocatedTestBase("testCollocated");
+            test.mainClass = mainClass;
+            test.args = arg;
+            suite.addTest(test);
+        }
+        return suite;
     }
 }
-

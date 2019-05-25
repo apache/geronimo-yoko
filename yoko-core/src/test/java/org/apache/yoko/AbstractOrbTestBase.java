@@ -1,11 +1,11 @@
-/**
+/*
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -15,25 +15,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.yoko;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
+import junit.framework.TestCase;
+import org.apache.yoko.processmanager.JavaProcess;
+import org.apache.yoko.processmanager.ProcessManager;
 
 import java.io.File;
 import java.rmi.registry.Registry;
 import java.util.Map.Entry;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import junit.framework.TestCase;
-
-import org.apache.yoko.processmanager.JavaProcess;
-import org.apache.yoko.processmanager.ProcessManager;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
- * Superclass for ORB tests. Takes care of setting up a a server process and a client process.
+ * Superclass for ORB tests. Takes care of setting up a server process and a client process.
  * It also sets the java.endorsed.dirs property and launches the client process.
  *
  * Currently, the client waits for the server to create a file containing an IOR. This
@@ -41,11 +38,10 @@ import org.apache.yoko.processmanager.ProcessManager;
  * can be used to set the name of this file, which varies in the ORB tests.
  */
 public class AbstractOrbTestBase extends TestCase {
-    protected ProcessManager processManager;
-    protected JavaProcess server, client;
-    protected File waitForFile;
-    int waitForFileTimeout = 10000;
-        
+    JavaProcess server;
+    JavaProcess client;
+    File waitForFile;
+
     public AbstractOrbTestBase() {
         super();
     }
@@ -55,29 +51,28 @@ public class AbstractOrbTestBase extends TestCase {
     }
         
     protected void setUp() throws Exception {
-        super.setUp();
-        processManager = new ProcessManager(Registry.REGISTRY_PORT);
+        ProcessManager processManager = new ProcessManager(Registry.REGISTRY_PORT);
         client = new JavaProcess("client", processManager);
-        client.addSystemProperty("java.endorsed.dirs");
+        client.copyExistingSystemProperty("java.endorsed.dirs");
         server = new JavaProcess("server", processManager);
-        server.addSystemProperty("java.endorsed.dirs");
+        server.copyExistingSystemProperty("java.endorsed.dirs");
         JavaProcess[] processes = new JavaProcess[] {server, client};
-        for(int i = 0; i < processes.length; i++) {
-            JavaProcess process = processes[i];
-            for(Entry<?, ?> entry: System.getProperties().entrySet()) {
+        for (JavaProcess process : processes) {
+            String prefix = process.getName() + ":";
+            for (Entry<?, ?> entry : System.getProperties().entrySet()) {
                 String key = entry.getKey().toString();
-                if(key.startsWith(process.getName() + ":")){
-                    int pos = key.indexOf(':') + 1;
-                    String property = key.substring(pos);
+                if (key.startsWith(prefix)) {
+                    String property = key.substring(prefix.length());
                     String value = entry.getValue().toString();
                     System.out.println("Adding (" + property + ", " + value + ")");
-                    process.addSystemProperty(property, value);
+                    process.addNewSystemProperty(property, value);
                 }
             }
         }
         client.launch();
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void tearDown() throws Exception {
         client.exit(0);
         if(getWaitForFile() != null && getWaitForFile().exists()) {
@@ -86,14 +81,10 @@ public class AbstractOrbTestBase extends TestCase {
     }
     
     protected void runServerClientTest(Class<?> serverClass, Class<?> clientClass, String...commonArgs) throws Exception {
-        runServerClientTest(serverClass.getName(), commonArgs, clientClass.getName(), commonArgs);
+        runServerClientTest(serverClass, commonArgs, clientClass, commonArgs);
     }
-    
-    protected void runServerClientTest(String serverClass, String clientClass) throws Exception {
-        runServerClientTest(serverClass, new String[0], clientClass, new String[0]);
-    }
-    protected void runServerClientTest(String serverClass, String[] serverArgs, 
-                                       String clientClass, String[] clientArgs) throws Exception {
+
+    void runServerClientTest(Class<?> serverClass, String[] serverArgs, Class<?> clientClass, String[] clientArgs) throws Exception {
         server.launch();
         Future<Void> serverFuture = server.invokeMainAsync(serverClass, serverArgs);
         waitForFile();
@@ -110,13 +101,14 @@ public class AbstractOrbTestBase extends TestCase {
         this.waitForFile = new File(file);
     }
         
-    public final File getWaitForFile() {
+    private File getWaitForFile() {
         return waitForFile;
     }
         
-    protected void waitForFile() {
+    void waitForFile() {
         File file = getWaitForFile();
         if(file != null) {
+            int waitForFileTimeout = 10000;
             waitFor(file, waitForFileTimeout);
         }
     }

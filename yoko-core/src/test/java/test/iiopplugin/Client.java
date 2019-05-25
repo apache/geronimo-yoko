@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -15,24 +14,26 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-
-/**
- * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
- */
-
 package test.iiopplugin;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryHelper;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import test.common.TestBase;
 
 import java.util.Properties;
 
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
+import static org.junit.Assert.*;
 
-public class Client extends test.common.TestBase {
-    public static int run(ORB orb, String[] args)
-            throws org.omg.CORBA.UserException {
+public class Client extends TestBase {
+    private static int run(ORB orb) throws UserException {
         //
         // Get "test" object
         //
@@ -43,30 +44,29 @@ public class Client extends test.common.TestBase {
         }
 
         Test test = TestHelper.narrow(obj);
-        assertTrue(test != null);
+        assertNotNull(test);
 
         Test localTest = new LocalTest_impl();
 
-        org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper
-                .narrow(orb.resolve_initial_references("CodecFactory"));
-        assertTrue(factory != null);
+        CodecFactory factory = CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
+        assertNotNull(factory);
 
-        org.omg.IOP.Encoding how = new org.omg.IOP.Encoding();
+        Encoding how = new Encoding();
         how.major_version = 0;
         how.minor_version = 0;
-        how.format = org.omg.IOP.ENCODING_CDR_ENCAPS.value;
+        how.format = ENCODING_CDR_ENCAPS.value;
 
-        org.omg.IOP.Codec codec = factory.create_codec(how);
-        assertTrue(codec != null);
+        Codec codec = factory.create_codec(how);
+        assertNotNull(codec);
 
         System.out.print("Testing Codec... ");
         System.out.flush();
         try {
-            org.omg.CORBA.Any a = orb.create_any();
+            Any a = orb.create_any();
             TestHelper.insert(a, test);
-            byte[] data = codec.encode_value(a);
-        } catch (org.omg.CORBA.SystemException ex) {
-            assertTrue(false);
+            codec.encode_value(a);
+        } catch (SystemException ex) {
+            fail();
         }
         System.out.println("Done!");
 
@@ -79,8 +79,8 @@ public class Client extends test.common.TestBase {
         System.out.flush();
         try {
             test.intest(test);
-        } catch (org.omg.CORBA.SystemException ex) {
-            assertTrue(false);
+        } catch (SystemException ex) {
+            fail();
         }
         System.out.println("Done!");
 
@@ -88,8 +88,8 @@ public class Client extends test.common.TestBase {
         System.out.flush();
         try {
             test.intest(localTest);
-            assertTrue(false);
-        } catch (org.omg.CORBA.MARSHAL ex) {
+            fail();
+        } catch (MARSHAL ex) {
             // Expected
         }
         System.out.println("Done!");
@@ -97,11 +97,11 @@ public class Client extends test.common.TestBase {
         System.out.print("Testing passing non-local object in any... ");
         System.out.flush();
         try {
-            org.omg.CORBA.Any a = orb.create_any();
+            Any a = orb.create_any();
             TestHelper.insert(a, test);
             test.inany(a);
-        } catch (org.omg.CORBA.SystemException ex) {
-            assertTrue(false);
+        } catch (SystemException ex) {
+            fail();
         }
 
 //        if (!ServerPlugin.testPassed()) {
@@ -109,7 +109,7 @@ public class Client extends test.common.TestBase {
 //        }
 
         if (!ClientPlugin.testPassed()) {
-            assertTrue(false);
+            fail();
         }
 
         System.out.println("Done!");
@@ -120,8 +120,8 @@ public class Client extends test.common.TestBase {
         return 0;
     }
 
-    public static void main(String args[]) {
-        java.util.Properties props = new Properties();
+    public static void main(String[] args) {
+        Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass",
@@ -133,7 +133,7 @@ public class Client extends test.common.TestBase {
 
         try {
             orb = ORB.init(arguments, props);
-            status = run(orb, arguments);
+            status = run(orb);
         } catch (Exception ex) {
             ex.printStackTrace();
             status = 1;

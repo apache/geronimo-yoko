@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -15,33 +14,29 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.yoko.processmanager;
-
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.rmi.RemoteException;
-import java.rmi.registry.Registry;
-import java.util.Properties;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.apache.yoko.processmanager.internal.ProcessAgent;
 import org.apache.yoko.processmanager.internal.ProcessAgentImpl;
 import org.apache.yoko.processmanager.internal.Util;
 
-public class JavaProcess {
+import java.lang.reflect.InvocationTargetException;
+import java.rmi.RemoteException;
+import java.rmi.registry.Registry;
+import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
+public class JavaProcess {
     private final boolean inProcess;
     private final String name;
     private final Properties systemProperties;
     private ProcessAgent processAgent;
-    private ProcessManager manager;
+    private final ProcessManager manager;
 
-    CountDownLatch processExited = new CountDownLatch(1);
-    CountDownLatch processStarted = new CountDownLatch(1);
+    final CountDownLatch processExited = new CountDownLatch(1);
+    final CountDownLatch processStarted = new CountDownLatch(1);
 
     public JavaProcess(String name, ProcessManager manager) {
         this.name = name;
@@ -51,12 +46,11 @@ public class JavaProcess {
         manager.registerProcess(this);
     }
 
-
-    public void addSystemProperty(String key, String value) {
+    public void addNewSystemProperty(String key, String value) {
         systemProperties.put(key, value);
     }
 
-    public void addSystemProperty(String key) {
+    public void copyExistingSystemProperty(String key) {
     	String val = System.getProperty(key);
     	if(val != null)
     		systemProperties.put(key, val);
@@ -64,70 +58,46 @@ public class JavaProcess {
 
     /**
      * Starts the process.
-     *
      */
     public void launch() {
-        launch(5000);
-    }
-
-    public void launch(int timeoutMillis) {
         try {
             if(inProcess) {
                 ProcessAgentImpl.startLocalProcess(manager, this.name);
-            } else {                
+            } else {
                 Process proc = Util.execJava(ProcessAgentImpl.class.getName(), systemProperties, name, "localhost", ""+Registry.REGISTRY_PORT, manager.getName());
                 Util.redirectStream(proc.getInputStream(), System.out, name+":out");
                 Util.redirectStream(proc.getErrorStream(), System.err, name+":err");
-                waitForProcessStartup(timeoutMillis);
+                waitForProcessStartup();
             }
         } catch(Exception e) {
             throw new Error(e);
         }
     }
 
-    public Object invokeMain(String className, String...args) throws InvocationTargetException {
-        return invokeStatic(className, "main", new Object[] { args });
+    public void invokeMain(Class<?> mainClass, String...args) throws InvocationTargetException {
+        invokeMain(mainClass, new Object[]{args});
     }
 
-    public Future<Void> invokeMainAsync(String className, String...args) {
-        return invokeStaticAsync(className, "main", new Object[] { args });
-    }
-
-    public Future<Void> invokeStaticAsync(final String className, final String method, final Object[] args) {
-        return Executors.newSingleThreadExecutor().submit(new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-                invokeStatic(className, method, args);
-                return null;
-            }
+    public Future<Void> invokeMainAsync(final Class<?> mainClass, final String...args) {
+        return Executors.newSingleThreadExecutor().submit(() -> {
+            invokeMain(mainClass, new Object[] { args });
+            return null;
         });
     }
 
     /**
      * Invokes a static method within the process. The static method cannot return a Throwable.
      */
-    public Object invokeStatic(String className, String method, Object[] args) throws InvocationTargetException {
-        Object result = null;
+    private void invokeMain(Class<?> mainClass, Object[] args) throws InvocationTargetException {
         try {
-            result = processAgent.invokeStatic(className, method, args);
+            Object result = processAgent.invokeStatic(mainClass.getName(), "main", args);
+            if (result instanceof InvocationTargetException) throw (InvocationTargetException) result;
+            if (result instanceof Throwable) throw new Error((Throwable) result);
+        } catch(RemoteException e) {
+            if (processExited.getCount() == 0) {return;}
+            e.printStackTrace();
+            throw new Error(e);
         }
-        catch(RemoteException e) {
-            if(processExited.getCount() != 0) {
-                e.printStackTrace();
-                throw new Error(e);
-            }
-            else {
-                //System.out.println("invokeStatic terminated process");
-            }
-        }
-
-        if(result instanceof Throwable) {
-            if(result instanceof InvocationTargetException) {
-                throw (InvocationTargetException) result;
-            }
-            else throw new Error((Throwable) result);
-        }
-        return result;
     }
 
     protected void setAgent(ProcessAgent agent) {
@@ -138,7 +108,6 @@ public class JavaProcess {
 
     /**
      * If this process is forked, this method terminates the process with the given exit code. Waits for the process to terminate.
-     * @param exitCode
      */
     public void exit(int exitCode) {
         if (inProcess) return;
@@ -154,7 +123,7 @@ public class JavaProcess {
         }
     }
 
-    private void waitForProcessStartup(int maxWaitMillis) {
+    private void waitForProcessStartup() {
         try {
             processStarted.await();
         } catch (InterruptedException e) {

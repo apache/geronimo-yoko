@@ -17,12 +17,14 @@
 
 package test.types;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TypeCode;
 
-import java.math.*;
+import java.math.BigDecimal;
 import java.util.Properties;
 
-import org.omg.CORBA.*;
+import static org.junit.Assert.*;
 
 public class TestAny extends test.common.TestBase {
     public TestAny(ORB orb) {
@@ -560,20 +562,8 @@ public class TestAny extends test.common.TestBase {
             System.out.flush();
             new TestAny(orb);
             System.out.println("Done!");
-        } catch (org.omg.CORBA.SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
+        } finally {
+            if (orb != null) orb.destroy();
         }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (org.omg.CORBA.SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

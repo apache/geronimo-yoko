@@ -17,9 +17,65 @@
 
 package test.types;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.AliasDefHelper;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ArrayDefHelper;
+import org.omg.CORBA.AttrDescriptionSeqHelper;
+import org.omg.CORBA.AttributeDefHelper;
+import org.omg.CORBA.AttributeDescriptionHelper;
+import org.omg.CORBA.AttributeModeHelper;
+import org.omg.CORBA.CompletionStatusHelper;
+import org.omg.CORBA.ConstantDefHelper;
+import org.omg.CORBA.ConstantDescriptionHelper;
+import org.omg.CORBA.ContainedHelper;
+import org.omg.CORBA.ContainedSeqHelper;
+import org.omg.CORBA.ContainerHelper;
+import org.omg.CORBA.ContextIdSeqHelper;
+import org.omg.CORBA.ContextIdentifierHelper;
+import org.omg.CORBA.DefinitionKindHelper;
+import org.omg.CORBA.EnumDefHelper;
+import org.omg.CORBA.EnumMemberSeqHelper;
+import org.omg.CORBA.ExcDescriptionSeqHelper;
+import org.omg.CORBA.ExceptionDefHelper;
+import org.omg.CORBA.ExceptionDefSeqHelper;
+import org.omg.CORBA.ExceptionDescriptionHelper;
+import org.omg.CORBA.IDLTypeHelper;
+import org.omg.CORBA.IRObjectHelper;
+import org.omg.CORBA.IdentifierHelper;
+import org.omg.CORBA.InterfaceDefHelper;
+import org.omg.CORBA.InterfaceDefSeqHelper;
+import org.omg.CORBA.InterfaceDescriptionHelper;
+import org.omg.CORBA.ModuleDefHelper;
+import org.omg.CORBA.ModuleDescriptionHelper;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.OpDescriptionSeqHelper;
+import org.omg.CORBA.OperationDefHelper;
+import org.omg.CORBA.OperationDescriptionHelper;
+import org.omg.CORBA.OperationModeHelper;
+import org.omg.CORBA.ParDescriptionSeqHelper;
+import org.omg.CORBA.ParameterDescriptionHelper;
+import org.omg.CORBA.ParameterModeHelper;
+import org.omg.CORBA.PrimitiveDefHelper;
+import org.omg.CORBA.PrimitiveKindHelper;
+import org.omg.CORBA.RepositoryHelper;
+import org.omg.CORBA.RepositoryIdHelper;
+import org.omg.CORBA.RepositoryIdSeqHelper;
+import org.omg.CORBA.ScopedNameHelper;
+import org.omg.CORBA.SequenceDefHelper;
+import org.omg.CORBA.StringDefHelper;
+import org.omg.CORBA.StructDefHelper;
+import org.omg.CORBA.StructMemberHelper;
+import org.omg.CORBA.StructMemberSeqHelper;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeDescriptionHelper;
+import org.omg.CORBA.TypedefDefHelper;
+import org.omg.CORBA.UnionDefHelper;
+import org.omg.CORBA.UnionMemberHelper;
+import org.omg.CORBA.UnionMemberSeqHelper;
+import org.omg.CORBA.VersionSpecHelper;
 
-import org.omg.CORBA.*;
+import static org.junit.Assert.*;
 
 public class TestTypeCode extends test.common.TestBase {
     private static final boolean CHECK_IDL_NAMES = false;
@@ -824,20 +880,9 @@ public class TestTypeCode extends test.common.TestBase {
             System.out.flush();
             new TestTypeCode(orb);
             System.out.println("Done!");
-        } catch (org.omg.CORBA.SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
+        } finally {
+            if (orb != null) orb.destroy();
         }
 
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (org.omg.CORBA.SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

@@ -58,9 +58,12 @@ subprojects {
 
 /* Standard configuration for subprojects with tests */
 configure(testProjects) {
-  // Not all sub projects have tests,
-  // but it is cleaner and simpler to
-  // standardise the test deps here.
+  compileTestJava {
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+  }
+
+  // standardise the test deps here
   dependencies {
     testCompile 'junit:junit:4.12'
     testCompile 'org.mockito:mockito-core:2.22.0'
@@ -121,9 +124,7 @@ configure(testProjects) {
       }
     }
   }
-
 }
-
 
 /* Standard configuration for subprojects with shippable outputs */
 configure(shipProjects) {

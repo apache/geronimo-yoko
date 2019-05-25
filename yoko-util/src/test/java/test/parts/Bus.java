@@ -14,8 +14,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package test.parts;
 
-package test.common;
+import java.util.function.BiConsumer;
 
-public class TestException extends RuntimeException {
+public interface Bus {
+    UserBus forUser(String user);
+
+    void put(String key, String value);
+    String get(String key);
+
+    void forEach(BiConsumer<String, String> action);
 }

@@ -17,11 +17,12 @@
 
 package test.types;
 
-import static org.junit.Assert.assertTrue;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
 
 import java.util.Properties;
 
-import org.omg.CORBA.*;
+import static org.junit.Assert.*;
 
 public class TestUnion extends test.common.TestBase {
     TestUnion(ORB orb) {
@@ -170,20 +171,8 @@ public class TestUnion extends test.common.TestBase {
             System.out.flush();
             new TestUnion(orb);
             System.out.println("Done!");
-        } catch (org.omg.CORBA.SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
+        } finally {
+            if (orb != null) orb.destroy();
         }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (org.omg.CORBA.SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

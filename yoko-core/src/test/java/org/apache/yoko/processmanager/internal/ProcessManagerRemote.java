@@ -20,7 +20,7 @@ package org.apache.yoko.processmanager.internal;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-public interface ProcessManagerRemoteIF extends Remote {
+public interface ProcessManagerRemote extends Remote {
 	void agentReady(ProcessAgent agent) throws RemoteException;
 	void isAlive() throws RemoteException;
 	void agentExited(ProcessAgent agent) throws RemoteException;
