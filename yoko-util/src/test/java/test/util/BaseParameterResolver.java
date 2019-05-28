@@ -40,15 +40,14 @@ public abstract class BaseParameterResolver<T> implements ParameterResolver, Aft
             try { return getKeyInternal(ctx); }
             catch (Exception e) { throw new AssertionFailedError("Scope " + this + " does not work in the current context"); }
         }
-
     }
 
-    public static abstract class BaseBuilder<B extends BaseBuilder<B, E>, E extends BaseParameterResolver> {
+    public static abstract class BaseBuilder<B extends BaseBuilder<B>> {
         private Scope scope = Scope.AUTO;
         protected Scope scope() { return scope; }
         public B perTest() { assertEquals(scope, Scope.AUTO); scope = Scope.PER_TEST; return (B)this; }
         public B perContainer() { assertEquals(scope, Scope.AUTO); scope = Scope.PER_CONTAINER; return (B)this; }
-        public abstract E build();
+        public abstract BaseParameterResolver build();
     }
 
     private final Class<T> type;

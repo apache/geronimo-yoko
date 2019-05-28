@@ -19,7 +19,7 @@ import org.omg.CORBA.ORB;
 import java.util.Properties;
 
 public class SimpleOrbResolver extends BaseParameterResolver<ORB> {
-    public static class Builder extends BaseBuilder<Builder, SimpleOrbResolver> {
+    public static final class Builder extends BaseBuilder<Builder> {
         public SimpleOrbResolver build() { return new SimpleOrbResolver(scope()); }
     }
 

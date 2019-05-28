@@ -31,9 +31,9 @@ import org.omg.CORBA.SystemException;
 import test.ins.Server;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
-import test.parts.PartRunner;
-import test.parts.PartRunnerResolver;
 import test.util.SimpleOrbResolver;
+import test.util.parts.PartRunner;
+import test.util.parts.PartRunnerResolver;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;

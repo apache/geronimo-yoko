@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package test.util.parts;
 
 import test.util.BiStream;
 
@@ -26,8 +26,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static test.parts.SerialUtil.stringify;
-import static test.parts.SerialUtil.unstringify;
+import static test.util.parts.SerialUtil.stringify;
+import static test.util.parts.SerialUtil.unstringify;
 
 class ProcessRunner extends PartRunnerImpl<Process> {
     private static final List<String> PROPERTIES_TO_COPY = Arrays.asList("java.endorsed.dirs");

@@ -14,14 +14,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package test.util.parts;
 
 import junit.framework.AssertionFailedError;
-import test.util.BiStream;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
 
 import static java.util.Arrays.asList;

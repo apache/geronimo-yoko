@@ -32,7 +32,7 @@ import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManager;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddress_impl;
-import test.parts.UserBus;
+import test.util.parts.UserBus;
 
 import java.util.Properties;
 

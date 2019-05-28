@@ -14,24 +14,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package test.util.parts;
 
-import java.util.concurrent.TimeUnit;
+import java.io.Serializable;
 
-class ThreadRunner extends PartRunnerImpl<Thread> {
-    Thread fork(NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)));
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
-    }
-    boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
-    boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.interrupt();
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
+@FunctionalInterface
+public interface TestPart extends Serializable {
+    void run(UserBus bus) throws Throwable;
 }

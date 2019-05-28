@@ -10,7 +10,7 @@
  *     IBM Corporation - initial API and implementation
  * =============================================================================
  */
-package test.parts;
+package test.util.parts;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
@@ -19,7 +19,7 @@ import test.util.BaseParameterResolver;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class PartRunnerResolver extends BaseParameterResolver<PartRunner> {
-    public static final class Builder extends BaseBuilder<Builder, PartRunnerResolver> {
+    public static final class Builder extends BaseBuilder<Builder> {
         private boolean processes = false;
         public Builder useThreads() { assertFalse(processes); return this; }
         public Builder useProcesses() { assertFalse(processes); processes = true; return this; }

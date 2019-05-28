@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package test.util.parts;
 
 import java.lang.reflect.InvocationTargetException;
 

@@ -14,15 +14,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package test.util.parts;
 
-import java.util.function.BiConsumer;
+import static test.util.parts.SerialUtil.stringify;
+import static test.util.parts.SerialUtil.unstringify;
 
-public interface Bus {
-    UserBus forUser(String user);
+public interface UserBus extends Bus {
+    String get(String user, String key);
+    String getOwn(String key);
+    default Object get(Enum<?> key) { return unstringify(getFullyQualifiedName(key)); }
+    default Object get(String user, Enum<?> key) { return unstringify(get(user, getFullyQualifiedName(key))); }
+    default Object getOwn(Enum<?>key) { return unstringify(getOwn(getFullyQualifiedName(key))); }
+    default void put(Enum<?>key) { put(key, key); }
+    default void put(Enum<?>key, Object value) { put(getFullyQualifiedName(key), stringify(value)); }
 
-    void put(String key, String value);
-    String get(String key);
-
-    void forEach(BiConsumer<String, String> action);
+    static String getFullyQualifiedName(Enum<?> e) { return e.getDeclaringClass().getName() + '.' + e.name(); }
 }
