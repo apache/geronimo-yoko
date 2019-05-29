@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.bus;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,7 +33,7 @@ import static java.util.Arrays.asList;
 /**
  * Allow processes to communicate using process streams.
  */
-final class InterProcessBus extends BusImpl {
+public final class InterProcessBus extends BusImpl {
     private static final String SEP = ">|<"; // sneezing elephants make the best separators
 
     private static final Pattern SUPPRESS = Pattern.compile("^WARNING: " +
@@ -46,13 +46,13 @@ final class InterProcessBus extends BusImpl {
     /**
      * Allow a master (parent) process to communicate with its slave (child) processes.
      */
-    static InterProcessBus createMaster() { return new InterProcessBus(true); }
+    public static InterProcessBus createMaster() { return new InterProcessBus(true); }
 
     /**
      * Allow a slave (child) process to use its {@link System#in} and {@link System#out}
      * to communicate with its master (parent) process.
      */
-    static InterProcessBus createSlave() { return new InterProcessBus(false); }
+    public static InterProcessBus createSlave() { return new InterProcessBus(false); }
 
     private final List<IO> ioList;
 

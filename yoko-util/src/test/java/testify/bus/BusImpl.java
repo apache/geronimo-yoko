@@ -14,17 +14,24 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.bus;
 
 import test.util.BiStream;
 
+import java.util.Optional;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -32,16 +39,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Enable multiple threads to communicate asynchronously.
  */
-class BusImpl implements Bus {
-    private final ConcurrentMap<String, Object> properties;
+class BusImpl implements RawBus {
+    private static final Executor EXECUTOR = Executors.newCachedThreadPool();
+    private final ConcurrentMap<String, Object> properties = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
-
-    public BusImpl() { this.properties = new ConcurrentHashMap<>(); }
-
-    @Override
-    public UserBus forUser(String user) {
-        return new UserBusImpl(user, this);
-    }
 
     @Override
     public void put(String key, String value) {
@@ -49,6 +51,10 @@ class BusImpl implements Bus {
         Object previous = properties.put(key, requireNonNull(value));
         // notify any waiting threads
         if (previous instanceof CountDownLatch) ((CountDownLatch) previous).countDown();
+        // kick off callbacks on (potentially) separate threads
+        Optional.ofNullable(callbacks.get(key))
+                .map(Queue::stream).orElse(Stream.empty())
+                .forEach(action -> EXECUTOR.execute(() -> action.accept(value)));
     }
 
     @Override
@@ -70,6 +76,12 @@ class BusImpl implements Bus {
         throw reThrowErrorIfPresent(); // there must be an error by now
     }
 
+    @Override
+    public void onMsg(String key, Consumer<String> action) {
+        // register the callback
+        callbacks.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(action);
+    }
+
     Error reThrowErrorIfPresent() {
         if (originalError == null) return null;
         throw new IllegalStateException(originalError);
@@ -79,8 +91,8 @@ class BusImpl implements Bus {
         // only do this for the first error
         if (originalError != null) return;
         // log the error
-        System.err.println("Bus error: " + t);
-        System.err.println("Bus state: " + this);
+        System.err.println("RawBus error: " + t);
+        System.err.println("RawBus state: " + this);
         // must set the error before waking any threads
         originalError = t;
         // wake any waiting threads — they will receive an error

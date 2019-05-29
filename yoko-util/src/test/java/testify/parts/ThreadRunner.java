@@ -14,15 +14,24 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.parts;
 
-import java.util.function.BiConsumer;
+import java.util.concurrent.TimeUnit;
 
-public interface Bus {
-    UserBus forUser(String user);
-
-    void put(String key, String value);
-    String get(String key);
-
-    void forEach(BiConsumer<String, String> action);
+class ThreadRunner extends PartRunnerImpl<Thread> {
+    Thread fork(NamedPart part) {
+        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)));
+        thread.setDaemon(true);
+        thread.start();
+        return thread;
+    }
+    boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
+        thread.join(unit.toMillis(timeout));
+        return !thread.isAlive();
+    }
+    boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
+        thread.interrupt();
+        thread.join(unit.toMillis(timeout));
+        return !thread.isAlive();
+    }
 }

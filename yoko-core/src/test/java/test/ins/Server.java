@@ -32,7 +32,7 @@ import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManager;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddress_impl;
-import test.util.parts.UserBus;
+import testify.bus.Bus;
 
 import java.util.Properties;
 
@@ -43,7 +43,7 @@ public final class Server {
     }
 
     // Simple server providing objects for corba URL tests
-    private static void run(UserBus bus, ORB orb) throws UserException {
+    private static void run(Bus bus, ORB orb) throws UserException {
         // corbaloc key
         String keyStr = bus.get("key");
 
@@ -100,7 +100,7 @@ public final class Server {
     }
 
     // Start the INS test server
-    public static void run(UserBus bus) throws Exception {
+    public static void run(Bus bus) throws Exception {
         Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");

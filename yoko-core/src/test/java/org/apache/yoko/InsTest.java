@@ -31,9 +31,9 @@ import org.omg.CORBA.SystemException;
 import test.ins.Server;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
-import test.util.SimpleOrbResolver;
-import test.util.parts.PartRunner;
-import test.util.parts.PartRunnerResolver;
+import testify.util.SimpleOrbResolver;
+import testify.parts.PartRunner;
+import testify.parts.PartRunnerResolver;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -56,9 +56,9 @@ public class InsTest {
     @BeforeAll
     public static void setUp(PartRunner runner, ORB orb) {
         runner
-                .inline(bus -> bus.put("key", "TestINS"))
                 .fork("server", Server::run)
-                .inline(bus -> iorFromServer = bus.get("ior"));
+                .here("server", bus -> bus.put("key", "TestINS"))
+                .here("server", bus -> iorFromServer = bus.get("ior"));
         iiopAddress = stringToIIOPAddress(orb, iorFromServer);
     }
 

@@ -14,13 +14,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.parts;
 
 import junit.framework.AssertionFailedError;
+import testify.util.EasyCloseable;
+import testify.bus.Bus;
+import testify.bus.InterProcessBus;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -28,7 +34,8 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 abstract class PartRunnerImpl<J> implements PartRunner {
     private final Map<J, NamedPart> jobs = new HashMap<>();
     final InterProcessBus centralBus = InterProcessBus.createMaster();
-    private final UserBus bus = centralBus.forUser("master");
+    private final Bus bus = centralBus.global();
+    private final Queue<EasyCloseable> endActions = new ConcurrentLinkedQueue<>();
 
     @Override
     public PartRunner fork(String partName, TestPart part) {
@@ -44,9 +51,25 @@ abstract class PartRunnerImpl<J> implements PartRunner {
     }
 
     @Override
-    public PartRunner inline(TestPart part) {
+    public PartRunner onStop(String partName, Consumer<Bus> endAction) {
+        endActions.add(() -> endAction.accept(bus.forUser(partName)));
+        return this;
+    }
+
+    @Override
+    public PartRunner here(TestPart part) {
         try {
             part.run(bus);
+            return this;
+        } catch (Throwable throwable) {
+            throw fatalError(throwable);
+        }
+    }
+
+    @Override
+    public PartRunner here(String partName, TestPart part) {
+        try {
+            part.run(bus.forUser(partName));
             return this;
         } catch (Throwable throwable) {
             throw fatalError(throwable);
@@ -68,6 +91,14 @@ abstract class PartRunnerImpl<J> implements PartRunner {
         }
     }
 
+    // recursively ensure close
+    private void runCloseHooks() {
+        if (endActions.isEmpty()) return;
+        try (EasyCloseable hook = endActions.poll()) {
+            runCloseHooks();
+        }
+    }
+
     @Override
     public void join() {
         // wait for the ended events on the bus
@@ -85,7 +116,6 @@ abstract class PartRunnerImpl<J> implements PartRunner {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
-
     }
 
     abstract J fork(NamedPart part);
@@ -99,33 +129,33 @@ abstract class PartRunnerImpl<J> implements PartRunner {
             for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
                 runner.fork("part1", bus -> {
                     bus.put("a", "Hello");
-                    bus.get("b");
-                }).inline(bus -> {
-                    bus.get("a");
+                    bus.global().get("b");
+                }).here(bus -> {
+                    bus.global().get("a");
                     bus.put("b", "Hello");
                 }).join();
             }
             for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
-                runner.inline(bus -> {
+                runner.debug("part1").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");
                 }).fork("part2", bus -> {
                     bus.put("b", "bar");
                     System.out.printf("a == %s%nb == %s%nc == %s%n",
-                            bus.get("a"),
-                            bus.get("b"),
-                            bus.get("c"));
+                            bus.global().get("a"),
+                            bus.global().get("b"),
+                            bus.global().get("c"));
                 }).fork("part3", bus -> {
                     bus.put("c", "baz");
                     System.out.printf("part1.a == %s%npart1.b == %s%npart1.c == %s%n",
-                            bus.get("part1", "a"),
-                            bus.get("part2", "b"),
-                            bus.get("part3", "c"));
-                }).inline(bus -> {
-                    bus.get("a");
-                    bus.get("b");
-                    bus.get("c");
+                            bus.forUser("part1").get("a"),
+                            bus.forUser("part2").get("b"),
+                            bus.forUser("part3").get("c"));
+                }).here(bus -> {
+                    bus.global().get("b");
+                    bus.global().get("a");
+                    bus.global().get("c");
                     Thread.sleep(200);
                     System.out.println();
                     System.out.println();

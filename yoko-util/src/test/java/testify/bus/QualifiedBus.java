@@ -14,19 +14,30 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.bus;
 
-import static test.util.parts.SerialUtil.stringify;
-import static test.util.parts.SerialUtil.unstringify;
+import static java.util.Objects.requireNonNull;
 
-public interface UserBus extends Bus {
-    String get(String user, String key);
-    String getOwn(String key);
-    default Object get(Enum<?> key) { return unstringify(getFullyQualifiedName(key)); }
-    default Object get(String user, Enum<?> key) { return unstringify(get(user, getFullyQualifiedName(key))); }
-    default Object getOwn(Enum<?>key) { return unstringify(getOwn(getFullyQualifiedName(key))); }
-    default void put(Enum<?>key) { put(key, key); }
-    default void put(Enum<?>key, Object value) { put(getFullyQualifiedName(key), stringify(value)); }
+public interface QualifiedBus extends BusWrapper {
+    String GLOBAL_USER = "";
+    String DELIMITER = "::";
+    String user();
 
-    static String getFullyQualifiedName(Enum<?> e) { return e.getDeclaringClass().getName() + '.' + e.name(); }
+    @Override
+    default String transform(String key) {  return user() + DELIMITER + validate(key); }
+
+    default boolean isGlobal() { return GLOBAL_USER.equals(user()); }
+
+    @Override
+    default void put(String key, String value) {
+        BusWrapper.super.put(key, value);
+        if (isGlobal()) return;
+        bus().global().put(key, value);
+    }
+
+    static String validate(String name) {
+        if (requireNonNull(name).contains(DELIMITER))
+            throw new Error("Names may not contain '" + DELIMITER + "' (name was '" + name + "')");
+        return name;
+    }
 }

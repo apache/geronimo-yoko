@@ -14,13 +14,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.parts;
+
+import testify.bus.Bus;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public interface PartRunner {
     static String[] NO_STRINGS = {};
-
+    default PartRunner debug(String...partNames) {
+        if (partNames.length == 0) return here(Bus::enableLogging);
+        here(bus -> Stream.of(partNames).map(bus::forUser).forEach(Bus::enableLogging));
+        return this;
+    }
     PartRunner fork(String partName, TestPart part);
 
     default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
@@ -36,9 +44,9 @@ public interface PartRunner {
         };
     }
 
-    PartRunner inline(TestPart part);
-
-    default PartRunner inlineMain(Class<?> mainClass, String...args) { return inline(wrapMain(mainClass, args)); }
-
+    PartRunner onStop(String partName, Consumer<Bus> endAction);
+    PartRunner here(TestPart part);
+    PartRunner here(String partName, TestPart part);
+    default PartRunner runMain(Class<?> mainClass, String...args) { return here(mainClass.getName(), wrapMain(mainClass, args)); }
     void join();
 }

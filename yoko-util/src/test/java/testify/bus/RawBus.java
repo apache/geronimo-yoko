@@ -14,11 +14,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util.parts;
+package testify.bus;
 
-import java.io.Serializable;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
-@FunctionalInterface
-public interface TestPart extends Serializable {
-    void run(UserBus bus) throws Throwable;
+public interface RawBus {
+    String get(String key);
+    void onMsg(String key, Consumer<String> action);
+    void put(String key, String value);
+    void forEach(BiConsumer<String, String> action);
+
+    default Bus global() { return forUser(QualifiedBus.GLOBAL_USER); }
+    default Bus forUser(String user) { return new QualifiedBus() {
+        public String user() { return user; }
+        public RawBus bus() { return RawBus.this; }
+    }; }
 }
+
