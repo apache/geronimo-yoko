@@ -1,13 +1,13 @@
-package test.util;
+package testify.hex;
 
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.*;
-import static test.util.HexParser.HEX_DUMP;
-import static test.util.HexParser.HEX_STRING;
-import static test.util.ByteArrayMatchers.*;
+import static testify.hex.HexParser.HEX_DUMP;
+import static testify.hex.HexParser.HEX_STRING;
+import static testify.matchers.ByteArrayMatchers.*;
 
 public class HexParserTest {
 

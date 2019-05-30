@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util;
+package testify.jupiter;
 
 import junit.framework.AssertionFailedError;
 import org.junit.jupiter.api.extension.AfterAllCallback;

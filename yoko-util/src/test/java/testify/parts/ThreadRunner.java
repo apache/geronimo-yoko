@@ -18,7 +18,7 @@ package testify.parts;
 
 import java.util.concurrent.TimeUnit;
 
-class ThreadRunner extends PartRunnerImpl<Thread> {
+public class ThreadRunner extends PartRunnerImpl<Thread> {
     Thread fork(NamedPart part) {
         Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)));
         thread.setDaemon(true);

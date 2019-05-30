@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util;
+package testify.matchers;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;

@@ -20,7 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import testify.parts.PartRunner;
-import testify.parts.PartRunnerResolver;
+import testify.jupiter.PartRunnerResolver;
 import test.types.TestAny;
 import test.types.TestDynAny;
 import test.types.TestPortableTypes;

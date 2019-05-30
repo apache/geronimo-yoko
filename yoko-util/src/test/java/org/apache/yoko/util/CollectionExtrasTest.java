@@ -13,8 +13,8 @@ import static org.apache.yoko.util.CollectionExtras.filterByType;
 import static org.apache.yoko.util.CollectionExtras.removeInReverse;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.*;
-import static test.util.Matchers.consistsOf;
-import static test.util.Matchers.isEmpty;
+import static testify.matchers.Matchers.consistsOf;
+import static testify.matchers.Matchers.isEmpty;
 
 public class CollectionExtrasTest {
     @Test

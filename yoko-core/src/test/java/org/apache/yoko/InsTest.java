@@ -31,9 +31,9 @@ import org.omg.CORBA.SystemException;
 import test.ins.Server;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
-import testify.util.SimpleOrbResolver;
+import testify.jupiter.SimpleOrbResolver;
 import testify.parts.PartRunner;
-import testify.parts.PartRunnerResolver;
+import testify.jupiter.PartRunnerResolver;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;

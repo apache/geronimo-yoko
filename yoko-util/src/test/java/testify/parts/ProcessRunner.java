@@ -16,7 +16,7 @@
  */
 package testify.parts;
 
-import test.util.BiStream;
+import testify.streams.BiStream;
 import testify.bus.Bus;
 import testify.bus.EventBus.TypeRef;
 import testify.bus.InterProcessBus;
@@ -29,7 +29,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-class ProcessRunner extends PartRunnerImpl<Process> {
+public class ProcessRunner extends PartRunnerImpl<Process> {
     private enum Part implements TypeRef<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Arrays.asList("java.endorsed.dirs");
 

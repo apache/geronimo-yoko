@@ -1,4 +1,4 @@
-package test.util;
+package testify.iiop;
 
 import org.junit.Assert;
 import org.omg.CORBA.BAD_PARAM;

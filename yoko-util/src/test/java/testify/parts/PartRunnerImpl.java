@@ -17,7 +17,7 @@
 package testify.parts;
 
 import junit.framework.AssertionFailedError;
-import testify.util.EasyCloseable;
+import testify.io.EasyCloseable;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
 

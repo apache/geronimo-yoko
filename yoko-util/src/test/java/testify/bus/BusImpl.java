@@ -16,7 +16,7 @@
  */
 package testify.bus;
 
-import test.util.BiStream;
+import testify.streams.BiStream;
 
 import java.util.Optional;
 import java.util.Queue;

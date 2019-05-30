@@ -1,4 +1,4 @@
-package test.util;
+package testify.matchers;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
