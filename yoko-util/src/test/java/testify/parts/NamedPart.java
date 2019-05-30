@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class NamedPart implements TestPart {
-    private enum Event implements TypeRef<Object>  {STARTED, ENDED}
+    private enum Event implements TypeRef<Throwable>  {STARTED, ENDED}
     private static final ConcurrentMap<String, AtomicInteger> uids = new ConcurrentHashMap<>();
     final String name;
     private final TestPart part;
@@ -34,7 +34,7 @@ final class NamedPart implements TestPart {
         this.name = name;
         this.part = part;
         int instance = uids.computeIfAbsent(name, s -> new AtomicInteger()).incrementAndGet();
-        this.uid = name + '#' + instance;
+        this.uid = NamedPart.class.getSimpleName() + '[' + name + '#' + instance + ']';
     }
 
     private String resultKey() { return uid + ".result"; }

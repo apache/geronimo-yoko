@@ -22,12 +22,8 @@ public interface LogBus extends EventBus {
     enum LogLevel implements TypeRef<String> {DEFAULT}
 
     default void log(String message) { log(LogLevel.DEFAULT, message); }
-
     default void log(LogLevel level, String message) { put(level, message); }
-
     default void enableLogging() { enableLogging(System.err::println); }
-
     default void enableLogging(Consumer<String> action) { enableLogging(LogLevel.DEFAULT, action); }
-
     default void enableLogging(LogLevel level, Consumer<String> action) { onMsg(level, action); }
 }

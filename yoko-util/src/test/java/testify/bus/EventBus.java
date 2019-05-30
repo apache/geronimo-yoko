@@ -21,24 +21,15 @@ import java.util.function.Consumer;
 public interface EventBus extends RawBus {
     interface TypeRef<T> {
         Class<? extends Enum> getDeclaringClass();
-
         String name();
-
         default T unstringify(String s) { return (T) SerialUtil.unstringify(s); }
-
         default String stringify(T t) { return SerialUtil.stringify(t); }
-
         default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }
     }
 
     default <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(get(key.fullName())); }
-
     default <K extends Enum<K> & TypeRef<? super T>, T> void put(K key, T value) { put(key.fullName(), key.stringify(value)); }
-
-    default <K extends Enum<K> & TypeRef<? super Void>> void put(K key) { put(key, null); }
-
-    void onMsg(String key, Consumer<String> action);
-
+    default <K extends Enum<K> & TypeRef<T>, T> void put(K key) { put(key, null); }
     default <K extends Enum<K> & TypeRef<T>, T> void onMsg(K key, Consumer<T> action) {
         onMsg(key.fullName(), s -> action.accept(key.unstringify(s)));
     }
