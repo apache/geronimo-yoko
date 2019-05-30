@@ -16,19 +16,18 @@
  */
 package testify.bus;
 
+import testify.streams.BiStream;
+
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface RawBus {
+    boolean hasKey(String key);
     String get(String key);
+    String peek(String key);
     void onMsg(String key, Consumer<String> action);
     void put(String key, String value);
-    void forEach(BiConsumer<String, String> action);
-
-    default Bus global() { return forUser(QualifiedBus.GLOBAL_USER); }
-    default Bus forUser(String user) { return new QualifiedBus() {
-        public String user() { return user; }
-        public RawBus bus() { return RawBus.this; }
-    }; }
+    default void forEach(BiConsumer<String, String> action) { biStream().forEach(action); }
+    BiStream<String, String> biStream();
 }
 

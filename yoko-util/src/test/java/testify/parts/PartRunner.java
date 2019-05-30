@@ -17,18 +17,31 @@
 package testify.parts;
 
 import testify.bus.Bus;
+import testify.bus.LogBus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public interface PartRunner {
-    static String[] NO_STRINGS = {};
-    default PartRunner debug(String...partNames) {
-        if (partNames.length == 0) return here(Bus::enableLogging);
-        here(bus -> Stream.of(partNames).map(bus::forUser).forEach(Bus::enableLogging));
+    default PartRunner debug(LogLevel level, String pattern, String...partNames) {
+        // define how to enable logging for a bus
+        final TestPart enableLogging = bus -> {
+            bus.enableLogging(level, pattern);
+            bus.sendToErr(level);
+        };
+        // if no part names were supplied, enable logging globally
+        if (partNames.length == 0) return here(enableLogging);
+        // otherwise, enable logging for each supplied part name
+        Stream.of(partNames).forEach(partName -> here(partName, bus -> {
+            bus.enableLogging(level, pattern);
+            bus.sendToErr(level);
+        }));
         return this;
     }
+
+    default PartRunner debug(String pattern, String...partNames) { return debug(LogLevel.DEFAULT, pattern, partNames); }
+
     PartRunner fork(String partName, TestPart part);
 
     default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }

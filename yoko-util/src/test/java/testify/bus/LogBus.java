@@ -16,14 +16,48 @@
  */
 package testify.bus;
 
+import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
+
+import static java.util.EnumSet.range;
 
 public interface LogBus extends EventBus {
-    enum LogLevel implements TypeRef<String> {DEFAULT}
+    enum LogSpec implements StringRef {SPEC}
+    enum LogLevel implements StringRef {
+        ERROR, WARN, DEFAULT, INFO, DEBUG;
+        Set<LogLevel> includedLevels() { return range(ERROR, this); }
+        boolean includes(LogLevel level) { return includedLevels().contains(level); }
+    }
 
+    default String isLoggingEnabled(LogLevel level) { return global().isLoggingEnabled(level); }
+    String isLoggingEnabled(String user, LogLevel level);
+
+    default void enableLogging() { enableLogging(""); }
+    default void enableLogging(String pattern) { enableLogging(LogLevel.DEFAULT, pattern); }
+    default void enableLogging(LogLevel level, String pattern) {
+        global().enableLogging(level, pattern);
+    }
+    void enableLogging(String user, LogLevel level, String pattern);
+
+
+    default void log(Supplier<String> message) { log(LogLevel.DEFAULT, message);}
     default void log(String message) { log(LogLevel.DEFAULT, message); }
-    default void log(LogLevel level, String message) { put(level, message); }
-    default void enableLogging() { enableLogging(System.err::println); }
-    default void enableLogging(Consumer<String> action) { enableLogging(LogLevel.DEFAULT, action); }
-    default void enableLogging(LogLevel level, Consumer<String> action) { onMsg(level, action); }
+    default void log(LogLevel level, String message) { log(level, () -> message); }
+    default void log(LogLevel level, Supplier<String> message) {
+        final String context = isLoggingEnabled(level);
+        if (context == null) return;
+        put(level, "[" + context + "]" + message.get());
+    }
+    default void sendToErr() { onLog(System.err::println); }
+    default void sendToErr(LogLevel level) { onLog(level, System.err::println); }
+    default void onLog(Consumer<String> action) { onLog(LogLevel.DEFAULT, action); }
+
+    default void onLog(LogLevel level, Consumer<String> action) {
+        level.includedLevels().forEach(l -> onMsg(l, action));
+    }
+
+    Bus forUser(String user);
+    default Bus global() { return forUser(QualifiedBus.GLOBAL_USER); }
 }
+

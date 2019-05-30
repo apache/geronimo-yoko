@@ -30,6 +30,7 @@ enum SerialUtil {
     ;
 
     public static String stringify(Object payload) {
+        if (payload == null) return "<null>";
         try (ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
              ObjectOutputStream out = new ObjectOutputStream(byteOut)) {
             out.writeObject(payload);
@@ -42,6 +43,8 @@ enum SerialUtil {
     }
 
     public static <T> T unstringify(String string) {
+        if (string == null) return null;
+        if (string.equals("<null>")) return null;
         try { return readObject(Base64.getDecoder().decode(string)); }
         catch (IOException e) { throw new IOError(e); }
         catch (ClassNotFoundException e) { throw wrapAsError(e); }

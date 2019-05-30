@@ -17,9 +17,10 @@
 package testify.parts;
 
 import junit.framework.AssertionFailedError;
-import testify.io.EasyCloseable;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
+import testify.bus.LogBus.LogLevel;
+import testify.io.EasyCloseable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -68,12 +69,9 @@ abstract class PartRunnerImpl<J> implements PartRunner {
 
     @Override
     public PartRunner here(String partName, TestPart part) {
-        try {
-            part.run(bus.forUser(partName));
-            return this;
-        } catch (Throwable throwable) {
-            throw fatalError(throwable);
-        }
+        NamedPart namedPart = new NamedPart(partName, part);
+        namedPart.run(bus);
+        return this;
     }
 
     private final Error fatalError(Throwable t) {
@@ -101,10 +99,14 @@ abstract class PartRunnerImpl<J> implements PartRunner {
 
     @Override
     public void join() {
-        // wait for the ended events on the bus
-        jobs.values().forEach(p -> p.waitForEnd(bus));
-        // wait for the job mechanisms to complete
-        jobs.forEach(this::waitForJob);
+        // close down the main bus
+        try (EasyCloseable close = centralBus) {
+            runCloseHooks();
+            // wait for the ended events on the bus
+            jobs.values().forEach(p -> p.waitForEnd(bus));
+            // wait for the job mechanisms to complete
+            jobs.forEach(this::waitForJob);
+        }
     }
 
     private void waitForJob(J job, NamedPart part) {
@@ -136,7 +138,7 @@ abstract class PartRunnerImpl<J> implements PartRunner {
                 }).join();
             }
             for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
-                runner.debug("part1").here(bus -> {
+                runner.debug(LogLevel.INFO, ".*", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");
@@ -152,16 +154,28 @@ abstract class PartRunnerImpl<J> implements PartRunner {
                             bus.forUser("part1").get("a"),
                             bus.forUser("part2").get("b"),
                             bus.forUser("part3").get("c"));
-                }).here(bus -> {
-                    bus.global().get("b");
+                }).here("part4", bus -> {
                     bus.global().get("a");
+                    bus.global().get("b");
                     bus.global().get("c");
                     Thread.sleep(200);
                     System.out.println();
                     System.out.println();
+                    System.out.println(bus.forUser("part1"));
                     System.out.println();
-                }).join();
+                    System.out.println();
+                    System.out.println(bus.forUser("part2"));
+                    System.out.println();
+                    System.out.println();
+                    System.out.println(bus.forUser("part3"));
+                    System.out.println();
+                    System.out.println();
+                    System.out.println(bus.forUser("part4"));
+                    System.out.println();
+                    System.out.println();
+                }).here(System.out::println).join();
             }
+            System.out.println("#########################");
         }
     }
 }

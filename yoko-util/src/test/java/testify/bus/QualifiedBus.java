@@ -18,13 +18,25 @@ package testify.bus;
 
 import static java.util.Objects.requireNonNull;
 
-public interface QualifiedBus extends BusWrapper {
-    String GLOBAL_USER = "";
+interface QualifiedBus extends BusWrapper {
+    String GLOBAL_USER = "global";
     String DELIMITER = "::";
     String user();
 
     @Override
     default String transform(String key) {  return user() + DELIMITER + validate(key); }
+
+    @Override
+    default String untransform(String key) {
+        final String prefix = user() + DELIMITER;
+        return key.startsWith(prefix) ? key.substring(prefix.length()) : null;
+    };
+
+    @Override
+    default String isLoggingEnabled(LogLevel level) { return isLoggingEnabled(user(), level); }
+
+    @Override
+    default void enableLogging(LogLevel level, String pattern) { enableLogging(user(), level, pattern); }
 
     default boolean isGlobal() { return GLOBAL_USER.equals(user()); }
 

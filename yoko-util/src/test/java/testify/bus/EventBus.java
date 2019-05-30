@@ -27,7 +27,19 @@ public interface EventBus extends RawBus {
         default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }
     }
 
+    interface StringRef extends TypeRef<String> {
+        default String stringify(String s) { return s; }
+        default String unstringify(String s) { return s; }
+    }
+
+    interface VoidRef extends TypeRef<Void> {
+        default String stringify(Void v) { return ""; }
+        default Void unstringify(String s) { return null; }
+    }
+
+    default <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return hasKey(key.fullName()); }
     default <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(get(key.fullName())); }
+    default <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return key.unstringify(peek(key.fullName())); }
     default <K extends Enum<K> & TypeRef<? super T>, T> void put(K key, T value) { put(key.fullName(), key.stringify(value)); }
     default <K extends Enum<K> & TypeRef<T>, T> void put(K key) { put(key, null); }
     default <K extends Enum<K> & TypeRef<T>, T> void onMsg(K key, Consumer<T> action) {
