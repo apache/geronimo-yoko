@@ -25,13 +25,13 @@ import java.io.IOError;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ProcessRunner extends PartRunnerImpl<Process> {
     private enum Part implements TypeRef<NamedPart> {NAMED_PART}
-    private static final List<String> PROPERTIES_TO_COPY = Arrays.asList("java.endorsed.dirs");
+    private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
     public static void main(String[] args) {
         String name = args[0];

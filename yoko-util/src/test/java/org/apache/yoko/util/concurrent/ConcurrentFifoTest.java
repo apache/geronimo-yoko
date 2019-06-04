@@ -48,7 +48,7 @@ public class ConcurrentFifoTest {
 
     @Before
     public void setupPlaces() {
-        places = Collections.newSetFromMap(new ConcurrentHashMap<Sequential.Place<String>, Boolean>());
+        places = Collections.newSetFromMap(new ConcurrentHashMap<>());
     }
 
     @Before
@@ -106,7 +106,7 @@ public class ConcurrentFifoTest {
 
         // run the tasks concurrently
         List<List<String>> removalLists = runConcurrently(tasks);
-        for (List<String> list : removalLists) if (!!!list.isEmpty()) System.out.println(list);
+        for (List<String> list : removalLists) if (!list.isEmpty()) System.out.println(list);
 
         // convert the queue to a list
         List<String> remainingElements = drainFifo();
@@ -133,7 +133,7 @@ public class ConcurrentFifoTest {
 
         // run the tasks concurrently
         List<List<String>> removalLists = runConcurrently(tasks);
-        for (List<String> list : removalLists) if (!!!list.isEmpty()) System.out.println(list);
+        for (List<String> list : removalLists) if (!list.isEmpty()) System.out.println(list);
 
         // convert the queue to a list
         List<String> remainingElements = drainFifo();
@@ -255,7 +255,7 @@ public class ConcurrentFifoTest {
         public List<String> call() throws Exception {
             List<String> constricted = new ArrayList<>();
             startBarrier.await();
-            while (!!! places.isEmpty()) {
+            while (!places.isEmpty()) {
                 // get a copy of the known places in the fifo and shuffle it
                 List<Sequential.Place<String>> myPlaces = new ArrayList<>(places);
                 Collections.shuffle(myPlaces);

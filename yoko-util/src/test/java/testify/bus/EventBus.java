@@ -22,6 +22,7 @@ public interface EventBus extends RawBus {
     interface TypeRef<T> {
         Class<? extends Enum> getDeclaringClass();
         String name();
+        @SuppressWarnings("unchecked")
         default T unstringify(String s) { return (T) SerialUtil.unstringify(s); }
         default String stringify(T t) { return SerialUtil.stringify(t); }
         default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }

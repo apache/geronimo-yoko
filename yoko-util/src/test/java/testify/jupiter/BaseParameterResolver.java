@@ -46,6 +46,7 @@ public abstract class BaseParameterResolver<T> implements ParameterResolver, Aft
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static abstract class BaseBuilder<B extends BaseBuilder<B>> {
         private Scope scope = Scope.AUTO;
         protected Scope scope() { return scope; }

@@ -30,7 +30,7 @@ interface QualifiedBus extends BusWrapper {
     default String untransform(String key) {
         final String prefix = user() + DELIMITER;
         return key.startsWith(prefix) ? key.substring(prefix.length()) : null;
-    };
+    }
 
     @Override
     default String isLoggingEnabled(LogLevel level) { return isLoggingEnabled(user(), level); }

@@ -1,26 +1,40 @@
 package org.apache.yoko.util.concurrent;
 
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
-
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.KeyedFactory;
 import org.apache.yoko.util.Reference;
 import org.junit.After;
 import org.junit.Test;
-
 import org.junit.runner.RunWith;
 import org.mockito.Spy;
 import org.mockito.runners.MockitoJUnitRunner;
 
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @RunWith(MockitoJUnitRunner.class)
 public class ReferenceCountedCacheTest {
     private static final ConcurrentLinkedQueue<Integer> createdInts = new ConcurrentLinkedQueue<>();
     private static final ConcurrentLinkedQueue<Integer> deletedInts = new ConcurrentLinkedQueue<>();
     private static class StringToInteger implements KeyedFactory<String, Integer>, Cache.Cleaner<Integer> {
+        @SuppressWarnings("CachedNumberConstructorCall")
         @Override
         public Integer create(String key) {
             Integer result = new Integer(key);
@@ -60,31 +74,31 @@ public class ReferenceCountedCacheTest {
     @Test
     public void testGetAndCreate() {
         cache = new ReferenceCountedCache<>(factory, 0, 5);
-        assertEquals(null, cache.get("1"));
-        try (Reference<Integer> ref = cache.getOrCreate("1", factory);)
+        assertNull(cache.get("1"));
+        try (Reference<Integer> ref = cache.getOrCreate("1", factory))
         {assertEquals(Integer.valueOf(1), ref.get());}
-        try (Reference<Integer> ref = cache.get("1");)
+        try (Reference<Integer> ref = cache.get("1"))
         {assertEquals(Integer.valueOf(1), ref.get());}
         cache.clean();
-        assertEquals(null, cache.get("1"));
+        assertNull(cache.get("1"));
     }
 
     @Test
     public void testFailedCreateDoesNotPolluteCache() {
         cache = new ReferenceCountedCache<>(factory, 0, 5);
-        assertEquals(null, cache.get("1"));
-        try (Reference<Integer> ref = cache.getOrCreate("1", badFactory);) {
+        assertNull(cache.get("1"));
+        try (Reference<Integer> ref = cache.getOrCreate("1", badFactory)) {
             fail("getOrCreate() should throw an exception");
         } catch (UnsupportedOperationException expected) {}
 
-        assertEquals(null, cache.get("1"));
+        assertNull(cache.get("1"));
 
-        try (Reference<Integer> ref = cache.getOrCreate("1", factory);)
+        try (Reference<Integer> ref = cache.getOrCreate("1", factory))
         {assertEquals(Integer.valueOf(1), ref.get());}
-        try (Reference<Integer> ref = cache.get("1");)
+        try (Reference<Integer> ref = cache.get("1"))
         {assertEquals(Integer.valueOf(1), ref.get());}
         cache.clean();
-        assertEquals(null, cache.get("1"));
+        assertNull(cache.get("1"));
     }
 
     @Test
@@ -200,7 +214,7 @@ public class ReferenceCountedCacheTest {
     }
 
     private static <T> Set<T> newIdentityHashSet() {
-        return Collections.newSetFromMap(new IdentityHashMap<T, Boolean>());
+        return Collections.newSetFromMap(new IdentityHashMap<>());
     }
 
     private static <T> Set<T> newIdentityHashSet(Collection<? extends T> c) {
@@ -209,6 +223,7 @@ public class ReferenceCountedCacheTest {
         return result;
     }
 
+    @SuppressWarnings("unchecked")
     private static <T> Set<T> unionByIdentity(Collection<T>...collections) {
         Set<T> result = newIdentityHashSet();
         for(Collection<T> c : collections)

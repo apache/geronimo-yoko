@@ -25,7 +25,7 @@ public class CollectionExtrasTest {
 
     @Test
     public void testRemoveInReverseNonEmptyList() {
-        List<Integer> ints = new ArrayList(asList(1, 2, 3, 4, 5));
+        List<Integer> ints = new ArrayList<>(asList(1, 2, 3, 4, 5));
         final Iterable<Integer> integers = removeInReverse(ints);
         assertThat(integers, consistsOf(5, 4, 3, 2, 1));
         assertThat(ints, is(Collections.<Integer>emptyList()));
@@ -53,7 +53,7 @@ public class CollectionExtrasTest {
     public void testAllOfDisparateLists() {
         final List<Integer> ints = asList(1, 2);
         final List<Double> doubles = asList(3D, 4D);
-        final List<Float> floats = asList(5F);
+        final List<Float> floats = Collections.singletonList(5F);
         final List<Short> shorts = emptyList();
         assertThat(allOf(ints, doubles, floats, shorts), consistsOf(1, 2, 3D, 4D, 5F));
     }
@@ -65,7 +65,7 @@ public class CollectionExtrasTest {
 
     @Test
     public void testFilterByTypeListOfNumbers() {
-        final List<Number> numbers = new ArrayList(asList(1, (short)2, 3D, 4F, 5L, 6, (short)7, 8D, 9F, 10L));
+        final List<Number> numbers = new ArrayList<>(asList(1, (short)2, 3D, 4F, 5L, 6, (short)7, 8D, 9F, 10L));
         assertThat(filterByType(numbers, Integer.class), consistsOf(1, 6));
         assertThat(filterByType(numbers, Short.class), consistsOf((short)2, (short)7));
         assertThat(filterByType(numbers, Double.class), consistsOf(3D, 8D));

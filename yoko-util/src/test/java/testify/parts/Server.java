@@ -44,14 +44,14 @@ public abstract class Server {
         bus.log("Calling orb.shutdown(true)");
         orb.shutdown(true);
         bus.log("ORB shutdown complete");
-    };
+    }
 
     private void stopRemotely(Bus bus) {
         bus.forUser(name).put(Event.STOP);
     }
 
     private void run(Bus bus) throws Exception {
-        Class<? extends Server> clazz = (Class<? extends Server>)bus.get(ClassParam.SERVER_CLASS);
+        Class<? extends Server> clazz = bus.get(ClassParam.SERVER_CLASS);
         Server server = clazz.getConstructor().newInstance();
         server.props = bus.get(PropsParam.ORB_PROPS);
         server.args = bus.get(ArgsParam.ORB_ARGS);

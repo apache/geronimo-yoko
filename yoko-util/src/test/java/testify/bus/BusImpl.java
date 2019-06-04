@@ -90,8 +90,7 @@ class BusImpl implements LogBus, EasyCloseable {
             // rethrow any stored error
             reThrowErrorIfPresent();
             // it's there now, so return it
-            final String value = (String) properties.get(key);
-            return value;
+            return (String) properties.get(key);
         } catch (InterruptedException e) {
             storeError(new InterruptedException("Interrupted while waiting for key: " + key).initCause(e));
         } catch (ClassCastException e) {
@@ -123,7 +122,7 @@ class BusImpl implements LogBus, EasyCloseable {
         BiStream.of(properties).narrowValues(CountDownLatch.class).values().forEach(CountDownLatch::countDown);
     }
 
-    public BiStream biStream() {
+    public BiStream<String, String> biStream() {
         return BiStream.of(properties).narrowValues(String.class);
     }
 
@@ -155,7 +154,7 @@ class BusImpl implements LogBus, EasyCloseable {
         for (String specpart : spec.split(":")) {
             // we can specify just the log level
             if (specpart.equals(level.name())) return returnValue.get();
-        };
+        }
 
         for (String specpart : spec.split(":")) {
             String[] subparts = specpart.split("=", 2);

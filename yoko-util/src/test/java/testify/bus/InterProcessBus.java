@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -59,7 +60,7 @@ public final class InterProcessBus extends BusImpl {
     private InterProcessBus(boolean master) {
         this.ioList = master
                 ? new CopyOnWriteArrayList<>()
-                : asList(new IO("master", System.out).startListening(System.in));
+                : Collections.singletonList(new IO("master", System.out).startListening(System.in));
     }
 
     private void putLocal(String key, String value) { super.put(key, value); }

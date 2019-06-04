@@ -74,7 +74,7 @@ abstract class PartRunnerImpl<J> implements PartRunner {
         return this;
     }
 
-    private final Error fatalError(Throwable t) {
+    private Error fatalError(Throwable t) {
         try {
             try {
                 throw t;

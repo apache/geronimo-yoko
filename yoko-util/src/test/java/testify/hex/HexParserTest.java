@@ -58,7 +58,6 @@ public class HexParserTest {
     public void testHexDumpValidLine() {
         byte[] actual = HEX_DUMP.parse("47494f50 01020000 0000016c 00000007  \"GIOP.......l....\"");
         assertThat(actual, matchesHex("47494f50 01020000 0000016c 00000007"));
-
     }
 
     @Test
