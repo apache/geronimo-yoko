@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util;
+package testify.matchers;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -27,11 +27,13 @@ import static java.util.Arrays.asList;
 
 public enum Matchers {
     ;
+    @SuppressWarnings("unchecked")
     public static <T> Matcher<Iterable<T>> consistsOf(final T...elems) {
         return new BaseMatcher<Iterable<T>>() {
             Iterable<T> iterable;
             List<T> actualElems;
             List<T> expectedElems;
+            @SuppressWarnings("unchecked")
             public boolean matches(Object item) {
                 iterable = (Iterable<T>) item;
                 actualElems = new ArrayList<>();

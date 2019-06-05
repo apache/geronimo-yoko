@@ -1,4 +1,4 @@
-package test.util;
+package testify.matchers;
 
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
@@ -39,8 +39,8 @@ public enum ByteArrayMatchers {;
 
     private static String indent(String text, int depth) {
         if (text == null || text.isEmpty()) return text;
-        String indent = "";
-        for (int i = 0; i < depth; i++) indent += "\t";
+        StringBuilder indent = new StringBuilder();
+        for (int i = 0; i < depth; i++) indent.append("\t");
         return indent + text.replace("\n", "\n" + indent);
     }
 

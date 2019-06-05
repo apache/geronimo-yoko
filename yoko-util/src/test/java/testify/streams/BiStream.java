@@ -14,26 +14,33 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.util;
+package testify.streams;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Spliterator;
+import java.util.Spliterators.AbstractSpliterator;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @FunctionalInterface
 public interface BiStream<K, V> {
-    void forEach(BiConsumer<K, V> action);
+    boolean tryAdvance(BiConsumer<K, V> action);
+
+    default void forEach(BiConsumer<K, V> action) {
+        while (tryAdvance(action));
+    }
 
     default BiStream<K, V> filterKeys(Function<K, Boolean> filter) {
-        return action -> this.forEach((k, v) -> { if (filter.apply(k)) action.accept(k, v); });
+        return action -> this.tryAdvance((k, v) -> { if (filter.apply(k)) action.accept(k, v); });
     }
 
     default <K2> BiStream<K2, V> mapKeys(Function<K, K2> mapper) {
-        return action -> this.forEach((k, v) -> action.accept(mapper.apply(k), v));
+        return action -> this.tryAdvance((k, v) -> action.accept(mapper.apply(k), v));
     }
 
     default <K2 extends K> BiStream<K2, V> narrowKeys(Class<K2> keyClass) {
@@ -41,11 +48,11 @@ public interface BiStream<K, V> {
     }
 
     default BiStream<K, V> filterValues(Function<V, Boolean> filter) {
-        return action -> this.forEach((k, v) -> { if (filter.apply(v)) action.accept(k, v); });
+        return action -> this.tryAdvance((k, v) -> { if (filter.apply(v)) action.accept(k, v); });
     }
 
     default <V2> BiStream<K, V2> mapValues(Function<V, V2> mapper) {
-        return action -> this.forEach((k, v) -> action.accept(k, mapper.apply(v)));
+        return action -> this.tryAdvance((k, v) -> action.accept(k, mapper.apply(v)));
     }
 
     default <V2 extends V> BiStream<K, V2> narrowValues(Class<V2> valueClass) {
@@ -53,7 +60,7 @@ public interface BiStream<K, V> {
     }
 
     default BiStream<K, V> filter(BiFunction<K, V, Boolean> filter) {
-        return action -> this.forEach((k, v) -> { if (filter.apply(k, v)) action.accept(k, v); });
+        return action -> this.tryAdvance((k, v) -> { if (filter.apply(k, v)) action.accept(k, v); });
     }
 
     default <K2, V2> BiStream<K2, V2> map(Function<K, K2> keyMapper, Function<V, V2> valueMapper) {
@@ -61,9 +68,12 @@ public interface BiStream<K, V> {
     }
 
     default <T> Stream<T> map(BiFunction<K, V, T> mapper) {
-        final List<T> tmpList = new ArrayList<>();
-        this.forEach((k, v) -> tmpList.add(mapper.apply(k, v)));
-        return tmpList.stream();
+        return StreamSupport.stream(new AbstractSpliterator<T>(Long.MAX_VALUE, 0) {
+            @Override
+            public boolean tryAdvance(Consumer<? super T> action) {
+                return BiStream.this.tryAdvance((k, v) -> action.accept(mapper.apply(k, v)));
+            }
+        }, false);
     }
 
     default <K2 extends K, V2 extends V> BiStream<K2, V2> narrow(Class<K2> keyClass, Class<V2> valueClass) {
@@ -73,6 +83,8 @@ public interface BiStream<K, V> {
     default Stream<K> keys() { return map((k, v) -> k); }
     default Stream<V> values() { return map((k, v) -> v); }
 
-    static <K, V> BiStream<K, V> of(Map<K, V> map) { return map::forEach; }
+    static <K, V> BiStream<K, V> of(Map<K, V> map) {
+        final Spliterator<Entry<K,V>> split = map.entrySet().spliterator();
+        return action -> split.tryAdvance(e -> action.accept(e.getKey(), e.getValue()));
+    }
 }
-

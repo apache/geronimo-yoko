@@ -14,11 +14,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.bus;
 
-import java.io.Serializable;
+import testify.streams.BiStream;
 
-@FunctionalInterface
-public interface TestPart extends Serializable {
-    void run(UserBus bus) throws Throwable;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+public interface RawBus {
+    boolean hasKey(String key);
+    String get(String key);
+    String peek(String key);
+    void onMsg(String key, Consumer<String> action);
+    void put(String key, String value);
+    default void forEach(BiConsumer<String, String> action) { biStream().forEach(action); }
+    BiStream<String, String> biStream();
 }
+

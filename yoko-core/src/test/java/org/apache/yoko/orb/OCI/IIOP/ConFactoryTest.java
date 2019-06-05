@@ -14,17 +14,16 @@ import org.omg.IOP.TAG_CSI_SEC_MECH_LIST;
 import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedComponent;
 import org.omg.IOP.TaggedProfile;
-import test.util.HexParser;
+import testify.hex.HexParser;
 
 import static org.mockito.ArgumentMatchers.any;
-import static test.util.HexBuilder.buildHex;
+import static testify.hex.HexBuilder.buildHex;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
-
 
 public class ConFactoryTest {
     private static final int TAG_UNKNOWN = -1;

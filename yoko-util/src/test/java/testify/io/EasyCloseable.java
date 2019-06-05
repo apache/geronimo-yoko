@@ -14,15 +14,14 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.io;
 
-import java.util.function.BiConsumer;
+public interface EasyCloseable extends AutoCloseable {
+    @Override
+    default void close() {
+        try { easyClose(); }
+        catch (Exception e) {throw new Error("Unexpected exception", e);}
+    }
 
-public interface Bus {
-    UserBus forUser(String user);
-
-    void put(String key, String value);
-    String get(String key);
-
-    void forEach(BiConsumer<String, String> action);
+    void easyClose() throws Exception;
 }

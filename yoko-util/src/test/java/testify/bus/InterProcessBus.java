@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.bus;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -22,6 +22,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
@@ -33,7 +34,7 @@ import static java.util.Arrays.asList;
 /**
  * Allow processes to communicate using process streams.
  */
-final class InterProcessBus extends BusImpl {
+public final class InterProcessBus extends BusImpl {
     private static final String SEP = ">|<"; // sneezing elephants make the best separators
 
     private static final Pattern SUPPRESS = Pattern.compile("^WARNING: " +
@@ -46,20 +47,20 @@ final class InterProcessBus extends BusImpl {
     /**
      * Allow a master (parent) process to communicate with its slave (child) processes.
      */
-    static InterProcessBus createMaster() { return new InterProcessBus(true); }
+    public static InterProcessBus createMaster() { return new InterProcessBus(true); }
 
     /**
      * Allow a slave (child) process to use its {@link System#in} and {@link System#out}
      * to communicate with its master (parent) process.
      */
-    static InterProcessBus createSlave() { return new InterProcessBus(false); }
+    public static InterProcessBus createSlave() { return new InterProcessBus(false); }
 
     private final List<IO> ioList;
 
     private InterProcessBus(boolean master) {
         this.ioList = master
                 ? new CopyOnWriteArrayList<>()
-                : asList(new IO("master", System.out).startListening(System.in));
+                : Collections.singletonList(new IO("master", System.out).startListening(System.in));
     }
 
     private void putLocal(String key, String value) { super.put(key, value); }

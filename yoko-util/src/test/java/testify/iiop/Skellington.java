@@ -1,4 +1,4 @@
-package test.util;
+package testify.iiop;
 
 import org.junit.Assert;
 import org.omg.CORBA.BAD_PARAM;
@@ -60,6 +60,7 @@ public abstract class Skellington extends Servant implements Tie, Remote {
             this.ids[index++] = vh.getRMIRepositoryID(c);
     }
 
+    @SuppressWarnings("unchecked")
     public Skellington(Class<? extends Remote>... interfaces) {
         final ValueHandler vh = Util.createValueHandler();
         ids = new String[interfaces.length];

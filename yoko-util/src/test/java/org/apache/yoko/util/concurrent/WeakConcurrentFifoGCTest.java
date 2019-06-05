@@ -74,10 +74,10 @@ public class WeakConcurrentFifoGCTest {
 
             assertThat(expectedElements, hasItem(elem));
 
-            while(!!!expectedElements.remove(0).equals(elem)) {
+            while(!expectedElements.remove(0).equals(elem)) {
                 collectedElements ++;
             }
-        } while (!!!expectedElements.isEmpty());
+        } while (!expectedElements.isEmpty());
 
         verify(cleanup, times(collectedElements)).run();
         assertThat(fifo.remove(), is(nullValue()));

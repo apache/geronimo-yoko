@@ -82,9 +82,9 @@ public class HexConverterTest {
         }
 
         static String hex(byte[] bytes) {
-            String s = "";
-            for (byte b: bytes) s += String.format("%02X", b);
-            return s;
+            StringBuilder s = new StringBuilder();
+            for (byte b: bytes) s.append(String.format("%02X", b));
+            return s.toString();
         }
 
         static byte[] bytes(String hex) {

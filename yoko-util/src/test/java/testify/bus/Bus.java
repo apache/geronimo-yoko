@@ -14,19 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.bus;
 
-import static test.parts.SerialUtil.stringify;
-import static test.parts.SerialUtil.unstringify;
-
-public interface UserBus extends Bus {
-    String get(String user, String key);
-    String getOwn(String key);
-    default Object get(Enum<?> key) { return unstringify(getFullyQualifiedName(key)); }
-    default Object get(String user, Enum<?> key) { return unstringify(get(user, getFullyQualifiedName(key))); }
-    default Object getOwn(Enum<?>key) { return unstringify(getOwn(getFullyQualifiedName(key))); }
-    default void put(Enum<?>key) { put(key, key); }
-    default void put(Enum<?>key, Object value) { put(getFullyQualifiedName(key), stringify(value)); }
-
-    static String getFullyQualifiedName(Enum<?> e) { return e.getDeclaringClass().getName() + '.' + e.name(); }
+public interface Bus extends LogBus {
 }

@@ -17,7 +17,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.CoreMatchers.theInstance;
 import static org.junit.Assert.*;
-import static test.util.HexParser.HEX_DUMP;
+import static testify.hex.HexParser.HEX_DUMP;
 
 /**
  * Test writing Java values directly to and reading them back from CDR streams.

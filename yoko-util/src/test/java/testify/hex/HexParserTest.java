@@ -1,13 +1,13 @@
-package test.util;
+package testify.hex;
 
 import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.junit.Assert.*;
-import static test.util.HexParser.HEX_DUMP;
-import static test.util.HexParser.HEX_STRING;
-import static test.util.ByteArrayMatchers.*;
+import static testify.hex.HexParser.HEX_DUMP;
+import static testify.hex.HexParser.HEX_STRING;
+import static testify.matchers.ByteArrayMatchers.*;
 
 public class HexParserTest {
 
@@ -58,7 +58,6 @@ public class HexParserTest {
     public void testHexDumpValidLine() {
         byte[] actual = HEX_DUMP.parse("47494f50 01020000 0000016c 00000007  \"GIOP.......l....\"");
         assertThat(actual, matchesHex("47494f50 01020000 0000016c 00000007"));
-
     }
 
     @Test

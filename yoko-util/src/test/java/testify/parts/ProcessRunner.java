@@ -14,35 +14,43 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.parts;
 
-import test.util.BiStream;
+import testify.streams.BiStream;
+import testify.bus.Bus;
+import testify.bus.EventBus.TypeRef;
+import testify.bus.InterProcessBus;
 
 import java.io.IOError;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static test.parts.SerialUtil.stringify;
-import static test.parts.SerialUtil.unstringify;
-
-class ProcessRunner extends PartRunnerImpl<Process> {
-    private static final List<String> PROPERTIES_TO_COPY = Arrays.asList("java.endorsed.dirs");
+public class ProcessRunner extends PartRunnerImpl<Process> {
+    private enum Part implements TypeRef<NamedPart> {NAMED_PART}
+    private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
     public static void main(String[] args) {
-        String partString = args[0];
-        NamedPart part = unstringify(partString);
+        String name = args[0];
         InterProcessBus slaveBus = InterProcessBus.createSlave();
-        UserBus userBus = slaveBus.forUser(part.name);
-        part.run(userBus);
+        Bus bus = slaveBus.forUser(name);
+        bus.log("Started remote process for test part: " + name);
+        NamedPart part = bus.get(Part.NAMED_PART);
+        bus.log("Running named part: " + part.name);
+        part.run(slaveBus.forUser(name));
     }
 
     Process fork(NamedPart part) {
-        final Process process = ProcessRunner.exec(part);
+        final Bus bus = centralBus.forUser(part.name);
+        bus.log("Starting child process");
+        final Process process = ProcessRunner.exec(part.name);
+        bus.log("Adding process to inter-process bus");
         this.centralBus.addProcess(part.name, process);
+        bus.log("Serializing part for execution in remote process");
+        bus.put(Part.NAMED_PART, part);
         return process;
     }
 
@@ -58,7 +66,7 @@ class ProcessRunner extends PartRunnerImpl<Process> {
         return !p.isAlive();
     }
 
-    static Process exec(NamedPart part) {
+    static Process exec(String name) {
         final String pathToJava;
         try { pathToJava = Paths.get(System.getProperty("java.home"), "bin", "java").toRealPath().toString(); }
         catch (IOException e) { throw new IOError(e); }
@@ -74,7 +82,7 @@ class ProcessRunner extends PartRunnerImpl<Process> {
                 .map(key -> String.format("-D%s=%s", key, System.getProperty(key)))
                 .forEach(argList::add);
         // Add any prefixed properties, stripping the prefix
-        String prefix = part.name + ':';
+        String prefix = name + ':';
         BiStream.of(System.getProperties())
                 .narrow(String.class, String.class)
                 .filterKeys(k -> k.startsWith(prefix))
@@ -83,7 +91,7 @@ class ProcessRunner extends PartRunnerImpl<Process> {
                 .forEach(argList::add);
         // Add main class
         argList.add(ProcessRunner.class.getName());
-        argList.add(stringify(part));
+        argList.add(name);
         final Process process;
         try { process = new ProcessBuilder().command(argList).start(); }
         catch (IOException e) { throw new IOError(e); }

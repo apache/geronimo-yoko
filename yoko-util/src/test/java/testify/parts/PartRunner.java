@@ -14,12 +14,33 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.parts;
+
+import testify.bus.Bus;
+import testify.bus.LogBus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 public interface PartRunner {
-    static String[] NO_STRINGS = {};
+    default PartRunner debug(LogLevel level, String pattern, String...partNames) {
+        // define how to enable logging for a bus
+        final TestPart enableLogging = bus -> {
+            bus.enableLogging(level, pattern);
+            bus.sendToErr(level);
+        };
+        // if no part names were supplied, enable logging globally
+        if (partNames.length == 0) return here(enableLogging);
+        // otherwise, enable logging for each supplied part name
+        Stream.of(partNames).forEach(partName -> here(partName, bus -> {
+            bus.enableLogging(level, pattern);
+            bus.sendToErr(level);
+        }));
+        return this;
+    }
+
+    default PartRunner debug(String pattern, String...partNames) { return debug(LogLevel.DEFAULT, pattern, partNames); }
 
     PartRunner fork(String partName, TestPart part);
 
@@ -36,9 +57,9 @@ public interface PartRunner {
         };
     }
 
-    PartRunner inline(TestPart part);
-
-    default PartRunner inlineMain(Class<?> mainClass, String...args) { return inline(wrapMain(mainClass, args)); }
-
+    PartRunner onStop(String partName, Consumer<Bus> endAction);
+    PartRunner here(TestPart part);
+    PartRunner here(String partName, TestPart part);
+    default PartRunner runMain(Class<?> mainClass, String...args) { return here(mainClass.getName(), wrapMain(mainClass, args)); }
     void join();
 }

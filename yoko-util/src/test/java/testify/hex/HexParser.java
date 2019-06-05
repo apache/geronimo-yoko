@@ -1,4 +1,4 @@
-package test.util;
+package testify.hex;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -68,7 +68,7 @@ public enum HexParser {
             BufferedReader br = new BufferedReader(sr);
             int lineNo = 0;
             try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-                String line = null;
+                String line;
                 while (null != (line = br.readLine())) {
                     line = line.trim();
                     lineNo++;

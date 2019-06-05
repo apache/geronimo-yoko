@@ -14,14 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package test.parts;
+package testify.parts;
+
+import testify.bus.Bus;
+import testify.bus.EventBus.TypeRef;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class NamedPart implements TestPart {
-    private enum Event{STARTED, ENDED}
+    private enum Event implements TypeRef<Throwable>  {STARTED, ENDED}
     private static final ConcurrentMap<String, AtomicInteger> uids = new ConcurrentHashMap<>();
     final String name;
     private final TestPart part;
@@ -31,18 +34,21 @@ final class NamedPart implements TestPart {
         this.name = name;
         this.part = part;
         int instance = uids.computeIfAbsent(name, s -> new AtomicInteger()).incrementAndGet();
-        this.uid = name + '#' + instance;
+        this.uid = NamedPart.class.getSimpleName() + '[' + name + '#' + instance + ']';
     }
 
     private String resultKey() { return uid + ".result"; }
 
-    public void run(UserBus bus) {
+    public void run(Bus bus) {
         try {
+            bus.log("part started");
             bus.forUser(uid).put(Event.STARTED);
             part.run(bus);
+            bus.log("part ended normally");
             // normal completion — test passed
-            bus.forUser(uid).put(Event.ENDED, null);
+            bus.forUser(uid).put(Event.ENDED);
         } catch (Throwable e) {
+            bus.log("part ended abnormally");
             System.err.printf("Test part '%s' failed with exception: %s%n", name, e);
             e.printStackTrace();
             bus.forUser(uid).put(Event.ENDED, e);
@@ -52,7 +58,7 @@ final class NamedPart implements TestPart {
         }
     }
 
-    public void waitForStart(UserBus bus) { bus.forUser(uid).getOwn(Event.STARTED); }
+    public void waitForStart(Bus bus) { bus.forUser(uid).get(Event.STARTED); }
 
-    public void waitForEnd(UserBus bus) { bus.forUser(uid).getOwn(Event.ENDED); }
+    public void waitForEnd(Bus bus) { bus.forUser(uid).get(Event.ENDED); }
 }
