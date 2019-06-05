@@ -68,9 +68,7 @@ configure(testProjects) {
     testCompile 'junit:junit:4.12'
     testCompile 'org.mockito:mockito-core:2.22.0'
     testCompile "org.hamcrest:hamcrest:2.1"
-    testCompile "org.junit.jupiter:junit-jupiter-params:5.2.0"
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:5.2.0"
-
+    testCompile "org.junit.jupiter:junit-jupiter:5.4.2"
   }
 
   if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
