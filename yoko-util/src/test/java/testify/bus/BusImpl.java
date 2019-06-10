@@ -18,8 +18,8 @@ package testify.bus;
 
 import testify.io.EasyCloseable;
 import testify.streams.BiStream;
+import testify.util.Stack;
 
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -48,6 +48,7 @@ import static testify.bus.LogBus.LogLevel.DEFAULT;
  * Enable multiple threads to communicate asynchronously.
  */
 class BusImpl implements LogBus, EasyCloseable {
+    private static final Package MY_PKG = BusImpl.class.getPackage();
     protected final ExecutorService threadPool = Executors.newCachedThreadPool();
     private final ConcurrentMap<String, Object> properties = new ConcurrentSkipListMap<>();
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
@@ -138,7 +139,7 @@ class BusImpl implements LogBus, EasyCloseable {
         if (spec == null) spec = global().peek(LogSpec.SPEC);
         if (spec == null) return null;
 
-        Class<?> caller = StackUtil.getCallingClass();
+        Class<?> caller = Stack.getCallingClassOutsidePackage(MY_PKG);
         String context = caller.getName();
         String shortcut = user + level + context;
         Supplier<String> returnValue = () -> {
@@ -206,7 +207,7 @@ class BusImpl implements LogBus, EasyCloseable {
         public String user() { return user; }
         public LogBus bus() { return BusImpl.this; }
         @Override
-        public String toString() { return String.format("UserBus[%s]%s", user(), format(biStream())); }
+        public String toString() { return String.format("UserBus[%s] %s", user(), format(biStream())); }
     }
 
     @Override
@@ -217,32 +218,11 @@ class BusImpl implements LogBus, EasyCloseable {
     public static String format(BiStream<String, String> bis) {
         StringBuilder sb = new StringBuilder("{");
         bis.forEach((k, v) -> sb.append("\n\t").append(k).append(" -> ").append(v));
-        sb.append("}");
+        if (sb.length() == 1) return "{}";
+        sb.append("\n}");
         return sb.toString();
     }
 
-    enum StackUtil {
-        ;
-        private static class Callers extends SecurityManager {
-            private static final Callers INSTANCE = new Callers();
-
-            private static Class<?>[] get() {
-                return INSTANCE.getClassContext();
-            }
-        }
-
-        private static final Package MY_PKG = StackUtil.class.getPackage();
-
-        static Class<?> getCallingClass() {
-            final Class<?>[] stack = Callers.get();
-            for (Class<?> c: stack) {
-                if (MY_PKG.equals(c.getPackage())) continue;
-                return c;
-            }
-            throw new Error("Could not find a caller in the stack: " + Arrays.toString(stack));
-        }
-
-    }
 }
 
 

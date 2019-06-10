@@ -33,10 +33,7 @@ public interface PartRunner {
         // if no part names were supplied, enable logging globally
         if (partNames.length == 0) return here(enableLogging);
         // otherwise, enable logging for each supplied part name
-        Stream.of(partNames).forEach(partName -> here(partName, bus -> {
-            bus.enableLogging(level, pattern);
-            bus.sendToErr(level);
-        }));
+        Stream.of(partNames).forEach(partName -> here(partName, enableLogging));
         return this;
     }
 

@@ -70,7 +70,7 @@ abstract class PartRunnerImpl<J> implements PartRunner {
     @Override
     public PartRunner here(String partName, TestPart part) {
         NamedPart namedPart = new NamedPart(partName, part);
-        namedPart.run(bus);
+        namedPart.run(bus.forUser(partName));
         return this;
     }
 
@@ -138,7 +138,7 @@ abstract class PartRunnerImpl<J> implements PartRunner {
                 }).join();
             }
             for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
-                runner.debug(LogLevel.INFO, ".*", "part4").here(bus -> {
+                runner.debug(LogLevel.INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");
