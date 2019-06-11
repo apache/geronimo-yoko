@@ -40,16 +40,30 @@ public enum Stack {
         }
     }
 
-    public static String getCallingMethod(int depth) {
+    public static String getCallingFrame(int depth) {
         StackTraceElement[] stack = new Throwable().getStackTrace();
         int i = 0;
         try {
-            while (!"getCallingMethod".equals(stack[i].getMethodName())) i++; // fast forward to this method
+            while (!"getCallingFrame".equals(stack[i].getMethodName())) i++; // fast forward to this method
             i++; // now at the method that called this one - i.e. depth 0
             i += depth;
-            return stack[i].getClassName() + '.' + stack[i].getMethodName();
+            return stack[i].toString();
         } catch (IndexOutOfBoundsException e) {
             throw new Error("Stack not deep enough to find caller#" + depth + ": " + Arrays.toString(stack));
         }
     }
+
+    public static String getCallingFrame(Class<?> callingClass) {
+        StackTraceElement[] stack = new Throwable().getStackTrace();
+        int i = 0;
+        try {
+            String className = callingClass.getName();
+            while (!className.equals(stack[i].getClassName())) i++; // fast forward to the first method from the mentioned class
+            return stack[i].toString();
+        } catch (IndexOutOfBoundsException e) {
+            throw new Error("Could not find caller matching class " + callingClass.getName() + " in stack " + Arrays.toString(stack));
+        }
+
+    }
+
 }

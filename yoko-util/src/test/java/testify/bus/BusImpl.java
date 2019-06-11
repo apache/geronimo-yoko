@@ -146,10 +146,10 @@ class BusImpl implements Bus, EasyCloseable {
         String shortcut = user + level + context;
         Supplier<String> returnValue = () -> {
             loggingShortcuts.add(shortcut);
-            return context;
+            return Stack.getCallingFrame(caller);
         };
 
-        if (loggingShortcuts.contains(shortcut)) return context;
+        if (loggingShortcuts.contains(shortcut)) return returnValue.get();
 
         // an empty string for the trace spec means enable all DEFAULT level logging
         if (spec.isEmpty() && DEFAULT.includes(level)) return returnValue.get();

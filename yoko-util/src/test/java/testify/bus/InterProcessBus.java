@@ -116,6 +116,7 @@ public final class InterProcessBus extends BusImpl {
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
                     br.lines().forEach(action);
                 } catch (IOException e) {
+                    if (e.getMessage().contains("Stream closed")) return; // ignore closed streams
                     storeError(e);
                 }
             });

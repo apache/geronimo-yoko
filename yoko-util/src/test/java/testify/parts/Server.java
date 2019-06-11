@@ -32,16 +32,15 @@ public abstract class Server implements Serializable {
 
     private String[] args;
     private Properties props;
-    private ORB orb;
+    private transient ORB orb;
 
-    protected abstract void run(ORB orb, Bus bus);
+    protected abstract void run(ORB orb, Bus bus) throws Exception;
 
     private void stop(Bus bus) {
-        bus.log("Calling orb.destroy()");
-        orb.destroy();
         bus.log("Calling orb.shutdown(true)");
         orb.shutdown(true);
-        bus.log("ORB shutdown complete");
+        bus.log("ORB shutdown complete, calling orb.destroy()");
+        orb.destroy();
     }
 
     private void stopRemotely(Bus bus) {
@@ -49,23 +48,21 @@ public abstract class Server implements Serializable {
     }
 
     private void run(Bus bus) throws Exception {
-        Class<? extends Server> clazz = bus.get(ClassParam.SERVER_CLASS);
-        Server server = clazz.getConstructor().newInstance();
-        server.props = bus.get(PropsParam.ORB_PROPS);
-        server.args = bus.get(ArgsParam.ORB_ARGS);
-        server.orb = ORB.init(server.args, server.props);
-        bus.onMsg(Event.STOP, nul -> server.stop(bus));
-        server.run(server.orb, bus);
+        this.orb = ORB.init(args, props);
+        bus.onMsg(Event.STOP, nul -> stop(bus));
+        run(orb, bus);
+
+        // Give up control to the ORB
+        orb.run();
+        bus.log("orb.run() completed.");
     }
 
     public static final void launch(PartRunner runner, Class<? extends Server> serverClass, String name, Properties props, String... args) {
         final Server server;
         try {
             server = serverClass.getConstructor().newInstance();
-            runner.bus(name)
-                    .put(ClassParam.SERVER_CLASS, serverClass)
-                    .put(PropsParam.ORB_PROPS, props)
-                    .put(ArgsParam.ORB_ARGS, args);
+            server.props = props;
+            server.args = args;
             runner.fork(name, server::run).endWith(name, server::stopRemotely);
         } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new Error("Could not construct " + serverClass + ". Make sure it has an accessible default constructor", e);

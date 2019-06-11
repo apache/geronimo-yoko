@@ -44,19 +44,18 @@ public interface LogBus<B extends LogBus<B>> extends EventBus<B> {
     default B log(Supplier<String> message) { return log(LogLevel.DEFAULT, message);}
     default B log(String message) { return log(LogLevel.DEFAULT, message); }
     default B log(LogLevel level, String message) { return log(level, () -> message); }
+
     @SuppressWarnings("unchecked")
     default B log(LogLevel level, Supplier<String> message) {
         final String context = isLoggingEnabled(level);
         if (context != null) put(level, "[" + context + "] " + message.get());
         return (B)this;
     }
-    default void sendToErr() { onLog(System.err::println); }
-    default void sendToErr(LogLevel level) { onLog(level, System.err::println); }
-    default void onLog(Consumer<String> action) { onLog(LogLevel.DEFAULT, action); }
+    default B logToSysOut(LogLevel level) { return onLog(level, System.out::println); }
+    default B logToSysErr(LogLevel level) { return onLog(level, System.err::println); }
+    default B onLog(Consumer<String> action) { return onLog(LogLevel.DEFAULT, action); }
 
-    default void onLog(LogLevel level, Consumer<String> action) {
-        level.includedLevels().forEach(l -> onMsg(l, action));
-    }
+    default B onLog(LogLevel level, Consumer<String> action) { return onMsg(level, action);}
 
     B forUser(String user);
     default B global() { return forUser(QualifiedBus.GLOBAL_USER); }

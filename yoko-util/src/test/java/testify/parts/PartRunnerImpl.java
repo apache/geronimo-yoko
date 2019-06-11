@@ -19,11 +19,14 @@ package testify.parts;
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
+
 import testify.bus.LogBus.LogLevel;
 import testify.io.EasyCloseable;
 
 import java.util.Deque;
+import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
@@ -31,8 +34,18 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 class PartRunnerImpl implements PartRunner {
     final InterProcessBus centralBus = InterProcessBus.createMaster();
-    private final Bus bus = centralBus.global();
-    private final Deque<EasyCloseable> endActions = new ConcurrentLinkedDeque<>();
+    private final Bus bus = centralBus.global()
+            .logToSysErr(LogLevel.ERROR)
+            .logToSysErr(LogLevel.WARN)
+            .logToSysOut(LogLevel.INFO)
+            .logToSysOut(LogLevel.DEFAULT)
+            .logToSysOut(LogLevel.DEBUG)
+            .enableLogging(LogLevel.ERROR, ".*")
+            .enableLogging(LogLevel.WARN, ".*")
+            ;
+    private final Queue<EasyCloseable> preJoinActions = new ConcurrentLinkedQueue<>();
+    private final Deque<EasyCloseable> joinActions = new ConcurrentLinkedDeque<>();
+    private final Deque<EasyCloseable> postJoinActions = new ConcurrentLinkedDeque<>();
     private boolean useProcesses = false;
 
     @Override
@@ -59,7 +72,7 @@ class PartRunnerImpl implements PartRunner {
             final NamedPart namedPart = new NamedPart(partName, part);
             J job = runner.fork(centralBus, namedPart);
             namedPart.waitForStart(bus);
-            endActions.addLast(() -> waitForJob(runner, job, namedPart));
+            registerForJoin(runner, job, partName);
             return this;
         } catch (Throwable throwable) {
             throw fatalError(throwable);
@@ -68,7 +81,7 @@ class PartRunnerImpl implements PartRunner {
 
     @Override
     public PartRunner endWith(String partName, Consumer<Bus> endAction) {
-        endActions.addFirst(() -> endAction.accept(bus.forUser(partName)));
+        preJoinActions.add(() -> endAction.accept(bus.forUser(partName)));
         return this;
     }
 
@@ -105,30 +118,43 @@ class PartRunnerImpl implements PartRunner {
     }
 
     // recursively ensure close
-    private void runCloseHooks() {
-        if (endActions.isEmpty()) return;
-        try (EasyCloseable hook = endActions.pollLast()) {
-            runCloseHooks();
-        }
+    private static void close(Queue<EasyCloseable> closeables) {
+        if (closeables.isEmpty()) return;
+        try (EasyCloseable hook = closeables.poll()) {}
+        finally { close(closeables); }
     }
 
     @Override
     public void join() {
         // close down the main bus
         try (EasyCloseable close = centralBus) {
-            runCloseHooks();
+            centralBus.log("Running pre-join actions: " + preJoinActions);
+            close(preJoinActions);
+            centralBus.log("Running join actions: " + joinActions);
+            close(joinActions);
+            centralBus.log("Running post-join actions: " + postJoinActions);
+            close(postJoinActions);
+            centralBus.log("Completed all join actions.");
         }
     }
 
-    private <J> void waitForJob(Runner<J> runner, J job, NamedPart part) {
-        try {
-            if (runner.join(job, 5, SECONDS)) return;
-            System.err.printf("The test part '%s' did not complete. Trying to force it to stop.%n", part.name);
-            if (runner.stop(job, 5, SECONDS)) return;
-            System.err.printf("The test part '%s' STILL did not complete. There's nothing more to try.%n", part.name);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private <J> void registerForJoin(Runner<J> runner, J job, String name) {
+        joinActions.addFirst(() -> {
+            try {
+                if (runner.join(job, 5, SECONDS)) return;
+                centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        postJoinActions.addFirst(() -> {
+            try {
+                if (runner.stop(job, 5, SECONDS)) return;
+                centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
 
     private enum Test {

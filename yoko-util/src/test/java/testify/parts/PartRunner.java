@@ -36,9 +36,9 @@ public interface PartRunner {
     default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
         // define how to enable logging for a bus
         // if no part names were supplied, enable logging globally
-        if (partNames.length == 0) bus().enableLogging(level, pattern).sendToErr(level);
+        if (partNames.length == 0) bus().enableLogging(level, pattern);
         // otherwise, enable logging for each supplied part name
-        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern).sendToErr(level));
+        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern));
         return this;
     }
 

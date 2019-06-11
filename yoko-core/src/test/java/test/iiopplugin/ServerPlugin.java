@@ -44,7 +44,7 @@ public class ServerPlugin implements ConnectionHelper {
     static private boolean createdServerConnection = false;
 
     public ServerPlugin() {
-        System.out.println("Server-side connection helper constructed");
+        System.out.println("InsServer-side connection helper constructed");
         constructed = true;
     }
 

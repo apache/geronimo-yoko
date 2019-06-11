@@ -120,7 +120,6 @@ public class IIOPAddress_impl extends IIOPAddressPOA {
     // IDL:URLTest/IIOPAddress/deactivate:1.0
     //
     public void deactivate() {
-        System.out.println("Received call to IIOPAddress.deactivate() —> shutting down ORB");
         orb_.shutdown(false);
     }
 }

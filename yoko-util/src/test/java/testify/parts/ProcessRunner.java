@@ -59,8 +59,8 @@ enum ProcessRunner implements Runner<Process>{
 
     @Override
     public boolean join(Process p, long timeout, TimeUnit unit) throws InterruptedException {
-        if (p.isAlive()) p.waitFor(timeout, unit);
-        return !p.isAlive();
+        p.destroy();
+        return !p.isAlive() || p.waitFor(timeout, unit);
     }
 
     @Override
