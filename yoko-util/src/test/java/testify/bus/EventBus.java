@@ -18,7 +18,7 @@ package testify.bus;
 
 import java.util.function.Consumer;
 
-public interface EventBus extends RawBus {
+public interface EventBus<B extends EventBus<B>> extends RawBus<B> {
     interface TypeRef<T> {
         Class<? extends Enum> getDeclaringClass();
         String name();
@@ -41,10 +41,10 @@ public interface EventBus extends RawBus {
     default <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return hasKey(key.fullName()); }
     default <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(get(key.fullName())); }
     default <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return key.unstringify(peek(key.fullName())); }
-    default <K extends Enum<K> & TypeRef<? super T>, T> void put(K key, T value) { put(key.fullName(), key.stringify(value)); }
-    default <K extends Enum<K> & TypeRef<T>, T> void put(K key) { put(key, null); }
-    default <K extends Enum<K> & TypeRef<T>, T> void onMsg(K key, Consumer<T> action) {
-        onMsg(key.fullName(), s -> action.accept(key.unstringify(s)));
+    default <K extends Enum<K> & TypeRef<? super T>, T> B put(K key, T value) { return put(key.fullName(), key.stringify(value)); }
+    default <K extends Enum<K> & TypeRef<T>, T> B put(K key) { return put(key, null); }
+    default <K extends Enum<K> & TypeRef<T>, T> B onMsg(K key, Consumer<T> action) {
+        return onMsg(key.fullName(), s -> action.accept(key.unstringify(s)));
     }
 
     default <K extends Enum<K> & TypeRef<K>> void onMsg(K key, Runnable action) {

@@ -47,7 +47,7 @@ public enum Stack {
             while (!"getCallingMethod".equals(stack[i].getMethodName())) i++; // fast forward to this method
             i++; // now at the method that called this one - i.e. depth 0
             i += depth;
-            return stack[i].getMethodName();
+            return stack[i].getClassName() + '.' + stack[i].getMethodName();
         } catch (IndexOutOfBoundsException e) {
             throw new Error("Stack not deep enough to find caller#" + depth + ": " + Arrays.toString(stack));
         }

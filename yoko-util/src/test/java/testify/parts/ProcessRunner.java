@@ -29,7 +29,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class ProcessRunner extends PartRunnerImpl<Process> {
+enum ProcessRunner implements Runner<Process>{
+    SINGLETON
+    ;
     private enum Part implements TypeRef<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
@@ -43,23 +45,26 @@ public class ProcessRunner extends PartRunnerImpl<Process> {
         part.run(slaveBus.forUser(name));
     }
 
-    Process fork(NamedPart part) {
-        final Bus bus = centralBus.forUser(part.name);
+    @Override
+    public Process fork(InterProcessBus centralBus, NamedPart part) {
+        Bus bus = centralBus.forUser(part.name);
         bus.log("Starting child process");
         final Process process = ProcessRunner.exec(part.name);
         bus.log("Adding process to inter-process bus");
-        this.centralBus.addProcess(part.name, process);
+        centralBus.addProcess(part.name, process);
         bus.log("Serializing part for execution in remote process");
         bus.put(Part.NAMED_PART, part);
         return process;
     }
 
-    boolean join(Process p, long timeout, TimeUnit unit) throws InterruptedException {
+    @Override
+    public boolean join(Process p, long timeout, TimeUnit unit) throws InterruptedException {
         if (p.isAlive()) p.waitFor(timeout, unit);
         return !p.isAlive();
     }
 
-    boolean stop(Process p, long timeout, TimeUnit unit) throws InterruptedException{
+    @Override
+    public boolean stop(Process p, long timeout, TimeUnit unit) throws InterruptedException{
         p.destroy();
         p.waitFor(timeout, unit);
         p.destroyForcibly().waitFor(timeout, unit);

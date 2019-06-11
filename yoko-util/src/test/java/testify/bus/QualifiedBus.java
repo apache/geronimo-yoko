@@ -36,15 +36,15 @@ interface QualifiedBus extends BusWrapper {
     default String isLoggingEnabled(LogLevel level) { return isLoggingEnabled(user(), level); }
 
     @Override
-    default void enableLogging(LogLevel level, String pattern) { enableLogging(user(), level, pattern); }
+    default Bus enableLogging(LogLevel level, String pattern) { return enableLogging(user(), level, pattern); }
 
     default boolean isGlobal() { return GLOBAL_USER.equals(user()); }
 
     @Override
-    default void put(String key, String value) {
+    default Bus put(String key, String value) {
         BusWrapper.super.put(key, value);
-        if (isGlobal()) return;
-        bus().global().put(key, value);
+        if (! isGlobal()) bus().global().put(key, value);
+        return this;
     }
 
     static String validate(String name) {
@@ -52,4 +52,5 @@ interface QualifiedBus extends BusWrapper {
             throw new Error("Names may not contain '" + DELIMITER + "' (name was '" + name + "')");
         return name;
     }
+
 }

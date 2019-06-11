@@ -21,13 +21,17 @@ import testify.streams.BiStream;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-public interface RawBus {
+public interface RawBus<B extends RawBus<B>> {
     boolean hasKey(String key);
     String get(String key);
     String peek(String key);
-    void onMsg(String key, Consumer<String> action);
-    void put(String key, String value);
-    default void forEach(BiConsumer<String, String> action) { biStream().forEach(action); }
+    B onMsg(String key, Consumer<String> action);
+    B put(String key, String value);
+    @SuppressWarnings("unchecked")
+    default B forEach(BiConsumer<String, String> action) {
+        biStream().forEach(action);
+        return (B) this;
+    }
     BiStream<String, String> biStream();
 }
 

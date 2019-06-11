@@ -16,5 +16,5 @@
  */
 package testify.bus;
 
-public interface Bus extends LogBus {
+public interface Bus extends LogBus<Bus> {
 }

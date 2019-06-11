@@ -22,7 +22,7 @@ import java.util.function.Supplier;
 
 import static java.util.EnumSet.range;
 
-public interface LogBus extends EventBus {
+public interface LogBus<B extends LogBus<B>> extends EventBus<B> {
     enum LogSpec implements StringRef {SPEC}
     enum LogLevel implements StringRef {
         ERROR, WARN, DEFAULT, INFO, DEBUG;
@@ -33,21 +33,22 @@ public interface LogBus extends EventBus {
     default String isLoggingEnabled(LogLevel level) { return global().isLoggingEnabled(level); }
     String isLoggingEnabled(String user, LogLevel level);
 
-    default void enableLogging() { enableLogging(""); }
-    default void enableLogging(String pattern) { enableLogging(LogLevel.DEFAULT, pattern); }
-    default void enableLogging(LogLevel level, String pattern) {
-        global().enableLogging(level, pattern);
+    default B enableLogging() { return enableLogging(""); }
+    default B enableLogging(String pattern) { return enableLogging(LogLevel.DEFAULT, pattern); }
+    default B enableLogging(LogLevel level, String pattern) {
+        return global().enableLogging(level, pattern);
     }
-    void enableLogging(String user, LogLevel level, String pattern);
+    B enableLogging(String user, LogLevel level, String pattern);
 
 
-    default void log(Supplier<String> message) { log(LogLevel.DEFAULT, message);}
-    default void log(String message) { log(LogLevel.DEFAULT, message); }
-    default void log(LogLevel level, String message) { log(level, () -> message); }
-    default void log(LogLevel level, Supplier<String> message) {
+    default B log(Supplier<String> message) { return log(LogLevel.DEFAULT, message);}
+    default B log(String message) { return log(LogLevel.DEFAULT, message); }
+    default B log(LogLevel level, String message) { return log(level, () -> message); }
+    @SuppressWarnings("unchecked")
+    default B log(LogLevel level, Supplier<String> message) {
         final String context = isLoggingEnabled(level);
-        if (context == null) return;
-        put(level, "[" + context + "]" + message.get());
+        if (context != null) put(level, "[" + context + "] " + message.get());
+        return (B)this;
     }
     default void sendToErr() { onLog(System.err::println); }
     default void sendToErr(LogLevel level) { onLog(level, System.err::println); }
@@ -57,7 +58,7 @@ public interface LogBus extends EventBus {
         level.includedLevels().forEach(l -> onMsg(l, action));
     }
 
-    Bus forUser(String user);
-    default Bus global() { return forUser(QualifiedBus.GLOBAL_USER); }
+    B forUser(String user);
+    default B global() { return forUser(QualifiedBus.GLOBAL_USER); }
 }
 

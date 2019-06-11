@@ -23,7 +23,7 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 interface BusWrapper extends Bus {
-    LogBus bus();
+    Bus bus();
 
     String transform(String key);
 
@@ -39,13 +39,13 @@ interface BusWrapper extends Bus {
     default String get(String key) { return bus().get(transform(key)); }
 
     @Override
-    default void onMsg(String key, Consumer<String> action) { bus().onMsg(transform(key), action);}
+    default Bus onMsg(String key, Consumer<String> action) { return bus().onMsg(transform(key), action); }
 
     @Override
     default Bus forUser(String user) { return bus().forUser(user); }
 
     @Override
-    default void forEach(BiConsumer<String, String> action) { bus().forEach(action); }
+    default Bus forEach(BiConsumer<String, String> action) { return bus().forEach(action); }
 
     @Override
     default BiStream<String, String> biStream() {
@@ -53,31 +53,29 @@ interface BusWrapper extends Bus {
     }
 
     @Override
-    default void put(String key, String value) { bus().put(transform(key), value); }
-
-    @Override
-    default void log(LogLevel level, String message) { Bus.super.log(level, transform(message)); }
+    default Bus put(String key, String value) { return bus().put(transform(key), value); }
 
     @Override
     default String isLoggingEnabled(String user, LogLevel level) {
-        return bus().isLoggingEnabled(user, level);
+        String context = bus().isLoggingEnabled(user, level);
+        return context == null ? null : transform(context);
     }
 
     @Override
     String isLoggingEnabled(LogLevel level);
 
     @Override
-    void enableLogging(LogLevel level, String pattern);
+    Bus enableLogging(LogLevel level, String pattern);
 
-    default void enableLogging(String user, LogLevel level, String pattern) {
-        bus().enableLogging(user, level, pattern);
+    default Bus enableLogging(String user, LogLevel level, String pattern) {
+        return bus().enableLogging(user, level, pattern);
     }
 }
 
 class TestBusWrapper implements BusWrapper {
 
     @Override
-    public LogBus bus() { return null; }
+    public Bus bus() { return null; }
 
     @Override
     public String transform(String key) { return null; }
@@ -91,8 +89,5 @@ class TestBusWrapper implements BusWrapper {
     }
 
     @Override
-    public void enableLogging(LogLevel level, String pattern) {
-
-    }
-
+    public Bus enableLogging(LogLevel level, String pattern) { return this; }
 }

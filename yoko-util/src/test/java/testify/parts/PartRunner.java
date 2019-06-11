@@ -21,23 +21,54 @@ import testify.bus.LogBus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public interface PartRunner {
-    default PartRunner debug(LogLevel level, String pattern, String...partNames) {
+    static PartRunner create() { return new PartRunnerImpl(); }
+    /**
+     * Enable logging.
+     * @param level the level of logging to enable
+     * @param pattern a regular expression to match the classes to debug
+     * @param partNames if empty, all parts will be debugged, otherwise only the parts with the specified names will have debugging enabled
+     * @return this object for call chaining
+     */
+    default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
         // define how to enable logging for a bus
-        final TestPart enableLogging = bus -> {
-            bus.enableLogging(level, pattern);
-            bus.sendToErr(level);
-        };
         // if no part names were supplied, enable logging globally
-        if (partNames.length == 0) return here(enableLogging);
+        if (partNames.length == 0) bus().enableLogging(level, pattern).sendToErr(level);
         // otherwise, enable logging for each supplied part name
-        Stream.of(partNames).forEach(partName -> here(partName, enableLogging));
+        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern).sendToErr(level));
         return this;
     }
 
-    default PartRunner debug(String pattern, String...partNames) { return debug(LogLevel.DEFAULT, pattern, partNames); }
+    /**
+     * Enable {@link LogLevel#DEFAULT} level logging.
+     * @param pattern a regular expression to match the classes to debug
+     * @param partNames if empty, all parts will be debugged, otherwise only the parts with the specified names will have debugging enabled
+     * @return this object for call chaining
+     */
+    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(LogLevel.DEFAULT, pattern, partNames); }
+
+    /**
+     * Enable {@link LogLevel#DEFAULT} level logging.
+     * @param pattern a regular expression to match the classes to debug
+     * @param partNames if empty, all parts will be debugged, otherwise only the parts with the specified names will have debugging enabled
+     * @return this object for call chaining
+     */
+    default PartRunner enableLogging(Class<?> classToTrace, String...partNames) { return enableLogging(LogLevel.DEFAULT, Pattern.quote(classToTrace.getName()), partNames); }
+
+    /**
+     * Get the global bus.
+     */
+    Bus bus();
+
+    /**
+     * Get the bus specific to the named part.
+     */
+    Bus bus(String partName);
+
+    PartRunner useProcesses(boolean useProcesses);
 
     PartRunner fork(String partName, TestPart part);
 
@@ -54,7 +85,7 @@ public interface PartRunner {
         };
     }
 
-    PartRunner onStop(String partName, Consumer<Bus> endAction);
+    PartRunner endWith(String partName, Consumer<Bus> endAction);
     PartRunner here(TestPart part);
     PartRunner here(String partName, TestPart part);
     default PartRunner runMain(Class<?> mainClass, String...args) { return here(mainClass.getName(), wrapMain(mainClass, args)); }

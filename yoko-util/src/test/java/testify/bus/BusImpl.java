@@ -47,7 +47,7 @@ import static testify.bus.LogBus.LogLevel.DEFAULT;
 /**
  * Enable multiple threads to communicate asynchronously.
  */
-class BusImpl implements LogBus, EasyCloseable {
+class BusImpl implements Bus, EasyCloseable {
     private static final Package MY_PKG = BusImpl.class.getPackage();
     protected final ExecutorService threadPool = Executors.newCachedThreadPool();
     private final ConcurrentMap<String, Object> properties = new ConcurrentSkipListMap<>();
@@ -57,7 +57,7 @@ class BusImpl implements LogBus, EasyCloseable {
     private volatile Throwable originalError = null;
 
     @Override
-    public void put(String key, String value) {
+    public Bus put(String key, String value) {
         // store the reference
         Object previous = properties.put(key, requireNonNull(value));
         // notify any waiting threads
@@ -66,6 +66,7 @@ class BusImpl implements LogBus, EasyCloseable {
         Optional.ofNullable(callbacks.get(key))
                 .map(Queue::stream).orElse(Stream.empty())
                 .forEach(action -> threadPool.execute(() -> action.accept(value)));
+        return this;
     }
 
     @Override
@@ -101,9 +102,10 @@ class BusImpl implements LogBus, EasyCloseable {
     }
 
     @Override
-    public void onMsg(String key, Consumer<String> action) {
+    public Bus onMsg(String key, Consumer<String> action) {
         // register the callback
         callbacks.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(action);
+        return this;
     }
 
     Error reThrowErrorIfPresent() {
@@ -176,7 +178,7 @@ class BusImpl implements LogBus, EasyCloseable {
     }
 
     @Override
-    public void enableLogging(String user, LogLevel level, String pattern) {
+    public Bus enableLogging(String user, LogLevel level, String pattern) {
         Bus bus = forUser(user);
         // add this new pattern to the existing spec if any
         String spec = bus.peek(LogSpec.SPEC);
@@ -184,7 +186,7 @@ class BusImpl implements LogBus, EasyCloseable {
         else spec += ":";
         spec += pattern + '=' + level;
         // now put the new spec on the bus so everyone can see it
-        bus.put(LogSpec.SPEC, spec);
+        return bus.put(LogSpec.SPEC, spec);
     }
 
     @Override
@@ -205,7 +207,7 @@ class BusImpl implements LogBus, EasyCloseable {
         final String user;
         private UserBus(String user) {this.user = user;}
         public String user() { return user; }
-        public LogBus bus() { return BusImpl.this; }
+        public Bus bus() { return BusImpl.this; }
         @Override
         public String toString() { return String.format("UserBus[%s] %s", user(), format(biStream())); }
     }

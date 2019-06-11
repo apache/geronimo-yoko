@@ -19,8 +19,6 @@ package testify.jupiter;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import testify.parts.PartRunner;
-import testify.parts.ProcessRunner;
-import testify.parts.ThreadRunner;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -44,7 +42,7 @@ public class PartRunnerResolver extends BaseParameterResolver<PartRunner> {
     PartRunnerResolver() { this(false, Scope.AUTO); }
 
     @Override
-    protected PartRunner create(ParameterContext pCtx, ExtensionContext eCtx) { return processes ? new ProcessRunner() : new ThreadRunner(); }
+    protected PartRunner create(ParameterContext pCtx, ExtensionContext eCtx) { return PartRunner.create().useProcesses(processes); }
 
     @Override
     protected void destroy(PartRunner partRunner) { partRunner.join(); }

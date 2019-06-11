@@ -65,10 +65,11 @@ public final class InterProcessBus extends BusImpl {
 
     private void putLocal(String key, String value) { super.put(key, value); }
 
-    public void put(String key, String value) {
+    public Bus put(String key, String value) {
         putLocal(key, value);
         String msg = encodeMessage(key, value);
         ioList.forEach(io -> io.sendMessage(msg));
+        return this;
     }
 
     private static String encodeMessage(String key, String value) {

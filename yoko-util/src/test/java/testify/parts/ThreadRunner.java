@@ -16,20 +16,24 @@
  */
 package testify.parts;
 
+import testify.bus.InterProcessBus;
+
 import java.util.concurrent.TimeUnit;
 
-public class ThreadRunner extends PartRunnerImpl<Thread> {
-    Thread fork(NamedPart part) {
+enum ThreadRunner implements Runner<Thread> {
+    SINGLETON
+    ;
+    public Thread fork(InterProcessBus centralBus, NamedPart part) {
         Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)));
         thread.setDaemon(true);
         thread.start();
         return thread;
     }
-    boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
         thread.join(unit.toMillis(timeout));
         return !thread.isAlive();
     }
-    boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
+    public boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
         thread.interrupt();
         thread.join(unit.toMillis(timeout));
         return !thread.isAlive();
