@@ -21,10 +21,7 @@ import org.apache.yoko.orb.OB.ObjectKey;
 import org.apache.yoko.orb.OB.ObjectKeyData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.Extension;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
@@ -32,8 +29,6 @@ import test.ins.InsServer;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
 import testify.bus.Bus;
-import testify.jupiter.PartRunnerResolver;
-import testify.jupiter.SimpleOrbResolver;
 import testify.jupiter.UseServer;
 
 import java.util.stream.IntStream;
@@ -44,13 +39,8 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.*;
 
-@UseServer(InsServer.class)
+@UseServer(value = InsServer.class)
 public class InsTest {
-//    @RegisterExtension
-//    static Extension x1 = PartRunnerResolver.builder().perContainer().build();
-//    @RegisterExtension
-//    static Extension x2 = SimpleOrbResolver.builder().perContainer().build();
-
     private static String iorFromServer;
     // object reference to use during testing
     private static IIOPAddress iiopAddress;
@@ -185,7 +175,7 @@ public class InsTest {
     }
 
     @Test
-    public void testUnssuportedIiopVersionCorbalocUrls(ORB orb) {
+    public void testUnsupportedIiopVersionCorbalocUrls(ORB orb) {
         // Try iiop major versions 0 and 2
         Stream.of(":0.", ":2.").forEach(iiopMajor -> {
             IntStream.range(0, 10).forEach(iiopMinor -> {

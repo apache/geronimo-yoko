@@ -224,7 +224,6 @@ class BusImpl implements Bus, EasyCloseable {
         sb.append("\n}");
         return sb.toString();
     }
-
 }
 
 

@@ -18,30 +18,20 @@ package testify.jupiter;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
-import org.omg.CORBA.ORB;
+import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.jupiter.api.extension.ParameterResolver;
+import testify.parts.PartRunner;
 
-import java.util.Properties;
-
-public class SimpleOrbResolver extends BaseParameterResolver<ORB> {
-    public static final class Builder extends BaseBuilder<Builder> {
-        public SimpleOrbResolver build() { return new SimpleOrbResolver(scope()); }
-    }
-
-    public static Builder builder() { return new Builder(); }
-
-    private SimpleOrbResolver(Scope scope) { super(ORB.class, scope); }
+class ServerlessExtension extends DelegatingExtension<Class<?>, ServerlessClient> implements ParameterResolver {
+    ServerlessExtension() { super(ExtensionContext::getRequiredTestClass, ServerlessClient::create); }
 
     @Override
-    protected ORB create(ParameterContext pCtx, ExtensionContext eCtx) {
-        Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-        return ORB.init((String[]) null, props);
+    public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
+        return pCtx.getParameter().getType() == PartRunner.class;
     }
 
     @Override
-    protected void destroy(ORB orb) {
-        orb.destroy();
+    public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
+        return getDelegate(ctx).partRunner;
     }
 }

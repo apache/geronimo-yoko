@@ -16,6 +16,7 @@
  */
 package testify.parts;
 
+import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
 import testify.bus.EventBus.TypeRef;
@@ -37,10 +38,18 @@ public abstract class Server implements Serializable {
     protected abstract void run(ORB orb, Bus bus) throws Exception;
 
     private void stop(Bus bus) {
-        bus.log("Calling orb.shutdown(true)");
-        orb.shutdown(true);
-        bus.log("ORB shutdown complete, calling orb.destroy()");
-        orb.destroy();
+        try {
+            bus.log("Calling orb.shutdown(true)");
+            orb.shutdown(true);
+            bus.log("ORB shutdown complete, calling orb.destroy()");
+            orb.destroy();
+        } catch (BAD_INV_ORDER e) {
+            // The ORB is sometimes already shut down.
+            // This should not cause an error in the test.
+            // TODO: find out how this happens
+            if (e.minor == 4) return;
+            throw e;
+        }
     }
 
     private void stopRemotely(Bus bus) {

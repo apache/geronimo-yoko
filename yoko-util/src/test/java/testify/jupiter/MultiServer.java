@@ -14,27 +14,18 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko;
+package testify.jupiter;
 
-import org.junit.jupiter.api.Test;
-import test.types.TestAny;
-import test.types.TestDynAny;
-import test.types.TestPortableTypes;
-import test.types.TestTypeCode;
-import test.types.TestUnion;
-import testify.jupiter.Serverless;
-import testify.parts.PartRunner;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-@Serverless
-class TypesTest {
-    @Test
-    void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }
-    @Test
-    void testAny(PartRunner runner) { runner.forkMain(TestAny.class); }
-    @Test
-    void testDynAny(PartRunner runner) { runner.forkMain(TestDynAny.class); }
-    @Test
-    void testPortableTypes(PartRunner runner) { runner.forkMain(TestPortableTypes.class); }
-    @Test
-    void testUnion(PartRunner runner) { runner.forkMain(TestUnion.class); }
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@ExtendWith(MultiServerExtension.class)
+@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface MultiServer {
+    UseServer[] value();
 }
