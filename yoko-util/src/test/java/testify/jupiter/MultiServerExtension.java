@@ -27,8 +27,8 @@ import testify.bus.Bus;
 
 import java.util.stream.Stream;
 
-class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerClient> implements BeforeAllCallback, ArgumentsProvider, ParameterResolver {
-    MultiServerExtension() { super(ExtensionContext::getRequiredTestClass, MultiServerClient::create); }
+class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerAdjunct> implements BeforeAllCallback, ArgumentsProvider, ParameterResolver {
+    MultiServerExtension() { super(ExtensionContext::getRequiredTestClass, MultiServerAdjunct::create); }
 
     @Override
     public void beforeAll(ExtensionContext ctx) throws Exception { getDelegate(ctx).startServers(); }
@@ -47,7 +47,7 @@ class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerClie
     public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
         if (ctx.getTestClass().isPresent())
             throw new ParameterResolutionException("Bus parameter requested by " + ctx.getDisplayName() +
-                    " cannot be resolved. Either use exactly one @" + UseServer.class.getSimpleName() +
+                    " cannot be resolved. Either use exactly one @" + Server.class.getSimpleName() +
                     " annotation or annotate test methods with @" + TestPerServer.class.getSimpleName() + ".");
         return getDelegate(ctx).partRunner.bus();
     }

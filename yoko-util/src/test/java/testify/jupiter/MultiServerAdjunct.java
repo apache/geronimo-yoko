@@ -17,7 +17,7 @@
 package testify.jupiter;
 
 import testify.bus.Bus;
-import testify.parts.Server;
+import testify.parts.ServerPart;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -29,20 +29,20 @@ import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
-class MultiServerClient extends ServerlessClient {
-    final Map<String, UseServer> configMap;
+class MultiServerAdjunct extends ServerlessAdjunct {
+    final Map<String, Server> configMap;
 
-    static MultiServerClient create(Class<?> testClass) {
+    static MultiServerAdjunct create(Class<?> testClass) {
         if (!testClass.isAnnotationPresent(MultiServer.class))
-            throw new IllegalStateException("The test " + testClass + " should have multiple @" + UseServer.class.getSimpleName() + " annotations");
-        return new MultiServerClient(testClass.getAnnotation(MultiServer.class).value());
+            throw new IllegalStateException("The test " + testClass + " should have multiple @" + Server.class.getSimpleName() + " annotations");
+        return new MultiServerAdjunct(testClass.getAnnotation(MultiServer.class).value());
     }
 
-    MultiServerClient(UseServer...configs) {
+    MultiServerAdjunct(Server...configs) {
         super(false);
         // count up how many of each name we have
         Map<String, AtomicInteger> nameCount = new HashMap<>();
-        for (UseServer config: configs) {
+        for (Server config: configs) {
             nameCount.computeIfAbsent(config.name(), s -> new AtomicInteger()).incrementAndGet();
         }
         final Collection<AtomicInteger> counts = nameCount.values();
@@ -53,8 +53,8 @@ class MultiServerClient extends ServerlessClient {
 
         // create the config map of unique part names to configs
         // use a linked hash map as this preserves insertion order
-        Map<String, UseServer> map = new LinkedHashMap<>();
-        for (UseServer config: configs) {
+        Map<String, Server> map = new LinkedHashMap<>();
+        for (Server config: configs) {
             String name = config.name();
             if (nameCount.containsKey(name)) name += "#" + nameCount.get(name).incrementAndGet();
             map.put(name, config);
@@ -68,10 +68,10 @@ class MultiServerClient extends ServerlessClient {
         configMap.forEach(this::startServer);
     }
 
-    void startServer(String name, UseServer config) {
+    void startServer(String name, Server config) {
         // set the forking mode from the config
         partRunner.useProcesses(config.forkProcesses());
         // launch it with the computed name
-        Server.launch(partRunner, config.value(), name, props(config.orbProps()), config.orbArgs());
+        ServerPart.launch(partRunner, config.value(), name, OrbExtension.props(config.orbProps()), config.orbArgs());
     }
 }

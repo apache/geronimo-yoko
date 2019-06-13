@@ -17,18 +17,18 @@
 package testify.jupiter;
 
 import testify.bus.Bus;
-import testify.parts.Server;
+import testify.parts.ServerPart;
 
-class SingleServerClient extends ServerlessClient {
-    final UseServer config;
+class ServerAdjunct extends ServerlessAdjunct {
+    final Server config;
 
-    static SingleServerClient create(Class<?> testClass) {
-        if (!testClass.isAnnotationPresent(UseServer.class))
-            throw new IllegalStateException("The test " + testClass + " needs to use the @" + UseServer.class.getSimpleName() + " annotation");
-        return new SingleServerClient(testClass.getAnnotation(UseServer.class));
+    static ServerAdjunct create(Class<?> testClass) {
+        if (!testClass.isAnnotationPresent(Server.class))
+            throw new IllegalStateException("The test " + testClass + " needs to use the @" + Server.class.getSimpleName() + " annotation");
+        return new ServerAdjunct(testClass.getAnnotation(Server.class));
     }
 
-    SingleServerClient(UseServer config) {
+    ServerAdjunct(Server config) {
         super(config.forkProcesses());
         this.config = config;
         String traceSpec = "default".equals(config.trace()) ? config.value().getName() : config.trace();
@@ -40,6 +40,6 @@ class SingleServerClient extends ServerlessClient {
     }
 
     void startServer() {
-        Server.launch(partRunner, config.value(), config.name(), props(config.orbProps()), config.orbArgs());
+        ServerPart.launch(partRunner, config.value(), config.name(), OrbExtension.props(config.orbProps()), config.orbArgs());
     }
 }

@@ -17,7 +17,7 @@
 package testify.jupiter;
 
 import org.junit.jupiter.api.extension.ExtendWith;
-import testify.parts.Server;
+import testify.parts.ServerPart;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
@@ -26,11 +26,12 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Repeatable(MultiServer.class)
-@ExtendWith(SingleServerExtension.class)
+@ExtendWith(ServerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
+@Orb
 @Retention(RetentionPolicy.RUNTIME)
-public @interface UseServer {
-    Class<? extends Server> value();
+public @interface Server {
+    Class<? extends ServerPart> value();
     String name() default "server";
     boolean forkProcesses() default false;
     String[] orbProps() default {};

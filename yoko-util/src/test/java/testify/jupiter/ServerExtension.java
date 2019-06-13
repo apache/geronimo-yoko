@@ -24,21 +24,18 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
 
-class SingleServerExtension extends DelegatingExtension<Class<?>, SingleServerClient> implements BeforeAllCallback, ParameterResolver {
-    SingleServerExtension() { super(ExtensionContext::getRequiredTestClass, SingleServerClient::create); }
+class ServerExtension extends DelegatingExtension<Class<?>, ServerAdjunct> implements BeforeAllCallback, ParameterResolver {
+    ServerExtension() { super(ExtensionContext::getRequiredTestClass, ServerAdjunct::create); }
 
     @Override
     public void beforeAll(ExtensionContext ctx) throws Exception { getDelegate(ctx).startServer(); }
 
     @Override
     public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) {
-        return pCtx.getParameter().getType() == Bus.class || pCtx.getParameter().getType() == ORB.class;
+        return pCtx.getParameter().getType() == Bus.class;
     }
     @Override
     public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx)  {
-        final Class<?> type = pCtx.getParameter().getType();
-        if (type == Bus.class) return getDelegate(ctx).getBus();
-        if (type == ORB.class) return getDelegate(ctx).getOrb();
-        throw new ParameterResolutionException("Unexpected type: " + type);
+        return getDelegate(ctx).getBus();
     }
 }

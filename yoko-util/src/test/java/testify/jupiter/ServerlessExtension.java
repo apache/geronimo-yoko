@@ -22,8 +22,8 @@ import org.junit.jupiter.api.extension.ParameterResolutionException;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import testify.parts.PartRunner;
 
-class ServerlessExtension extends DelegatingExtension<Class<?>, ServerlessClient> implements ParameterResolver {
-    ServerlessExtension() { super(ExtensionContext::getRequiredTestClass, ServerlessClient::create); }
+class ServerlessExtension extends DelegatingExtension<Class<?>, ServerlessAdjunct> implements ParameterResolver {
+    ServerlessExtension() { super(ExtensionContext::getRequiredTestClass, ServerlessAdjunct::create); }
 
     @Override
     public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {

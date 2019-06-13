@@ -25,8 +25,8 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Properties;
 
-public abstract class Server implements Serializable {
-    private enum ClassParam implements TypeRef<Class<? extends Server>> {SERVER_CLASS}
+public abstract class ServerPart implements Serializable {
+    private enum ClassParam implements TypeRef<Class<? extends ServerPart>> {SERVER_CLASS}
     private enum PropsParam implements TypeRef<Properties> {ORB_PROPS}
     private enum ArgsParam implements TypeRef<String[]> {ORB_ARGS}
     private enum Event implements TypeRef<Void> {STOP}
@@ -66,8 +66,8 @@ public abstract class Server implements Serializable {
         bus.log("orb.run() completed.");
     }
 
-    public static final void launch(PartRunner runner, Class<? extends Server> serverClass, String name, Properties props, String... args) {
-        final Server server;
+    public static final void launch(PartRunner runner, Class<? extends ServerPart> serverClass, String name, Properties props, String... args) {
+        final ServerPart server;
         try {
             server = serverClass.getConstructor().newInstance();
             server.props = props;

@@ -33,9 +33,9 @@ import org.omg.PortableServer.POAManager;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddress_impl;
 import testify.bus.Bus;
-import testify.parts.Server;
+import testify.parts.ServerPart;
 
-public final class InsServer extends Server {
+public final class InsServer extends ServerPart {
     // Simple server providing objects for corba URL tests
     public void run(ORB orb, Bus bus) throws UserException {
         // corbaloc key

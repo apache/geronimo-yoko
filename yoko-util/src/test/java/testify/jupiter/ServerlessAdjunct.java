@@ -19,24 +19,22 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.omg.CORBA.ORB;
 import testify.parts.PartRunner;
 
-import java.util.Properties;
-
-class ServerlessClient implements CloseableResource {
+class ServerlessAdjunct implements CloseableResource {
     final PartRunner partRunner;
     ORB orb;
 
-    static ServerlessClient create(Class<?> testClass) {
+    static ServerlessAdjunct create(Class<?> testClass) {
         if (!testClass.isAnnotationPresent(Serverless.class))
             throw new IllegalStateException("The test " + testClass + " needs to use the @" + Serverless.class.getSimpleName() + " annotation");
-        return new ServerlessClient(testClass.getAnnotation(Serverless.class));
+        return new ServerlessAdjunct(testClass.getAnnotation(Serverless.class));
     }
 
-    public ServerlessClient(Serverless config) {
+    public ServerlessAdjunct(Serverless config) {
         this(config.forkProcesses());
         partRunner.enableLogging(config.trace());
     }
 
-    ServerlessClient(boolean forkProcesses) { this.partRunner = PartRunner.create().useProcesses(forkProcesses); }
+    ServerlessAdjunct(boolean forkProcesses) { this.partRunner = PartRunner.create().useProcesses(forkProcesses); }
 
     @Override
     public void close() throws Throwable {
@@ -47,7 +45,7 @@ class ServerlessClient implements CloseableResource {
 
     ORB getOrb() {
         if (orb == null) {
-            orb = ORB.init((String[]) null, props());
+            orb = ORB.init((String[]) null, OrbExtension.props());
             partRunner.endWith("client", bus -> {
                 bus.log("Calling orb.shutdown(true)");
                 orb.shutdown(true);
@@ -59,14 +57,4 @@ class ServerlessClient implements CloseableResource {
         return orb;
     }
 
-    static Properties props(String...orbProps) {
-        Properties props = new Properties();
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-        for (String prop : orbProps) {
-            String[] arr = prop.split("=", 2);
-            props.put(arr[0], arr.length < 2 ? "" : arr[1]);
-        }
-        return props;
-    }
 }
