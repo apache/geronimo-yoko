@@ -43,6 +43,7 @@ public abstract class ServerPart implements Serializable {
             orb.shutdown(true);
             bus.log("ORB shutdown complete, calling orb.destroy()");
             orb.destroy();
+            bus.log("orb.destroy() returned");
         } catch (BAD_INV_ORDER e) {
             // The ORB is sometimes already shut down.
             // This should not cause an error in the test.
@@ -50,10 +51,6 @@ public abstract class ServerPart implements Serializable {
             if (e.minor == 4) return;
             throw e;
         }
-    }
-
-    private void stopRemotely(Bus bus) {
-        bus.put(Event.STOP);
     }
 
     private void run(Bus bus) throws Exception {
@@ -72,7 +69,7 @@ public abstract class ServerPart implements Serializable {
             server = serverClass.getConstructor().newInstance();
             server.props = props;
             server.args = args;
-            runner.fork(name, server::run).endWith(name, server::stopRemotely);
+            runner.fork(name, server::run, bus -> bus.put(Event.STOP));
         } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new Error("Could not construct " + serverClass + ". Make sure it has an accessible default constructor", e);
         }

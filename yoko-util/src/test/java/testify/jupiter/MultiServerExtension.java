@@ -18,16 +18,12 @@ package testify.jupiter;
 
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
-import testify.bus.Bus;
 
 import java.util.stream.Stream;
 
-class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerAdjunct> implements BeforeAllCallback, ArgumentsProvider, ParameterResolver {
+class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerAdjunct> implements BeforeAllCallback, ArgumentsProvider {
     MultiServerExtension() { super(ExtensionContext::getRequiredTestClass, MultiServerAdjunct::create); }
 
     @Override
@@ -35,20 +31,6 @@ class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerAdju
 
     @Override
     public Stream<? extends Arguments> provideArguments(ExtensionContext ctx) throws Exception {
-        return getDelegate(ctx).getBuses().map(Arguments::of);
-    }
-
-    @Override
-    public boolean supportsParameter(ParameterContext parameterContext, ExtensionContext extensionContext) throws ParameterResolutionException {
-        return parameterContext.getParameter().getType() == Bus.class;
-    }
-
-    @Override
-    public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
-        if (ctx.getTestClass().isPresent())
-            throw new ParameterResolutionException("Bus parameter requested by " + ctx.getDisplayName() +
-                    " cannot be resolved. Either use exactly one @" + Server.class.getSimpleName() +
-                    " annotation or annotate test methods with @" + TestPerServer.class.getSimpleName() + ".");
-        return getDelegate(ctx).partRunner.bus();
+        return getDelegate(ctx).buses().map(Arguments::of);
     }
 }

@@ -16,4 +16,19 @@
  */
 package testify.jupiter;
 
-@interface TestPerServer {}
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+@Target({ANNOTATION_TYPE, METHOD})
+@Retention(RUNTIME)
+@ParameterizedTest
+@ArgumentsSource(MultiServerExtension.class)
+public @interface TestPerServer {}

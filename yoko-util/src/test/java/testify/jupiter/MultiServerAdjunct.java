@@ -62,7 +62,7 @@ class MultiServerAdjunct extends ServerlessAdjunct {
         this.configMap = Collections.unmodifiableMap(map);
     }
 
-    Stream<Bus> getBuses() { return configMap.keySet().stream().map(partRunner::bus); }
+    Stream<Bus> buses() { return configMap.keySet().stream().map(partRunner::bus); }
 
     void startServers() {
         configMap.forEach(this::startServer);

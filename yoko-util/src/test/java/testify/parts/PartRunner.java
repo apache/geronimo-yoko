@@ -72,6 +72,10 @@ public interface PartRunner {
 
     PartRunner fork(String partName, TestPart part);
 
+    default PartRunner fork(String partName, TestPart part, Consumer<Bus> endAction) {
+        return fork(partName, part).endWith(partName, endAction);
+    }
+
     default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
 
     static TestPart wrapMain(Class<?> mainClass, String[] args) {

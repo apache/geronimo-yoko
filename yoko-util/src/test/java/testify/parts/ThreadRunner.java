@@ -24,7 +24,7 @@ enum ThreadRunner implements Runner<Thread> {
     SINGLETON
     ;
     public Thread fork(InterProcessBus centralBus, NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)));
+        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)), part.name);
         thread.setDaemon(true);
         thread.start();
         return thread;
