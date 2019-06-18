@@ -23,15 +23,19 @@ import testify.bus.LogBus.LogLevel;
 import testify.io.EasyCloseable;
 
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static testify.bus.LogBus.LogLevel.DEBUG;
 import static testify.bus.LogBus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
@@ -44,9 +48,10 @@ class PartRunnerImpl implements PartRunner {
 //            .enableLogging(WARN, ".*")
             ;
 
-    private final Queue<EasyCloseable> preJoinActions = new ConcurrentLinkedQueue<>();
-    private final Deque<EasyCloseable> joinActions = new ConcurrentLinkedDeque<>();
-    private final Deque<EasyCloseable> postJoinActions = new ConcurrentLinkedDeque<>();
+    private enum HookType { PRE_JOIN, JOIN, POST_JOIN }
+    private final EnumMap<HookType, Deque<EasyCloseable>> hooks = new EnumMap<>(HookType.class);
+    { for (HookType ht: HookType.values()) hooks.put(ht, new ConcurrentLinkedDeque<>()); }
+    private final Map<EasyCloseable, String> hookNames = new HashMap<>();
     private boolean useProcesses = false;
 
     @Override
@@ -78,10 +83,22 @@ class PartRunnerImpl implements PartRunner {
         }
     }
 
+    private PartRunner addHook(HookType hookType, String partName, EasyCloseable hook) {
+        hookNames.put(hook, partName);
+        switch (hookType) {
+        case PRE_JOIN:
+            hooks.get(hookType).add(hook);
+            return this;
+        default:
+            hooks.get(hookType).addFirst(hook);
+            return this;
+        }
+    }
+
     @Override
     public PartRunner endWith(String partName, Consumer<Bus> endAction) {
-        preJoinActions.add(() -> endAction.accept(bus.forUser(partName)));
-        return this;
+        ;
+        return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus.forUser(partName)));
     }
 
     @Override
@@ -117,28 +134,34 @@ class PartRunnerImpl implements PartRunner {
     }
 
     // recursively ensure close
-    private static void close(Queue<EasyCloseable> closeables) {
+    private void close(HookType type) {
+        Deque<EasyCloseable> closeables = this.hooks.get(type);
         if (closeables.isEmpty()) return;
-        try (EasyCloseable hook = closeables.poll()) {}
-        finally { close(closeables); }
+        String name = "unknown";
+        try (EasyCloseable hook = closeables.poll()) {
+            final String partName = name = hookNames.get(hook);
+            centralBus.log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
+        } finally {
+            final String partName = name;
+            centralBus.log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
+            close(type);
+        }
     }
 
     @Override
     public void join() {
         // close down the main bus
         try (EasyCloseable close = centralBus) {
-            centralBus.log("Running pre-join actions: " + preJoinActions);
-            close(preJoinActions);
-            centralBus.log("Running join actions: " + joinActions);
-            close(joinActions);
-            centralBus.log("Running post-join actions: " + postJoinActions);
-            close(postJoinActions);
+            for (HookType type : HookType.values()) {
+                centralBus.log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
+                close(type);
+            }
             centralBus.log("Completed all join actions.");
         }
     }
 
     private <J> void registerForJoin(Runner<J> runner, J job, String name) {
-        joinActions.addFirst(() -> {
+        addHook(HookType.JOIN, name, () -> {
             try {
                 if (runner.join(job, 5, SECONDS)) return;
                 centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
@@ -146,7 +169,7 @@ class PartRunnerImpl implements PartRunner {
                 Thread.currentThread().interrupt();
             }
         });
-        postJoinActions.addFirst(() -> {
+        addHook(HookType.POST_JOIN, name, () -> {
             try {
                 if (runner.stop(job, 5, SECONDS)) return;
                 centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");

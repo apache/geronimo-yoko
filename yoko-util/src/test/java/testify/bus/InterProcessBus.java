@@ -22,9 +22,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -35,7 +37,7 @@ import static java.util.Arrays.asList;
  * Allow processes to communicate using process streams.
  */
 public final class InterProcessBus extends BusImpl {
-    private static final String SEP = ">|<"; // sneezing elephants make the best separators
+    private static final String SEP = "\t";
 
     private static final Pattern SUPPRESS = Pattern.compile("^WARNING: " +
             "(An illegal reflective access operation has occurred" +
@@ -73,14 +75,55 @@ public final class InterProcessBus extends BusImpl {
     }
 
     private static String encodeMessage(String key, String value) {
-        return String.format("%s%s%s%s%s", SEP, key, SEP, value, SEP);
+        return String.format("%s%s%s%s%s", SEP, encode(key), SEP, encode(value), SEP);
     }
 
-    private static void decode(String msg, BiConsumer<String, String> action) {
+    private static String encode(String s) {
+        StringBuilder sb = new StringBuilder(s.length() * 5 / 4);
+        s.chars().forEachOrdered(ch -> {
+            switch(ch) {
+            case '\r': sb.append("\\r"); break;
+            case '\n': sb.append("\\n"); break;
+            case '\f': sb.append("\\f"); break;
+            case '\t': sb.append("\\t"); break;
+            case '\b': sb.append("\\b"); break;
+            case '\\': sb.append("\\\\"); break;
+            default: sb.append((char)ch); break;
+            }
+        });
+        return sb.toString();
+    }
+
+    private static String decode(String s) {
+        StringBuilder sb = new StringBuilder(s.length() * 5 / 4);
+        AtomicBoolean escaping = new AtomicBoolean();
+        s.chars().forEachOrdered(ch -> {
+            if (escaping.get()) {
+                switch (ch) {
+                case 'r': sb.append("\r"); break;
+                case 'n': sb.append("\n"); break;
+                case 'f': sb.append("\f"); break;
+                case 't': sb.append("\t"); break;
+                case 'b': sb.append("\b"); break;
+                case '\\': sb.append("\\\\"); break;
+                default: sb.append((char)ch); break;
+                }
+                escaping.set(false);
+            } else {
+                switch(ch) {
+                case '\\': escaping.set(true); break;
+                default: sb.append((char)ch); break;
+                }
+            }
+        });
+        return sb.toString();
+    }
+
+    private static void decodeMessage(String msg, BiConsumer<String, String> action) {
         String[] parts = msg.split(Pattern.quote(SEP));
-        if (parts.length != 3) throw new Error("Expected 3 parts but found " + parts.length + ": " + asList(parts));
+        if (parts.length != 3) throw new Error("Expected 3 parts but found " + parts.length + " when splitting '" + msg + "' into " + asList(parts));
         // split returns {"", "name", "value", ""}
-        action.accept(parts[1], parts[2]);
+        action.accept(decode(parts[1]), decode(parts[2]));
     }
 
     private static boolean isEncodedMessage(String line) {
@@ -115,7 +158,7 @@ public final class InterProcessBus extends BusImpl {
             Thread t = new Thread(() -> {
                 try (BufferedReader br = new BufferedReader(new InputStreamReader(in))) {
                     br.lines().forEach(action);
-                } catch (IOException e) {
+                } catch (UncheckedIOException|IOException e) {
                     if (e.getMessage().contains("Stream closed")) return; // ignore closed streams
                     storeError(e);
                 }
@@ -126,11 +169,11 @@ public final class InterProcessBus extends BusImpl {
         }
 
         void checkForIncomingMessage(String line) {
+            System.out.printf("%s[out]: %s%n", name, line);
+            System.out.flush();
             if (isEncodedMessage(line)) {
                 receiveMessage(line);
             } else {
-                System.out.printf("%s[out]: %s%n", name, line);
-                System.out.flush();
             }
         }
 
@@ -140,7 +183,7 @@ public final class InterProcessBus extends BusImpl {
         }
 
         void receiveMessage(String msg) {
-            decode(msg, this::receive); // decode and store the message locally
+            decodeMessage(msg, this::receive); // decode and store the message locally
             everyOther(io -> io.sendMessage(msg)); // propagate to other processes
         }
 
