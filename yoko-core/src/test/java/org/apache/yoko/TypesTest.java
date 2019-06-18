@@ -22,10 +22,10 @@ import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
-import testify.jupiter.Serverless;
+import testify.jupiter.ConfigurePartRunner;
 import testify.parts.PartRunner;
 
-@Serverless
+@ConfigurePartRunner
 class TypesTest {
     @Test
     void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }

@@ -16,21 +16,17 @@
  */
 package testify.jupiter;
 
-import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import java.util.stream.Stream;
-
-class MultiServerExtension extends DelegatingExtension<Class<?>, MultiServerAdjunct> implements BeforeAllCallback, ArgumentsProvider {
-    MultiServerExtension() { super(ExtensionContext::getRequiredTestClass, MultiServerAdjunct::create); }
+interface SimpleParameterResolver<P> extends ParameterResolver {
+    @Override
+    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
 
     @Override
-    public void beforeAll(ExtensionContext ctx) throws Exception { getDelegate(ctx).startServers(); }
+    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
 
-    @Override
-    public Stream<? extends Arguments> provideArguments(ExtensionContext ctx) throws Exception {
-        return getDelegate(ctx).buses().map(Arguments::of);
-    }
+    boolean supportsParameter(ParameterContext pCtx);
+    P resolveParameter(ExtensionContext ctx);
 }

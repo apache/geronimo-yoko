@@ -29,7 +29,7 @@ import test.ins.InsServer;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
 import testify.bus.Bus;
-import testify.jupiter.Server;
+import testify.jupiter.ConfigureServer;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -39,7 +39,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.*;
 
-@Server(value = InsServer.class)
+@ConfigureServer(value = InsServer.class)
 public class InsTest {
     private static String iorFromServer;
     // object reference to use during testing

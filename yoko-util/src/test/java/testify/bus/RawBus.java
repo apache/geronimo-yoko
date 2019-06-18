@@ -27,11 +27,12 @@ public interface RawBus<B extends RawBus<B>> {
     String peek(String key);
     B onMsg(String key, Consumer<String> action);
     B put(String key, String value);
-    @SuppressWarnings("unchecked")
     default B forEach(BiConsumer<String, String> action) {
         biStream().forEach(action);
-        return (B) this;
+        return self();
     }
+    @SuppressWarnings("unchecked")
+    default B self() { return (B) this;}
     BiStream<String, String> biStream();
 }
 

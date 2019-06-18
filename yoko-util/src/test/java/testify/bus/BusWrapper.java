@@ -45,9 +45,6 @@ interface BusWrapper extends Bus {
     default Bus forUser(String user) { return bus().forUser(user); }
 
     @Override
-    default Bus forEach(BiConsumer<String, String> action) { return bus().forEach(action); }
-
-    @Override
     default BiStream<String, String> biStream() {
         return bus().biStream().mapKeys(this::untransform).filterKeys(Objects::nonNull);
     }

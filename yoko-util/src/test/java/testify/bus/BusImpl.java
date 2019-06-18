@@ -209,7 +209,7 @@ class BusImpl implements Bus, EasyCloseable {
         public String user() { return user; }
         public Bus bus() { return BusImpl.this; }
         @Override
-        public String toString() { return String.format("UserBus[%s] %s", user(), format(biStream())); }
+        public String toString() { return String.format("Bus[%s]", user()); }
     }
 
     @Override

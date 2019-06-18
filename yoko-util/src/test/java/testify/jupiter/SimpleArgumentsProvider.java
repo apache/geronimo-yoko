@@ -17,21 +17,14 @@
 package testify.jupiter;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolutionException;
-import org.junit.jupiter.api.extension.ParameterResolver;
-import testify.parts.PartRunner;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
 
-class ServerlessExtension extends DelegatingExtension<Class<?>, ServerlessAdjunct> implements ParameterResolver {
-    ServerlessExtension() { super(ExtensionContext::getRequiredTestClass, ServerlessAdjunct::create); }
+import java.util.stream.Stream;
 
+interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
     @Override
-    public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
-        return pCtx.getParameter().getType() == PartRunner.class;
-    }
+    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); };
 
-    @Override
-    public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx) throws ParameterResolutionException {
-        return getDelegate(ctx).partRunner;
-    }
+    Stream<P> provideArgs(ExtensionContext ctx);
 }

@@ -19,30 +19,31 @@ package testify.parts;
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-
 import testify.bus.LogBus.LogLevel;
 import testify.io.EasyCloseable;
 
 import java.util.Deque;
+import java.util.EnumSet;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Consumer;
 
 import static java.util.Arrays.asList;
+import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static testify.bus.LogBus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
+    public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(LogLevel.ERROR, WARN);
     final InterProcessBus centralBus = InterProcessBus.createMaster();
     private final Bus bus = centralBus.global()
-            .logToSysErr(LogLevel.ERROR)
-            .logToSysErr(LogLevel.WARN)
-            .logToSysOut(LogLevel.INFO)
-            .logToSysOut(LogLevel.DEFAULT)
-            .logToSysOut(LogLevel.DEBUG)
-            .enableLogging(LogLevel.ERROR, ".*")
-            .enableLogging(LogLevel.WARN, ".*")
+            .logToSysErr(URGENT_LEVELS)
+            .logToSysOut(complementOf(URGENT_LEVELS))
+//            .enableLogging(LogLevel.ERROR, ".*")
+//            .enableLogging(WARN, ".*")
             ;
+
     private final Queue<EasyCloseable> preJoinActions = new ConcurrentLinkedQueue<>();
     private final Deque<EasyCloseable> joinActions = new ConcurrentLinkedDeque<>();
     private final Deque<EasyCloseable> postJoinActions = new ConcurrentLinkedDeque<>();
@@ -54,9 +55,7 @@ class PartRunnerImpl implements PartRunner {
     }
 
     @Override
-    public Bus bus(String partName) {
-        return centralBus.forUser(partName);
-    }
+    public Bus bus(String partName) { return centralBus.forUser(partName); }
 
     @Override
     public PartRunner useProcesses(boolean useProcesses) { this.useProcesses = useProcesses; return this; }
