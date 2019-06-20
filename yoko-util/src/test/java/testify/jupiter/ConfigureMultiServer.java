@@ -49,7 +49,7 @@ class MultiServerSteward extends Steward<ConfigureMultiServer> {
     final List<ServerSteward> stewards;
 
     private MultiServerSteward(Class<?> testClass) {
-        super(ConfigureMultiServer.class);
+        super(ConfigureMultiServer.class, ConfigureServer.class);
         ConfigureServer[] configs = getAnnotation(testClass).value();
         // count up how many of each name we have
         Map<String, AtomicInteger> nameCount = new HashMap<>();

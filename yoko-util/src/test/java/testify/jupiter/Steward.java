@@ -33,19 +33,19 @@ class Steward<A extends Annotation> implements CloseableResource {
 
     protected Steward(Class<A> annotationClass) {
         this.annotationClass = annotationClass;
-        this.missingAnnotationSuffix =  String.format(" needs to use the @%s annotation", annotationClass.getSimpleName());
+        this.missingAnnotationSuffix =  String.format(" does not use the @%s annotation", annotationClass.getSimpleName());
     }
 
     protected <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {
         this.annotationClass = annotationClass;
         validateRepeatableRelationship(annotationClass, contentClass);
-        this.missingAnnotationSuffix = String.format(" needs to use more than one @%s annotation", contentClass.getSimpleName());
+        this.missingAnnotationSuffix = String.format(" does not use multiple @%s annotations", contentClass.getSimpleName());
     }
 
     private static <A extends Annotation, B extends Annotation> void validateRepeatableRelationship(Class<A> annotationClass, Class<B> contentClass) {
         Repeatable repeatable = contentClass.getAnnotation(Repeatable.class);
         if (repeatable != null && repeatable.value() == annotationClass) return;
-        throw new IllegalArgumentException(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
+        throw new Error(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
     }
 
     static <T extends Steward> T getInstanceForContext(ExtensionContext ctx, Class<T> type, Function<Class<?>, T> constructor) {
@@ -57,7 +57,7 @@ class Steward<A extends Annotation> implements CloseableResource {
     }
 
     final A getAnnotation(AnnotatedElement elem) {
-        return findAnnotation(elem).orElseThrow(() -> new IllegalStateException(elem + missingAnnotationSuffix));
+        return findAnnotation(elem).orElseThrow(() -> new Error(elem + missingAnnotationSuffix));
     }
 
     /**
