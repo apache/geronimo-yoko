@@ -26,9 +26,9 @@ import java.io.UncheckedIOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
+import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 
 import static java.util.Arrays.asList;
@@ -45,6 +45,9 @@ public final class InterProcessBus extends BusImpl {
             "|Please consider reporting this to the maintainers of .*" +
             "|Use --illegal-access=warn to enable warnings of further illegal reflective access operations" +
             "|All illegal access operations will be denied in a future release)$");
+    public static final BiConsumer<StringBuilder, StringBuilder> DO_NOT_ACCEPT_PARALLELISM = (x, y) -> {
+    throw new IllegalStateException("Sequential streams must never be processed in parallel. Bad JVM!");
+};
 
     /**
      * Allow a master (parent) process to communicate with its slave (child) processes.
@@ -79,44 +82,48 @@ public final class InterProcessBus extends BusImpl {
     }
 
     private static String encode(String s) {
-        StringBuilder sb = new StringBuilder(s.length() * 5 / 4);
-        s.chars().forEachOrdered(ch -> {
-            switch(ch) {
-            case '\r': sb.append("\\r"); break;
-            case '\n': sb.append("\\n"); break;
-            case '\f': sb.append("\\f"); break;
-            case '\t': sb.append("\\t"); break;
-            case '\b': sb.append("\\b"); break;
-            case '\\': sb.append("\\\\"); break;
-            default: sb.append((char)ch); break;
-            }
-        });
-        return sb.toString();
+        return s.chars()
+                .sequential()
+                .collect(StringBuilder::new,
+                        (sb, ch) -> {
+                            switch (ch) {
+                            case '\r': sb.append("\\r"); break;
+                            case '\n': sb.append("\\n"); break;
+                            case '\f': sb.append("\\f"); break;
+                            case '\t': sb.append("\\t"); break;
+                            case '\b': sb.append("\\b"); break;
+                            case '\\': sb.append("\\\\"); break;
+                            default: sb.append((char) ch); break; }}, DO_NOT_ACCEPT_PARALLELISM)
+                .toString();
     }
 
     private static String decode(String s) {
-        StringBuilder sb = new StringBuilder(s.length() * 5 / 4);
-        AtomicBoolean escaping = new AtomicBoolean();
-        s.chars().forEachOrdered(ch -> {
-            if (escaping.get()) {
+        class Unescaper implements ObjIntConsumer<StringBuilder> {
+            private boolean notEscaping = true;
+            public void accept(StringBuilder sb, int ch) {
+                if (notEscaping) {
+                    if (ch == '\\') notEscaping = false;
+                    else sb.append((char) ch);
+                    return;
+                }
+                notEscaping = true;
                 switch (ch) {
-                case 'r': sb.append("\r"); break;
-                case 'n': sb.append("\n"); break;
-                case 'f': sb.append("\f"); break;
-                case 't': sb.append("\t"); break;
-                case 'b': sb.append("\b"); break;
-                case '\\': sb.append("\\\\"); break;
-                default: sb.append((char)ch); break;
+                case 'r': sb.append("\r"); return;
+                case 'n': sb.append("\n"); return;
+                case 'f': sb.append("\f"); return;
+                case 't': sb.append("\t"); return;
+                case 'b': sb.append("\b"); return;
+                case '\\': sb.append("\\"); return;
                 }
-                escaping.set(false);
-            } else {
-                switch(ch) {
-                case '\\': escaping.set(true); break;
-                default: sb.append((char)ch); break;
-                }
+                throw new Error("Found illegal escape sequence \\" + (char) ch +
+                        "\n encoded string: '" + s + "'" +
+                        "\n decoded so far: '" + s + "'");
             }
-        });
-        return sb.toString();
+        }
+        return s.chars()
+                .sequential()
+                .collect(StringBuilder::new, new Unescaper(), DO_NOT_ACCEPT_PARALLELISM)
+                .toString();
     }
 
     private static void decodeMessage(String msg, BiConsumer<String, String> action) {
