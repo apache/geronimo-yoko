@@ -22,25 +22,47 @@ import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.platform.commons.support.AnnotationSupport;
 
 import java.lang.annotation.Annotation;
+import java.lang.annotation.Repeatable;
 import java.lang.reflect.AnnotatedElement;
 import java.util.Optional;
 import java.util.function.Function;
 
-interface Steward<A extends Annotation> extends CloseableResource {
-    Class<A> annoType();
+class Steward<A extends Annotation> implements CloseableResource {
+    private final Class<A> annotationClass;
+    private final String missingAnnotationSuffix;
 
-    static <T extends Steward> T getInstance(ExtensionContext ctx, Class<T> type, Function<Class<?>, T> constructor) {
+    protected Steward(Class<A> annotationClass) {
+        this.annotationClass = annotationClass;
+        this.missingAnnotationSuffix =  String.format(" needs to use the @%s annotation", annotationClass.getSimpleName());
+    }
+
+    protected <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {
+        this.annotationClass = annotationClass;
+        validateRepeatableRelationship(annotationClass, contentClass);
+        this.missingAnnotationSuffix = String.format(" needs to use more than one @%s annotation", contentClass.getSimpleName());
+    }
+
+    private static <A extends Annotation, B extends Annotation> void validateRepeatableRelationship(Class<A> annotationClass, Class<B> contentClass) {
+        Repeatable repeatable = contentClass.getAnnotation(Repeatable.class);
+        if (repeatable != null && repeatable.value() == annotationClass) return;
+        throw new IllegalArgumentException(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
+    }
+
+    static <T extends Steward> T getInstanceForContext(ExtensionContext ctx, Class<T> type, Function<Class<?>, T> constructor) {
         return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
     }
 
-    default Optional<A> findAnnotation(AnnotatedElement elem){
-        return AnnotationSupport.findAnnotation(elem, annoType());
+    final Optional<A> findAnnotation(AnnotatedElement elem){
+        return AnnotationSupport.findAnnotation(elem, annotationClass);
     }
 
-    default A getAnnotation(AnnotatedElement elem) {
-        return findAnnotation(elem).orElseThrow(() -> new IllegalStateException(String.format("%s needs to use the @%s annotation", elem, annoType().getSimpleName())));
+    final A getAnnotation(AnnotatedElement elem) {
+        return findAnnotation(elem).orElseThrow(() -> new IllegalStateException(elem + missingAnnotationSuffix));
     }
 
+    /**
+     * Child classes that have any clean up work to do should override this method.
+     */
     @Override
-    default void close() throws Throwable { /* do nothing */ }
+    public void close() { /* do nothing */ }
 }

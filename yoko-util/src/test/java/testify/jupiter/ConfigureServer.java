@@ -51,22 +51,21 @@ public @interface ConfigureServer {
     Tracing trace() default @Tracing(level = LogLevel.WARN);
 }
 
-class ServerSteward implements Steward<ConfigureServer> {
+class ServerSteward extends Steward<ConfigureServer> {
     private final ConfigureServer config;
     private final String name;
 
     private ServerSteward(Class<?> testClass) {
+        super(ConfigureServer.class);
         this.config = getAnnotation(testClass);
         this.name = config.name();
     }
 
     ServerSteward(ConfigureServer config, String name) {
+        super(ConfigureServer.class);
         this.config = config;
         this.name = name;
     }
-
-    @Override
-    public Class<ConfigureServer> annoType() { return ConfigureServer.class; }
 
     Bus getBus(ExtensionContext ctx) {
         return PartRunnerSteward.getPartRunner(ctx).bus(name);
@@ -83,7 +82,7 @@ class ServerSteward implements Steward<ConfigureServer> {
     }
 
     static ServerSteward getInstance(ExtensionContext ctx) {
-        return Steward.getInstance(ctx, ServerSteward.class, ServerSteward::new);
+        return Steward.getInstanceForContext(ctx, ServerSteward.class, ServerSteward::new);
     }
 }
 
@@ -93,5 +92,7 @@ class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus>
     @Override
     public boolean supportsParameter(ParameterContext ctx) { return ctx.getParameter().getType() == Bus.class; }
     @Override
+    // Since the ServerSteward was retrieved from BeforeAll (i.e. in the test class context),
+    // that is the one that will be found and reused from here (even if this is a test method context)
     public Bus resolveParameter(ExtensionContext ctx)  { return ServerSteward.getInstance(ctx).getBus(ctx); }
 }

@@ -45,14 +45,12 @@ public @interface ConfigureMultiServer {
     ConfigureServer[] value();
 }
 
-class MultiServerSteward implements Steward<ConfigureMultiServer> {
+class MultiServerSteward extends Steward<ConfigureMultiServer> {
     final List<ServerSteward> stewards;
 
     private MultiServerSteward(Class<?> testClass) {
-        this(testClass.getAnnotation(ConfigureMultiServer.class).value());
-    }
-
-    MultiServerSteward(ConfigureServer...configs) {
+        super(ConfigureMultiServer.class);
+        ConfigureServer[] configs = getAnnotation(testClass).value();
         // count up how many of each name we have
         Map<String, AtomicInteger> nameCount = new HashMap<>();
         for (ConfigureServer config: configs) {
@@ -66,22 +64,22 @@ class MultiServerSteward implements Steward<ConfigureMultiServer> {
 
         // create the config map of unique part names to configs
         // use a linked hash map as this preserves insertion order
-        this.stewards = Stream.of(configs).map(cfg -> {
-            String name = cfg.name();
-            if (nameCount.containsKey(name)) name += "#" + nameCount.get(name).incrementAndGet();
-            System.out.println(name);
-            return new ServerSteward(cfg, name);
-        }).collect(collectingAndThen(toList(), Collections::unmodifiableList));
+        this.stewards = Stream.of(configs)
+                .map(cfg -> {
+                    String name = cfg.name();
+                    if (nameCount.containsKey(name)) name += "#" + nameCount.get(name).incrementAndGet();
+                    System.out.println(name);
+                    return new ServerSteward(cfg, name);
+                })
+                .collect(collectingAndThen(toList(), Collections::unmodifiableList));
     }
-
-    public Class<ConfigureMultiServer> annoType() { return ConfigureMultiServer.class; }
 
     Stream<Bus> buses(ExtensionContext ctx) { return stewards.stream().map(s -> s.getBus(ctx)); }
 
     void startServers(ExtensionContext ctx) { stewards.forEach(s -> s.startServer(ctx)); }
 
     static MultiServerSteward getInstance(ExtensionContext ctx) {
-        return Steward.getInstance(ctx, MultiServerSteward.class, MultiServerSteward::new);
+        return Steward.getInstanceForContext(ctx, MultiServerSteward.class, MultiServerSteward::new);
     }
 }
 

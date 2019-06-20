@@ -40,19 +40,17 @@ public @interface ConfigureOrb {
     String props() default "";
 }
 
-class OrbSteward implements Steward<ConfigureOrb> {
+class OrbSteward extends Steward<ConfigureOrb> {
     final ORB orb;
     private OrbSteward(Class<?> testClass) {
+        super(ConfigureOrb.class);
         ConfigureOrb cfg = getAnnotation(testClass);
         this.orb = ORB.init(args(cfg), props(cfg)); }
 
     @Override
-    public Class<ConfigureOrb> annoType() { return ConfigureOrb.class; }
-
-    @Override
-    public void close() throws Throwable {
-        // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
-        // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
+    // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
+    // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
+    public void close() {
         orb.shutdown(true);
         orb.destroy();
     }
@@ -73,18 +71,22 @@ class OrbSteward implements Steward<ConfigureOrb> {
     }
 
     /** Get a client ORB */
-    static ORB getOrb(ExtensionContext ctx) { return Steward.getInstance(ctx, OrbSteward.class, OrbSteward::new).orb; }
+    static ORB getOrb(ExtensionContext ctx) { return Steward.getInstanceForContext(ctx, OrbSteward.class, OrbSteward::new).orb; }
 }
 
+/** Must be registered using the {@link ExtendWith} annotation */
 class OrbExtension implements Extension, BeforeAllCallback, SimpleParameterResolver<ORB> {
     @Override
     // to ensure the ORB is created only once per test class, create the steward here
     public void beforeAll(ExtensionContext ctx) throws Exception { getOrb(ctx); }
 
-    // assume that any child class of org.omg.CORBA.ORB will be satisfied
     @Override
+    // assume that any child class of org.omg.CORBA.ORB will be satisfied
     public boolean supportsParameter(ParameterContext ctx) { return ORB.class.isAssignableFrom(ctx.getParameter().getType()); }
 
     @Override
+    // get the configured ORB for the context,
+    // but if the context has a test method, use its parent instead
+    // i.e. get an ORB for the test class, not for each test method
     public ORB resolveParameter(ExtensionContext ctx) { return getOrb(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
 }

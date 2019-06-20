@@ -31,32 +31,28 @@ import static testify.jupiter.PartRunnerSteward.getPartRunner;
 @ExtendWith(PartRunnerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ConfigurePartRunner {
-    boolean useProcesses() default false;
-}
+public @interface ConfigurePartRunner {}
 
-class PartRunnerSteward implements Steward<ConfigurePartRunner> {
+class PartRunnerSteward extends Steward<ConfigurePartRunner> {
     final PartRunner partRunner;
 
     private PartRunnerSteward(Class<?> testClass) {
+        super(ConfigurePartRunner.class);
         ConfigurePartRunner config = getAnnotation(testClass);
-        this.partRunner = PartRunner.create().useProcesses(config.useProcesses());
+        this.partRunner = PartRunner.create();
         TracingSteward.addTraceSettings(partRunner, testClass);
     }
 
     @Override
-    public Class<ConfigurePartRunner> annoType() { return ConfigurePartRunner.class; }
-
-    @Override
-    public void close() throws Throwable {
-        // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
-        // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
+    // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
+    // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
+    public void close() {
         partRunner.join();
     }
 
     static PartRunner getPartRunner(ExtensionContext ctx) {
         // PartRunners are always one per test, so get one for the root context
-        return Steward.getInstance(ctx, PartRunnerSteward.class, PartRunnerSteward::new).partRunner;
+        return Steward.getInstanceForContext(ctx, PartRunnerSteward.class, PartRunnerSteward::new).partRunner;
     }
 }
 
@@ -64,5 +60,8 @@ class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
     @Override
     public boolean supportsParameter(ParameterContext ctx)  { return ctx.getParameter().getType() == PartRunner.class; }
     @Override
+    // get the configured PartRunner for the context,
+    // but if the context has a test method, use its parent instead
+    // i.e. get an ORB for the test class, not for each test method
     public PartRunner resolveParameter(ExtensionContext ctx) { return getPartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
 }
