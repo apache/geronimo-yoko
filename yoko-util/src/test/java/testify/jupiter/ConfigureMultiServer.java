@@ -68,7 +68,6 @@ class MultiServerSteward extends Steward<ConfigureMultiServer> {
                 .map(cfg -> {
                     String name = cfg.name();
                     if (nameCount.containsKey(name)) name += "#" + nameCount.get(name).incrementAndGet();
-                    System.out.println(name);
                     return new ServerSteward(cfg, name);
                 })
                 .collect(collectingAndThen(toList(), Collections::unmodifiableList));
