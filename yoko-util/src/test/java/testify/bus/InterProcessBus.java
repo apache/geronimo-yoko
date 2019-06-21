@@ -70,7 +70,7 @@ public final class InterProcessBus extends BusImpl {
 
     private void putLocal(String key, String value) { super.put(key, value); }
 
-    public Bus put(String key, String value) {
+    public InterProcessBus put(String key, String value) {
         putLocal(key, value);
         String msg = encodeMessage(key, value);
         ioList.forEach(io -> io.sendMessage(msg));
@@ -145,7 +145,7 @@ public final class InterProcessBus extends BusImpl {
         // twice in this small window is //
         //       the same at the end.    //
         ///////////////////////////////////
-        forEach(io::send); // send pre-existing props to process
+        biStream().forEach(io::send); // send pre-existing props to process
         io.startListening(proc.getInputStream()); // listen for props from process
         return this;
     }

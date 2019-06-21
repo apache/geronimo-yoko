@@ -16,56 +16,128 @@
  */
 package testify.bus;
 
+import testify.util.Stack;
+
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
-import static java.util.EnumSet.range;
-import static testify.bus.QualifiedBus.GLOBAL_USER;
+import static testify.bus.Bus.LogLevel.DEFAULT;
+import static testify.bus.LogBus.LogDestination.SYS_ERR;
+import static testify.bus.LogBus.LogDestination.SYS_OUT;
 
-public interface LogBus<B extends LogBus<B>> extends EventBus<B> {
-    enum LogSpec implements StringRef {SPEC}
-    enum LogLevel implements StringRef {
-        DEBUG, INFO, DEFAULT, WARN, ERROR;
-        Set<LogLevel> andHigher() { return range(this, ERROR); }
-        boolean includes(LogLevel level) { return andHigher().contains(level); }
+abstract class LogBus extends EventBus {
+    private static final Package MY_PKG = LogBus.class.getPackage();
+
+    @Override
+    public Bus enableLogging(LogLevel level, String pattern) {
+        // add this new pattern to the existing spec if any
+        String spec = this.<LogSpec, String>peek(LogSpec.SPEC);
+        if (spec == null) spec = "";
+        else spec += ":";
+        spec += pattern + '=' + level;
+        // now put the new spec on the bus so everyone can see it
+        put(LogSpec.SPEC, spec);
+        return this;
     }
 
-    String isLoggingEnabled(String user, LogLevel level);
-    B enableLogging(String user, LogLevel level, String pattern);
-    B forUser(String user);
-
-    default String isLoggingEnabled(LogLevel level) { return global().isLoggingEnabled(level); }
-    default B enableLogging(String...patterns) { return enableLogging(LogLevel.DEFAULT, patterns); }
-    default B enableLogging(LogLevel level, String...patterns) {
+    @Override
+    public Bus enableLogging(String... patterns) { return enableLogging(DEFAULT, patterns); }
+    @Override
+    public Bus enableLogging(LogLevel level, String... patterns) {
         if (patterns.length == 0) return enableLogging(level, ".*");
         Stream.of(patterns).forEach(p -> enableLogging(level, p));
-        return self();
+        return this;
     }
-    default B enableLogging(LogLevel level, String pattern) { return global().enableLogging(level, pattern); }
-    default B enableLogging(Set<LogLevel> levels, String...patterns) { levels.forEach( l -> enableLogging(l, patterns)); return self(); }
-    default B enableLogging(String user, Set<LogLevel> levels, String...patterns) { levels.forEach( l -> enableLogging(user, l, patterns)); return self(); }
-    default B enableLogging(String user, LogLevel level, String...patterns) { forUser(user).enableLogging(level, patterns); return self(); }
+    @Override
+    public final Bus enableLogging(Set<LogLevel> levels, String... patterns) { levels.forEach(l -> enableLogging(l, patterns)); return this; }
 
-    default B log(Supplier<String> message) { return log(LogLevel.DEFAULT, message);}
-    default B log(String message) { return log(LogLevel.DEFAULT, message); }
-    default B log(LogLevel level, String message) { return log(level, () -> message); }
+    @Override
+    public final Bus log(Supplier<String> message) { return log(DEFAULT, message);}
+    @Override
+    public final Bus log(String message) { return log(DEFAULT, message); }
+    @Override
+    public final Bus log(LogLevel level, String message) { return log(level, () -> message); }
 
-    default B log(LogLevel level, Supplier<String> message) {
+    @Override
+    public Bus log(LogLevel level, Supplier<String> message) {
         final String context = isLoggingEnabled(level);
         if (context != null) put(level, "[" + context + "] " + message.get());
-        return self();
+        return this;
     }
 
-    default B logToSysOut(LogLevel level) { return onLog(level, System.out::println); }
-    default B logToSysErr(LogLevel level) { return onLog(level, System.err::println); }
-    default B logToSysOut(Set<LogLevel> levels) { return onLog(levels, System.out::println); }
-    default B logToSysErr(Set<LogLevel> levels) { return onLog(levels, System.err::println); }
+    public static enum LogDestination implements Consumer<String> {
+        SYS_OUT(System.out::println),
+        SYS_ERR(System.err::println)
+        ;
+        private final Consumer<String> consumer;
+        LogDestination(Consumer<String> consumer) {this.consumer = consumer;}
+        public void accept(String s) { consumer.accept(s); }
+    }
 
-    default B onLog(Consumer<String> action) { return onLog(LogLevel.DEFAULT, action); }
-    default B onLog(LogLevel level, Consumer<String> action) { return onMsg(level, action);}
-    default B onLog(Set<LogLevel> levels, Consumer<String> action) { levels.forEach(l -> onMsg(l, action)); return self(); }
+    @Override
+    public final Bus logToSysOut(LogLevel level) { return onLog(level, SYS_OUT); }
+    @Override
+    public final Bus logToSysErr(LogLevel level) { return onLog(level, SYS_ERR); }
+    @Override
+    public final Bus logToSysOut(Set<LogLevel> levels) { return onLog(levels, SYS_OUT); }
+    @Override
+    public final Bus logToSysErr(Set<LogLevel> levels) { return onLog(levels, SYS_ERR); }
 
-    default B global() { return forUser(GLOBAL_USER); }
+    @Override
+    public final Bus onLog(Consumer<String> action) { return onLog(DEFAULT, action); }
+    @Override
+    public final Bus onLog(LogLevel level, Consumer<String> action) { return onMsg(level, action);}
+    @Override
+    public final Bus onLog(Set<LogLevel> levels, Consumer<String> action) { levels.forEach(l -> onMsg(l, action)); return this; }
+
+
+    private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
+
+    @Override
+    public String isLoggingEnabled(LogLevel level) {
+        String spec = this.<LogSpec, String>peek(LogSpec.SPEC);
+        if (isLocal() && spec == null) spec = global().<LogSpec, String>peek(LogSpec.SPEC);
+        if (spec == null) return null;
+
+        Class<?> caller = Stack.getCallingClassOutsidePackage(MY_PKG);
+        String context = caller.getName();
+        String shortcut = user() + level + context;
+
+        if (loggingShortcuts.contains(shortcut)) return Stack.getCallingFrame(caller);
+
+        Supplier<String> answer = () -> {
+            loggingShortcuts.add(shortcut);
+            return Stack.getCallingFrame(caller);
+        };
+
+        // an empty string for the trace spec means enable all DEFAULT level logging
+        if (spec.isEmpty() && DEFAULT.includes(level)) return answer.get();
+
+        for (String specpart : spec.split(":")) {
+            // we can specify just the log level
+            if (specpart.equals(level.name())) return answer.get();
+        }
+
+        for (String specpart : spec.split(":")) {
+            String[] subparts = specpart.split("=", 2);
+            String pattern = subparts[0] + ".*";
+            if (!caller.getName().matches(pattern)) continue;
+            if (subparts.length == 1) {
+                if (DEFAULT.includes(level)) return answer.get();
+            }
+            String levelSpec = subparts[1];
+            try {
+                LogLevel specifiedLevel = Bus.LogLevel.valueOf(levelSpec);
+                if (specifiedLevel.includes(level)) return answer.get();
+            } catch (Throwable t) {
+                System.err.println("Unknown level '" + levelSpec + "' in logging specification '" + spec + "'");
+            }
+        }
+        return null;
+    }
+
+    enum LogSpec implements StringRef {SPEC}
 }

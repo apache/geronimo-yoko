@@ -18,7 +18,7 @@ package testify.parts;
 
 import testify.streams.BiStream;
 import testify.bus.Bus;
-import testify.bus.EventBus.TypeRef;
+import testify.bus.Bus.TypeRef;
 import testify.bus.InterProcessBus;
 
 import java.io.IOError;
@@ -29,7 +29,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-enum ProcessRunner implements Runner<Process>{
+public enum ProcessRunner implements Runner<Process>{
     SINGLETON
     ;
     private enum Part implements TypeRef<NamedPart> {NAMED_PART}

@@ -19,7 +19,7 @@ package testify.parts;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
-import testify.bus.EventBus.TypeRef;
+import testify.bus.Bus.TypeRef;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -39,7 +39,7 @@ public abstract class ServerPart implements Serializable {
 
     private void stop(Bus bus) {
         try {
-            bus.log("Calling orb.shutdown(true)");
+            bus.log(Bus.LogLevel.ERROR, "Calling orb.shutdown(true)");
             orb.shutdown(true);
             bus.log("ORB shutdown complete, calling orb.destroy()");
             orb.destroy();

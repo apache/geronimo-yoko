@@ -12,7 +12,8 @@
  */
 package testify.jupiter;
 
-import testify.bus.LogBus.LogLevel;
+import testify.bus.Bus;
+import testify.bus.Bus.LogLevel;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.Retention;
@@ -31,8 +32,8 @@ public @interface Tracing {
     Class<?>[] classes() default {};
     /** Specify a regular expression to match trace sources */
     String value() default "";
-    LogLevel level() default LogLevel.DEFAULT;
-    LogLevel maxLevel() default LogLevel.ERROR;
+    LogLevel level() default Bus.LogLevel.DEFAULT;
+    LogLevel maxLevel() default Bus.LogLevel.ERROR;
     boolean disabled() default false;
 }
 

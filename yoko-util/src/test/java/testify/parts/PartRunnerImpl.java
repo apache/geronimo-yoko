@@ -19,7 +19,7 @@ package testify.parts;
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-import testify.bus.LogBus.LogLevel;
+import testify.bus.Bus.LogLevel;
 import testify.io.EasyCloseable;
 
 import java.util.Deque;
@@ -27,7 +27,6 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
@@ -35,11 +34,12 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.asList;
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static testify.bus.LogBus.LogLevel.DEBUG;
-import static testify.bus.LogBus.LogLevel.WARN;
+import static testify.bus.Bus.LogLevel.*;
+import static testify.bus.Bus.LogLevel.DEBUG;
+import static testify.bus.Bus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
-    public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(LogLevel.ERROR, WARN);
+    public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
     final InterProcessBus centralBus = InterProcessBus.createMaster();
     private final Bus bus = centralBus.global()
             .logToSysErr(URGENT_LEVELS)
@@ -140,10 +140,10 @@ class PartRunnerImpl implements PartRunner {
         String name = "unknown";
         try (EasyCloseable hook = closeables.poll()) {
             final String partName = name = hookNames.get(hook);
-            centralBus.log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
+            bus.log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
         } finally {
             final String partName = name;
-            centralBus.log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
+            bus.log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
             close(type);
         }
     }
@@ -153,10 +153,10 @@ class PartRunnerImpl implements PartRunner {
         // close down the main bus
         try (EasyCloseable close = centralBus) {
             for (HookType type : HookType.values()) {
-                centralBus.log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
+                bus.log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
                 close(type);
             }
-            centralBus.log("Completed all join actions.");
+            bus.log("Completed all join actions.");
         }
     }
 
@@ -164,7 +164,7 @@ class PartRunnerImpl implements PartRunner {
         addHook(HookType.JOIN, name, () -> {
             try {
                 if (runner.join(job, 5, SECONDS)) return;
-                centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
+                bus.log(ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -172,7 +172,7 @@ class PartRunnerImpl implements PartRunner {
         addHook(HookType.POST_JOIN, name, () -> {
             try {
                 if (runner.stop(job, 5, SECONDS)) return;
-                centralBus.log(LogLevel.ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
+                bus.log(ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -193,7 +193,7 @@ class PartRunnerImpl implements PartRunner {
                 }).join();
             }
             for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
-                runner.enableLogging(LogLevel.INFO, ".*NamedPart", "part4").here(bus -> {
+                runner.enableLogging(INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");

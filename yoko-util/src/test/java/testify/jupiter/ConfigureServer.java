@@ -21,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import testify.bus.Bus;
-import testify.bus.LogBus.LogLevel;
 import testify.parts.PartRunner;
 import testify.parts.ServerPart;
 
@@ -48,7 +47,6 @@ public @interface ConfigureServer {
      * Define the config for the ORB this server will use.
      */
     ConfigureOrb orb() default @ConfigureOrb;
-    Tracing trace() default @Tracing(level = LogLevel.WARN);
 }
 
 class ServerSteward extends Steward<ConfigureServer> {
@@ -75,9 +73,6 @@ class ServerSteward extends Steward<ConfigureServer> {
         PartRunner runner = PartRunnerSteward.getPartRunner(ctx);
         // does this part run in a thread or a new process?
         runner.useProcesses(config.newProcess());
-        // enable the specified logging for this part only
-        Tracing trc = config.trace();
-        runner.enableLogging(trc.level(), trc.maxLevel(), trc.classes(), name);
         ServerPart.launch(runner, config.value(), this.name, props(config.orb()), args(config.orb()));
     }
 

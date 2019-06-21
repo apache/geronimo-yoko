@@ -17,7 +17,7 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.LogBus.LogLevel;
+import testify.bus.Bus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.EnumSet;
@@ -48,7 +48,7 @@ public interface PartRunner {
      * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(LogLevel.DEFAULT, pattern, partNames); }
+    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(Bus.LogLevel.DEFAULT, pattern, partNames); }
 
     /**
      * Enable a range of log levels for the specified classes and partnames.
@@ -76,8 +76,9 @@ public interface PartRunner {
         return this;
     }
 
-    default PartRunner enableLogging(LogLevel lvl, Class<?>[] classesToTrace, String[] partNames) {
+    default PartRunner enableLogging(LogLevel lvl, Class<?>[] classesToTrace, String...partNames) {
         if (classesToTrace.length == 0) enableLogging(lvl, ".*", partNames);
+        else for (Class<?> cls: classesToTrace) enableLogging(lvl, cls.getName(), partNames);
         return this;
     }
 
