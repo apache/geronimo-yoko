@@ -16,10 +16,11 @@
  */
 package testify.bus;
 
+import testify.bus.Bus.LogLevel;
+import testify.bus.Bus.StringRef;
 import testify.util.Stack;
 
 import java.util.Set;
-import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -28,47 +29,11 @@ import static testify.bus.Bus.LogLevel.DEFAULT;
 import static testify.bus.LogBus.LogDestination.SYS_ERR;
 import static testify.bus.LogBus.LogDestination.SYS_OUT;
 
-abstract class LogBus extends EventBus {
-    private static final Package MY_PKG = LogBus.class.getPackage();
+// Provide logging functionality. This interface should remain package-private.
+interface LogBus {
+    enum LogSpec implements StringRef {SPEC}
 
-    @Override
-    public Bus enableLogging(LogLevel level, String pattern) {
-        // add this new pattern to the existing spec if any
-        String spec = this.<LogSpec, String>peek(LogSpec.SPEC);
-        if (spec == null) spec = "";
-        else spec += ":";
-        spec += pattern + '=' + level;
-        // now put the new spec on the bus so everyone can see it
-        put(LogSpec.SPEC, spec);
-        return this;
-    }
-
-    @Override
-    public Bus enableLogging(String... patterns) { return enableLogging(DEFAULT, patterns); }
-    @Override
-    public Bus enableLogging(LogLevel level, String... patterns) {
-        if (patterns.length == 0) return enableLogging(level, ".*");
-        Stream.of(patterns).forEach(p -> enableLogging(level, p));
-        return this;
-    }
-    @Override
-    public final Bus enableLogging(Set<LogLevel> levels, String... patterns) { levels.forEach(l -> enableLogging(l, patterns)); return this; }
-
-    @Override
-    public final Bus log(Supplier<String> message) { return log(DEFAULT, message);}
-    @Override
-    public final Bus log(String message) { return log(DEFAULT, message); }
-    @Override
-    public final Bus log(LogLevel level, String message) { return log(level, () -> message); }
-
-    @Override
-    public Bus log(LogLevel level, Supplier<String> message) {
-        final String context = isLoggingEnabled(level);
-        if (context != null) put(level, "[" + context + "] " + message.get());
-        return this;
-    }
-
-    public static enum LogDestination implements Consumer<String> {
+    enum LogDestination implements Consumer<String> {
         SYS_OUT(System.out::println),
         SYS_ERR(System.err::println)
         ;
@@ -77,39 +42,60 @@ abstract class LogBus extends EventBus {
         public void accept(String s) { consumer.accept(s); }
     }
 
-    @Override
-    public final Bus logToSysOut(LogLevel level) { return onLog(level, SYS_OUT); }
-    @Override
-    public final Bus logToSysErr(LogLevel level) { return onLog(level, SYS_ERR); }
-    @Override
-    public final Bus logToSysOut(Set<LogLevel> levels) { return onLog(levels, SYS_OUT); }
-    @Override
-    public final Bus logToSysErr(Set<LogLevel> levels) { return onLog(levels, SYS_ERR); }
+    Package MY_PKG = LogBus.class.getPackage();
 
-    @Override
-    public final Bus onLog(Consumer<String> action) { return onLog(DEFAULT, action); }
-    @Override
-    public final Bus onLog(LogLevel level, Consumer<String> action) { return onMsg(level, action);}
-    @Override
-    public final Bus onLog(Set<LogLevel> levels, Consumer<String> action) { levels.forEach(l -> onMsg(l, action)); return this; }
+    EventBus eventBus();
+    LogBus global();
+    Set<String> loggingShortcuts();
 
+    default void enableLogging(LogLevel level, String pattern) {
+        // add this new pattern to the existing spec if any
+        String spec = eventBus().peek(LogSpec.SPEC);
+        if (spec == null) spec = "";
+        else spec += ":";
+        spec += pattern + '=' + level;
+        // now put the new spec on the bus so everyone can see it
+        eventBus().put(LogSpec.SPEC, spec);
+    }
 
-    private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
+    default void enableLogging(String... patterns) { enableLogging(DEFAULT, patterns); }
+    default void enableLogging(LogLevel level, String...patterns) {
+        if (patterns.length == 0) enableLogging(level, ".*");
+        else Stream.of(patterns).forEach(p -> enableLogging(level, p));
+    }
+    default void enableLogging(Set<LogLevel> levels, String... patterns) { levels.forEach(l -> enableLogging(l, patterns)); }
 
-    @Override
-    public String isLoggingEnabled(LogLevel level) {
-        String spec = this.<LogSpec, String>peek(LogSpec.SPEC);
-        if (isLocal() && spec == null) spec = global().<LogSpec, String>peek(LogSpec.SPEC);
+    default void log(Supplier<String> message) { log(DEFAULT, message);}
+    default void log(String message) { log(DEFAULT, message); }
+    default void log(LogLevel level, String message) { log(level, () -> message); }
+
+    default void log(LogLevel level, Supplier<String> message) {
+        final String context = isLoggingEnabled(level);
+        if (context != null) eventBus().put(level, "[" + context + "] " + message.get());
+    }
+
+    default void logToSysOut(LogLevel level) { onLog(level, SYS_OUT); }
+    default void logToSysErr(LogLevel level) { onLog(level, SYS_ERR); }
+    default void logToSysOut(Set<LogLevel> levels) { onLog(levels, SYS_OUT); }
+    default void logToSysErr(Set<LogLevel> levels) { onLog(levels, SYS_ERR); }
+
+    default void onLog(Consumer<String> action) { onLog(DEFAULT, action); }
+    default void onLog(LogLevel level, Consumer<String> action) { eventBus().onMsg(level, action); }
+    default void onLog(Set<LogLevel> levels, Consumer<String> action) { levels.forEach(l -> onLog(l, action)); }
+
+    default String isLoggingEnabled(LogLevel level) {
+        String spec = eventBus().peek(LogSpec.SPEC);
+        if (spec == null) spec = eventBus().global().peek(LogSpec.SPEC);
         if (spec == null) return null;
 
         Class<?> caller = Stack.getCallingClassOutsidePackage(MY_PKG);
         String context = caller.getName();
-        String shortcut = user() + level + context;
+        String shortcut = eventBus().userBus().user() + level + context;
 
-        if (loggingShortcuts.contains(shortcut)) return Stack.getCallingFrame(caller);
+        if (loggingShortcuts().contains(shortcut)) return Stack.getCallingFrame(caller);
 
         Supplier<String> answer = () -> {
-            loggingShortcuts.add(shortcut);
+            loggingShortcuts().add(shortcut);
             return Stack.getCallingFrame(caller);
         };
 
@@ -139,5 +125,19 @@ abstract class LogBus extends EventBus {
         return null;
     }
 
-    enum LogSpec implements StringRef {SPEC}
+    static LogBus createGlobal(EventBus eventBus, Set<String> shortcuts) {
+        return new LogBus() {
+            public EventBus eventBus() { return eventBus; }
+            public LogBus global() { return this; }
+            public Set<String> loggingShortcuts() { return shortcuts; }
+        };
+    }
+
+    static LogBus create(EventBus eventBus, LogBus globalLogBus, Set<String> shortcuts) {
+        return new LogBus() {
+            public EventBus eventBus() { return eventBus; }
+            public LogBus global() { return globalLogBus; }
+            public Set<String> loggingShortcuts() { return shortcuts; }
+        };
+    }
 }

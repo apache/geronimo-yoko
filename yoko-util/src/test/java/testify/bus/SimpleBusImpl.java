@@ -16,19 +16,25 @@
  */
 package testify.bus;
 
+import org.junit.jupiter.api.Assertions;
 import testify.io.EasyCloseable;
 import testify.streams.BiStream;
 
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -43,20 +49,36 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 /**
  * Enable multiple threads to communicate asynchronously.
  */
-class BusImpl implements SimpleBus, EasyCloseable {
-    protected final ExecutorService threadPool = Executors.newCachedThreadPool();
+class SimpleBusImpl implements SimpleBus, EasyCloseable {
+    private final ExecutorService threadPool = Executors.newCachedThreadPool();
     private final ConcurrentMap<String, Object> properties = new ConcurrentSkipListMap<>();
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
     private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
+    private final UserBus globalUserBus = UserBus.createGlobal(this);
+    private final EventBus globalEventBus = EventBus.createGlobal(globalUserBus);
+    private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
+    private final LogBus globalLogBus = LogBus.createGlobal(globalEventBus, loggingShortcuts);
+    private final Bus globalBus = CompositeBus.createGlobal(globalLogBus);
 
     @Override
-    public Bus forUser(String user) {
-        return userBusMap.computeIfAbsent(user, u -> new UserBus(this, u));
+    public Bus global() {
+        return globalBus;
     }
 
     @Override
-    public BusImpl put(String key, String value) {
+    public Bus forUser(String user) { return userBusMap.computeIfAbsent(user, this::newBus); }
+
+    private Bus newBus(String user) { return CompositeBus.create(newLogBus(user), globalBus); }
+
+    private LogBus newLogBus(String user) { return LogBus.create(newEventBus(user), globalLogBus, loggingShortcuts); }
+
+    private EventBus newEventBus(String user) { return EventBus.create(newUserBus(user), globalEventBus); }
+
+    private UserBus newUserBus(String user) { return UserBus.create(user, this, globalUserBus); }
+
+    @Override
+    public SimpleBusImpl put(String key, String value) {
         // store the reference
         Object previous = properties.put(key, requireNonNull(value));
         // notify any waiting threads
@@ -89,6 +111,7 @@ class BusImpl implements SimpleBus, EasyCloseable {
             // if it wasn't there, block until it arrives
             if (obj instanceof CountDownLatch) ((CountDownLatch) obj).await(10, SECONDS);
             // rethrow any stored error
+            //noinspection ThrowableNotThrown
             reThrowErrorIfPresent();
             // it's there now, so return it
             return (String) properties.get(key);
@@ -97,17 +120,18 @@ class BusImpl implements SimpleBus, EasyCloseable {
         } catch (ClassCastException e) {
             storeError(new TimeoutException("Timed out waiting for key: " + key));
         }
-        throw reThrowErrorIfPresent(); // there must be an error by now
+        throw requireNonNull(reThrowErrorIfPresent()); // there must be an error by now
     }
 
     @Override
-    public BusImpl onMsg(String key, Consumer<String> action) {
+    public SimpleBusImpl onMsg(String key, Consumer<String> action) {
         // register the callback
         callbacks.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(action);
         return this;
     }
 
-    Error reThrowErrorIfPresent() {
+    @SuppressWarnings("SameReturnValue")
+    private Error reThrowErrorIfPresent() {
         if (originalError == null) return null;
         throw new IllegalStateException(originalError);
     }
@@ -149,7 +173,7 @@ class BusImpl implements SimpleBus, EasyCloseable {
         return format(this.biStream());
     }
 
-    static String format(BiStream<String, String> bis) {
+    private static String format(BiStream<String, String> bis) {
         StringBuilder sb = new StringBuilder("{");
         bis.forEach((k, v) -> sb.append("\n\t").append(k).append(" -> ").append(v));
         if (sb.length() == 1) return "{}";
@@ -157,6 +181,41 @@ class BusImpl implements SimpleBus, EasyCloseable {
         return sb.toString();
     }
 
+    private enum Test {
+        ;
+        public static void main(String...args) throws ExecutionException, InterruptedException {
+            try (SimpleBusImpl simpleBus = new SimpleBusImpl()) {
+
+                // try an asynchronous get
+                final ExecutorService xs = Executors.newSingleThreadExecutor();
+                try {
+                    final Future<String> msg = xs.submit(() -> simpleBus.get("msg"));
+                    Assertions.assertFalse(msg.isDone());
+                    simpleBus.put("msg", "hello");
+                    Assertions.assertTrue(msg.isDone());
+                    Assertions.assertEquals("hello", msg.get());
+                    System.out.println("Correctly retrieved message: " + msg.get());
+                } finally {
+                    xs.shutdown();
+                }
+
+                {
+                    // register a callback
+                    CompletableFuture<String> msg = new CompletableFuture<>();
+                    simpleBus.onMsg("msg", msg::complete);
+                    // check the callback has not been called
+                    Assertions.assertFalse(msg.isDone());
+                    // put a new message
+                    simpleBus.put("msg", "world");
+                    // wait for the callback to be called
+                    // check the callback has been called correctly
+                    Assertions.assertEquals("world", msg.get());
+                    System.out.println("Correctly retrieved message: " + msg.get());
+                }
+            }
+
+        }
+    }
 }
 
 

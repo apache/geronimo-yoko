@@ -18,8 +18,8 @@ package testify.parts;
 
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
-import testify.bus.InterProcessBus;
 import testify.bus.Bus.LogLevel;
+import testify.bus.InterProcessBus;
 import testify.io.EasyCloseable;
 
 import java.util.Deque;
@@ -34,8 +34,9 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.asList;
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static testify.bus.Bus.LogLevel.*;
 import static testify.bus.Bus.LogLevel.DEBUG;
+import static testify.bus.Bus.LogLevel.ERROR;
+import static testify.bus.Bus.LogLevel.INFO;
 import static testify.bus.Bus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {

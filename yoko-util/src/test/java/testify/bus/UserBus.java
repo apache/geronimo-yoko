@@ -23,58 +23,58 @@ import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
 
-final class UserBus extends LogBus {
-    public static final String DELIMITER = "::";
-    private final SimpleBus bus;
-    private final String user;
-    private final String prefix;
+interface UserBus {
+    String DELIMITER = "::";
+    String GLOBAL_USER = "global";
 
-    UserBus(SimpleBus bus, String user) {
-        this.bus = bus;
-        this.user = user;
-        this.prefix = user + DELIMITER;
+    String user();
+    SimpleBus simpleBus();
+    UserBus global();
+
+    default Bus forUser(String user) { return simpleBus().forUser(user()); }
+
+    default String transform(String key) {  return key == null ? null : (user() + DELIMITER + validate(key)); }
+
+    default String untransform(String key) { return key.startsWith(user() + DELIMITER) ? key.substring((user() + DELIMITER).length()) : null; }
+
+    default void put(String key, String value) {
+        simpleBus().put(transform(key), value);
+        if (global() != this) global().put(key, value);
     }
 
-    @Override
-    public String user() { return user; }
+    default boolean hasKey(String key) { return simpleBus().hasKey(transform(key)); }
 
-    @Override
-    public Bus forUser(String user) { return bus.forUser(user); }
+    default String peek(String key) { return simpleBus().peek(transform(key)); }
 
-    private String transform(String key) {  return key == null ? null : (prefix + validate(key)); }
+    default String get(String key) { return simpleBus().get(transform(key)); }
 
-    private String untransform(String key) { return key.startsWith(prefix) ? key.substring(prefix.length()) : null; }
+    default void onMsg(String key, Consumer<String> action) { simpleBus().onMsg(transform(key), action); }
 
-    @Override
-    public Bus put(String key, String value) {
-        bus.put(transform(key), value);
-        if (!GLOBAL_USER.equals(user)) global().put(key, value);
-        return this;
+    default BiStream<String, String> biStream() {
+        return simpleBus().biStream().mapKeys(this::untransform).filterKeys(Objects::nonNull);
     }
 
-    @Override
-    public final boolean hasKey(String key) { return bus.hasKey(transform(key)); }
-
-    @Override
-    public final String peek(String key) { return bus.peek(transform(key)); }
-
-    @Override
-    public final String get(String key) { return bus.get(transform(key)); }
-
-    @Override
-    public final Bus onMsg(String key, Consumer<String> action) { bus.onMsg(transform(key), action); return this; }
-
-    @Override
-    public final BiStream<String, String> biStream() {
-        return bus.biStream().mapKeys(this::untransform).filterKeys(Objects::nonNull);
-    }
-
-    @Override
-    public String toString() { return String.format("Bus[%s]", user); }
-
-    public static String validate(String name) {
+    static String validate(String name) {
         if (requireNonNull(name).contains(DELIMITER))
             throw new Error("Names may not contain '" + DELIMITER + "' (name was '" + name + "')");
         return name;
+    }
+
+    static UserBus createGlobal(SimpleBus simpleBus) {
+        return new UserBus() {
+            public String user() { return GLOBAL_USER; }
+            public SimpleBus simpleBus() { return simpleBus; }
+            public UserBus global() { return this; }
+            public String toString() { return "Global UserBus"; }
+        };
+    }
+
+    static UserBus create(String user, SimpleBus simpleBus, UserBus globalUserBus) {
+        return new UserBus() {
+            public String user() { return user; }
+            public SimpleBus simpleBus() { return simpleBus; }
+            public UserBus global() { return globalUserBus; }
+            public String toString() { return String.format("UserBus[%s]", user); }
+        };
     }
 }

@@ -16,10 +16,11 @@
  */
 package testify.parts;
 
-import testify.streams.BiStream;
 import testify.bus.Bus;
 import testify.bus.Bus.TypeRef;
 import testify.bus.InterProcessBus;
+import testify.bus.SimpleBus;
+import testify.streams.BiStream;
 
 import java.io.IOError;
 import java.io.IOException;
@@ -37,12 +38,11 @@ public enum ProcessRunner implements Runner<Process>{
 
     public static void main(String[] args) {
         String name = args[0];
-        InterProcessBus slaveBus = InterProcessBus.createSlave();
-        Bus bus = slaveBus.forUser(name);
+        Bus bus = InterProcessBus.createSlave().forUser(name);
         bus.log("Started remote process for test part: " + name);
         NamedPart part = bus.get(Part.NAMED_PART);
         bus.log("Running named part: " + part.name);
-        part.run(slaveBus.forUser(name));
+        part.run(bus);
     }
 
     @Override
