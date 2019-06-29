@@ -17,27 +17,24 @@
 package org.apache.yoko;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.Extension;
-import org.junit.jupiter.api.extension.RegisterExtension;
-import testify.parts.PartRunner;
-import testify.jupiter.PartRunnerResolver;
 import test.types.TestAny;
 import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
+import testify.jupiter.ConfigurePartRunner;
+import testify.parts.PartRunner;
 
-public class TypesTest {
-    @RegisterExtension
-    Extension ext = PartRunnerResolver.builder().useProcesses().build();
+@ConfigurePartRunner
+class TypesTest {
     @Test
-    public void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }
+    void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }
     @Test
-    public void testAny(PartRunner runner) { runner.forkMain(TestAny.class); }
+    void testAny(PartRunner runner) { runner.forkMain(TestAny.class); }
     @Test
-    public void testDynAny(PartRunner runner) { runner.forkMain(TestDynAny.class); }
+    void testDynAny(PartRunner runner) { runner.forkMain(TestDynAny.class); }
     @Test
-    public void testPortableTypes(PartRunner runner) { runner.forkMain(TestPortableTypes.class); }
+    void testPortableTypes(PartRunner runner) { runner.forkMain(TestPortableTypes.class); }
     @Test
-    public void testUnion(PartRunner runner) { runner.forkMain(TestUnion.class); }
+    void testUnion(PartRunner runner) { runner.forkMain(TestUnion.class); }
 }

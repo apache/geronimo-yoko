@@ -14,28 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.parts;
+package testify.jupiter;
 
-import testify.bus.InterProcessBus;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
 
-import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-enum ThreadRunner implements Runner<Thread> {
-    SINGLETON
-    ;
-    public Thread fork(InterProcessBus centralBus, NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)), part.name);
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
-    }
-    public boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
-    public boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.interrupt();
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
+interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
+    @Override
+    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); };
+
+    Stream<P> provideArgs(ExtensionContext ctx);
 }

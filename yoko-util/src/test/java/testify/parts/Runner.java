@@ -20,22 +20,10 @@ import testify.bus.InterProcessBus;
 
 import java.util.concurrent.TimeUnit;
 
-enum ThreadRunner implements Runner<Thread> {
-    SINGLETON
-    ;
-    public Thread fork(InterProcessBus centralBus, NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)), part.name);
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
-    }
-    public boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
-    public boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.interrupt();
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
+public interface Runner<J> {
+    J fork(InterProcessBus centralBus, NamedPart part);
+
+    boolean join(J job, long timeout, TimeUnit unit) throws InterruptedException;
+
+    boolean stop(J job, long timeout, TimeUnit unit) throws InterruptedException;
 }

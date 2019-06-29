@@ -21,19 +21,15 @@ import org.apache.yoko.orb.OB.ObjectKey;
 import org.apache.yoko.orb.OB.ObjectKeyData;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.Extension;
-import org.junit.jupiter.api.extension.RegisterExtension;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
-import test.ins.Server;
+import test.ins.InsServer;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
-import testify.jupiter.SimpleOrbResolver;
-import testify.parts.PartRunner;
-import testify.jupiter.PartRunnerResolver;
+import testify.bus.Bus;
+import testify.jupiter.ConfigureServer;
 
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -43,22 +39,16 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.*;
 
+@ConfigureServer(value = InsServer.class)
 public class InsTest {
-    @RegisterExtension
-    static Extension x1 = PartRunnerResolver.builder().perContainer().build();
-    @RegisterExtension
-    static Extension x2 = SimpleOrbResolver.builder().perContainer().build();
-
     private static String iorFromServer;
     // object reference to use during testing
     private static IIOPAddress iiopAddress;
 
     @BeforeAll
-    public static void setUp(PartRunner runner, ORB orb) {
-        runner
-                .fork("server", Server::run)
-                .here("server", bus -> bus.put("key", "TestINS"))
-                .here("server", bus -> iorFromServer = bus.get("ior"));
+    public static void setUp(ORB orb, Bus bus) {
+        bus.put("key", "TestINS");
+        iorFromServer = bus.get("ior");
         iiopAddress = stringToIIOPAddress(orb, iorFromServer);
     }
 
@@ -185,7 +175,7 @@ public class InsTest {
     }
 
     @Test
-    public void testUnssuportedIiopVersionCorbalocUrls(ORB orb) {
+    public void testUnsupportedIiopVersionCorbalocUrls(ORB orb) {
         // Try iiop major versions 0 and 2
         Stream.of(":0.", ":2.").forEach(iiopMajor -> {
             IntStream.range(0, 10).forEach(iiopMinor -> {
@@ -247,8 +237,8 @@ public class InsTest {
         assertThat(nObj.getString(), is(equalTo("corbaloc")));
     }
 
-    @Test
-    @Disabled("was disabled before junit 5 port — runs in sequence but fails on its own")
+//    @Test
+//    @Disabled("was disabled before junit 5 port — runs in sequence but fails on its own")
     public void testActiveProfile3InMultiProfileIor(ORB orb) {
         String url = "corbaloc:";
 

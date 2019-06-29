@@ -43,7 +43,7 @@ public class ClientPlugin implements ConnectionHelper {
     static private boolean createdConnection = false;
 
     public ClientPlugin() {
-        System.out.println("Client-side connection helper constructed");
+        System.out.println("Orb-side connection helper constructed");
         constructed = true;
     }
 

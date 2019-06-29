@@ -14,20 +14,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.bus;
+package testify.jupiter;
 
-import testify.streams.BiStream;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-public interface RawBus {
-    boolean hasKey(String key);
-    String get(String key);
-    String peek(String key);
-    void onMsg(String key, Consumer<String> action);
-    void put(String key, String value);
-    default void forEach(BiConsumer<String, String> action) { biStream().forEach(action); }
-    BiStream<String, String> biStream();
-}
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
+@Target({ANNOTATION_TYPE, METHOD})
+@Retention(RUNTIME)
+@ParameterizedTest
+@ArgumentsSource(MultiServerExtension.class)
+public @interface TestPerServer {}

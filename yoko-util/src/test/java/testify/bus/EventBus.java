@@ -16,38 +16,33 @@
  */
 package testify.bus;
 
+import testify.bus.Bus.TypeRef;
+
 import java.util.function.Consumer;
 
-public interface EventBus extends RawBus {
-    interface TypeRef<T> {
-        Class<? extends Enum> getDeclaringClass();
-        String name();
-        @SuppressWarnings("unchecked")
-        default T unstringify(String s) { return (T) SerialUtil.unstringify(s); }
-        default String stringify(T t) { return SerialUtil.stringify(t); }
-        default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }
-    }
-
-    interface StringRef extends TypeRef<String> {
-        default String stringify(String s) { return s; }
-        default String unstringify(String s) { return s; }
-    }
-
-    interface VoidRef extends TypeRef<Void> {
-        default String stringify(Void v) { return ""; }
-        default Void unstringify(String s) { return null; }
-    }
-
-    default <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return hasKey(key.fullName()); }
-    default <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(get(key.fullName())); }
-    default <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return key.unstringify(peek(key.fullName())); }
-    default <K extends Enum<K> & TypeRef<? super T>, T> void put(K key, T value) { put(key.fullName(), key.stringify(value)); }
+// Provide event functionality. This interface should remain package-private.
+interface EventBus {
+    UserBus userBus();
+    EventBus global();
+    default <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return userBus().hasKey(key.fullName()); }
+    default <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(userBus().get(key.fullName())); }
+    default <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return key.unstringify(userBus().peek(key.fullName())); }
+    default <K extends Enum<K> & TypeRef<? super T>, T> void put(K key, T value) { userBus().put(key.fullName(), key.stringify(value)); }
     default <K extends Enum<K> & TypeRef<T>, T> void put(K key) { put(key, null); }
-    default <K extends Enum<K> & TypeRef<T>, T> void onMsg(K key, Consumer<T> action) {
-        onMsg(key.fullName(), s -> action.accept(key.unstringify(s)));
+    default <K extends Enum<K> & TypeRef<T>, T> void onMsg(K key, Consumer<T> action) { userBus().onMsg(key.fullName(), s -> action.accept(key.unstringify(s))); }
+    default <K extends Enum<K> & TypeRef<K>> void onMsg(K key, Runnable action) { onMsg(key, s -> action.run()); }
+
+    static EventBus createGlobal(UserBus globalUserBus) {
+        return new EventBus() {
+            public UserBus userBus() { return globalUserBus; }
+            public EventBus global() { return this; }
+        };
     }
 
-    default <K extends Enum<K> & TypeRef<K>> void onMsg(K key, Runnable action) {
-        onMsg(key, s -> action.run());
+    static EventBus create(UserBus userBus, EventBus globalEventBus) {
+        return new EventBus() {
+          public UserBus userBus() { return userBus; }
+          public EventBus global() { return globalEventBus; }
+        };
     }
 }

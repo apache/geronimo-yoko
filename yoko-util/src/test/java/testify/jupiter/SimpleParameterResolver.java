@@ -18,30 +18,15 @@ package testify.jupiter;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
-import org.omg.CORBA.ORB;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import java.util.Properties;
-
-public class SimpleOrbResolver extends BaseParameterResolver<ORB> {
-    public static final class Builder extends BaseBuilder<Builder> {
-        public SimpleOrbResolver build() { return new SimpleOrbResolver(scope()); }
-    }
-
-    public static Builder builder() { return new Builder(); }
-
-    private SimpleOrbResolver(Scope scope) { super(ORB.class, scope); }
+interface SimpleParameterResolver<P> extends ParameterResolver {
+    @Override
+    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
 
     @Override
-    protected ORB create(ParameterContext pCtx, ExtensionContext eCtx) {
-        Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-        return ORB.init((String[]) null, props);
-    }
+    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
 
-    @Override
-    protected void destroy(ORB orb) {
-        orb.destroy();
-    }
+    boolean supportsParameter(ParameterContext pCtx);
+    P resolveParameter(ExtensionContext ctx);
 }

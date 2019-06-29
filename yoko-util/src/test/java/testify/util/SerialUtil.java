@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.bus;
+package testify.util;
 
 import junit.framework.AssertionFailedError;
 
@@ -26,7 +26,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.Base64;
 
-enum SerialUtil {
+public enum SerialUtil {
     ;
 
     public static String stringify(Object payload) {

@@ -14,28 +14,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.parts;
+package testify.bus;
 
-import testify.bus.InterProcessBus;
+import testify.streams.BiStream;
 
-import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
-enum ThreadRunner implements Runner<Thread> {
-    SINGLETON
-    ;
-    public Thread fork(InterProcessBus centralBus, NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)), part.name);
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
-    }
-    public boolean join(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
-    public boolean stop(Thread thread, long timeout, TimeUnit unit) throws InterruptedException {
-        thread.interrupt();
-        thread.join(unit.toMillis(timeout));
-        return !thread.isAlive();
-    }
+public interface SimpleBus {
+    SimpleBus put(String key, String value);
+    boolean hasKey(String key);
+    String peek(String key);
+    String get(String key);
+    SimpleBus onMsg(String key, Consumer<String> action);
+    BiStream<String, String> biStream();
+
+    Bus global();
+    Bus forUser(String user);
 }

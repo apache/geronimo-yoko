@@ -18,43 +18,88 @@ package testify.parts;
 
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
+import testify.bus.Bus.LogLevel;
 import testify.bus.InterProcessBus;
-import testify.bus.LogBus.LogLevel;
 import testify.io.EasyCloseable;
 
+import java.util.Deque;
+import java.util.EnumMap;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
+import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static testify.bus.Bus.LogLevel.DEBUG;
+import static testify.bus.Bus.LogLevel.ERROR;
+import static testify.bus.Bus.LogLevel.INFO;
+import static testify.bus.Bus.LogLevel.WARN;
 
-abstract class PartRunnerImpl<J> implements PartRunner {
-    private final Map<J, NamedPart> jobs = new HashMap<>();
+class PartRunnerImpl implements PartRunner {
+    public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
     final InterProcessBus centralBus = InterProcessBus.createMaster();
-    private final Bus bus = centralBus.global();
-    private final Queue<EasyCloseable> endActions = new ConcurrentLinkedQueue<>();
+    private final Bus bus = centralBus.global()
+            .logToSysErr(URGENT_LEVELS)
+            .logToSysOut(complementOf(URGENT_LEVELS))
+//            .enableLogging(LogLevel.ERROR, ".*")
+//            .enableLogging(WARN, ".*")
+            ;
+
+    private enum HookType { PRE_JOIN, JOIN, POST_JOIN }
+    private final EnumMap<HookType, Deque<EasyCloseable>> hooks = new EnumMap<>(HookType.class);
+    { for (HookType ht: HookType.values()) hooks.put(ht, new ConcurrentLinkedDeque<>()); }
+    private final Map<EasyCloseable, String> hookNames = new HashMap<>();
+    private boolean useProcesses = false;
+
+    @Override
+    public Bus bus() {
+        return centralBus.global();
+    }
+
+    @Override
+    public Bus bus(String partName) { return centralBus.forUser(partName); }
+
+    @Override
+    public PartRunner useProcesses(boolean useProcesses) { this.useProcesses = useProcesses; return this; }
 
     @Override
     public PartRunner fork(String partName, TestPart part) {
+        final Runner<?> runner = useProcesses ? ProcessRunner.SINGLETON : ThreadRunner.SINGLETON;
+        return fork(runner, partName, part);
+    }
+
+    private <J> PartRunner fork(Runner<J> runner, String partName, TestPart part) {
         try {
             final NamedPart namedPart = new NamedPart(partName, part);
-            J job = fork(namedPart);
+            J job = runner.fork(centralBus, namedPart);
             namedPart.waitForStart(bus);
-            jobs.put(job, namedPart);
+            registerForJoin(runner, job, partName);
             return this;
         } catch (Throwable throwable) {
             throw fatalError(throwable);
         }
     }
 
+    private PartRunner addHook(HookType hookType, String partName, EasyCloseable hook) {
+        hookNames.put(hook, partName);
+        switch (hookType) {
+        case PRE_JOIN:
+            hooks.get(hookType).add(hook);
+            return this;
+        default:
+            hooks.get(hookType).addFirst(hook);
+            return this;
+        }
+    }
+
     @Override
-    public PartRunner onStop(String partName, Consumer<Bus> endAction) {
-        endActions.add(() -> endAction.accept(bus.forUser(partName)));
-        return this;
+    public PartRunner endWith(String partName, Consumer<Bus> endAction) {
+        ;
+        return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus.forUser(partName)));
     }
 
     @Override
@@ -70,7 +115,7 @@ abstract class PartRunnerImpl<J> implements PartRunner {
     @Override
     public PartRunner here(String partName, TestPart part) {
         NamedPart namedPart = new NamedPart(partName, part);
-        namedPart.run(bus);
+        namedPart.run(bus.forUser(partName));
         return this;
     }
 
@@ -90,10 +135,17 @@ abstract class PartRunnerImpl<J> implements PartRunner {
     }
 
     // recursively ensure close
-    private void runCloseHooks() {
-        if (endActions.isEmpty()) return;
-        try (EasyCloseable hook = endActions.poll()) {
-            runCloseHooks();
+    private void close(HookType type) {
+        Deque<EasyCloseable> closeables = this.hooks.get(type);
+        if (closeables.isEmpty()) return;
+        String name = "unknown";
+        try (EasyCloseable hook = closeables.poll()) {
+            final String partName = name = hookNames.get(hook);
+            bus.log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
+        } finally {
+            final String partName = name;
+            bus.log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
+            close(type);
         }
     }
 
@@ -101,34 +153,38 @@ abstract class PartRunnerImpl<J> implements PartRunner {
     public void join() {
         // close down the main bus
         try (EasyCloseable close = centralBus) {
-            runCloseHooks();
-            // wait for the ended events on the bus
-            jobs.values().forEach(p -> p.waitForEnd(bus));
-            // wait for the job mechanisms to complete
-            jobs.forEach(this::waitForJob);
+            for (HookType type : HookType.values()) {
+                bus.log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
+                close(type);
+            }
+            bus.log("Completed all join actions.");
         }
     }
 
-    private void waitForJob(J job, NamedPart part) {
-        try {
-            if (join(job, 5, SECONDS)) return;
-            System.err.printf("The test part '%s' did not complete. Trying to force it to stop.%n", part.name);
-            if (stop(job, 5, SECONDS)) return;
-            System.err.printf("The test part '%s' STILL did not complete. There's nothing more to try.%n", part.name);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
+    private <J> void registerForJoin(Runner<J> runner, J job, String name) {
+        addHook(HookType.JOIN, name, () -> {
+            try {
+                if (runner.join(job, 5, SECONDS)) return;
+                bus.log(ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
+        addHook(HookType.POST_JOIN, name, () -> {
+            try {
+                if (runner.stop(job, 5, SECONDS)) return;
+                bus.log(ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        });
     }
-
-    abstract J fork(NamedPart part);
-    abstract boolean join(J job, long timeout, TimeUnit unit) throws InterruptedException;
-    abstract boolean stop(J job, long timeout, TimeUnit unit) throws InterruptedException;
 
     private enum Test {
         ;
         @SuppressWarnings("CodeBlock2Expr")
         public static void main(String[] args) throws Exception{
-            for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
+            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
                 runner.fork("part1", bus -> {
                     bus.put("a", "Hello");
                     bus.global().get("b");
@@ -137,8 +193,8 @@ abstract class PartRunnerImpl<J> implements PartRunner {
                     bus.put("b", "Hello");
                 }).join();
             }
-            for (PartRunner runner: asList(new ThreadRunner(), new ProcessRunner())) {
-                runner.debug(LogLevel.INFO, ".*", "part4").here(bus -> {
+            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
+                runner.enableLogging(INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");

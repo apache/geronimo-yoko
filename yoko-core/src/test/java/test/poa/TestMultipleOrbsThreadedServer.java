@@ -161,7 +161,7 @@ final public class TestMultipleOrbsThreadedServer extends test.common.TestBase {
             }
 
             //
-            // Create Test Server
+            // Create Test InsServer
             //
             TestInfo[] info = new TestInfo[NUM_ORBS];
             for (int i = 0; i < NUM_ORBS; i++) {

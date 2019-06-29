@@ -33,17 +33,11 @@ import org.omg.PortableServer.POAManager;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddress_impl;
 import testify.bus.Bus;
+import testify.parts.ServerPart;
 
-import java.util.Properties;
-
-public final class Server {
-    // Return the port used by an acceptor
-    private static int getPort(org.apache.yoko.orb.OCI.IIOP.AcceptorInfo iiopInfo) {
-        return (int)(char)iiopInfo.port();
-    }
-
+public final class InsServer extends ServerPart {
     // Simple server providing objects for corba URL tests
-    private static void run(Bus bus, ORB orb) throws UserException {
+    public void run(ORB orb, Bus bus) throws UserException {
         // corbaloc key
         String keyStr = bus.get("key");
 
@@ -77,7 +71,7 @@ public final class Server {
         }
 
         String[] hosts = iiopInfo.hosts();
-        int port = getPort(iiopInfo);
+        int port = (int) (char) iiopInfo.port();
 
         // corbaloc test object
         IIOPAddress corbaURLObj;
@@ -95,19 +89,5 @@ public final class Server {
         // not being ready yet.
         bus.put("ior", orb.object_to_string(corbaURLObj));
 
-        // Give up control to the ORB
-        orb.run();
-    }
-
-    // Start the INS test server
-    public static void run(Bus bus) throws Exception {
-        Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-
-        ORB orb = ORB.init((String[]) null, props);
-        try { run(bus, orb); }
-        finally { orb.destroy(); }
     }
 }
