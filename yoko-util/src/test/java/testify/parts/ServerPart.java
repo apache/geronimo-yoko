@@ -19,11 +19,13 @@ package testify.parts;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
-import testify.bus.Bus.TypeRef;
+import testify.bus.TypeRef;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Properties;
+
+import static testify.bus.LogLevel.ERROR;
 
 public abstract class ServerPart implements Serializable {
     private enum ClassParam implements TypeRef<Class<? extends ServerPart>> {SERVER_CLASS}
@@ -39,7 +41,7 @@ public abstract class ServerPart implements Serializable {
 
     private void stop(Bus bus) {
         try {
-            bus.log(Bus.LogLevel.ERROR, "Calling orb.shutdown(true)");
+            bus.log(ERROR, "Calling orb.shutdown(true)");
             orb.shutdown(true);
             bus.log("ORB shutdown complete, calling orb.destroy()");
             orb.destroy();

@@ -17,7 +17,7 @@
 package testify.jupiter;
 
 import testify.bus.Bus;
-import testify.bus.Bus.LogLevel;
+import testify.bus.LogLevel;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.Retention;
@@ -28,6 +28,7 @@ import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static testify.bus.LogLevel.*;
 
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)
@@ -36,8 +37,7 @@ public @interface Tracing {
     Class<?>[] classes() default {};
     /** Specify a regular expression to match trace sources */
     String value() default "";
-    LogLevel level() default Bus.LogLevel.DEFAULT;
-    LogLevel maxLevel() default Bus.LogLevel.ERROR;
+    LogLevel level() default DEFAULT;
     boolean disabled() default false;
 }
 
@@ -48,9 +48,12 @@ enum TracingSteward {
     }
     static void addTraceSettings(PartRunner runner, Tracing config, String...parts) {
         if (config.disabled()) return;
-        if (config.value().isEmpty() || config.classes().length > 0)
-            runner.enableLogging(config.level(), config.maxLevel(), config.classes(), parts);
+        if (config.value().isEmpty() || config.classes().length > 0) {
+            final LogLevel level = config.level();
+            final Class<?>[] classes = config.classes();
+            runner.enableLogging(level, classes, parts);
+        }
         if (config.value().length() > 0)
-            runner.enableLogging(config.level(), config.maxLevel(), config.value(), parts);
+            runner.enableLogging(config.level(), config.value(), parts);
     }
 }

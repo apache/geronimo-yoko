@@ -18,7 +18,7 @@ package testify.parts;
 
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
-import testify.bus.Bus.LogLevel;
+import testify.bus.LogLevel;
 import testify.bus.InterProcessBus;
 import testify.io.EasyCloseable;
 
@@ -34,10 +34,10 @@ import java.util.stream.Collectors;
 import static java.util.Arrays.asList;
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static testify.bus.Bus.LogLevel.DEBUG;
-import static testify.bus.Bus.LogLevel.ERROR;
-import static testify.bus.Bus.LogLevel.INFO;
-import static testify.bus.Bus.LogLevel.WARN;
+import static testify.bus.LogLevel.DEBUG;
+import static testify.bus.LogLevel.ERROR;
+import static testify.bus.LogLevel.INFO;
+import static testify.bus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
     public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
@@ -194,7 +194,7 @@ class PartRunnerImpl implements PartRunner {
                 }).join();
             }
             for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
-                runner.enableLogging(INFO, ".*NamedPart", "part4").here(bus -> {
+                runner.enableLogging0(INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");

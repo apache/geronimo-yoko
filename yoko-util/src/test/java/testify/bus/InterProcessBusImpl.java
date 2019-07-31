@@ -166,11 +166,11 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
         }
 
         void checkForIncomingMessage(String line) {
-            System.out.printf("%s[out]: %s%n", name, line);
-            System.out.flush();
             if (isEncodedMessage(line)) {
                 receiveMessage(line);
             } else {
+                System.out.printf("%s[out]: %s%n", name, line);
+                System.out.flush();
             }
         }
 
