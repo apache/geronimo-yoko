@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Assertions;
 import testify.io.EasyCloseable;
 import testify.streams.BiStream;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
@@ -55,11 +56,11 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
     private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
-    private final UserBus globalUserBus = UserBus.createGlobal(this);
-    private final EventBus globalEventBus = EventBus.createGlobal(globalUserBus);
+    private final UserBusImpl globalUserBus = new UserBusImpl(this);
+    private final EventBusImpl globalEventBus = new EventBusImpl(globalUserBus);
     private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
-    private final LogBus globalLogBus = LogBus.createGlobal(globalEventBus, loggingShortcuts);
-    private final Bus globalBus = CompositeBus.createGlobal(globalLogBus);
+    private final LogBusImpl globalLogBus = new LogBusImpl(globalEventBus, loggingShortcuts);
+    private final Bus globalBus = new BusImpl(globalLogBus);
 
     @Override
     public Bus global() {
@@ -69,13 +70,21 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     @Override
     public Bus forUser(String user) { return userBusMap.computeIfAbsent(user, this::newBus); }
 
-    private Bus newBus(String user) { return CompositeBus.create(newLogBus(user), globalBus); }
+    private Bus newBus(String user) {
+        return new BusImpl(newLogBus(user), globalBus);
+    }
 
-    private LogBus newLogBus(String user) { return LogBus.create(newEventBus(user), globalLogBus, loggingShortcuts); }
+    private LogBusImpl newLogBus(String user) {
+        return new LogBusImpl(newEventBus(user), loggingShortcuts);
+    }
 
-    private EventBus newEventBus(String user) { return EventBus.create(newUserBus(user), globalEventBus); }
+    private EventBusImpl newEventBus(String user) {
+        return new EventBusImpl(newUserBus(user), globalEventBus);
+    }
 
-    private UserBus newUserBus(String user) { return UserBus.create(user, this, globalUserBus); }
+    private UserBusImpl newUserBus(String user) {
+        return new UserBusImpl(user, this, globalUserBus);
+    }
 
     @Override
     public SimpleBusImpl put(String key, String value) {
@@ -161,9 +170,13 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
 
     @Override
     public void easyClose() throws Exception {
+        System.out.println("### shutting down thread pool");
         threadPool.shutdown();
+        System.out.println("### awaiting thread pool termination");
         threadPool.awaitTermination(200, MILLISECONDS);
-        threadPool.shutdownNow();
+        System.out.println("### calling shutdownNow() ");
+        List<?> list = threadPool.shutdownNow();
+        System.out.println("### shutdownNow returned " + list.size() + " item(s).");
         if (threadPool.isTerminated()) return;
         throw new Error("Unable to shut down thread pool: " + threadPool.shutdownNow());
     }

@@ -16,19 +16,7 @@
  */
 package testify.bus;
 
-import java.util.function.Consumer;
-
-// Although some of the methods here are fluent in design
-// (i.e. they return a Bus object suitable for method chaining)
-// the internal implementations are expected to return null.
-// The fluency is an affordance purely for the code calling
-// objects accessible outside the package.
-interface EventBus {
-    <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key);
-    <K extends Enum<K> & TypeRef<T>, T> T get(K key);
-    <K extends Enum<K> & TypeRef<T>, T> T peek(K key);
-    <K extends Enum<K> & TypeRef<? super T>, T> Bus put(K key, T value);
-    <K extends Enum<K> & TypeRef<T>, T> Bus put(K key);
-    <K extends Enum<K> & TypeRef<T>, T> Bus onMsg(K key, Consumer<T> action);
-    <K extends Enum<K> & TypeRef<K>> Bus onMsg(K key, Runnable action);
+public interface VoidRef extends TypeRef<Void> {
+    default String stringify(Void v) { return ""; }
+    default Void unstringify(String s) { return null; }
 }

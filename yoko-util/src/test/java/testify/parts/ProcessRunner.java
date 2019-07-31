@@ -17,9 +17,8 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.Bus.TypeRef;
+import testify.bus.TypeRef;
 import testify.bus.InterProcessBus;
-import testify.bus.SimpleBus;
 import testify.streams.BiStream;
 
 import java.io.IOError;

@@ -17,23 +17,24 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.Bus.LogLevel;
+import testify.bus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.EnumSet;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
+
+import static testify.bus.LogLevel.DEFAULT;
 
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
     /**
      * Enable logging.
-     * @param level the level of logging to enable
+     * @param level the most detailed level of logging to enable
      * @param pattern a regular expression to match the classes to debug
      * @param partNames if empty, all parts will be debugged, otherwise only the parts with the specified names will have debugging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
+    default PartRunner enableLogging0(LogLevel level, String pattern, String...partNames) {
         // define how to enable logging for a bus
         // if no part names were supplied, enable logging globally
         if (partNames.length == 0) bus().enableLogging(level, pattern);
@@ -48,37 +49,32 @@ public interface PartRunner {
      * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(Bus.LogLevel.DEFAULT, pattern, partNames); }
+    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(DEFAULT, pattern, partNames); }
 
     /**
      * Enable a range of log levels for the specified classes and partnames.
-     * @param min the minimum log level to include
-     * @param max the maximum log level to include
+     * @param level the most detailed log level to enable
      * @param classesToTrace the actual classes to trace, or empty to trace all classes
      * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(LogLevel min, LogLevel max, Class<?>[] classesToTrace, String...partNames) {
-        EnumSet.range(min, max).forEach(lvl -> enableLogging(lvl, classesToTrace, partNames));
+    default PartRunner enableLogging(LogLevel level, Class<?>[] classesToTrace, String...partNames) {
+        level.andHigher().forEach(lvl -> {
+            for (Class<?> cls: classesToTrace) enableLogging0(lvl, cls.getName(), partNames);
+        });
         return this;
     }
 
     /**
      * Enable a range of log levels for the specified pattern and partnames.
-     * @param min the minimum log level to include
-     * @param max the maximum log level to include
+     * @param level the most detailed log level to include
      * @param pattern a regular expression to match the classes to trace
      * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(LogLevel min, LogLevel max, String pattern, String...partNames) {
-        EnumSet.range(min, max).forEach(lvl -> enableLogging(lvl, pattern, partNames));
-        return this;
-    }
-
-    default PartRunner enableLogging(LogLevel lvl, Class<?>[] classesToTrace, String...partNames) {
-        if (classesToTrace.length == 0) enableLogging(lvl, ".*", partNames);
-        else for (Class<?> cls: classesToTrace) enableLogging(lvl, cls.getName(), partNames);
+    default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
+        if (partNames.length == 0) bus().enableLogging(level, pattern);
+        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern));
         return this;
     }
 
