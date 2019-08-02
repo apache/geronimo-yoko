@@ -7,6 +7,8 @@ dependencies {
   // We add the following dependency to allow the tests to run against the
   // yoko-core impl classes in Java 11 onwards (which has no ORB).
   testRuntime project(":yoko-core")
+  // use shared test utilities
+  testCompile project(":yoko-util").sourceSets.test.output
 }
 
 jar {
