@@ -20,14 +20,22 @@ package org.apache.yoko.rmi.impl;
 
 abstract class ModelElement {
     final TypeRepository repo;
+
     final String java_name;    // the java name of the type
     protected ModelElement(TypeRepository repo, String java_name) {
         this.repo = repo;
         this.java_name = java_name;
     }
 
-    protected void init() {
+    private boolean initComplete = false;
+    /** It is the caller's responsibility to ensure this method is called from only one thread at a time. */
+    final boolean doInitOnce() {
+        if (initComplete) return false;
+        init();
+        return initComplete = true;
     }
+
+    protected void init() { }
 
     private volatile String idlName = null;   // fully resolved package name
     protected abstract String genIDLName();
