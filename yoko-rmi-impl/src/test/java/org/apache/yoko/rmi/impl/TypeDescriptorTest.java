@@ -15,33 +15,50 @@ import static org.junit.Assert.*;
 
 public class TypeDescriptorTest {
     private interface S extends Serializable {}
+
     private interface R extends Remote {}
+
     private interface SR extends Serializable, Remote {}
+
     private interface S2 extends S {}
+
     private interface R2 extends R {}
+
     private interface S2R2 extends SR {}
+
     /**
      * This is an abstract value type because x does not throw RemoteException
      * (see Java-to-IDL 1.4 4.3.10 Mapping of non-conforming classes and interfaces)
      */
-    private interface S3 extends Serializable {void x();}
+    private interface S3 extends Serializable {
+        void x();
+    }
 
     private static class SI implements S {}
+
     private static class RI implements R {}
+
     private static class SRI implements SR {}
 
     private static class T extends Throwable {}
+
     private static class E extends Exception {}
+
     private static class E2 extends Error {}
 
     private interface I extends IDLEntity {}
+
     private static class IHelper {}
+
     private static class II implements IDLEntity {}
+
     private static class IIHelper {}
+
     private static class II2 implements I {}
+
     private static class II2Helper {}
 
-    private static enum N{NC1, NC2{}}
+    private static enum N {NC1, NC2 {}}
 
     @ParameterizedTest
     @ClassSource({
@@ -102,8 +119,7 @@ public class TypeDescriptorTest {
             RI.class, RemoteClassDescriptor.class,
             SRI.class, ValueDescriptor.class,
             SRI[].class, ValueArrayDescriptor.class,
-            Object[].class, ObjectArrayDescriptor.class
-    })
+            Object[].class, ObjectArrayDescriptor.class})
     public void testDescriptorType(Class<?> marshalledType, Class<?> descriptorType) {
         final TypeDescriptor descriptor = TypeRepository.get().getDescriptor(marshalledType);
         assertEquals(descriptor.getClass(), descriptorType);

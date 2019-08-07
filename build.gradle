@@ -8,6 +8,13 @@ buildscript {
   }
 }
 
+ext {
+  testCount = 0
+  successfulTestCount = 0
+  failedTestCount = 0
+  skippedTestCount = 0
+}
+
 /**
  * Compute a hash no longer than <code>length</code> for the git repository.
  * @param length
@@ -65,10 +72,12 @@ configure(testProjects) {
 
   // standardise the test deps here
   dependencies {
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.mockito:mockito-core:2.22.0'
-    testCompile "org.hamcrest:hamcrest:2.1"
-    testCompile "org.junit.jupiter:junit-jupiter:5.4.2"
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-core:2.22.0'
+    testImplementation "org.hamcrest:hamcrest:2.1"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.5.1"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:5.5.1"
+    testRuntime "org.junit.vintage:junit-vintage-engine:5.5.1"
   }
 
   if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
@@ -94,6 +103,7 @@ configure(testProjects) {
 
   // ensure tests run under $buildDir somewhere
   test {
+    useJUnitPlatform()
     workingDir = "$buildDir/testWorkingDir"
     doFirst {workingDir.mkdirs()}
     testLogging {
@@ -119,6 +129,10 @@ configure(testProjects) {
 
       afterSuite { desc, result ->
         if (!desc.parent) { // will match the outermost suite
+          rootProject.testCount += result.testCount
+          rootProject.successfulTestCount += result.successfulTestCount
+          rootProject.failedTestCount += result.failedTestCount
+          rootProject.skippedTestCount += result.skippedTestCount
           def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
           def startItem = '|  ', endItem = '  |'
           def repeatLength = startItem.length() + output.length() + endItem.length()
@@ -195,4 +209,13 @@ configure(shipProjects) {
   // because they don't exist yet when these lines are executed
   publish.dependsOn "publishMavenPublicationToMavenLocal"
   publish.dependsOn "publishToMavenLocal"
+}
+
+// Summarise the number of tests
+gradle.buildFinished {
+  if (testCount == 0) return
+  def output = "FINAL RESULT: ${failedTestCount ? "FAILURE" : "SUCCESS"} (${testCount} tests, ${successfulTestCount} successes, ${failedTestCount} failures, ${skippedTestCount} skipped)"
+  def startItem = '|  ', endItem = '  |'
+  def repeatLength = startItem.length() + output.length() + endItem.length()
+  println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
 }
