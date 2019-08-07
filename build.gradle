@@ -65,10 +65,12 @@ configure(testProjects) {
 
   // standardise the test deps here
   dependencies {
-    testCompile 'junit:junit:4.12'
-    testCompile 'org.mockito:mockito-core:2.22.0'
-    testCompile "org.hamcrest:hamcrest:2.1"
-    testCompile "org.junit.jupiter:junit-jupiter:5.4.2"
+    testImplementation 'junit:junit:4.12'
+    testImplementation 'org.mockito:mockito-core:2.22.0'
+    testImplementation "org.hamcrest:hamcrest:2.1"
+    testImplementation "org.junit.jupiter:junit-jupiter:5.5.1"
+    testRuntime "org.junit.jupiter:junit-jupiter-engine:5.5.1"
+    testRuntime "org.junit.vintage:junit-vintage-engine:5.5.1"
   }
 
   if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
@@ -94,6 +96,7 @@ configure(testProjects) {
 
   // ensure tests run under $buildDir somewhere
   test {
+    useJUnitPlatform()
     workingDir = "$buildDir/testWorkingDir"
     doFirst {workingDir.mkdirs()}
     testLogging {
