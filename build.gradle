@@ -8,6 +8,13 @@ buildscript {
   }
 }
 
+ext {
+  testCount = 0
+  successfulTestCount = 0
+  failedTestCount = 0
+  skippedTestCount = 0
+}
+
 /**
  * Compute a hash no longer than <code>length</code> for the git repository.
  * @param length
@@ -122,6 +129,10 @@ configure(testProjects) {
 
       afterSuite { desc, result ->
         if (!desc.parent) { // will match the outermost suite
+          rootProject.testCount += result.testCount
+          rootProject.successfulTestCount += result.successfulTestCount
+          rootProject.failedTestCount += result.failedTestCount
+          rootProject.skippedTestCount += result.skippedTestCount
           def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
           def startItem = '|  ', endItem = '  |'
           def repeatLength = startItem.length() + output.length() + endItem.length()
@@ -198,4 +209,13 @@ configure(shipProjects) {
   // because they don't exist yet when these lines are executed
   publish.dependsOn "publishMavenPublicationToMavenLocal"
   publish.dependsOn "publishToMavenLocal"
+}
+
+// Summarise the number of tests
+gradle.buildFinished {
+  if (testCount == 0) return
+  def output = "FINAL RESULT: ${failedTestCount ? "FAILURE" : "SUCCESS"} (${testCount} tests, ${successfulTestCount} successes, ${failedTestCount} failures, ${skippedTestCount} skipped)"
+  def startItem = '|  ', endItem = '  |'
+  def repeatLength = startItem.length() + output.length() + endItem.length()
+  println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
 }
