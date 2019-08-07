@@ -71,7 +71,7 @@ public @interface ClassSource {
             for (int i = 0; i < classes.length; i += paramCount) {
                 builder.add(Arrays.copyOfRange(classes, i, i + paramCount));
             }
-            return builder.build().map(classes -> Arguments.of(classes));
+            return builder.build().map(Arguments::of);
         }
     }
 }
