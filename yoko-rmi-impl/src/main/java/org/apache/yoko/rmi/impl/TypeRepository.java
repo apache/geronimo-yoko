@@ -18,6 +18,18 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.rmi.impl.TypeDescriptor.FullKey;
+import org.apache.yoko.rmi.impl.TypeDescriptor.SimpleKey;
+import org.apache.yoko.rmi.util.SearchKey;
+import org.apache.yoko.rmi.util.WeakKey;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.portable.IDLEntity;
+import org.omg.SendingContext.CodeBase;
+import org.omg.SendingContext.CodeBaseHelper;
+import org.omg.SendingContext.RunTime;
+
+import javax.rmi.CORBA.ClassDesc;
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.ref.Reference;
@@ -36,20 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import javax.rmi.CORBA.ClassDesc;
-
-import org.apache.yoko.rmi.util.SearchKey;
-import org.apache.yoko.rmi.util.WeakKey;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.ValueDefPackage.FullValueDescription;
-import org.omg.CORBA.portable.IDLEntity;
-import org.omg.SendingContext.CodeBase;
-import org.omg.SendingContext.CodeBaseHelper;
-import org.omg.SendingContext.RunTime;
-
-import org.apache.yoko.rmi.impl.TypeDescriptor.FullKey;
-import org.apache.yoko.rmi.impl.TypeDescriptor.SimpleKey;
 
 public class TypeRepository {
     static final Logger logger = Logger.getLogger(TypeRepository.class.getName());
@@ -212,10 +210,9 @@ public class TypeRepository {
             this.repIdDescriptors = repIdDescriptors;
         }
         @Override
-        protected TypeDescriptor computeValue(Class<?> type) {
+        protected synchronized TypeDescriptor computeValue(Class<?> type) {
             final TypeDescriptor desc = rawValues.get(type);
-            desc.init();
-            repIdDescriptors.put(desc);
+            if (desc.doInitOnce()) repIdDescriptors.put(desc);
             return desc;
         }
 
