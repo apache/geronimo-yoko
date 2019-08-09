@@ -78,6 +78,8 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         return desc;
     }
 
+    public Socket getSocket() {return socket;}
+
     public String addr() {return socket.getLocalAddress().getHostAddress();}
 
     public short port() {return (short)socket.getLocalPort();}
