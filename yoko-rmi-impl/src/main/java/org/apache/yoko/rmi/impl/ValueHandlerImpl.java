@@ -19,19 +19,28 @@
 package org.apache.yoko.rmi.impl;
 
 import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAPackage.ObjectNotActive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.omg.SendingContext.CodeBaseHelper;
 import org.omg.SendingContext.RunTime;
 
 import javax.rmi.CORBA.Stub;
+import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -75,17 +84,17 @@ public class ValueHandlerImpl implements ValueHandler {
         }
     }
 
-    public void writeValue(org.omg.CORBA.portable.OutputStream out,
-            java.io.Serializable val) {
+    public void writeValue(OutputStream out,
+                           Serializable val) {
         desc(val.getClass()).writeValue(out, val);
     }
 
     private final Map<InputStream, Map<Integer, Serializable>> streamMap = new HashMap<>();
 
-    public java.io.Serializable readValue(
-            org.omg.CORBA.portable.InputStream in, int offset,
-            java.lang.Class clz, java.lang.String repid,
-            org.omg.SendingContext.RunTime codebase) {
+    public Serializable readValue(
+            InputStream in, int offset,
+            Class clz, String repid,
+            RunTime codebase) {
         try {
             return readValue0(in, offset, clz, repid, codebase);
         } catch (Error | RuntimeException ex) {
@@ -94,11 +103,11 @@ public class ValueHandlerImpl implements ValueHandler {
         }
     }
 
-    private java.io.Serializable readValue0(
-            org.omg.CORBA.portable.InputStream in, int offset,
-            java.lang.Class clz, java.lang.String repid,
-            org.omg.SendingContext.RunTime codebase) {
-        java.io.Serializable obj = null;
+    private Serializable readValue0(
+            InputStream in, int offset,
+            Class clz, String repid,
+            RunTime codebase) {
+        Serializable obj = null;
         ValueDescriptor desc = repid == null ? desc(clz) : desc(clz, repid,
                 codebase);
 
@@ -136,43 +145,43 @@ public class ValueHandlerImpl implements ValueHandler {
         return obj;
     }
 
-    public java.lang.String getRMIRepositoryID(java.lang.Class clz) {
+    public String getRMIRepositoryID(Class clz) {
         return repo.getDescriptor(clz).getRepositoryID();
     }
 
     @Override
-    public boolean isCustomMarshaled(java.lang.Class clz) {
+    public boolean isCustomMarshaled(Class clz) {
         return desc(clz).isChunked();
     }
 
-    public synchronized org.omg.SendingContext.RunTime getRunTimeCodeBase() {
+    public synchronized RunTime getRunTimeCodeBase() {
         logger.finer("getRunTimeCodeBase");
 
         if (codeBase == null) {
             codeBase = new RunTimeCodeBaseImpl(this);
         }
 
-        org.omg.PortableServer.POA poa = RMIState.current().getPOA();
+        POA poa = RMIState.current().getPOA();
 
         try {
             org.omg.CORBA.Object ref = poa.servant_to_reference(codeBase);
-            return org.omg.SendingContext.CodeBaseHelper.narrow(ref);
-        } catch (org.omg.PortableServer.POAPackage.ServantNotActive ex) {
+            return CodeBaseHelper.narrow(ref);
+        } catch (ServantNotActive ex) {
             // ignore //
-        } catch (org.omg.PortableServer.POAPackage.WrongPolicy ex) {
-            throw (org.omg.CORBA.INTERNAL)new org.omg.CORBA.INTERNAL("should not happen").initCause(ex);
+        } catch (WrongPolicy ex) {
+            throw (INTERNAL)new INTERNAL("should not happen").initCause(ex);
         }
 
         try {
             byte[] id = poa.activate_object(codeBase);
             org.omg.CORBA.Object ref = poa.id_to_reference(id);
-            return org.omg.SendingContext.CodeBaseHelper.narrow(ref);
+            return CodeBaseHelper.narrow(ref);
         } catch (ServantAlreadyActive | ObjectNotActive | WrongPolicy ex) {
-            throw (org.omg.CORBA.INTERNAL)new org.omg.CORBA.INTERNAL("should not happen").initCause(ex);
+            throw (INTERNAL)new INTERNAL("should not happen").initCause(ex);
         }
     }
 
-    public java.io.Serializable writeReplace(java.io.Serializable val) {
+    public Serializable writeReplace(Serializable val) {
         if (val instanceof RMIStub) {
 
             RMIStub stub = (RMIStub) val;
@@ -188,11 +197,11 @@ public class ValueHandlerImpl implements ValueHandler {
                 return result;
             }
 
-            return new org.apache.yoko.rmi.impl.RMIPersistentStub(stub, type);
+            return new RMIPersistentStub(stub, type);
 
         } else {
             ValueDescriptor desc = desc(val.getClass());
-            java.io.Serializable result = desc.writeReplace(val);
+            Serializable result = desc.writeReplace(val);
             
             if (result != val) {
                 logger.finer("replacing with value of type " + val.getClass().getName() + " with " + result.getClass().getName());
@@ -238,7 +247,7 @@ public class ValueHandlerImpl implements ValueHandler {
 
             Class clz = getClassFromRepositoryID(id);
             if (clz != null) {
-                result = javax.rmi.CORBA.Util.getCodebase(clz);
+                result = Util.getCodebase(clz);
                 if (result == null) {
                     if (logger.isLoggable(Level.FINE)) {
                         logger.fine("failed to find implementation " + id);
@@ -281,7 +290,7 @@ public class ValueHandlerImpl implements ValueHandler {
 
                 if (clz == null) {
                     logger.warning("class not found: " + repId);
-                    throw new org.omg.CORBA.MARSHAL(0x4f4d0001,
+                    throw new MARSHAL(0x4f4d0001,
                             CompletionStatus.COMPLETED_MAYBE);
                 }
 
@@ -292,7 +301,7 @@ public class ValueHandlerImpl implements ValueHandler {
         } catch (Throwable ex) {
             logger.log(Level.WARNING, "exception in meta", ex);
 
-            throw (org.omg.CORBA.OBJECT_NOT_EXIST)new org.omg.CORBA.OBJECT_NOT_EXIST()
+            throw (OBJECT_NOT_EXIST)new OBJECT_NOT_EXIST()
                 .initCause(ex);
         }
     }
@@ -307,7 +316,7 @@ public class ValueHandlerImpl implements ValueHandler {
             Class[] ifaces = clz.getInterfaces();
             Class superClz = clz.getSuperclass();
 
-            java.util.ArrayList supers = new java.util.ArrayList();
+            ArrayList supers = new ArrayList();
 
             if (superClz != Object.class) {
                 addIfRMIClass(supers, superClz);
@@ -334,7 +343,7 @@ public class ValueHandlerImpl implements ValueHandler {
         }
     }
 
-    private void addIfRMIClass(java.util.List list, Class clz) {
+    private void addIfRMIClass(List list, Class clz) {
         TypeDescriptor desc = repo.getDescriptor(clz);
 
         if (desc instanceof RemoteDescriptor)
