@@ -48,11 +48,11 @@ class Steward<A extends Annotation> implements CloseableResource {
         throw new Error(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
     }
 
-    static <T extends Steward> T getInstanceForContext(ExtensionContext ctx, Class<T> type, Function<Class<?>, T> constructor) {
+    static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
         return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
     }
 
-    final Optional<A> findAnnotation(AnnotatedElement elem){
+    private final Optional<A> findAnnotation(AnnotatedElement elem){
         return AnnotationSupport.findAnnotation(elem, annotationClass);
     }
 

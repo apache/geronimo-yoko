@@ -43,6 +43,7 @@ public @interface ConfigureServer {
     Class<? extends ServerPart> value();
     String name() default "server";
     boolean newProcess() default false;
+    String[] jvmArgs() default {};
     /**
      * Define the config for the ORB this server will use.
      */
@@ -57,6 +58,10 @@ class ServerSteward extends Steward<ConfigureServer> {
         super(ConfigureServer.class);
         this.config = getAnnotation(testClass);
         this.name = config.name();
+        // blow up if the config is bogus
+        if (config.newProcess()) return;
+        if (config.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
+                + " cannot include JVM arguments unless newProcess is set to true");
     }
 
     ServerSteward(ConfigureServer config, String name) {
@@ -72,7 +77,8 @@ class ServerSteward extends Steward<ConfigureServer> {
     void startServer(ExtensionContext ctx) {
         PartRunner runner = PartRunnerSteward.getPartRunner(ctx);
         // does this part run in a thread or a new process?
-        runner.useProcesses(config.newProcess());
+        if (config.newProcess()) runner.useNewJVMWhenForking(config.jvmArgs());
+        else runner.useNewThreadWhenForking();
         ServerPart.launch(runner, config.value(), this.name, props(config.orb()), args(config.orb()));
     }
 

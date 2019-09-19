@@ -88,7 +88,8 @@ public interface PartRunner {
      */
     Bus bus(String partName);
 
-    PartRunner useProcesses(boolean useProcesses);
+    PartRunner useNewJVMWhenForking(String...jvmArgs);
+    PartRunner useNewThreadWhenForking();
 
     PartRunner fork(String partName, TestPart part);
 
