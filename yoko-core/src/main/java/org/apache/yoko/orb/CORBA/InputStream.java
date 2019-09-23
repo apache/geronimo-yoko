@@ -841,6 +841,9 @@ final public class InputStream extends InputStreamWithOffsets {
         return _OB_readLongUnchecked();
     }
 
+    @Override
+    public final long position() { return readBuffer.getPosition(); }
+
     public int read_ulong() {
         return read_long();
     }

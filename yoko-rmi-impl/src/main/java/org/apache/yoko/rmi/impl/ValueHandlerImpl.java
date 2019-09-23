@@ -18,6 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.rmi.util.SerialFilterHelper;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
@@ -36,6 +37,8 @@ import org.omg.SendingContext.RunTime;
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
+import java.io.IOException;
+import java.io.InvalidClassException;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -52,6 +55,8 @@ public class ValueHandlerImpl implements ValueHandler {
     private final TypeRepository repo;
 
     private RunTimeCodeBaseImpl codeBase;
+
+    private int depth = 0;
 
     private ValueHandlerImpl() {
         this.repo = TypeRepository.get();
@@ -96,10 +101,14 @@ public class ValueHandlerImpl implements ValueHandler {
             Class clz, String repid,
             RunTime codebase) {
         try {
+            depth++;
+            SerialFilterHelper.checkInput(clz, depth, in);
             return readValue0(in, offset, clz, repid, codebase);
         } catch (Error | RuntimeException ex) {
             logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
             throw ex;
+        } finally {
+            depth--;
         }
     }
 

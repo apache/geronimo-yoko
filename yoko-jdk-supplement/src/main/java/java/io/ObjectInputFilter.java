@@ -14,23 +14,28 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.rmi.impl;
+package java.io;
 
-import org.omg.CORBA.portable.ValueInputStream;
-
-import java.io.Serializable;
-import java.util.Hashtable;
-import java.util.Map;
-
-public abstract class InputStreamWithOffsets extends org.omg.CORBA_2_3.portable.InputStream implements ValueInputStream {
-    private final Map<Integer, Serializable> offsetMap = new Hashtable<Integer, Serializable>(131);
-
-    public Map<Integer, Serializable> getOffsetMap() {
-        return offsetMap;
+/**
+ * This is a dummy class for java compiler older than java9.
+ * It can be removed once the minimum runtime level becomes java9.
+ */
+public interface ObjectInputFilter {
+    interface FilterInfo {
+        Class<?> serialClass();
+        long arrayLength();
+        long depth();
+        long references();
+        long streamBytes();
     }
 
-    /**
-     * @return the number of bytes read so far
-     */
-    public abstract long position();
+    class Config {
+        public static ObjectInputFilter getSerialFilter() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    enum Status {REJECTED}
+
+    Status checkInput(FilterInfo info);
 }
