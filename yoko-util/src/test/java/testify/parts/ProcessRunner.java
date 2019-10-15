@@ -17,8 +17,8 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.TypeRef;
 import testify.bus.InterProcessBus;
+import testify.bus.TypeRef;
 import testify.streams.BiStream;
 
 import java.io.IOError;
@@ -28,10 +28,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
-public enum ProcessRunner implements Runner<Process>{
-    SINGLETON
-    ;
+public class ProcessRunner implements Runner<Process>{
+    private final String[] jvmArgs;
+
+    public ProcessRunner(String...jvmArgs) {this.jvmArgs = jvmArgs;}
+
     private enum Part implements TypeRef<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
@@ -48,7 +51,7 @@ public enum ProcessRunner implements Runner<Process>{
     public Process fork(InterProcessBus centralBus, NamedPart part) {
         Bus bus = centralBus.forUser(part.name);
         bus.log("Starting child process");
-        final Process process = ProcessRunner.exec(part.name);
+        final Process process = exec(part.name);
         bus.log("Adding process to inter-process bus");
         centralBus.addProcess(part.name, process);
         bus.log("Serializing part for execution in remote process");
@@ -70,7 +73,7 @@ public enum ProcessRunner implements Runner<Process>{
         return !p.isAlive();
     }
 
-    static Process exec(String name) {
+    Process exec(String name) {
         final String pathToJava;
         try { pathToJava = Paths.get(System.getProperty("java.home"), "bin", "java").toRealPath().toString(); }
         catch (IOException e) { throw new IOError(e); }
@@ -93,6 +96,8 @@ public enum ProcessRunner implements Runner<Process>{
                 .mapKeys(k -> k.substring(prefix.length()))
                 .map((k, v) -> String.format("-D%s=%s", k, v))
                 .forEach(argList::add);
+        // Add any requested JVM arguments
+        Stream.of(jvmArgs).forEach(argList::add);
         // Add main class
         argList.add(ProcessRunner.class.getName());
         argList.add(name);

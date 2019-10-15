@@ -22,6 +22,7 @@ import testify.bus.LogLevel;
 import testify.bus.InterProcessBus;
 import testify.io.EasyCloseable;
 
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -54,6 +55,7 @@ class PartRunnerImpl implements PartRunner {
     { for (HookType ht: HookType.values()) hooks.put(ht, new ConcurrentLinkedDeque<>()); }
     private final Map<EasyCloseable, String> hookNames = new HashMap<>();
     private boolean useProcesses = false;
+    private String[] jvmArgs;
 
     @Override
     public Bus bus() {
@@ -64,11 +66,22 @@ class PartRunnerImpl implements PartRunner {
     public Bus bus(String partName) { return centralBus.forUser(partName); }
 
     @Override
-    public PartRunner useProcesses(boolean useProcesses) { this.useProcesses = useProcesses; return this; }
+    public PartRunner useNewJVMWhenForking(String... jvmArgs) {
+        this.useProcesses = true;
+        this.jvmArgs = jvmArgs;
+        return this;
+    }
+
+    @Override
+    public PartRunner useNewThreadWhenForking() {
+        this.useProcesses = false;
+        this.jvmArgs = null;
+        return this;
+    }
 
     @Override
     public PartRunner fork(String partName, TestPart part) {
-        final Runner<?> runner = useProcesses ? ProcessRunner.SINGLETON : ThreadRunner.SINGLETON;
+        final Runner<?> runner = useProcesses ? new ProcessRunner(jvmArgs) : ThreadRunner.SINGLETON;
         return fork(runner, partName, part);
     }
 
@@ -184,7 +197,7 @@ class PartRunnerImpl implements PartRunner {
         ;
         @SuppressWarnings("CodeBlock2Expr")
         public static void main(String[] args) throws Exception{
-            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
+            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
                 runner.fork("part1", bus -> {
                     bus.put("a", "Hello");
                     bus.global().get("b");
@@ -193,7 +206,7 @@ class PartRunnerImpl implements PartRunner {
                     bus.put("b", "Hello");
                 }).join();
             }
-            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useProcesses(true))) {
+            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
                 runner.enableLogging0(INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {

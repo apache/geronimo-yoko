@@ -30,7 +30,7 @@ def getGitHash(length) {
 }
 
 def testProjects = "osgi util rmi-impl core test".split(" ").collect{s->project(":yoko-" + s)}
-def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core".split(" ").collect{s->project(":yoko-" + s)}
+def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core jdk-supplement".split(" ").collect{s->project(":yoko-" + s)}
 
 /* Configuration for all projects (including this parent) */
 allprojects  {
