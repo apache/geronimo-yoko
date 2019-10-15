@@ -53,6 +53,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
             int result = in.read(core.data, position, available());
             if (result <= 0) return false;
             position += result;
+            assert position <= core.length;
             return true;
         } catch (InterruptedIOException ex) {
             position += ex.bytesTransferred;
@@ -64,6 +65,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
         final int length = available();
         source.read_octet_array(core.data, position, length);
         position += length;
+        assert position <= core.length;
         return this;
     }
 
@@ -72,30 +74,35 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
     }
 
     public WriteBuffer writeBytes(byte[] bytes, int offset, int length) {
-        System.arraycopy(bytes, 0, core.data, position, length);
+        System.arraycopy(bytes, offset, core.data, position, length);
         position += length;
+        assert position <= core.length;
         return this;
     }
 
     public WriteBuffer writeByte(int i) {
         core.data[position++] = (byte)i;
+        assert position <= core.length;
         return this;
     }
 
     public WriteBuffer writeByte(byte b) {
         core.data[position++] = b;
+        assert position <= core.length;
         return this;
     }
 
     public WriteBuffer writeChar(char value) {
         core.data[position++] = (byte) (value >> 010);
         core.data[position++] = (byte) (value >> 000);
+        assert position <= core.length;
         return this;
     }
 
     public WriteBuffer writeShort(short value) {
         core.data[position++] = (byte) (value >> 010);
         core.data[position++] = (byte) (value >> 000);
+        assert position <= core.length;
         return this;
     }
 
@@ -104,6 +111,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
         core.data[position++] = (byte) (value >> 020);
         core.data[position++] = (byte) (value >> 010);
         core.data[position++] = (byte) (value >> 000);
+        assert position <= core.length;
         return this;
     }
 
@@ -116,6 +124,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
         core.data[position++] = (byte) (value >> 020);
         core.data[position++] = (byte) (value >> 010);
         core.data[position++] = (byte) (value >> 000);
+        assert position <= core.length;
         return this;
     }
 
