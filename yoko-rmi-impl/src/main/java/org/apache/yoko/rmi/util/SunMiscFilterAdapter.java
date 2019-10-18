@@ -19,19 +19,28 @@ package org.apache.yoko.rmi.util;
 import org.apache.yoko.rmi.util.SerialFilterHelper.BaseFilterAdapter;
 import org.apache.yoko.rmi.util.SerialFilterHelper.BaseInfo;
 import org.apache.yoko.rmi.util.SunMiscFilterAdapter.Info;
-
 import sun.misc.ObjectInputFilter;
 import sun.misc.ObjectInputFilter.Config;
 import sun.misc.ObjectInputFilter.FilterInfo;
 import sun.misc.ObjectInputFilter.Status;
 
+import java.security.PrivilegedAction;
+
+import static java.security.AccessController.doPrivileged;
 import static sun.misc.ObjectInputFilter.Status.REJECTED;
 
 final class SunMiscFilterAdapter extends BaseFilterAdapter<ObjectInputFilter, Info, Status> {
     SunMiscFilterAdapter() { super(Config.getSerialFilter(), REJECTED); }
 
     @Override
-    Status checkInput(Info info) { return filter.checkInput(info); }
+    Status checkInput(final Info info) {
+        return doPrivileged(new PrivilegedAction<Status>() {
+            @Override
+            public Status run() {
+                return filter.checkInput(info);
+            }
+        });
+    }
 
     @Override
     Info makeInfo(Class<?> serialClass, long arrayLength, long depth, long references, long streamBytes) {
