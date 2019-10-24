@@ -1,8 +1,5 @@
 package org.apache.yoko;
 
-import static javax.rmi.PortableRemoteObject.narrow;
-
-import org.apache.yoko.orb.OBPortableServer.POAHelper;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,17 +9,23 @@ import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA.portable.ResponseHandler;
 import org.omg.CORBA_2_3.portable.InputStream;
-import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
 import org.omg.PortableServer.POAPackage.WrongPolicy;
-import test.util.MultiException;
-import test.util.Skellington;
+import testify.iiop.Skellington;
+import testify.util.MultiException;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import static javax.rmi.PortableRemoteObject.narrow;
 
 public class ConnectionCleanupTest {
     ORB serverORB;

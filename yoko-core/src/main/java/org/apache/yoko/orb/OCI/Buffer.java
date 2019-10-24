@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,157 +14,163 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.yoko.orb.OCI;
 
 import org.apache.yoko.orb.OB.IORUtil;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.NO_MEMORY;
 
-public final class Buffer {
-    private int max_; // The maximum size of the buffer
+import java.util.Arrays;
 
-    public byte[] data_; // The octet buffer
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
+import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
-    public int len_; // The requested size of the buffer
+/**
+ * A growable buffer for holding data as a byte array.
+ * This class serves as a factory for creating buffers for reading or writing.
+ * @param <T> the concrete child class
+ */
+@SuppressWarnings("unchecked")
+public abstract class Buffer<T extends Buffer> implements Cloneable {
+    public static ReadBuffer createReadBuffer(byte[] data) { return new ReadBuffer(new Core(data)); }
+    public static WriteBuffer createWriteBuffer() { return new WriteBuffer(new Core()); }
+    public static WriteBuffer createWriteBuffer(int initialBufferSize) { return new WriteBuffer(new Core(initialBufferSize)); }
 
-    public int pos_; // The position counter
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
-
-    public byte[] data() {
-        return data_;
-    }
-
-    public int length() {
-        return len_;
-    }
-
-    public int rest_length() {
-        return len_ - pos_;
-    }
-
-    public int pos() {
-        return pos_;
-    }
-
-    public void pos(int pos) {
-        pos_ = pos;
-    }
-
-    public void advance(int delta) {
-        pos_ += delta;
-    }
-
-    public boolean is_full() {
-        return pos_ >= len_;
-    }
-    
     /**
-     * Return the data in the buffer as a formatted string suitable for 
-     * logging. 
-     * 
-     * @return The string value of the data. 
+     * Holds the actual buffer data. Objects of this type are shared between potentially many read or write buffers.
+     * This class and its members have package visibility so that the child classes can access them, but note that the
+     * constructors are private. Instance objects should always be held in private fields to preserve encapsulation.
      */
-    public String dumpData() 
-    {
-        StringBuilder dump = new StringBuilder(); 
-        dump.append(String.format("Buffer pos=0x%x Buffer len=0x%x Remaining buffer data=%n%n", pos_, len_)); 
-        
-        org.apache.yoko.orb.OB.IORUtil.dump_octets(data_, pos_, rest_length(), dump); 
-        return dump.toString(); 
-    }
+    static final class Core {
+        byte[] data; // The octet core
+        int length; // The requested size of the core
 
-    // ------------------------------------------------------------------
-    // Additional Yoko specific functions
-    // ------------------------------------------------------------------
-
-    public void alloc(int len) {
-        max_ = len;
-        len_ = len;
-        try {
-            data_ = new byte[max_];
-        } catch (OutOfMemoryError ex) {
-            throw new org.omg.CORBA.NO_MEMORY(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeNoMemory(org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
+        /**
+         * Create a Core with initial length zero.
+         */
+        private Core() {
+            // since we expect a write operation to follow, allocate a small core up front
+            this(newBytes(16), 0);
         }
-        pos_ = 0;
-    }
 
-    public void realloc(int len) {
-        if (data_ == null)
-            alloc(len);
-        else {
-            org.apache.yoko.orb.OB.Assert._OB_assert(len >= len_);
-            if (len <= max_)
-                len_ = len;
-            else {
-                int newMax = len > 2 * max_ ? len : 2 * max_;
-                byte[] newData = null;
-                try {
-                    newData = new byte[newMax];
-                } catch (OutOfMemoryError ex) {
-                    throw new org.omg.CORBA.NO_MEMORY(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeNoMemory(org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
-                }
-                System.arraycopy(data_, 0, newData, 0, len_);
-                data_ = newData;
-                len_ = len;
-                max_ = newMax;
+        private Core(byte[] data) {
+            this(data, data.length);
+        }
+
+        /**
+         * Create a Core with <code>len</code> bytes available for writing.
+         */
+        private Core(int len) {
+            this(newBytes(len), len);
+        }
+
+        private Core(byte[] data, int len) {
+            this.data = data;
+            this.length = len;
+        }
+
+        /**
+         * Extend the current core.
+         * @param extra the number of additional bytes required beyond the end of the core.
+         * @return <code>true</code> iff an existing core was insufficient
+         */
+        boolean growBy(int extra) {
+            _OB_assert(extra >= 0);
+            length += extra;
+
+            // the existing core might be big enough
+            if (length <= data.length) {
+                return false;
             }
+            // ok, we need a bigger core
+            data = copyOf(data, computeNewBufferSize(length));
+            return true;
+        }
+
+        private int computeNewBufferSize(int len) {
+            // use an allocation threshold of 4 megabytes
+            final int MAX_OVERALLOC = 4 * 1024 * 1024;
+            // double the existing capacity, unless over a threshold
+            final int minAlloc = data.length + min(data.length, MAX_OVERALLOC);
+            // allow more if requested length is greater
+            return max(len, minAlloc);
+        }
+
+        boolean dataEquals(Core that) {
+            if (this == that) return true;
+            if (that == null) return false;
+            if (this.length != that.length) return false;
+            for (int i = 0; i < length; i++) if (this.data[i] != that.data[i]) return false;
+            return true;
+        }
+
+        void dumpTo(StringBuilder dump) {
+            IORUtil.dump_octets(data, 0, length, dump);
+        }
+
+        @Override
+        public String toString() {
+            return new ReadBuffer(this).dumpAllDataWithPosition();
         }
     }
 
-    public void data(byte[] data, int len) {
-        data_ = data;
-        len_ = len;
-        max_ = len;
-        pos_ = 0;
+    int position = 0;
+
+    public final boolean isComplete() { return position >= length(); }
+    public final int getPosition() { return position; }
+    public final int available() { return length() - position; }
+    public abstract int length();
+
+    public final T clone() {
+        try {
+            return (T)super.clone();
+        } catch (CloneNotSupportedException e) {
+            throw new INTERNAL(e.getMessage());
+        }
     }
 
-    public void consume(Buffer buf) {
-        data_ = buf.data_;
-        len_ = buf.len_;
-        max_ = buf.max_;
-        pos_ = buf.pos_;
-        buf.data_ = null;
-        buf.len_ = 0;
-        buf.max_ = 0;
-        buf.pos_ = 0;
+    public final boolean dataEquals(T that) {
+        if (this == that) return true;
+        if (that == null) return false;
+        return dataEquals0(that);
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
+    abstract boolean dataEquals0(T that);
 
-    public Buffer() {
+    public final String dumpPosition() {
+        return String.format("position=0x%x", position);
     }
 
-    public Buffer(byte[] data, int len) {
-        data_ = data;
-        len_ = len;
-        max_ = len;
-        pos_ = 0;
+    public final String dumpAllData() {
+        StringBuilder dump = new StringBuilder();
+        dump.append(String.format("Core len=0x%x All core data=%n%n", length()));
+        dumpData(dump);
+        return dump.toString();
     }
 
-    public Buffer(int len) {
-        alloc(len);
+    abstract void dumpData(StringBuilder dump);
+
+    public final T setPosition(int p) { position = p; return (T)this; }
+    public final T rewind(int n) { position -= n; return (T)this;}
+
+    static byte[] copyOf(byte[] data, int length) {
+        try {
+            return Arrays.copyOf(data, length);
+        } catch (OutOfMemoryError oom) {
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+        }
     }
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        int pos = pos_, len = len_;
-        IORUtil.dump_octets(data_, 0, pos, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", pos));
-        IORUtil.dump_octets(data_, pos, len_ - pos, sb);
-        return sb.toString();
+    private static byte[] newBytes(int len) {
+        try {
+            // allocate only multiples of 16 so we can pad without checking
+            return new byte[(len + 0xFF) & ~0xFF];
+        } catch (OutOfMemoryError oom) {
+            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+        }
     }
 }

@@ -16,37 +16,18 @@
  */
 
 package org.apache.yoko.orb.OB;
+
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow;
+import static org.apache.yoko.orb.OB.MinorCodes.describeDataConversion;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
 final class UTF8Reader extends CodeSetReader {
-    public char read_char(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        return utf8ToUnicode(in);
-    }
-
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        return utf8ToUnicode(in);
-    }
-
-    public int count_wchar(char first) {
-        if ((first & 0x80) == 0)
-            return 1;
-        else if ((first & 0xf8) == 0xc0)
-            return 2;
-        else if ((first & 0xf8) == 0xe0)
-            return 3;
-
-        throw new org.omg.CORBA.DATA_CONVERSION(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow),
-                org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-    }
-
-    private char utf8ToUnicode(org.apache.yoko.orb.CORBA.InputStream in)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        byte first = in.buf_.data_[in.buf_.pos_++];
+    public char read_char(ReadBuffer readBuffer) throws DATA_CONVERSION {
+        byte first = readBuffer.readByte();
 
         //
         // Direct mapping for characters < 0x80
@@ -63,40 +44,43 @@ final class UTF8Reader extends CodeSetReader {
             // 4 free bits
             value = (char) (first & 0x0f);
 
-            if ((in.buf_.data_[in.buf_.pos_] & 0xc0) != 0x80) {
-                throw new org.omg.CORBA.DATA_CONVERSION(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            if ((readBuffer.peekByte() & 0xc0) != 0x80) {
+                throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
             }
 
             value <<= 6;
-            value |= in.buf_.data_[in.buf_.pos_++] & 0x3f;
+            value |= readBuffer.readByte() & 0x3f;
         }
         //
         // 16 bit overflow
         //
         else {
-            throw new org.omg.CORBA.DATA_CONVERSION(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Overflow), MinorUTF8Overflow, COMPLETED_NO);
         }
 
-        if ((in.buf_.data_[in.buf_.pos_] & 0xc0) != 0x80) {
-            throw new org.omg.CORBA.DATA_CONVERSION(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeDataConversion(org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if ((readBuffer.peekByte() & 0xc0) != 0x80) {
+            throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Encoding), MinorUTF8Encoding, COMPLETED_NO);
         }
 
         value <<= 6;
-        value |= in.buf_.data_[in.buf_.pos_++] & 0x3f;
+        value |= readBuffer.readByte() & 0x3f;
 
         return value;
+    }
+
+    public char read_wchar(ReadBuffer readBuffer, int len) throws DATA_CONVERSION {
+        return read_char(readBuffer);
+    }
+
+    public int count_wchar(char first) {
+        if ((first & 0x80) == 0)
+            return 1;
+        else if ((first & 0xf8) == 0xc0)
+            return 2;
+        else if ((first & 0xf8) == 0xe0)
+            return 3;
+
+        throw new DATA_CONVERSION(describeDataConversion(MinorUTF8Overflow), MinorUTF8Overflow, COMPLETED_NO);
     }
 
     public void set_flags(int flags) {

@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,9 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package test.common;
 
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContextExt;
+import org.omg.CosNaming.NamingContextPackage.InvalidName;
+
+import javax.rmi.PortableRemoteObject;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
@@ -27,22 +35,14 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.rmi.Remote;
 
-import javax.rmi.PortableRemoteObject;
-
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.portable.IDLEntity;
-import org.omg.CosNaming.NameComponent;
-import org.omg.CosNaming.NamingContextExt;
-import org.omg.CosNaming.NamingContextPackage.InvalidName;
-
 public class TestBase {
-    public static org.omg.CORBA.TypeCode getOrigType(org.omg.CORBA.TypeCode tc) {
-        org.omg.CORBA.TypeCode result = tc;
+    public static TypeCode getOrigType(TypeCode tc) {
+        TypeCode result = tc;
 
         try {
-            while (result.kind() == org.omg.CORBA.TCKind.tk_alias)
+            while (result.kind() == TCKind.tk_alias)
                 result = result.content_type();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+        } catch (BadKind ex) {
             throw new AssertionError(ex);
         }
 
@@ -67,10 +67,10 @@ public class TestBase {
     protected static String[] readRef(BufferedReader reader, String[] refStrings) throws IOException {
         String line = reader.readLine();
         if (line == null) {
-            throw new RuntimeException("Unknown Server error");
-        } else if (!!!line.equals("ref:")) {
+            throw new RuntimeException("Unknown InsServer error");
+        } else if (!line.equals("ref:")) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
-                pw.println("Server error:");
+                pw.println("InsServer error:");
                 do {
                     pw.print('\t');
                     pw.println(line);
@@ -90,11 +90,6 @@ public class TestBase {
 
     @SuppressWarnings("unchecked")
     protected static<T extends Remote> T readRmiStub(ORB orb, BufferedReader reader, Class<T> type) throws ClassCastException, IOException {
-        return (T)PortableRemoteObject.narrow(readGenericStub(orb, reader), type);
-    }
-
-    @SuppressWarnings("unchecked")
-    protected static<T extends IDLEntity> T readIdlStub(ORB orb, BufferedReader reader, Class<T> type) throws ClassCastException, IOException {
         return (T)PortableRemoteObject.narrow(readGenericStub(orb, reader), type);
     }
 

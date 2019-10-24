@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -14,90 +14,87 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package org.apache.yoko.orb.OB;
 
-import java.io.Serializable;
-
-import javax.rmi.CORBA.ValueHandler;
-
-import org.apache.yoko.util.cmsf.RepIds;
+import org.apache.yoko.orb.CORBA.DataOutputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.cmsf.RepIds;
+import org.omg.CORBA.CustomMarshal;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.StringValueHelper;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.BoxedValueHelper;
 import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CORBA.portable.StreamableValue;
+import org.omg.CORBA.portable.ValueBase;
+
+import javax.rmi.CORBA.ValueHandler;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.Hashtable;
+import java.util.IdentityHashMap;
+
+import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.CORBA.TCKind._tk_string;
 
 final public class ValueWriter {
-    //
-    // The OutputStream
-    //
-    private org.apache.yoko.orb.CORBA.OutputStream out_;
 
-    //
-    // The Buffer
-    //
-    private org.apache.yoko.orb.OCI.Buffer buf_;
+    /** The OutputStream */
+    private final OutputStream out_;
 
-    //
-    // Are we currently writing chunks?
-    //
+    /** The Buffer */
+    private final WriteBuffer writeBuffer;
+
+    /** Are we currently writing chunks? */
     private boolean chunked_ = false;
 
-    //
-    // The nesting level of chunked valuetypes
-    //
+    /** The nesting level of chunked valuetypes */
     private int nestingLevel_ = 0;
 
-    //
-    // True if we need to start a new chunk before the next write to the
-    // output stream
-    //
+    /**
+     * True if we need to start a new chunk before the next write to the
+     * output stream
+     */
     private boolean needChunk_;
 
-    //
-    // The position in the buffer at which we need to patch the chunk size
-    //
+    /** The position in the buffer at which we need to patch the chunk size */
     private int chunkSizePos_;
 
-    //
-    // The position in the buffer of the last end tag
-    //
+    /** The position in the buffer of the last end tag */
     private int lastEndTagPos_;
 
-    //
-    // Keep track of the last end tag we've written (Java only)
-    //
+    /** Keep track of the last end tag we've written (Java only) */
     private int lastTag_ = 0;
 
-    //
-    // These members are needed for indirection in valuetype marshalling.
-    // instanceTable_ records the position at which a valuetype was
-    // marshalled. idTable_ records the position of a repository ID.
-    // idListTable_ records the position of a list of repository IDs.
-    //
-    private java.util.IdentityHashMap instanceTable_;
+    /** Record valuetype positions in stream */
+    private final IdentityHashMap<Serializable, Integer> instanceTable_;
 
-    private java.util.Hashtable idTable_;
+    /** Record repository ID positions in stream */
+    private final Hashtable<String, Integer> idTable_;
 
-    private java.util.Hashtable idListTable_;
-    private java.util.Hashtable codebaseTable_;
+    /** Record repository ID list positions in stream */
+    private final Hashtable<StringSeqHasher, Integer> idListTable_;
 
-	private ValueHandler valueHandler;
+    private final Hashtable<String, Integer> codebaseTable_;
 
-    //
-    // Helper class for using a String array as the key in a Hashtable
-    //
-    private class StringSeqHasher {
-        String[] seq_;
+    private ValueHandler valueHandler;
 
-        int hashCode_;
+    /** Helper class for using a String array as the key in a Hashtable */
+    private final class StringSeqHasher {
+        final String[] seq_;
+
+        final int hashCode_;
 
         StringSeqHasher(String[] seq) {
             seq_ = seq;
-
-            hashCode_ = 0;
-            for (int i = 0; i < seq.length; i++)
-                hashCode_ ^= seq[i].hashCode();
+            hashCode_ = Arrays.hashCode(seq);
         }
 
         public int hashCode() {
@@ -105,35 +102,27 @@ final public class ValueWriter {
         }
 
         public boolean equals(Object o) {
-            StringSeqHasher h = (StringSeqHasher) o;
-
-            if (h.seq_.length != seq_.length)
+            if (!!! (o instanceof StringSeqHasher))
                 return false;
 
-            for (int i = 0; i < h.seq_.length; i++)
-                if (!h.seq_[i].equals(seq_[i]))
-                    return false;
+            StringSeqHasher h = (StringSeqHasher) o;
 
-            return true;
+            return Arrays.equals(this.seq_, h.seq_);
         }
     }
 
-    // ------------------------------------------------------------------
-    // Private and protected methods
-    // ------------------------------------------------------------------
-
-    private boolean checkIndirection(java.io.Serializable value) {
-        Integer pos = (Integer) instanceTable_.get(value);
+    private boolean checkIndirection(Serializable value) {
+        Integer pos = instanceTable_.get(value);
         if (pos != null) {
             //
             // Write indirection
             //
             out_.write_long(-1);
-            int p = pos.intValue();
-            // Align
+            int p = pos;
+            // Align p on a four-byte boundary
             p += 3;
             p -= p & 0x3;
-            int off = p - buf_.pos_;
+            int off = p - writeBuffer.getPosition();
             out_.write_long(off);
             return true;
         }
@@ -144,56 +133,41 @@ final public class ValueWriter {
     private void beginChunk() {
         Assert._OB_assert(chunked_);
 
-        //
         // Write a placeholder for the chunk size
-        //
         out_.write_long(0);
 
-        //
         // Remember the position of the placeholder
-        //
-        chunkSizePos_ = buf_.pos_ - 4;
+        chunkSizePos_ = writeBuffer.getPosition() - 4;
     }
 
     private void endChunk() {
         Assert._OB_assert(chunked_);
 
-        //
-        // If chunkSizePos_ > 0, then there is a chunk whose size needs to
-        // be updated
-        //
+        // If chunkSizePos_ > 0, then there is a chunk whose size needs to be updated
         if (chunkSizePos_ > 0) {
-            //
             // Compute size of chunk
-            //
-            int size = buf_.pos_ - (chunkSizePos_ + 4);
+            int size = writeBuffer.getPosition() - (chunkSizePos_ + 4);
 
-            //
             // Update chunk size
-            //
-            int savePos = buf_.pos_;
-            buf_.pos_ = chunkSizePos_;
+            int savePos = writeBuffer.getPosition();
+            writeBuffer.setPosition(chunkSizePos_);
             out_.write_long(size);
-            buf_.pos_ = savePos;
+            writeBuffer.setPosition(savePos);
 
             chunkSizePos_ = 0;
         }
     }
 
-    private BoxedValueHelper getHelper(java.io.Serializable value,
-            org.omg.CORBA.TypeCode type) {
+    private BoxedValueHelper getHelper(Serializable value, TypeCode type) {
         BoxedValueHelper result = null;
 
-        Class helperClass = null;
+        Class<?> helperClass = null;
         final Class<?> valueClass = value.getClass();
 
         //Short-cuts
-        if (String.class == valueClass) {
-            return new WStringValueHelper();
-        } else if (!!!IDLEntity.class.isAssignableFrom(valueClass)) {
-            return null;
-        }
-        //
+        if (String.class == valueClass) return fastPathStringBoxHelper(type);
+        if (!!!IDLEntity.class.isAssignableFrom(valueClass)) return null;
+
         // First try constructing a class name based on the class of
         // the value. This will only work for primitive types, because
         // a distinct valuetype class is generated for boxed primitive
@@ -203,10 +177,9 @@ final public class ValueWriter {
         try {
             String name = value.getClass().getName() + "Helper";
             // get the appropriate class for the loading.
-            Class c = ProviderLocator.loadClass(name, value.getClass(), Thread.currentThread().getContextClassLoader());
-            if (BoxedValueHelper.class.isAssignableFrom(c))
-                helperClass = c;
-        } catch (ClassNotFoundException ex) {
+            Class<?> c = ProviderLocator.loadClass(name, value.getClass(), Thread.currentThread().getContextClassLoader());
+            if (BoxedValueHelper.class.isAssignableFrom(c)) helperClass = c;
+        } catch (ClassNotFoundException ignored) {
         }
 
         //
@@ -215,11 +188,10 @@ final public class ValueWriter {
         //
         if (helperClass == null && type != null) {
             try {
-                org.omg.CORBA.TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode
-                        ._OB_getOrigType(type);
+                TypeCode origType = org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType(type);
                 String id = origType.id();
                 helperClass = RepIds.query(id).suffix("Helper").toClass();
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+            } catch (BadKind ex) {
                 Assert._OB_assert(ex);
             }
         }
@@ -229,40 +201,51 @@ final public class ValueWriter {
         //
         if (helperClass != null) {
             try {
-                result = (BoxedValueHelper) helperClass.newInstance();
-            } catch (ClassCastException ex) {
-            } catch (InstantiationException ex) {
-            } catch (IllegalAccessException ex) {
+                result = (BoxedValueHelper)helperClass.newInstance();
+            } catch (ClassCastException | IllegalAccessException | InstantiationException ignored) {
             }
         }
 
         return result;
     }
 
+    private BoxedValueHelper fastPathStringBoxHelper(TypeCode type) {
+        // There are two ways we could have a string value:
+        // EITHER the boxed value is an IDL string
+        // OR the boxed value is a Java String.
+        // We can tell if it is an IDL String if the kind == _tk_string
+        try {
+            return (type.content_type().kind().value() == _tk_string) ? new StringValueHelper() : new WStringValueHelper();
+        } catch (NullPointerException|BadKind ignored) {
+            return new WStringValueHelper();
+        }
+
+    }
+
     // ------------------------------------------------------------------
     // Public methods
     // ------------------------------------------------------------------
 
-    public ValueWriter(org.apache.yoko.orb.CORBA.OutputStream out) {
-        out_ = out;
-        buf_ = out._OB_buffer();
-        chunked_ = false;
-        nestingLevel_ = 0;
-        needChunk_ = false;
-        chunkSizePos_ = 0;
-        lastEndTagPos_ = 0;
-        instanceTable_ = new java.util.IdentityHashMap(131);
-        idTable_ = new java.util.Hashtable(131);
-        idListTable_ = new java.util.Hashtable(131);
-        codebaseTable_ = new java.util.Hashtable(3);
+    public ValueWriter(OutputStream out, WriteBuffer writeBuffer) {
+        this.out_ = out;
+        this.writeBuffer = writeBuffer;
+        this.chunked_ = false;
+        this.nestingLevel_ = 0;
+        this.needChunk_ = false;
+        this.chunkSizePos_ = 0;
+        this.lastEndTagPos_ = 0;
+        this.instanceTable_ = new IdentityHashMap<>(131);
+        this.idTable_ = new Hashtable<>(131);
+        this.idListTable_ = new Hashtable<>(131);
+        this.codebaseTable_ = new Hashtable<>(3);
     }
 
-    public void writeValue(java.io.Serializable value, String id) {
+    public void writeValue(Serializable value, String id) {
         if (value == null)
             out_.write_long(0);
         else if (!checkIndirection(value)) {
-            boolean isStreamable = (value instanceof org.omg.CORBA.portable.StreamableValue);
-            boolean isCustom = (value instanceof org.omg.CORBA.CustomMarshal);
+            boolean isStreamable = (value instanceof StreamableValue);
+            boolean isCustom = (value instanceof CustomMarshal);
 
             //
             // if the repositoryId begins with "RMI:" we force the
@@ -285,14 +268,14 @@ final public class ValueWriter {
             if (!isStreamable && !isCustom) {
                 BoxedValueHelper helper = getHelper (value, null);
                 if (helper == null) {
-                    writeRMIValue (value, id);
+                    writeRMIValue (value);
                 } else {
                     writeValueBox (value, null, helper);
                 }
                 return;
             }
 
-            org.omg.CORBA.portable.ValueBase vb = (org.omg.CORBA.portable.ValueBase) value;
+            ValueBase vb = (ValueBase) value;
             String[] truncIds = vb._truncatable_ids();
             String valueId = truncIds[0];
             boolean isTruncatable = (truncIds.length > 1);
@@ -373,58 +356,58 @@ final public class ValueWriter {
             }
 
             int startPos = beginValue(tag, ids, null, chunked);
-            instanceTable_.put(value, new Integer(startPos));
+            instanceTable_.put(value, startPos);
 
             //
             // Marshal the value data
             //
             if (isStreamable) {
-                ((org.omg.CORBA.portable.StreamableValue) value)._write(out_);
+                ((StreamableValue) value)._write(out_);
             } else // must be custom
             {
-                org.omg.CORBA.DataOutputStream out = new org.apache.yoko.orb.CORBA.DataOutputStream(
+                org.omg.CORBA.DataOutputStream out = new DataOutputStream(
                         out_);
-                ((org.omg.CORBA.CustomMarshal) value).marshal(out);
+                ((CustomMarshal) value).marshal(out);
             }
 
             endValue();
         }
     }
 
-    private void writeRMIValue(Serializable value, String id) {
+    private void writeRMIValue(Serializable value) {
 
-    		// check if it is the null object
-    		if (value == null) {
-    			out_.write_long(0);
-    			return;
-    		}
+        // check if it is the null object
+        if (value == null) {
+            out_.write_long(0);
+            return;
+        }
 
-    		// check if this value has already been written
-    		if (checkIndirection(value)) {
-    			return;
-    		}
+        // check if this value has already been written
+        if (checkIndirection(value)) {
+            return;
+        }
 
-    		// special-case string
-    		if (value instanceof java.lang.String) {
-    			//out_._OB_align(4);
-    			int pos = out_._OB_pos();
-    			org.omg.CORBA.WStringValueHelper.write (out_, (String)value);
-    	        instanceTable_.put (value, new Integer (pos));
-    			return;
-    		}
+        // special-case string
+        if (value instanceof String) {
+            //out_._OB_align(4);
+            int pos = writeBuffer.getPosition();
+            WStringValueHelper.write (out_, (String)value);
+            instanceTable_.put (value, pos);
+            return;
+        }
 
-    		// get hold of the value handler
-    		if (valueHandler == null) {
-    	        valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
-    	    }
+        // get hold of the value handler
+        if (valueHandler == null) {
+            valueHandler = javax.rmi.CORBA.Util.createValueHandler ();
+        }
 
         //
         // Needs writeReplace?
         //
-        java.io.Serializable repValue
-            = valueHandler.writeReplace (value);
-        
-        java.io.Serializable originalValue = null; 
+        Serializable repValue
+                = valueHandler.writeReplace (value);
+
+        Serializable originalValue = null;
 
         //
         // Repeat base checks if value was replaced
@@ -440,20 +423,20 @@ final public class ValueWriter {
                 return;
             }
 
-            if (repValue instanceof java.lang.String) {
-    			int pos = out_._OB_pos();
-       			org.omg.CORBA.WStringValueHelper.write (out_, (String)repValue);
-                instanceTable_.put (repValue, new Integer (pos));
+            if (repValue instanceof String) {
+                int pos = writeBuffer.getPosition();
+                WStringValueHelper.write (out_, (String)repValue);
+                instanceTable_.put (repValue, pos);
                 // we record the original value position so that another attempt to write out 
                 // the original object will resolve to the same object. 
-                instanceTable_.put (value, new Integer (pos));
-       			return;
+                instanceTable_.put (value, pos);
+                return;
             }
             // save the original value because we want to record that object in the 
             // indirection table also, once we've established the offset position. 
-            originalValue = value; 
+            originalValue = value;
             value = repValue;
-            
+
         }
 
         //
@@ -482,19 +465,19 @@ final public class ValueWriter {
         boolean isChunked = valueHandler.isCustomMarshaled(clz);
 
         int pos = beginValue (tag, ids, codebase, isChunked);
-        instanceTable_.put (value, new Integer (pos));
+        instanceTable_.put (value, pos);
         // if this was replace via writeReplace, record the original 
         // value in the indirection table too. 
         if (originalValue != null) {
-            instanceTable_.put (originalValue, new Integer (pos));
+            instanceTable_.put (originalValue, pos);
         }
         valueHandler.writeValue (out_, value);
         endValue ();
-	}
+    }
 
-    public void writeValueBox(java.io.Serializable value,
-            org.omg.CORBA.TypeCode type,
-            org.omg.CORBA.portable.BoxedValueHelper helper) {
+    public void writeValueBox(Serializable value,
+                              TypeCode type,
+                              BoxedValueHelper helper) {
         if (value == null)
             out_.write_long(0);
         else if (!checkIndirection(value)) {
@@ -508,11 +491,7 @@ final public class ValueWriter {
             // Raise MARSHAL if no Helper was found
             //
             if (helper == null)
-                throw new org.omg.CORBA.MARSHAL(org.apache.yoko.orb.OB.MinorCodes
-                        .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory)
-                        + ": no helper for valuebox",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": no helper for valuebox", MinorNoValueFactory, COMPLETED_NO);
 
             //
             // Setup header
@@ -525,22 +504,22 @@ final public class ValueWriter {
             // Marshal value
             //
             int startPos = beginValue(tag, ids, null, false);
-            instanceTable_.put(value, new Integer(startPos));
+            instanceTable_.put(value, startPos);
             helper.write_value(out_, value);
             endValue();
         }
     }
 
-    public void writeAbstractInterface(java.lang.Object obj) {
+    public void writeAbstractInterface(Object obj) {
         if (obj != null) {
             if (obj instanceof org.omg.CORBA.Object) {
                 out_.write_boolean(true); // discriminator for objref
                 out_.write_Object((org.omg.CORBA.Object) obj);
-            } else if (obj instanceof java.io.Serializable) {
+            } else if (obj instanceof Serializable) {
                 out_.write_boolean(false); // discriminator for valuetype
-                writeValue((java.io.Serializable) obj, null);
+                writeValue((Serializable) obj, null);
             } else
-                throw new org.omg.CORBA.MARSHAL("Object of class " + obj.getClass().getName() 
+                throw new MARSHAL("Object of class " + obj.getClass().getName()
                         + " is not an object reference or valuetype");
         } else {
             //
@@ -574,21 +553,21 @@ final public class ValueWriter {
         //
 
         out_.write_long(tag);
-        int startPos = buf_.pos_ - 4; // start of value
+        int startPos = writeBuffer.getPosition() - 4; // start of value
 
         // write codebase if present
         if ((tag & 0x00000001) == 1) {
 
-        		// check for indirection of codebase
-        		Integer pos = (Integer)codebaseTable_.get(codebase);
-        		if (pos != null) {
-        			out_.write_long(-1);
-        			int off = pos.intValue() - buf_.pos_;
-        			out_.write_long(off);
-        		} else {
-        			codebaseTable_.put(codebase, new Integer(buf_.pos_));
-        			out_.write_string(codebase);
-        		}
+            // check for indirection of codebase
+            Integer pos = codebaseTable_.get(codebase);
+            if (pos != null) {
+                out_.write_long(-1);
+                int off = pos - writeBuffer.getPosition();
+                out_.write_long(off);
+            } else {
+                codebaseTable_.put(codebase, writeBuffer.getPosition());
+                out_.write_string(codebase);
+            }
         }
 
         if ((tag & 0x00000006) == 6) {
@@ -596,24 +575,24 @@ final public class ValueWriter {
             // Check for possible indirection of repository IDs
             //
             StringSeqHasher key = new StringSeqHasher(ids);
-            Integer pos = (Integer) idListTable_.get(key);
+            Integer pos = idListTable_.get(key);
             if (pos != null) {
                 //
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos.intValue() - buf_.pos_;
+                int off = pos - writeBuffer.getPosition();
                 out_.write_long(off);
             } else {
-                idListTable_.put(key, new Integer(buf_.pos_));
+                idListTable_.put(key, writeBuffer.getPosition());
                 out_.write_long(ids.length);
-                for (int i = 0; i < ids.length; i++) {
+                for (String id : ids) {
                     //
                     // Add this ID to the history list, if necessary
                     //
-                    if (!idTable_.containsKey(ids[i]))
-                        idTable_.put(ids[i], new Integer(buf_.pos_));
-                    out_.write_string(ids[i]);
+                    if (!idTable_.containsKey(id))
+                        idTable_.put(id, writeBuffer.getPosition());
+                    out_.write_string(id);
                 }
             }
         } else if ((tag & 0x00000006) == 2) {
@@ -623,19 +602,19 @@ final public class ValueWriter {
             // Check to see if we've already marshalled this repository ID,
             // and if so, we write an indirection marker
             //
-            Integer pos = (Integer) idTable_.get(ids[0]);
+            Integer pos = idTable_.get(ids[0]);
             if (pos != null) {
                 //
                 // Write indirection
                 //
                 out_.write_long(-1);
-                int off = pos.intValue() - buf_.pos_;
+                int off = pos - writeBuffer.getPosition();
                 out_.write_long(off);
             } else {
                 //
                 // Remember ID in history at current position
                 //
-                idTable_.put(ids[0], new Integer(buf_.pos_));
+                idTable_.put(ids[0], writeBuffer.getPosition());
                 out_.write_string(ids[0]);
             }
         }
@@ -658,12 +637,12 @@ final public class ValueWriter {
             // this value coterminates with a nested value, so we increment
             // the last end tag rather than write a new one
             //
-            if (lastEndTagPos_ > 0 && buf_.pos_ == lastEndTagPos_ + 4) {
+            if (lastEndTagPos_ > 0 && writeBuffer.getPosition() == lastEndTagPos_ + 4) {
                 //
                 // Increment last end tag
                 //
                 lastTag_++;
-                buf_.pos_ = lastEndTagPos_; // same as "buf_.pos_ -= 4;"
+                writeBuffer.setPosition(lastEndTagPos_); // same as "buf_.pos_ -= 4;"
                 out_.write_long(lastTag_);
             } else {
                 endChunk();
@@ -674,7 +653,7 @@ final public class ValueWriter {
                 lastTag_ = -nestingLevel_;
                 out_.write_long(lastTag_);
                 if (nestingLevel_ > 1)
-                    lastEndTagPos_ = buf_.pos_ - 4;
+                    lastEndTagPos_ = writeBuffer.getPosition() - 4;
             }
 
             //

@@ -17,22 +17,119 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-import java.util.logging.Level;
+import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.DispatchRequest_impl;
+import org.apache.yoko.orb.OB.DispatchStrategy;
+import org.apache.yoko.orb.OB.InitialServiceManager;
+import org.apache.yoko.orb.OB.LocationForward;
+import org.apache.yoko.orb.OB.MessageRoutingUtil;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ObjectKey;
+import org.apache.yoko.orb.OB.ObjectKeyData;
+import org.apache.yoko.orb.OB.PIManager;
+import org.apache.yoko.orb.OB.PIUpcall;
+import org.apache.yoko.orb.OB.PolicyFactoryManager;
+import org.apache.yoko.orb.OB.RecursiveMutex;
+import org.apache.yoko.orb.OB.RefCountPolicyList;
+import org.apache.yoko.orb.OB.UnknownExceptionInfo;
+import org.apache.yoko.orb.OB.UnknownExceptionInfo_impl;
+import org.apache.yoko.orb.OB.UnknownExceptionStrategy;
+import org.apache.yoko.orb.OB.Upcall;
+import org.apache.yoko.orb.OB.UpcallReturn;
+import org.apache.yoko.orb.OBMessageRouting.DecayPolicy_impl;
+import org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicy_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.PersistentORT_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.TransientORT_impl;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
+import org.apache.yoko.orb.PortableInterceptor.POAPolicyFactory_impl;
+import org.apache.yoko.orb.PortableServer.Current_impl;
+import org.apache.yoko.orb.PortableServer.IdAssignmentPolicy_impl;
+import org.apache.yoko.orb.PortableServer.IdUniquenessPolicy_impl;
+import org.apache.yoko.orb.PortableServer.ImplicitActivationPolicy_impl;
+import org.apache.yoko.orb.PortableServer.LifespanPolicy_impl;
+import org.apache.yoko.orb.PortableServer.RequestProcessingPolicy_impl;
+import org.apache.yoko.orb.PortableServer.ServantRetentionPolicy_impl;
+import org.apache.yoko.orb.PortableServer.ThreadPolicy_impl;
+import org.omg.BiDirPolicy.BOTH;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.IntHolder;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.OBJ_ADAPTER;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyError;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.CORBA_2_3.ORB;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHolder;
+import org.omg.IOP.TaggedProfile;
+import org.omg.MessageRouting.InvalidState;
+import org.omg.MessageRouting.Router;
+import org.omg.MessageRouting.RouterAdmin;
+import org.omg.MessageRouting.RouterListHolder;
+import org.omg.PortableInterceptor.IORInfo;
+import org.omg.PortableInterceptor.NON_EXISTENT;
+import org.omg.PortableInterceptor.ObjectReferenceFactory;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+import org.omg.PortableInterceptor.PolicyFactory;
+import org.omg.PortableServer.AdapterActivator;
+import org.omg.PortableServer.CurrentPackage.NoContext;
+import org.omg.PortableServer.ID_ASSIGNMENT_POLICY_ID;
+import org.omg.PortableServer.ID_UNIQUENESS_POLICY_ID;
+import org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID;
+import org.omg.PortableServer.IdAssignmentPolicy;
+import org.omg.PortableServer.IdAssignmentPolicyValue;
+import org.omg.PortableServer.IdUniquenessPolicy;
+import org.omg.PortableServer.IdUniquenessPolicyValue;
+import org.omg.PortableServer.ImplicitActivationPolicy;
+import org.omg.PortableServer.ImplicitActivationPolicyValue;
+import org.omg.PortableServer.LIFESPAN_POLICY_ID;
+import org.omg.PortableServer.LifespanPolicy;
+import org.omg.PortableServer.LifespanPolicyValue;
+import org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.AdapterNonExistent;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
+import org.omg.PortableServer.POAPackage.NoServant;
+import org.omg.PortableServer.POAPackage.ObjectAlreadyActive;
+import org.omg.PortableServer.POAPackage.ObjectNotActive;
+import org.omg.PortableServer.POAPackage.ServantAlreadyActive;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongAdapter;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
+import org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID;
+import org.omg.PortableServer.RequestProcessingPolicy;
+import org.omg.PortableServer.RequestProcessingPolicyValue;
+import org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID;
+import org.omg.PortableServer.Servant;
+import org.omg.PortableServer.ServantLocatorPackage.CookieHolder;
+import org.omg.PortableServer.ServantManager;
+import org.omg.PortableServer.ServantRetentionPolicy;
+import org.omg.PortableServer.ServantRetentionPolicyValue;
+import org.omg.PortableServer.THREAD_POLICY_ID;
+import org.omg.PortableServer.ThreadPolicy;
+import org.omg.PortableServer.ThreadPolicyValue;
+
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Vector;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OBPortableServer.DISPATCH_STRATEGY_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.DispatchStrategyPolicy;
-import org.apache.yoko.orb.OBPortableServer.INTERCEPTOR_CALL_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.POA;
-import org.apache.yoko.orb.OBPortableServer.POAManager;
-import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
-import org.apache.yoko.orb.OBPortableServer.POAManagerFactoryHelper;
-import org.apache.yoko.orb.OBPortableServer.POAManagerHelper;
-import org.apache.yoko.orb.OBPortableServer.SYNCHRONIZATION_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.SynchronizationPolicy;
-import org.apache.yoko.orb.OBPortableServer.SynchronizationPolicyValue;
-
-final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
+final public class POA_impl extends LocalObject implements POA {
     static final Logger logger = Logger.getLogger(POA_impl.class.getName());
     //
     // The ORB
@@ -42,7 +139,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // The ORBInstance object
     //
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    private ORBInstance orbInstance_;
 
     //
     // The name of this POA and the name of the root POA
@@ -92,7 +189,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // All children of this POA
     //
-    private java.util.Hashtable children_;
+    private Hashtable children_;
 
     //
     // My policies
@@ -113,15 +210,15 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // If this POA has the single thread policy set then this mutex is
     // used ensure this policy is met
     //
-    private org.apache.yoko.orb.OB.RecursiveMutex poaSyncMutex_ = new org.apache.yoko.orb.OB.RecursiveMutex();
+    private RecursiveMutex poaSyncMutex_ = new RecursiveMutex();
 
-    private org.apache.yoko.orb.OB.DispatchStrategy dispatchStrategy_;
+    private DispatchStrategy dispatchStrategy_;
 
     //
     // The Current implementation. The RootPOA is responsible for the
     // creation and deletion of the one and only PortableServer::Current.
     //
-    private org.apache.yoko.orb.PortableServer.Current_impl poaCurrent_;
+    private Current_impl poaCurrent_;
 
     //
     // The OCI::Current implementation. The RootPOA is responsible for
@@ -133,27 +230,27 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // This is the set of policies that are not POA policies and are
     // registered with a valid PolicyFactory
     //
-    private org.omg.CORBA.Policy[] rawPolicies_;
+    private Policy[] rawPolicies_;
 
     //
     // The primary, secondary and current ObjectReferenceTemplate
     //
-    private org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate_;
+    private ObjectReferenceTemplate adapterTemplate_;
 
-    private org.omg.PortableInterceptor.ObjectReferenceFactory currentFactory_;
+    private ObjectReferenceFactory currentFactory_;
 
-    private org.omg.PortableInterceptor.ObjectReferenceFactory ort_;
+    private ObjectReferenceFactory ort_;
 
     //
     // The IORInfo
     //
-    private org.omg.PortableInterceptor.IORInfo iorInfo_;
+    private IORInfo iorInfo_;
 
     //
     // The child ORTs required for adapterStateChange call when
     // POA is destroyed.
     //
-    private java.util.Vector childTemplates_;
+    private Vector childTemplates_;
 
     //
     // Should POA call AdapterStateChange when destroyed
@@ -167,7 +264,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Return the appropriate object reference template.
     //
-    private org.omg.PortableInterceptor.ObjectReferenceFactory ort() {
+    private ObjectReferenceFactory ort() {
         if (ort_ == null) {
             ort_ = current_factory();
             if (ort_ == null)
@@ -180,20 +277,20 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Given an object id create an object key
     //
     private byte[] createObjectKey(byte[] id) {
-        return org.apache.yoko.orb.OB.ObjectKey
-                .CreateObjectKey(new org.apache.yoko.orb.OB.ObjectKeyData(
+        return ObjectKey
+                .CreateObjectKey(new ObjectKeyData(
                         serverId_,
                         poaId_,
                         id,
-                        policies_.lifespanPolicy() == org.omg.PortableServer.LifespanPolicyValue.PERSISTENT,
+                        policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT,
                         poaCreateTime_));
     }
 
     //
     // Find the index of the given policy
     //
-    private boolean findPolicyIndex(org.omg.CORBA.Policy[] p, int type,
-            org.omg.CORBA.IntHolder i) {
+    private boolean findPolicyIndex(Policy[] p, int type,
+                                    IntHolder i) {
         for (i.value = 0; i.value < p.length; i.value++)
             if (p[i.value].policy_type() == type)
                 return true;
@@ -204,67 +301,67 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Validate a specific set of POA policies
     //
     private boolean validatePolicies(POAPolicies policies,
-            org.omg.CORBA.Policy[] policyList, org.omg.CORBA.IntHolder i) {
+            Policy[] policyList, IntHolder i) {
         //
         // NON_RETAIN requires either USE_DEFAULT_SERVANT or
         // USE_SERVANT_MANAGER
         //
-        if (policies.servantRetentionPolicy() == org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN
-                && policies.requestProcessingPolicy() != org.omg.PortableServer.RequestProcessingPolicyValue.USE_SERVANT_MANAGER
-                && policies.requestProcessingPolicy() != org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT) {
+        if (policies.servantRetentionPolicy() == ServantRetentionPolicyValue.NON_RETAIN
+                && policies.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_SERVANT_MANAGER
+                && policies.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT) {
             boolean ok = findPolicyIndex(policyList,
-                    org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID.value, i);
-            org.apache.yoko.orb.OB.Assert._OB_assert(ok);
+                    SERVANT_RETENTION_POLICY_ID.value, i);
+            Assert._OB_assert(ok);
             return false;
         }
 
         //
         // USE_ACTIVE_OBJECT_MAP_ONLY requires RETAIN
         //
-        if (policies.requestProcessingPolicy() == org.omg.PortableServer.RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY
-                && policies.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN) {
+        if (policies.requestProcessingPolicy() == RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY
+                && policies.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN) {
             //
             // One of the two must be present
             //
             boolean ok = findPolicyIndex(policyList,
-                    org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID.value, i);
+                    SERVANT_RETENTION_POLICY_ID.value, i);
             if (!ok)
                 ok = findPolicyIndex(
                         policyList,
-                        org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID.value,
+                        REQUEST_PROCESSING_POLICY_ID.value,
                         i);
-            org.apache.yoko.orb.OB.Assert._OB_assert(ok);
+            Assert._OB_assert(ok);
             return false;
         }
 
         //
         // USE_DEFAULT_SERVANT requires MULTIPLE_ID
         //
-        if (policies.requestProcessingPolicy() == org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
-                && policies.idUniquenessPolicy() != org.omg.PortableServer.IdUniquenessPolicyValue.MULTIPLE_ID) {
+        if (policies.requestProcessingPolicy() == RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
+                && policies.idUniquenessPolicy() != IdUniquenessPolicyValue.MULTIPLE_ID) {
             //
             // Since USE_DEFAULT_SERVANT, this must be present
             //
             boolean ok = findPolicyIndex(policyList,
-                    org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID.value,
+                    REQUEST_PROCESSING_POLICY_ID.value,
                     i);
-            org.apache.yoko.orb.OB.Assert._OB_assert(ok);
+            Assert._OB_assert(ok);
             return false;
         }
 
         //
         // IMPLICIT_ACTIVATION requires SYSTEM_ID and RETAIN
         //
-        if (policies.implicitActivationPolicy() == org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION
-                && policies.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN
-                && policies.idAssignmentPolicy() != org.omg.PortableServer.IdAssignmentPolicyValue.SYSTEM_ID) {
+        if (policies.implicitActivationPolicy() == ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION
+                && policies.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
+                && policies.idAssignmentPolicy() != IdAssignmentPolicyValue.SYSTEM_ID) {
             //
             // Since IMPLICIT_ACTIVATION , this must be present
             //
             boolean ok = findPolicyIndex(policyList,
-                    org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID.value,
+                    IMPLICIT_ACTIVATION_POLICY_ID.value,
                     i);
-            org.apache.yoko.orb.OB.Assert._OB_assert(ok);
+            Assert._OB_assert(ok);
             return false;
         }
 
@@ -274,12 +371,12 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Handle unknown exceptions
     //
-    private void handleUnknownException(org.apache.yoko.orb.OB.Upcall upcall,
-            Exception ex) {
-        org.apache.yoko.orb.OB.UnknownExceptionStrategy strategy = orbInstance_
+    private void handleUnknownException(Upcall upcall,
+                                        Exception ex) {
+        UnknownExceptionStrategy strategy = orbInstance_
                 .getUnknownExceptionStrategy();
 
-        org.apache.yoko.orb.OB.UnknownExceptionInfo info = new org.apache.yoko.orb.OB.UnknownExceptionInfo_impl(
+        UnknownExceptionInfo info = new UnknownExceptionInfo_impl(
                 upcall.operation(), upcall.responseExpected(), upcall
                         .transportInfo(), (RuntimeException) ex);
 
@@ -290,11 +387,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // Return CORBA::UNKNOWN if the strategy doesn't raise
             // an exception
             //
-            upcall.setSystemException(new org.omg.CORBA.UNKNOWN());
-        } catch (org.omg.CORBA.SystemException sysEx) {
+            upcall.setSystemException(new UNKNOWN());
+        } catch (SystemException sysEx) {
             upcall.setSystemException(sysEx);
         } catch (RuntimeException rex) {
-            upcall.setSystemException(new org.omg.CORBA.UNKNOWN());
+            upcall.setSystemException(new UNKNOWN());
         }
     }
 
@@ -314,7 +411,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             //
             if (parent_ != null) {
                 synchronized (parent_.children_) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(parent_.children_
+                    Assert._OB_assert(parent_.children_
                             .containsKey(name_));
                     parent_.children_.remove(name_);
                 }
@@ -334,14 +431,14 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // Call the adapter_state_change hook
             //
             if (callAdapterStateChange_) {
-                org.omg.PortableInterceptor.ObjectReferenceTemplate[] orts = new org.omg.PortableInterceptor.ObjectReferenceTemplate[childTemplates_
+                ObjectReferenceTemplate[] orts = new ObjectReferenceTemplate[childTemplates_
                         .size()];
                 childTemplates_.copyInto(orts);
 
-                org.apache.yoko.orb.OB.PIManager piManager = orbInstance_
+                PIManager piManager = orbInstance_
                         .getPIManager();
                 piManager.adapterStateChange(orts,
-                        org.omg.PortableInterceptor.NON_EXISTENT.value);
+                        NON_EXISTENT.value);
             }
 
             //
@@ -389,13 +486,13 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // TODO: It would be nicer if this didn't use CreateObjectKey
         //
         byte[] oid = new byte[0];
-        org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData(
+        ObjectKeyData data = new ObjectKeyData(
                 serverId_,
                 poaId_,
                 oid,
-                policies_.lifespanPolicy() == org.omg.PortableServer.LifespanPolicyValue.PERSISTENT,
+                policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT,
                 poaCreateTime_);
-        adapterId_ = org.apache.yoko.orb.OB.ObjectKey.CreateObjectKey(data);
+        adapterId_ = ObjectKey.CreateObjectKey(data);
 
         //
         // Setup the object-reference templates for this POA. This
@@ -403,14 +500,14 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // components, and after calling the components_established
         // interception point.
         //
-        org.apache.yoko.orb.OBPortableServer.POAManager_impl m = (org.apache.yoko.orb.OBPortableServer.POAManager_impl) manager_;
+        POAManager_impl m = (POAManager_impl) manager_;
 
-        org.apache.yoko.orb.OCI.Acceptor[] acceptors = m._OB_getAcceptors();
+        Acceptor[] acceptors = m._OB_getAcceptors();
 
         //
         // Create the IORInfo for this POA
         //
-        org.apache.yoko.orb.PortableInterceptor.IORInfo_impl iorInfoImpl = new org.apache.yoko.orb.PortableInterceptor.IORInfo_impl(
+        IORInfo_impl iorInfoImpl = new IORInfo_impl(
                 orbInstance_, acceptors, rawPolicies_, policies_, m._OB_getAdapterManagerId(), m
                         ._OB_getAdapterState());
         iorInfo_ = iorInfoImpl;
@@ -419,7 +516,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Establish the components to place in IORs generated by this
         // POA.
         //
-        org.apache.yoko.orb.OB.PIManager piManager = orbInstance_
+        PIManager piManager = orbInstance_
                 .getPIManager();
         piManager.establishComponents(iorInfo_);
 
@@ -427,11 +524,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Once the components have been established the IORTemplate can
         // be created for this POA.
         //
-        org.omg.IOP.IOR iorTemplate = new org.omg.IOP.IOR();
-        iorTemplate.profiles = new org.omg.IOP.TaggedProfile[0];
+        IOR iorTemplate = new IOR();
+        iorTemplate.profiles = new TaggedProfile[0];
         iorTemplate.type_id = new String();
 
-        org.omg.IOP.IORHolder iorH = new org.omg.IOP.IORHolder(iorTemplate);
+        IORHolder iorH = new IORHolder(iorTemplate);
         iorInfoImpl._OB_addComponents(iorH, m._OB_getGIOPVersion());
 
         //
@@ -441,11 +538,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         String orbId = orbInstance_.getOrbId();
         String serverId = orbInstance_.getServerId();
         logger.fine("POA " + name_ + " activated on ORB " + orbId + " and server " + serverId); 
-        if (policies_.lifespanPolicy() == org.omg.PortableServer.LifespanPolicyValue.PERSISTENT)
-            adapterTemplate_ = new org.apache.yoko.orb.OBPortableInterceptor.PersistentORT_impl(
+        if (policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT)
+            adapterTemplate_ = new PersistentORT_impl(
                     orbInstance_, serverId, orbId, poaId_, iorTemplate);
         else
-            adapterTemplate_ = new org.apache.yoko.orb.OBPortableInterceptor.TransientORT_impl(
+            adapterTemplate_ = new TransientORT_impl(
                     orbInstance_, serverId, orbId, poaId_, poaCreateTime_,
                     iorTemplate);
 
@@ -489,7 +586,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // Initialize the POA child hashtable
         //
-        children_ = new java.util.Hashtable(31);
+        children_ = new Hashtable(31);
 
         //
         // Initialize the dispatch strategy
@@ -510,11 +607,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Constructor for any POA other than the root
     //
     private POA_impl(org.omg.CORBA.ORB orb,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance, String serverId,
+            ORBInstance orbInstance, String serverId,
             String name, POA_impl parent, POAManager manager,
-            org.apache.yoko.orb.PortableServer.Current_impl poaCurrent,
+            Current_impl poaCurrent,
             org.apache.yoko.orb.OCI.Current_impl ociCurrent,
-            POAPolicies policies, org.omg.CORBA.Policy[] rawPolicies) {
+            POAPolicies policies, Policy[] rawPolicies) {
         orb_ = orb;
         orbInstance_ = orbInstance;
         serverId_ = serverId;
@@ -528,7 +625,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         adapterTemplate_ = null;
         currentFactory_ = null;
         ort_ = null;
-        childTemplates_ = new java.util.Vector();
+        childTemplates_ = new Vector();
         callAdapterStateChange_ = true;
         
         logger.fine("Creating POA " + name + " using manager " + manager.get_id()); 
@@ -536,7 +633,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // Set my POA id
         //
-        org.apache.yoko.orb.OB.Assert._OB_assert(parent != null);
+        Assert._OB_assert(parent != null);
         poaId_ = new String[parent.poaId_.length + 1];
         System.arraycopy(parent.poaId_, 0, poaId_, 0, parent.poaId_.length);
         poaId_[parent.poaId_.length] = name;
@@ -548,7 +645,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Constructor for the root POA
     //
     public POA_impl(org.omg.CORBA.ORB orb,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance, String name,
+            ORBInstance orbInstance, String name,
             POAManager manager) {
         orb_ = orb;
         orbInstance_ = orbInstance;
@@ -562,12 +659,12 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         adapterTemplate_ = null;
         currentFactory_ = null;
         ort_ = null;
-        childTemplates_ = new java.util.Vector();
+        childTemplates_ = new Vector();
         callAdapterStateChange_ = true;
 
-        org.omg.CORBA.Policy[] pl = new org.omg.CORBA.Policy[1];
-        pl[0] = new org.apache.yoko.orb.PortableServer.ImplicitActivationPolicy_impl(
-                org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
+        Policy[] pl = new Policy[1];
+        pl[0] = new ImplicitActivationPolicy_impl(
+                ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
 
         //
         // Create the policies_ member
@@ -577,39 +674,39 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // This is the default externally visible for the RootPOA
         //
-        rawPolicies_ = new org.omg.CORBA.Policy[7];
-        rawPolicies_[0] = new org.apache.yoko.orb.PortableServer.ThreadPolicy_impl(
-                org.omg.PortableServer.ThreadPolicyValue.ORB_CTRL_MODEL);
-        rawPolicies_[1] = new org.apache.yoko.orb.PortableServer.LifespanPolicy_impl(
-                org.omg.PortableServer.LifespanPolicyValue.TRANSIENT);
-        rawPolicies_[2] = new org.apache.yoko.orb.PortableServer.IdUniquenessPolicy_impl(
-                org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID);
-        rawPolicies_[3] = new org.apache.yoko.orb.PortableServer.IdAssignmentPolicy_impl(
-                org.omg.PortableServer.IdAssignmentPolicyValue.SYSTEM_ID);
-        rawPolicies_[4] = new org.apache.yoko.orb.PortableServer.ServantRetentionPolicy_impl(
-                org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN);
-        rawPolicies_[5] = new org.apache.yoko.orb.PortableServer.RequestProcessingPolicy_impl(
-                org.omg.PortableServer.RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY);
-        rawPolicies_[6] = new org.apache.yoko.orb.PortableServer.ImplicitActivationPolicy_impl(
-                org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
+        rawPolicies_ = new Policy[7];
+        rawPolicies_[0] = new ThreadPolicy_impl(
+                ThreadPolicyValue.ORB_CTRL_MODEL);
+        rawPolicies_[1] = new LifespanPolicy_impl(
+                LifespanPolicyValue.TRANSIENT);
+        rawPolicies_[2] = new IdUniquenessPolicy_impl(
+                IdUniquenessPolicyValue.UNIQUE_ID);
+        rawPolicies_[3] = new IdAssignmentPolicy_impl(
+                IdAssignmentPolicyValue.SYSTEM_ID);
+        rawPolicies_[4] = new ServantRetentionPolicy_impl(
+                ServantRetentionPolicyValue.RETAIN);
+        rawPolicies_[5] = new RequestProcessingPolicy_impl(
+                RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY);
+        rawPolicies_[6] = new ImplicitActivationPolicy_impl(
+                ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
 
         //
         // Create the POA and OCI Current implementation object
         //
-        poaCurrent_ = new org.apache.yoko.orb.PortableServer.Current_impl();
+        poaCurrent_ = new Current_impl();
         ociCurrent_ = new org.apache.yoko.orb.OCI.Current_impl();
 
         //
         // Register the POA::Current, and the OCI::Current classes with
         // the ORB
         //
-        org.apache.yoko.orb.OB.InitialServiceManager ism = orbInstance_
+        InitialServiceManager ism = orbInstance_
                 .getInitialServiceManager();
         try {
             ism.addInitialReference("POACurrent", poaCurrent_);
             ism.addInitialReference("OCICurrent", ociCurrent_);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InvalidName ex) {
+            Assert._OB_assert(ex);
         }
 
         //
@@ -624,7 +721,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     protected void finalize() throws Throwable {
-        org.apache.yoko.orb.OB.Assert._OB_assert(poaControl_.getDestroyed());
+        Assert._OB_assert(poaControl_.getDestroyed());
 
         super.finalize();
     }
@@ -635,16 +732,16 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public org.omg.PortableServer.POA create_POA(String adapter,
             org.omg.PortableServer.POAManager manager,
-            org.omg.CORBA.Policy[] rawPolicies)
-            throws org.omg.PortableServer.POAPackage.AdapterAlreadyExists,
-            org.omg.PortableServer.POAPackage.InvalidPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(adapter != null);
+            Policy[] rawPolicies)
+            throws AdapterAlreadyExists,
+            InvalidPolicy {
+        Assert._OB_assert(adapter != null);
 
         //
         // Has the POA been destroyed?
         //
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         
         logger.fine("POA " + name_ + " creating new POA with name " + adapter); 
@@ -653,9 +750,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Are the requested policies valid?
         //
         POAPolicies policies = new POAPolicies(orbInstance_, rawPolicies);
-        org.omg.CORBA.IntHolder idx = new org.omg.CORBA.IntHolder();
+        IntHolder idx = new IntHolder();
         if (!validatePolicies(policies, rawPolicies, idx))
-            throw new org.omg.PortableServer.POAPackage.InvalidPolicy(
+            throw new InvalidPolicy(
                     (short) idx.value);
 
         POA_impl child = null;
@@ -668,7 +765,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         synchronized (children_) {
             if (children_.containsKey(adapter)) {
-                throw new org.omg.PortableServer.POAPackage.AdapterAlreadyExists();
+                throw new AdapterAlreadyExists();
             }
 
             //
@@ -677,30 +774,30 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             POAManager obmanager = null;
             if (manager == null) {
                 try {
-                    org.apache.yoko.orb.OB.InitialServiceManager ism = orbInstance_
+                    InitialServiceManager ism = orbInstance_
                             .getInitialServiceManager();
                     POAManagerFactory factory = POAManagerFactoryHelper
                             .narrow(ism.resolveInitialReferences("POAManagerFactory"));
-                    org.omg.CORBA.Policy[] emptyPl = new org.omg.CORBA.Policy[0];
-                    obmanager = (org.apache.yoko.orb.OBPortableServer.POAManager) factory
+                    Policy[] emptyPl = new Policy[0];
+                    obmanager = (POAManager) factory
                             .create_POAManager(adapter, emptyPl);
-                } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-                } catch (org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                } catch (InvalidName ex) {
+                    Assert._OB_assert(ex);
+                } catch (ManagerAlreadyExists ex) {
+                    Assert._OB_assert(ex);
                 }
                 // catch(org.apache.yoko.orb.OCI.InvalidParam ex)
                 // {
                 // org.apache.yoko.orb.OB.Assert._OB_assert(ex);
                 // }
-                catch (org.omg.CORBA.PolicyError ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                catch (PolicyError ex) {
+                    Assert._OB_assert(ex);
                 }
             } else {
                 try {
                     obmanager = POAManagerHelper.narrow(manager);
-                } catch (org.omg.CORBA.BAD_PARAM ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                } catch (BAD_PARAM ex) {
+                    Assert._OB_assert(ex);
                 }
             }
 
@@ -711,16 +808,16 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                 child = new POA_impl(orb_, orbInstance_, serverId_, adapter,
                         this, obmanager, poaCurrent_, ociCurrent_, policies,
                         rawPolicies);
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 //
                 // If the creation of the POA fails and a new POAManager
                 // was created the deactivate the POAManager
                 //
                 if (manager == null) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(obmanager != null);
+                    Assert._OB_assert(obmanager != null);
                     try {
                         obmanager.deactivate(true, true);
-                    } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive e) {
+                    } catch (AdapterInactive e) {
                     }
                 }
                 throw ex;
@@ -736,11 +833,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public org.omg.PortableServer.POA find_POA(String adapter, boolean activate)
-            throws org.omg.PortableServer.POAPackage.AdapterNonExistent {
-        org.apache.yoko.orb.OB.Assert._OB_assert(adapter != null);
+            throws AdapterNonExistent {
+        Assert._OB_assert(adapter != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         
         logger.fine("POA " + name_ + " finding POA with name " + adapter); 
@@ -760,7 +857,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // will not get called.
         //
         if (!children_.containsKey(adapter) && activate) {
-            org.omg.PortableServer.AdapterActivator adapterActivator = adapterActivator_
+            AdapterActivator adapterActivator = adapterActivator_
                     .getAdapterActivator();
             if (adapterActivator != null) {
                 //
@@ -784,7 +881,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                 //
                 try {
                     check = adapterActivator.unknown_adapter(this, adapter);
-                } catch (org.omg.CORBA.SystemException ex) {
+                } catch (SystemException ex) {
                     //
                     // 11.3.3.2:
                     //
@@ -792,11 +889,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                     // will report an OBJ_ADAPTER system exception with
                     // standard minor code 1.
                     //
-                    throw new org.omg.CORBA.OBJ_ADAPTER(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeObjAdapter(org.apache.yoko.orb.OB.MinorCodes.MinorSystemExceptionInUnknownAdapter),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorSystemExceptionInUnknownAdapter,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new OBJ_ADAPTER(
+                            MinorCodes
+                                    .describeObjAdapter(MinorCodes.MinorSystemExceptionInUnknownAdapter),
+                            MinorCodes.MinorSystemExceptionInUnknownAdapter,
+                            CompletionStatus.COMPLETED_NO);
                 }
             }
         }
@@ -809,7 +906,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             poa = (org.omg.PortableServer.POA) children_.get(adapter);
 
         if (poa == null)
-            throw new org.omg.PortableServer.POAPackage.AdapterNonExistent();
+            throw new AdapterNonExistent();
 
         return poa;
     }
@@ -827,43 +924,43 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // already been destroyed
     //
 
-    public org.omg.PortableServer.ThreadPolicy create_thread_policy(
-            org.omg.PortableServer.ThreadPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.ThreadPolicy_impl(value);
+    public ThreadPolicy create_thread_policy(
+            ThreadPolicyValue value) {
+        return new ThreadPolicy_impl(value);
     }
 
-    public org.omg.PortableServer.LifespanPolicy create_lifespan_policy(
-            org.omg.PortableServer.LifespanPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.LifespanPolicy_impl(value);
+    public LifespanPolicy create_lifespan_policy(
+            LifespanPolicyValue value) {
+        return new LifespanPolicy_impl(value);
     }
 
-    public org.omg.PortableServer.IdUniquenessPolicy create_id_uniqueness_policy(
-            org.omg.PortableServer.IdUniquenessPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.IdUniquenessPolicy_impl(
+    public IdUniquenessPolicy create_id_uniqueness_policy(
+            IdUniquenessPolicyValue value) {
+        return new IdUniquenessPolicy_impl(
                 value);
     }
 
-    public org.omg.PortableServer.IdAssignmentPolicy create_id_assignment_policy(
-            org.omg.PortableServer.IdAssignmentPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.IdAssignmentPolicy_impl(
+    public IdAssignmentPolicy create_id_assignment_policy(
+            IdAssignmentPolicyValue value) {
+        return new IdAssignmentPolicy_impl(
                 value);
     }
 
-    public org.omg.PortableServer.ImplicitActivationPolicy create_implicit_activation_policy(
-            org.omg.PortableServer.ImplicitActivationPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.ImplicitActivationPolicy_impl(
+    public ImplicitActivationPolicy create_implicit_activation_policy(
+            ImplicitActivationPolicyValue value) {
+        return new ImplicitActivationPolicy_impl(
                 value);
     }
 
-    public org.omg.PortableServer.ServantRetentionPolicy create_servant_retention_policy(
-            org.omg.PortableServer.ServantRetentionPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.ServantRetentionPolicy_impl(
+    public ServantRetentionPolicy create_servant_retention_policy(
+            ServantRetentionPolicyValue value) {
+        return new ServantRetentionPolicy_impl(
                 value);
     }
 
-    public org.omg.PortableServer.RequestProcessingPolicy create_request_processing_policy(
-            org.omg.PortableServer.RequestProcessingPolicyValue value) {
-        return new org.apache.yoko.orb.PortableServer.RequestProcessingPolicy_impl(
+    public RequestProcessingPolicy create_request_processing_policy(
+            RequestProcessingPolicyValue value) {
+        return new RequestProcessingPolicy_impl(
                 value);
     }
 
@@ -873,7 +970,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public DispatchStrategyPolicy create_dispatch_strategy_policy(
-            org.apache.yoko.orb.OB.DispatchStrategy value) {
+            DispatchStrategy value) {
         return new DispatchStrategyPolicy_impl(value);
     }
 
@@ -883,7 +980,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public String the_name() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         return name_;
@@ -891,7 +988,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public org.omg.PortableServer.POA the_parent() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         return parent_;
@@ -899,7 +996,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public org.omg.PortableServer.POA[] the_children() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
@@ -907,8 +1004,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // this method call is in progress its necessary to check the
         // return value of Hashtable::get.
         //
-        java.util.Vector content = new java.util.Vector();
-        java.util.Enumeration e = children_.elements();
+        Vector content = new Vector();
+        Enumeration e = children_.elements();
         while (e.hasMoreElements()) {
             org.omg.PortableServer.POA child = (org.omg.PortableServer.POA) e.nextElement();
             if (child != null) {
@@ -923,7 +1020,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public org.omg.PortableServer.POAManager the_POAManager() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         return manager_;
@@ -933,38 +1030,38 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         return orbInstance_.getPOAManagerFactory();
     }
 
-    public org.omg.PortableServer.AdapterActivator the_activator() {
+    public AdapterActivator the_activator() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         return adapterActivator_.getAdapterActivator();
     }
 
-    public void the_activator(org.omg.PortableServer.AdapterActivator activator) {
+    public void the_activator(AdapterActivator activator) {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         
         adapterActivator_.setAdapterActivator(activator);
     }
 
-    public org.omg.CORBA.Policy[] the_policies() {
+    public Policy[] the_policies() {
         return policies_.recreate();
     }
 
-    public org.apache.yoko.orb.OB.DispatchStrategy the_dispatch_strategy() {
+    public DispatchStrategy the_dispatch_strategy() {
         return policies_.dispatchStrategyPolicy();
     }
 
-    public org.omg.PortableInterceptor.ObjectReferenceTemplate adapter_template() {
+    public ObjectReferenceTemplate adapter_template() {
         return adapterTemplate_;
     }
 
-    public org.omg.PortableInterceptor.ObjectReferenceFactory current_factory() {
+    public ObjectReferenceFactory current_factory() {
         if (iorInfo_ != null) {
             try {
-                return ((org.apache.yoko.orb.PortableInterceptor.IORInfo_impl) iorInfo_)
+                return ((IORInfo_impl) iorInfo_)
                         .current_factory();
             } catch (ClassCastException e) {
                 return iorInfo_.current_factory();
@@ -981,91 +1078,91 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Servant manager registration
     // ----------------------------------------------------------------------
 
-    public org.omg.PortableServer.ServantManager get_servant_manager()
-            throws org.omg.PortableServer.POAPackage.WrongPolicy {
+    public ServantManager get_servant_manager()
+            throws WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         ServantManagerStrategy servantManagerStrategy = servantLocationStrategy_
                 .getServantManagerStrategy();
 
         if (servantManagerStrategy == null) {
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+            throw new WrongPolicy();
         }
 
         return servantManagerStrategy.getServantManager();
     }
 
-    public void set_servant_manager(org.omg.PortableServer.ServantManager mgr)
-            throws org.omg.PortableServer.POAPackage.WrongPolicy {
+    public void set_servant_manager(ServantManager mgr)
+            throws WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         ServantManagerStrategy servantManagerStrategy = servantLocationStrategy_
                 .getServantManagerStrategy();
 
         if (servantManagerStrategy == null)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+            throw new WrongPolicy();
 
         servantManagerStrategy.setServantManager(mgr);
     }
 
-    public org.omg.PortableServer.Servant get_servant()
-            throws org.omg.PortableServer.POAPackage.NoServant,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
+    public Servant get_servant()
+            throws NoServant,
+            WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         DefaultServantHolder defaultServantHolder = servantLocationStrategy_
                 .getDefaultServantHolder();
 
         if (defaultServantHolder == null)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+            throw new WrongPolicy();
 
-        org.omg.PortableServer.Servant servant = defaultServantHolder
+        Servant servant = defaultServantHolder
                 .getDefaultServant();
 
         if (servant == null)
-            throw new org.omg.PortableServer.POAPackage.NoServant();
+            throw new NoServant();
         return servant;
     }
 
-    public void set_servant(org.omg.PortableServer.Servant servant)
-            throws org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
+    public void set_servant(Servant servant)
+            throws WrongPolicy {
+        Assert._OB_assert(servant != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         DefaultServantHolder defaultServantHolder = servantLocationStrategy_
                 .getDefaultServantHolder();
         if (defaultServantHolder == null)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+            throw new WrongPolicy();
 
-        ((org.omg.CORBA_2_3.ORB) orbInstance_.getORB()).set_delegate(servant);
+        ((ORB) orbInstance_.getORB()).set_delegate(servant);
 
         defaultServantHolder.setDefaultServant(servant);
     }
 
-    public byte[] activate_object(org.omg.PortableServer.Servant servant)
-            throws org.omg.PortableServer.POAPackage.ServantAlreadyActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
+    public byte[] activate_object(Servant servant)
+            throws ServantAlreadyActive,
+            WrongPolicy {
+        Assert._OB_assert(servant != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         byte[] oid = idGenerationStrategy_.createId();
 
         try {
             servantLocationStrategy_.activate(oid, servant);
-        } catch (org.omg.PortableServer.POAPackage.ObjectAlreadyActive ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex); // Should not
+        } catch (ObjectAlreadyActive ex) {
+            Assert._OB_assert(ex); // Should not
                                                                 // occur
         }
 
@@ -1076,22 +1173,22 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // Get the list of routers for this target
         //
-        org.omg.MessageRouting.RouterListHolder configRouterList = new org.omg.MessageRouting.RouterListHolder();
-        configRouterList.value = new org.omg.MessageRouting.Router[0];
-        org.apache.yoko.orb.OB.MessageRoutingUtil.getRouterListFromConfig(
+        RouterListHolder configRouterList = new RouterListHolder();
+        configRouterList.value = new Router[0];
+        MessageRoutingUtil.getRouterListFromConfig(
                 orbInstance_, configRouterList);
 
         int numRouters = configRouterList.value.length;
         for (int i = 0; i < numRouters; ++i) {
-            org.omg.MessageRouting.Router curRouter = configRouterList.value[i];
+            Router curRouter = configRouterList.value[i];
 
             //
             // Get the router admin
             //
-            org.omg.MessageRouting.RouterAdmin routerAdmin = null;
+            RouterAdmin routerAdmin = null;
             try {
                 routerAdmin = curRouter.admin();
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
             }
 
             //
@@ -1102,17 +1199,17 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                 org.omg.CORBA.Object dest;
                 try {
                     dest = id_to_reference(oid);
-                } catch (org.omg.PortableServer.POAPackage.ObjectNotActive ex) {
+                } catch (ObjectNotActive ex) {
                     break;
-                } catch (org.omg.PortableServer.POAPackage.WrongPolicy ex) {
+                } catch (WrongPolicy ex) {
                     break;
                 }
 
                 if (activate) {
-                    org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicy_impl retryPolicy = new org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicy_impl();
+                    ImmediateSuspendPolicy_impl retryPolicy = new ImmediateSuspendPolicy_impl();
 
                     int decaySeconds = 0;
-                    org.apache.yoko.orb.OBMessageRouting.DecayPolicy_impl decayPolicy = new org.apache.yoko.orb.OBMessageRouting.DecayPolicy_impl(
+                    DecayPolicy_impl decayPolicy = new DecayPolicy_impl(
                             decaySeconds);
 
                     //
@@ -1123,14 +1220,14 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                     try {
                         routerAdmin.register_destination(dest, false,
                                 retryPolicy, decayPolicy);
-                    } catch (org.omg.CORBA.SystemException ex) {
+                    } catch (SystemException ex) {
                     }
                 } else // deactivate
                 {
                     try {
                         routerAdmin.unregister_destination(dest);
-                    } catch (org.omg.MessageRouting.InvalidState ex) {
-                    } catch (org.omg.CORBA.SystemException ex) {
+                    } catch (InvalidState ex) {
+                    } catch (SystemException ex) {
                     }
                 }
             }
@@ -1138,27 +1235,27 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public void activate_object_with_id(byte[] oid,
-            org.omg.PortableServer.Servant servant)
-            throws org.omg.PortableServer.POAPackage.ServantAlreadyActive,
-            org.omg.PortableServer.POAPackage.ObjectAlreadyActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
+            Servant servant)
+            throws ServantAlreadyActive,
+            ObjectAlreadyActive,
+            WrongPolicy {
+        Assert._OB_assert(servant != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
         // Validate that the ObjectId is valid
         //
         if (!idGenerationStrategy_.isValid(oid))
-            throw new org.omg.CORBA.BAD_PARAM(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidObjectId)
+            throw new BAD_PARAM(
+                    MinorCodes
+                            .describeBadParam(MinorCodes.MinorInvalidObjectId)
                             + ": POA has SYSTEM_ID policy but the object ID was not "
                             + "generated by this POA",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidObjectId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    MinorCodes.MinorInvalidObjectId,
+                    CompletionStatus.COMPLETED_NO);
 
         servantLocationStrategy_.activate(oid, servant);
 
@@ -1169,10 +1266,10 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public void deactivate_object(byte[] oid)
-            throws org.omg.PortableServer.POAPackage.ObjectNotActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
+            throws ObjectNotActive,
+            WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         servantLocationStrategy_.deactivate(this, oid);
@@ -1184,11 +1281,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public org.omg.CORBA.Object create_reference(String intf)
-            throws org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(intf != null);
+            throws WrongPolicy {
+        Assert._OB_assert(intf != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         byte[] oid = idGenerationStrategy_.createId();
@@ -1196,33 +1293,33 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public org.omg.CORBA.Object create_reference_with_id(byte[] oid, String intf) {
-        org.apache.yoko.orb.OB.Assert._OB_assert(intf != null);
+        Assert._OB_assert(intf != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
         //
         // Validate that the ObjectId is valid
         //
         if (!idGenerationStrategy_.isValid(oid))
-            throw new org.omg.CORBA.BAD_PARAM(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidObjectId)
+            throw new BAD_PARAM(
+                    MinorCodes
+                            .describeBadParam(MinorCodes.MinorInvalidObjectId)
                             + ": POA has SYSTEM_ID policy but the object ID was not "
                             + "generated by this POA",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidObjectId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    MinorCodes.MinorInvalidObjectId,
+                    CompletionStatus.COMPLETED_NO);
 
         return ort().make_object(intf, oid);
     }
 
-    public byte[] servant_to_id(org.omg.PortableServer.Servant servant)
-            throws org.omg.PortableServer.POAPackage.ServantNotActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
+    public byte[] servant_to_id(Servant servant)
+            throws ServantNotActive,
+            WrongPolicy {
+        Assert._OB_assert(servant != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
@@ -1230,11 +1327,11 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // either the UNIQUE_ID policy or the IMPLICIT_ACTIVATION (w/
         // SYSTEM_ID) policies.
         //
-        if (policies_.requestProcessingPolicy() != org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
-                && (policies_.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN || (policies_
-                        .idUniquenessPolicy() != org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID && policies_
-                        .implicitActivationPolicy() != org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)))
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+        if (policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
+                && (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN || (policies_
+                        .idUniquenessPolicy() != IdUniquenessPolicyValue.UNIQUE_ID && policies_
+                        .implicitActivationPolicy() != ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)))
+            throw new WrongPolicy();
 
         byte[] oid = servantLocationStrategy_.servantToId(servant, poaCurrent_);
 
@@ -1243,13 +1340,13 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // If the POA doesn't have the IMPLICIT_ACTIVATION
             // (w/ SYSTEM_ID) then a ServantNotActive exception
             //
-            if (policies_.implicitActivationPolicy() != org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)
-                throw new org.omg.PortableServer.POAPackage.ServantNotActive();
+            if (policies_.implicitActivationPolicy() != ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)
+                throw new ServantNotActive();
 
             try {
                 oid = activate_object(servant);
-            } catch (org.omg.PortableServer.POAPackage.ServantAlreadyActive ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex); // Should
+            } catch (ServantAlreadyActive ex) {
+                Assert._OB_assert(ex); // Should
                                                                     // not occur
             }
         }
@@ -1258,13 +1355,13 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public org.omg.CORBA.Object servant_to_reference(
-            org.omg.PortableServer.Servant servant)
-            throws org.omg.PortableServer.POAPackage.ServantNotActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(servant != null);
+            Servant servant)
+            throws ServantNotActive,
+            WrongPolicy {
+        Assert._OB_assert(servant != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
@@ -1278,8 +1375,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                 byte[] oid = poaCurrent_.get_object_id();
                 String intf = servant._all_interfaces(this, oid)[0];
                 return ort().make_object(intf, oid);
-            } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (NoContext ex) {
+                Assert._OB_assert(ex);
             }
         }
 
@@ -1288,57 +1385,57 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         return create_reference_with_id(oid, intf);
     }
 
-    public org.omg.PortableServer.Servant reference_to_servant(
+    public Servant reference_to_servant(
             org.omg.CORBA.Object reference)
-            throws org.omg.PortableServer.POAPackage.ObjectNotActive,
-            org.omg.PortableServer.POAPackage.WrongAdapter,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(reference != null);
+            throws ObjectNotActive,
+            WrongAdapter,
+            WrongPolicy {
+        Assert._OB_assert(reference != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT
         // policy.
         //
-        if (policies_.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN
-                && policies_.requestProcessingPolicy() != org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
+                && policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
+            throw new WrongPolicy();
 
         byte[] oid = reference_to_id(reference);
 
-        org.omg.PortableServer.Servant servant = servantLocationStrategy_
+        Servant servant = servantLocationStrategy_
                 .idToServant(oid, true);
 
         if (servant == null)
-            throw new org.omg.PortableServer.POAPackage.ObjectNotActive();
+            throw new ObjectNotActive();
 
         return servant;
     }
 
     public byte[] reference_to_id(org.omg.CORBA.Object reference)
-            throws org.omg.PortableServer.POAPackage.WrongAdapter,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
-        org.apache.yoko.orb.OB.Assert._OB_assert(reference != null);
+            throws WrongAdapter,
+            WrongPolicy {
+        Assert._OB_assert(reference != null);
 
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
-        org.apache.yoko.orb.CORBA.Delegate d = (org.apache.yoko.orb.CORBA.Delegate) ((org.omg.CORBA.portable.ObjectImpl) reference)
+        Delegate d = (Delegate) ((ObjectImpl) reference)
                 ._get_delegate();
-        org.omg.IOP.IOR ior = d._OB_IOR();
+        IOR ior = d._OB_IOR();
 
         //
         // Extract the object key from the IOR of the object reference.
         //
-        org.apache.yoko.orb.OBPortableServer.POAManager_impl m = (org.apache.yoko.orb.OBPortableServer.POAManager_impl) manager_;
-        org.apache.yoko.orb.OCI.Acceptor[] acceptors = m._OB_getAcceptors();
+        POAManager_impl m = (POAManager_impl) manager_;
+        Acceptor[] acceptors = m._OB_getAcceptors();
 
         boolean local = false;
-        org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = null;
+        ProfileInfo[] profileInfos = null;
 
         for (int i = 0; i < acceptors.length && !local; i++) {
             profileInfos = acceptors[i].get_local_profiles(ior);
@@ -1354,56 +1451,56 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // Verify the poaIds are the same, have the persistency
             // values and the same create time if transient
             //
-            org.apache.yoko.orb.OB.ObjectKeyData keyData = new org.apache.yoko.orb.OB.ObjectKeyData();
-            if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(
+            ObjectKeyData keyData = new ObjectKeyData();
+            if (ObjectKey.ParseObjectKey(
                     profileInfos[0].key, keyData)
                     && _OB_poaMatches(keyData, true)) {
                 return keyData.oid;
             }
         }
 
-        throw new org.omg.PortableServer.POAPackage.WrongAdapter();
+        throw new WrongAdapter();
     }
 
-    public org.omg.PortableServer.Servant id_to_servant(byte[] oid)
-            throws org.omg.PortableServer.POAPackage.ObjectNotActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
+    public Servant id_to_servant(byte[] oid)
+            throws ObjectNotActive,
+            WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         //
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT policy.
         //
-        if (policies_.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN
-                && policies_.requestProcessingPolicy() != org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
+                && policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
+            throw new WrongPolicy();
 
-        org.omg.PortableServer.Servant servant = servantLocationStrategy_
+        Servant servant = servantLocationStrategy_
                 .idToServant(oid, true);
 
         if (servant == null)
-            throw new org.omg.PortableServer.POAPackage.ObjectNotActive();
+            throw new ObjectNotActive();
 
         return servant;
     }
 
     public org.omg.CORBA.Object id_to_reference(byte[] oid)
-            throws org.omg.PortableServer.POAPackage.ObjectNotActive,
-            org.omg.PortableServer.POAPackage.WrongPolicy {
+            throws ObjectNotActive,
+            WrongPolicy {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         // Requires the RETAIN policy
         //
-        if (policies_.servantRetentionPolicy() != org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN)
-            throw new org.omg.PortableServer.POAPackage.WrongPolicy();
+        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN)
+            throw new WrongPolicy();
 
-        org.omg.PortableServer.Servant servant = servantLocationStrategy_
+        Servant servant = servantLocationStrategy_
                 .idToServant(oid, false);
         if (servant == null)
-            throw new org.omg.PortableServer.POAPackage.ObjectNotActive();
+            throw new ObjectNotActive();
 
         String intf = servant._all_interfaces(this, oid)[0];
         return ort().make_object(intf, oid);
@@ -1411,7 +1508,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
 
     public byte[] id() {
         if (poaControl_.getDestroyed()) {
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
         return adapterId_;
@@ -1422,8 +1519,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // ----------------------------------------------------------------------
 
     public void _OB_preinvoke(String op, byte[] oid,
-            org.omg.PortableServer.Servant servant, java.lang.Object cookie,
-            org.apache.yoko.orb.OCI.TransportInfo info) {
+            Servant servant, Object cookie,
+            TransportInfo info) {
         //
         // preinvoke the servant location strategy
         //
@@ -1462,8 +1559,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     public void _OB_postinvoke() {
         byte[] oid = poaCurrent_._OB_getObjectId();
         String op = poaCurrent_._OB_getOp();
-        org.omg.PortableServer.Servant servant = poaCurrent_._OB_getServant();
-        java.lang.Object cookie = poaCurrent_._OB_getCookie();
+        Servant servant = poaCurrent_._OB_getServant();
+        Object cookie = poaCurrent_._OB_getCookie();
 
         //
         // Depending on the synchronization policy we have to unlock a
@@ -1501,18 +1598,18 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     void _OB_locateServant(byte[] oid)
-            throws org.apache.yoko.orb.OB.LocationForward {
-        org.omg.PortableServer.ServantLocatorPackage.CookieHolder cookieHolder = new org.omg.PortableServer.ServantLocatorPackage.CookieHolder();
+            throws LocationForward {
+        CookieHolder cookieHolder = new CookieHolder();
         String op = "_locate";
-        org.omg.PortableServer.Servant servant = servantLocationStrategy_
+        Servant servant = servantLocationStrategy_
                 .locate(oid, this, op, cookieHolder);
 
         if (servant == null)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeObjectNotExist(org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new OBJECT_NOT_EXIST(
+                    MinorCodes
+                            .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
+                    MinorCodes.MinorCannotDispatch,
+                    CompletionStatus.COMPLETED_NO);
 
         servantLocationStrategy_.preinvoke(oid);
         servantLocationStrategy_.postinvoke(oid, this, op, cookieHolder.value,
@@ -1522,74 +1619,57 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Create the upcall object for a method invocation
     //
-    org.apache.yoko.orb.OB.Upcall _OB_createUpcall(byte[] oid,
-            org.apache.yoko.orb.OB.UpcallReturn upcallReturn,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo, int requestId,
-            String op, org.apache.yoko.orb.CORBA.InputStream in,
-            org.omg.IOP.ServiceContext[] requestSCL)
-            throws org.apache.yoko.orb.OB.LocationForward {
-        org.apache.yoko.orb.OB.Upcall upcall = null;
-
-        //
+    Upcall _OB_createUpcall(byte[] oid,
+                            UpcallReturn upcallReturn,
+                            ProfileInfo profileInfo,
+                            TransportInfo transportInfo, int requestId,
+                            String op, InputStream in,
+                            ServiceContexts requestContexts) throws LocationForward {
         // Increment the outstanding request count
-        //
-        if (poaControl_.incrementRequestCount()) {
-            try {
-                //
-                // Create the upcall object
-                //
-                if (policies_.interceptorCallPolicy()) {
-                    org.apache.yoko.orb.OB.PIManager piManager = orbInstance_
-                            .getPIManager();
+        if (!poaControl_.incrementRequestCount()) {return null;}
 
-                    if (piManager.haveServerInterceptors()) {
-                        org.apache.yoko.orb.OB.PIUpcall piUpcall = new org.apache.yoko.orb.OB.PIUpcall(
-                                orbInstance_, upcallReturn, profileInfo,
-                                transportInfo, requestId, op, in, requestSCL,
-                                piManager);
-                        upcall = piUpcall;
+        final Upcall upcall;
 
-                        //
-                        // Call the receive_request_service_contexts
-                        // interception point
-                        //
-                        piUpcall.receiveRequestServiceContexts(rawPolicies_,
-                                adapterId_, oid, adapterTemplate_);
+            //
+            // Create the upcall object
+            //
+            if (policies_.interceptorCallPolicy()) {
+                PIManager piManager = orbInstance_.getPIManager();
 
-                        piUpcall.contextSwitch();
-                    } else {
-                        upcall = new org.apache.yoko.orb.OB.Upcall(
-                                orbInstance_, upcallReturn, profileInfo,
-                                transportInfo, requestId, op, in, requestSCL);
-                    }
+                if (piManager.haveServerInterceptors()) {
+                    PIUpcall piUpcall = new PIUpcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts, piManager);
+                    upcall = piUpcall;
+
+                    //
+                    // Call the receive_request_service_contexts
+                    // interception point
+                    //
+                    piUpcall.receiveRequestServiceContexts(rawPolicies_, adapterId_, oid, adapterTemplate_);
+
+                    piUpcall.contextSwitch();
                 } else {
-                    upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
-                            upcallReturn, profileInfo, transportInfo,
-                            requestId, op, in, requestSCL);
+                    upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                 }
+            } else {
+                upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
+            }
 
-                org.apache.yoko.orb.OB.DispatchRequest_impl dispatchRequestImpl = new org.apache.yoko.orb.OB.DispatchRequest_impl(
-                        this, oid, upcall);
-
+            try {
+                DispatchRequest_impl dispatchRequestImpl = new DispatchRequest_impl(this, oid, upcall);
                 upcall.setDispatchInfo(dispatchRequestImpl, dispatchStrategy_);
-            } catch (org.omg.CORBA.SystemException ex) {
+            } catch (SystemException ex) {
                 upcall.setSystemException(ex);
                 _OB_decrementRequestCount();
-            } catch (org.apache.yoko.orb.OB.LocationForward ex) {
-                upcall.setLocationForward(ex.ior, ex.perm);
-                _OB_decrementRequestCount();
             }
-        }
 
         //
         // If this POA has a BidirPolicy set to BOTH and we have
-        // received some listening points in the SCL (which implies that
-        // the client has the BidirPolicy as well), then we must make
-        // sure to map these in the transportInfo structure
+        // received some listening points in the service context
+        // (implying the client has the BidirPolicy as well),
+        // then we must map these in the transportInfo structure
         //
-        if (upcall != null)
-            _OB_handleBidirSCL(transportInfo, requestSCL);
+        if (upcall != null) _OB_handleBidirContext(transportInfo, requestContexts);
+
 
         return upcall;
     }
@@ -1597,7 +1677,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Dispatch a method invocation
     //
-    public void _OB_dispatch(byte[] oid, org.apache.yoko.orb.OB.Upcall upcall) {
+    public void _OB_dispatch(byte[] oid, Upcall upcall) {
         String op = upcall.operation();
 
         //
@@ -1613,15 +1693,15 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             // Locating a servant can throw LocationForward and
             // SystemException errors
             //
-            org.omg.PortableServer.ServantLocatorPackage.CookieHolder cookieHolder = new org.omg.PortableServer.ServantLocatorPackage.CookieHolder();
-            org.omg.PortableServer.Servant servant = servantLocationStrategy_
+            CookieHolder cookieHolder = new CookieHolder();
+            Servant servant = servantLocationStrategy_
                     .locate(oid, this, op, cookieHolder);
 
             //
             // If there is a servant then dispatch the request
             //
             if (servant != null) {
-                org.apache.yoko.orb.OCI.TransportInfo transportInfo = upcall
+                TransportInfo transportInfo = upcall
                         .transportInfo();
 
                 //
@@ -1656,25 +1736,25 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
                 upcall.preUnmarshal();
                 upcall.postUnmarshal();
                 upcall.postinvoke();
-                org.omg.CORBA.portable.OutputStream out = upcall.preMarshal();
+                OutputStream out = upcall.preMarshal();
                 out.write_boolean(true);
                 upcall.postMarshal();
             } else {
                 upcall
-                        .setSystemException(new org.omg.CORBA.OBJECT_NOT_EXIST(
-                                org.apache.yoko.orb.OB.MinorCodes
-                                        .describeObjectNotExist(org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch),
-                                org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch,
-                                org.omg.CORBA.CompletionStatus.COMPLETED_NO));
+                        .setSystemException(new OBJECT_NOT_EXIST(
+                                MinorCodes
+                                        .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
+                                MinorCodes.MinorCannotDispatch,
+                                CompletionStatus.COMPLETED_NO));
             }
-        } catch (org.apache.yoko.orb.OB.LocationForward ex) {
+        } catch (LocationForward ex) {
             upcall.setLocationForward(ex.ior, ex.perm);
         }
         /*
          * This can't happen in Java catch(org.omg.CORBA.UserException ex) {
          * upcall.setUserException(ex); }
          */
-        catch (org.omg.CORBA.SystemException ex) {
+        catch (SystemException ex) {
             upcall.setSystemException(ex);
         } catch (Exception ex) {
             handleUnknownException(upcall, ex);
@@ -1696,13 +1776,13 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     DirectServant _OB_getDirectServant(byte[] oid,
-            org.apache.yoko.orb.OB.RefCountPolicyList policies)
-            throws org.apache.yoko.orb.OB.LocationForward {
+            RefCountPolicyList policies)
+            throws LocationForward {
         return servantLocationStrategy_.createDirectStubImpl(this, oid,
                 policies);
     }
 
-    public org.apache.yoko.orb.PortableServer.Current_impl _OB_POACurrent() {
+    public Current_impl _OB_POACurrent() {
         return poaCurrent_;
     }
 
@@ -1713,8 +1793,8 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Determine if this POA matches the provided object key
     //
-    boolean _OB_poaMatches(org.apache.yoko.orb.OB.ObjectKeyData data,
-            boolean full) {
+    boolean _OB_poaMatches(ObjectKeyData data,
+                           boolean full) {
         if (full) {
             //
             // Check server id
@@ -1740,7 +1820,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         // Is the POA persistent? If so then the ObjectKeyData must be
         // persistent.
         //
-        if (policies_.lifespanPolicy() == org.omg.PortableServer.LifespanPolicyValue.PERSISTENT)
+        if (policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT)
             return data.persistent;
 
         //
@@ -1778,7 +1858,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     //
     // Get the ORBInstance object
     //
-    public org.apache.yoko.orb.OB.ORBInstance _OB_ORBInstance() {
+    public ORBInstance _OB_ORBInstance() {
         return orbInstance_;
     }
 
@@ -1786,28 +1866,28 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     // Add the policy factory for the POA Policies
     //
     public void _OB_addPolicyFactory() {
-        org.apache.yoko.orb.OB.PolicyFactoryManager pfm = orbInstance_
+        PolicyFactoryManager pfm = orbInstance_
                 .getPolicyFactoryManager();
 
-        org.omg.PortableInterceptor.PolicyFactory factory = new org.apache.yoko.orb.PortableInterceptor.POAPolicyFactory_impl();
+        PolicyFactory factory = new POAPolicyFactory_impl();
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.THREAD_POLICY_ID.value, factory, true);
+                THREAD_POLICY_ID.value, factory, true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.LIFESPAN_POLICY_ID.value, factory, true);
+                LIFESPAN_POLICY_ID.value, factory, true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.ID_UNIQUENESS_POLICY_ID.value, factory,
+                ID_UNIQUENESS_POLICY_ID.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.ID_ASSIGNMENT_POLICY_ID.value, factory,
+                ID_ASSIGNMENT_POLICY_ID.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID.value,
+                IMPLICIT_ACTIVATION_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID.value,
+                SERVANT_RETENTION_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.PortableServer.REQUEST_PROCESSING_POLICY_ID.value,
+                REQUEST_PROCESSING_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(SYNCHRONIZATION_POLICY_ID.value, factory,
                 true);
@@ -1826,9 +1906,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         //
         // Recursively etherealize children's POA
         //
-        java.util.Enumeration e = children_.elements();
+        Enumeration e = children_.elements();
         while (e.hasMoreElements()) {
-            org.apache.yoko.orb.OBPortableServer.POA_impl child = (org.apache.yoko.orb.OBPortableServer.POA_impl) e
+            POA_impl child = (POA_impl) e
                     .nextElement();
             child._OB_etherealize(manager);
         }
@@ -1843,7 +1923,7 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
     }
 
     public void _OB_destroy(boolean etherealize, boolean waitForCompletion,
-            java.util.Vector templates) {
+            Vector templates) {
         logger.fine("Destroying POA " + name_); 
         if (poaControl_.getDestroyed()) {
             // this is not an error on other ORBS. 
@@ -1860,10 +1940,10 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             try {
                 POA_impl p = (POA_impl) poaCurrent_.get_POA();
                 if (p._OB_ORBInstance() == orbInstance_) {
-                    throw new org.omg.CORBA.BAD_INV_ORDER(
+                    throw new BAD_INV_ORDER(
                             "Invocation in progress");
                 }
-            } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
+            } catch (NoContext ex) {
             }
         }
 
@@ -1886,9 +1966,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
             //
             // Recursively destroy all children
             //
-            java.util.Enumeration e = children_.elements();
+            Enumeration e = children_.elements();
             while (e.hasMoreElements()) {
-                org.apache.yoko.orb.OBPortableServer.POA_impl child = (org.apache.yoko.orb.OBPortableServer.POA_impl) e
+                POA_impl child = (POA_impl) e
                         .nextElement();
                 if (child != null) {
                     if (templates == null)
@@ -1927,15 +2007,9 @@ final public class POA_impl extends org.omg.CORBA.LocalObject implements POA {
         }
     }
 
-    private void _OB_handleBidirSCL(
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo,
-            org.omg.IOP.ServiceContext[] contexts) {
-        if (policies_.bidirPolicy() != org.omg.BiDirPolicy.BOTH.value) {
-            return;
-        }
-
-        if (transportInfo != null) {
-            transportInfo.handle_service_contexts(contexts);
-        }
+    private void _OB_handleBidirContext(TransportInfo transportInfo, ServiceContexts contexts) {
+        if (policies_.bidirPolicy() != BOTH.value) return;
+        if (transportInfo == null) return;
+        transportInfo.handle_service_contexts(contexts);
     }
 }

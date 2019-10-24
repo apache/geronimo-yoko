@@ -19,7 +19,8 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
@@ -34,11 +35,24 @@ import org.omg.CSIIOP.TLS_SEC_TRANSHelper;
 import org.omg.CSIIOP.TransportAddress;
 import org.omg.IIOP.ProfileBody_1_0;
 import org.omg.IIOP.ProfileBody_1_0Helper;
-import org.omg.IOP.*;
+import org.omg.IIOP.ProfileBody_1_1;
+import org.omg.IIOP.ProfileBody_1_1Helper;
+import org.omg.IIOP.Version;
+import org.omg.IOP.Codec;
 import org.omg.IOP.CodecPackage.FormatMismatch;
 import org.omg.IOP.CodecPackage.TypeMismatch;
+import org.omg.IOP.IOR;
+import org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS;
+import org.omg.IOP.TAG_INTERNET_IOP;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedComponentHelper;
+import org.omg.IOP.TaggedProfile;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -47,29 +61,27 @@ final public class Util {
     static public IOR createIOR(String host, int port, String id, ProfileInfo profileInfo) {
         IOR ior = new IOR();
         ior.type_id = id;
-        ior.profiles = new org.omg.IOP.TaggedProfile[1];
-        ior.profiles[0] = new org.omg.IOP.TaggedProfile();
+        ior.profiles = new TaggedProfile[1];
+        ior.profiles[0] = new TaggedProfile();
         ior.profiles[0].tag = TAG_INTERNET_IOP.value;
 
         if (profileInfo.major == 1 && profileInfo.minor == 0) {
             ProfileBody_1_0 body = new ProfileBody_1_0();
-            body.iiop_version = new org.omg.IIOP.Version((byte) 1, (byte) 0);
+            body.iiop_version = new Version((byte) 1, (byte) 0);
             body.host = host;
             if (port >= 0x8000)
                 body.port = (short) (port - 0xffff - 1);
             else
                 body.port = (short) port;
             body.object_key = profileInfo.key;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            ProfileBody_1_0Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                ProfileBody_1_0Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         } else {
-            org.omg.IIOP.ProfileBody_1_1 body = new org.omg.IIOP.ProfileBody_1_1();
-            body.iiop_version = new org.omg.IIOP.Version(profileInfo.major,
+            ProfileBody_1_1 body = new ProfileBody_1_1();
+            body.iiop_version = new Version(profileInfo.major,
                     profileInfo.minor);
             body.host = host;
             if (port >= 0x8000)
@@ -78,13 +90,11 @@ final public class Util {
                 body.port = (short) port;
             body.object_key = profileInfo.key;
             body.components = profileInfo.components;
-            Buffer buf = new Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_writeEndian();
-            org.omg.IIOP.ProfileBody_1_1Helper.write(out, body);
-            ior.profiles[0].profile_data = new byte[buf.length()];
-            System.arraycopy(buf.data(), 0, ior.profiles[0].profile_data, 0,
-                    buf.length());
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                ProfileBody_1_1Helper.write(out, body);
+                ior.profiles[0].profile_data = out.copyWrittenBytes();
+            }
         }
 
         return ior;
@@ -100,12 +110,9 @@ final public class Util {
                 break;
 
         // TODO: Internal error?
-        org.apache.yoko.orb.OB.Assert._OB_assert(profile < ior.profiles.length);
+        Assert._OB_assert(profile < ior.profiles.length);
 
-        Buffer buf = new Buffer(
-                ior.profiles[profile].profile_data,
-                ior.profiles[profile].profile_data.length);
-        InputStream in = new InputStream(buf, 0, false, null, null);
+        InputStream in = new InputStream(ior.profiles[profile].profile_data);
         in._OB_readEndian();
         ProfileBody_1_0 body = ProfileBody_1_0Helper
                 .read(in);
@@ -131,43 +138,7 @@ final public class Util {
     }
 
     static public boolean hostMatch(String host1, String host2, boolean matchLoopback) {
-        //
-        // Direct host name comparison
-        //
-        if (!host1.equals(host2)) {
-            //
-            //
-            // Direct host name comparision failed - must look up
-            // addresses to be really sure if the hosts differ
-            //
-            try {
-                InetAddress addr1 = InetAddress.getByName(host1);
-
-                InetAddress addr2 = InetAddress.getByName(host2);
-
-                if (!addr1.equals(addr2)) {
-                    //
-                    // Address comparison failed - shall I extract
-                    // the key if the profile body contains the
-                    // loopback address?
-                    //
-                    if (matchLoopback) {
-                        InetAddress loopback = InetAddress.getByName("127.0.0.1");
-
-                        if (!addr2.equals(loopback))
-                            return false;
-                    } else
-                        return false;
-                }
-            } catch (java.net.UnknownHostException ex) {
-                //
-                // Continue on hostname lookup failure
-                //
-                return false;
-            }
-        }
-
-        return true;
+        return Net.CompareHosts(host1, host2, matchLoopback);
     }
 
     static public void extractAllProfileInfos(IOR ior, ProfileInfoSeqHolder profileInfoSeq,
@@ -181,9 +152,7 @@ final public class Util {
             //
             // Get the IIOP profile body
             //
-            byte[] data = ior.profiles[i].profile_data;
-            Buffer buf = new Buffer(data, data.length);
-            InputStream in = new InputStream(buf, 0, false, null, null);
+            InputStream in = new InputStream(ior.profiles[i].profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -233,9 +202,7 @@ final public class Util {
     private static boolean taggedComponentsMatch(TaggedComponent[] components, String host, short port, Codec codec, boolean matchLoopback) {
         for (final TaggedComponent component : components) {
             if (component.tag == TAG_ALTERNATE_IIOP_ADDRESS.value) {
-                byte[] d = component.component_data;
-                Buffer b = new Buffer(d, d.length);
-                InputStream s = new InputStream(b, 0, false, null, null);
+                InputStream s = new InputStream(component.component_data);
                 s._OB_readEndian();
                 String altHost = s.read_string();
                 short altPort = s.read_ushort();
@@ -308,10 +275,7 @@ final public class Util {
         bodies1 = new ProfileBody_1_0[cnt1];
         for (p1 = 0, b1 = 0; p1 < ior1.profiles.length; p1++)
             if (ior1.profiles[p1].tag == TAG_INTERNET_IOP.value) {
-                byte[] data = ior1.profiles[p1].profile_data;
-                Buffer buf = new Buffer(
-                        data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, null);
+                InputStream in = new InputStream(ior1.profiles[p1].profile_data);
                 in._OB_readEndian();
                 bodies1[b1++] = ProfileBody_1_0Helper.read(in);
             }
@@ -325,10 +289,7 @@ final public class Util {
         bodies2 = new ProfileBody_1_0[cnt2];
         for (p2 = 0, b2 = 0; p2 < ior2.profiles.length; p2++)
             if (ior2.profiles[p2].tag == TAG_INTERNET_IOP.value) {
-                byte[] data = ior2.profiles[p2].profile_data;
-                Buffer buf = new Buffer(
-                        data, data.length);
-                InputStream in = new InputStream(buf, 0, false, null, null);
+                InputStream in = new InputStream(ior2.profiles[p2].profile_data);
                 in._OB_readEndian();
                 bodies2[b2++] = ProfileBody_1_0Helper.read(in);
             }
@@ -399,34 +360,9 @@ final public class Util {
                 return false;
 
         //
-        // Direct host name comparison
+        // Direct host comparison
         //
-        if (!body1.host.equals(body2.host)) {
-            //
-            // Direct host name comparision failed - must look up
-            // addresses to be really sure if the hosts differ
-            //
-            try {
-                InetAddress addr1 = InetAddress
-                        .getByName(body1.host);
-
-                InetAddress addr2 = InetAddress
-                        .getByName(body2.host);
-
-                if (!addr1.equals(addr2))
-                    return false;
-            } catch (java.net.UnknownHostException ex) {
-                //
-                // Return false on hostname lookup failure
-                //
-                return false;
-            }
-        }
-
-        //
-        // OK, found a match
-        //
-        return true;
+        return Net.CompareHosts(body1.host, body2.host);
     }
 
     //
@@ -440,9 +376,7 @@ final public class Util {
             //
             // Get the first IIOP profile body
             //
-            byte[] data = profile.profile_data;
-            Buffer buf = new Buffer(data, data.length);
-            InputStream in = new InputStream(buf, 0, false, null, null);
+            InputStream in = new InputStream(profile.profile_data);
             in._OB_readEndian();
             ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
@@ -459,5 +393,50 @@ final public class Util {
         }
 
         return hash % (maximum + 1);
+    }
+
+    static public String encodeHost(String host, String protocol, String info) {
+        return "_" + protocol + "[" + info + "]." + host;
+    }
+
+    static public boolean isEncodedHost(String host) {
+        return host != null & host.startsWith("_");
+    }
+
+    static public boolean isEncodedHost(String host, String protocol) {
+        return host != null & host.startsWith("_" + protocol);
+    }
+
+    static public String decodeHost(String host) {
+        if (host == null) return null;
+        int index = host.lastIndexOf("].");
+        return index < 0 ? host : host.substring(index + 2);
+    }
+
+    static public String decodeHostInfo(String host) {
+        if (host == null) return null;
+        int start = host.indexOf('[');
+        int end = host.lastIndexOf("].");
+        if (start < 0 || end < 0 || end <= start) return null;
+        return host.substring(start + 1, end);
+    }
+
+    static InetAddress getInetAddress(final String host) throws UnknownHostException {
+        try {
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<InetAddress>() {
+                @Override
+                public InetAddress run() throws Exception {
+                    return InetAddress.getByName(host);
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            try {
+                throw e.getException();
+            } catch (RuntimeException | UnknownHostException e2) {
+                throw e2;
+            } catch (Exception e2) {
+                throw new RuntimeException("Unexpected excecption", e2);
+            }
+        }
     }
 }

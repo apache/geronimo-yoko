@@ -18,6 +18,15 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.rmi.util.SerialFilterHelper;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.portable.IndirectionException;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -31,20 +40,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.ValueMember;
-import org.omg.CORBA.portable.IndirectionException;
-import org.omg.CORBA.portable.InputStream;
-import org.omg.CORBA.portable.OutputStream;
-
-abstract class ArrayDescriptor extends ValueDescriptor {
+abstract class ArrayDescriptor<ARR extends Serializable> extends ValueDescriptor {
     final Class elementType;
     final Class basicType;
     private final int order;
 
-    protected ArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
+    protected ArrayDescriptor(Class<? extends ARR> type, Class elemType, TypeRepository rep) {
         super(type, rep);
         logger.fine("Creating an array descriptor for type " + type.getName() + " holding elements of " + elemType.getName());
         this.elementType = elemType;
@@ -57,6 +58,14 @@ abstract class ArrayDescriptor extends ValueDescriptor {
         }
         this.basicType = basicType;
         this.order = order;
+    }
+
+    protected final ARR createArray(InputStream in, Map<Integer, Serializable> offsetMap, Integer key) {
+        int len = in.read_long();
+        SerialFilterHelper.checkArrayInput(type, len, in);
+        final ARR arr = (ARR)Array.newInstance(elementType, len);
+        offsetMap.put(key, arr);
+        return arr;
     }
 
     @Override
@@ -132,21 +141,21 @@ abstract class ArrayDescriptor extends ValueDescriptor {
 
         if (elemType.isPrimitive()) {
             if (elemType == Boolean.TYPE) {
-                return new BooleanArrayDescriptor(type, elemType, rep);
+                return new BooleanArrayDescriptor(rep);
             } else if (elemType == Byte.TYPE) {
-                return new ByteArrayDescriptor(type, elemType, rep);
+                return new ByteArrayDescriptor(rep);
             } else if (elemType == Character.TYPE) {
-                return new CharArrayDescriptor(type, elemType, rep);
+                return new CharArrayDescriptor(rep);
             } else if (elemType == Short.TYPE) {
-                return new ShortArrayDescriptor(type, elemType, rep);
+                return new ShortArrayDescriptor(rep);
             } else if (elemType == Integer.TYPE) {
-                return new IntArrayDescriptor(type, elemType, rep);
+                return new IntArrayDescriptor(rep);
             } else if (elemType == Long.TYPE) {
-                return new LongArrayDescriptor(type, elemType, rep);
+                return new LongArrayDescriptor(rep);
             } else if (elemType == Float.TYPE) {
-                return new FloatArrayDescriptor(type, elemType, rep);
+                return new FloatArrayDescriptor(rep);
             } else if (elemType == Double.TYPE) {
-                return new DoubleArrayDescriptor(type, elemType, rep);
+                return new DoubleArrayDescriptor(rep);
             } else {
                 throw new RuntimeException("unknown array type " + type);
             }
@@ -154,10 +163,10 @@ abstract class ArrayDescriptor extends ValueDescriptor {
         if (Serializable.class.equals(elemType) ||
                 Externalizable.class.equals(elemType) || Object.class.equals(elemType)) {
             return new ObjectArrayDescriptor(type, elemType, rep);
-        } else if (Remote.class.isAssignableFrom(elemType)) {
-            return new RemoteArrayDescriptor(type, elemType, rep);
         } else if (Serializable.class.isAssignableFrom(elemType)) {
             return new ValueArrayDescriptor(type, elemType, rep);
+        } else if (Remote.class.isAssignableFrom(elemType)) {
+            return new RemoteArrayDescriptor(type, elemType, rep);
         } else {
             return new AbstractObjectArrayDescriptor(type, elemType, rep);
         }
@@ -220,7 +229,7 @@ abstract class ArrayDescriptor extends ValueDescriptor {
     }
 }
 
-class ObjectArrayDescriptor extends ArrayDescriptor {
+class ObjectArrayDescriptor extends ArrayDescriptor<Object[]> {
     static Logger logger = Logger.getLogger(ArrayDescriptor.class.getName());
 
     ObjectArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
@@ -239,26 +248,24 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
                 + arr.length);
 
         for (int i = 0; i < arr.length; i++) {
-            javax.rmi.CORBA.Util.writeAny(out, arr[i]); 
+            javax.rmi.CORBA.Util.writeAny(out, arr[i]);
         }
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
+            Object[] arr = createArray(in, offsetMap, key);
+
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
 
-            int length = reader.readInt();
-            Object[] arr = (Object[]) Array.newInstance(elementType, length);
-
-            offsetMap.put(key, arr);
 
             logger.fine("reading " + type.getName() + " size="
                     + arr.length);
 
-            for (int i = 0; i < length; i++) {
+            for (int i = 0; i < arr.length; i++) {
                 try {
                     arr[i] = reader.readAny();
                     if (arr[i] != null) {
@@ -318,7 +325,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor {
 
 }
 
-class RemoteArrayDescriptor extends ArrayDescriptor {
+class RemoteArrayDescriptor extends ArrayDescriptor<Object[]> {
     RemoteArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, elemType, rep);
     }
@@ -335,16 +342,15 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
+            Object[] arr = createArray(in, offsetMap, key);
+
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
 
-            int length = reader.readInt();
-            Object[] arr = (Object[]) Array.newInstance(elementType, length);
-            offsetMap.put(key, arr);
 
-            for (int i = 0; i < length; i++) {
+            for (int i = 0; i < arr.length; i++) {
                 try {
                     arr[i] = reader.readRemoteObject(elementType);
                 } catch (IndirectionException ex) {
@@ -399,7 +405,7 @@ class RemoteArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class ValueArrayDescriptor extends ArrayDescriptor {
+class ValueArrayDescriptor extends ArrayDescriptor<Object[]> {
 
     ValueArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, elemType, rep);
@@ -418,13 +424,11 @@ class ValueArrayDescriptor extends ArrayDescriptor {
     }
 
     @Override
-    public Serializable readValue(InputStream in, Map offsetMap, Integer key) {
-        final int length = in.read_long();
-        Object[] arr = (Object[]) Array.newInstance(elementType, length);
-        offsetMap.put(key, arr);
+    public Serializable readValue(InputStream in, Map<Integer, Serializable> offsetMap, Integer key) {
+        Object[] arr = createArray(in, offsetMap, key);
 
         final org.omg.CORBA_2_3.portable.InputStream _in = (org.omg.CORBA_2_3.portable.InputStream) in;
-        for (int i = 0; i < length; i++) {
+        for (int i = 0; i < arr.length; i++) {
             try {
                 arr[i] = _in.read_value(elementType);
             } catch (IndirectionException ex) {
@@ -474,7 +478,7 @@ class ValueArrayDescriptor extends ArrayDescriptor {
 
 }
 
-class AbstractObjectArrayDescriptor extends ArrayDescriptor {
+class AbstractObjectArrayDescriptor extends ArrayDescriptor<Object[]> {
     AbstractObjectArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
         super(type, elemType, rep);
     }
@@ -492,17 +496,14 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
         try {
+            Object[] arr = createArray(in, offsetMap, key);
+
             ObjectReader reader = makeCorbaObjectReader(in, offsetMap, null);
 
-            int length = reader.readInt();
-            Object[] arr = (Object[]) Array.newInstance(elementType, length);
-
-            offsetMap.put(key, arr);
-
-            for (int i = 0; i < length; i++) {
+            for (int i = 0; i < arr.length; i++) {
                 try {
                     arr[i] = reader.readAbstractObject();
                 } catch (IndirectionException ex) {
@@ -557,17 +558,16 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor {
 
 }
 
-class BooleanArrayDescriptor extends ArrayDescriptor {
-    BooleanArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class BooleanArrayDescriptor extends ArrayDescriptor<boolean[]> {
+    BooleanArrayDescriptor(TypeRepository rep) {
+        super(boolean[].class, boolean.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        boolean[] arr = new boolean[in.read_long()];
-        offsetMap.put(key, arr);
+        boolean[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_boolean();
         }
@@ -608,17 +608,16 @@ class BooleanArrayDescriptor extends ArrayDescriptor {
 
 }
 
-class ByteArrayDescriptor extends ArrayDescriptor {
-    ByteArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class ByteArrayDescriptor extends ArrayDescriptor<byte[]> {
+    ByteArrayDescriptor(TypeRepository rep) {
+        super(byte[].class, byte.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        byte[] arr = new byte[in.read_long()];
-        offsetMap.put(key, arr);
+        byte[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_octet();
         }
@@ -657,19 +656,17 @@ class ByteArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class CharArrayDescriptor extends ArrayDescriptor {
-    CharArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class CharArrayDescriptor extends ArrayDescriptor<char[]> {
+    CharArrayDescriptor(TypeRepository rep) {
+        super(char[].class, char.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        int len = in.read_long();
-        char[] arr = new char[len];
-        offsetMap.put(key, arr);
-        in.read_wchar_array(arr, 0, len);
+        char[] arr = createArray(in, offsetMap, key);
+        in.read_wchar_array(arr, 0, arr.length);
         return arr;
     }
 
@@ -704,17 +701,16 @@ class CharArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class ShortArrayDescriptor extends ArrayDescriptor {
-    ShortArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class ShortArrayDescriptor extends ArrayDescriptor<short[]> {
+    ShortArrayDescriptor(TypeRepository rep) {
+        super(short[].class, short.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        short[] arr = new short[in.read_long()];
-        offsetMap.put(key, arr);
+        short[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_short();
         }
@@ -754,17 +750,16 @@ class ShortArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class IntArrayDescriptor extends ArrayDescriptor {
-    IntArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class IntArrayDescriptor extends ArrayDescriptor<int[]> {
+    IntArrayDescriptor(TypeRepository rep) {
+        super(int[].class, int.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        int[] arr = new int[in.read_long()];
-        offsetMap.put(key, arr);
+        int[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_long();
         }
@@ -804,17 +799,16 @@ class IntArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class LongArrayDescriptor extends ArrayDescriptor {
-    LongArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class LongArrayDescriptor extends ArrayDescriptor<long[]> {
+    LongArrayDescriptor(TypeRepository rep) {
+        super(long[].class, long.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        long[] arr = new long[in.read_long()];
-        offsetMap.put(key, arr);
+        long[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_longlong();
         }
@@ -855,17 +849,16 @@ class LongArrayDescriptor extends ArrayDescriptor {
 
 }
 
-class FloatArrayDescriptor extends ArrayDescriptor {
-    FloatArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class FloatArrayDescriptor extends ArrayDescriptor<float[]> {
+    FloatArrayDescriptor(TypeRepository rep) {
+        super(float[].class, float.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        float[] arr = new float[in.read_long()];
-        offsetMap.put(key, arr);
+        float[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_float();
         }
@@ -905,17 +898,16 @@ class FloatArrayDescriptor extends ArrayDescriptor {
     }
 }
 
-class DoubleArrayDescriptor extends ArrayDescriptor {
-    DoubleArrayDescriptor(Class type, Class elemType, TypeRepository rep) {
-        super(type, elemType, rep);
+class DoubleArrayDescriptor extends ArrayDescriptor<double[]> {
+    DoubleArrayDescriptor(TypeRepository rep) {
+        super(double[].class, double.class, rep);
     }
 
     @Override
     public Serializable readValue(
-            InputStream in, Map offsetMap,
+            InputStream in, Map<Integer, Serializable> offsetMap,
             Integer key) {
-        double[] arr = new double[in.read_long()];
-        offsetMap.put(key, arr);
+        double[] arr = createArray(in, offsetMap, key);
         for (int i = 0; i < arr.length; i++) {
             arr[i] = in.read_double();
         }

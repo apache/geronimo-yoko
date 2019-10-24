@@ -16,11 +16,36 @@
  */
 
 package org.apache.yoko.orb.OBPortableServer;
- 
+
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.BootManager_impl;
+import org.apache.yoko.orb.OB.LocationForward;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.OAInterface;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ObjectKey;
+import org.apache.yoko.orb.OB.ObjectKeyData;
+import org.apache.yoko.orb.OB.Upcall;
+import org.apache.yoko.orb.OB.UpcallReturn;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.TransportInfo;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHolder;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+
+import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.apache.yoko.orb.OB.IORUtil;
 
 //
 // We don't need any sort of concurrency protection on this class
@@ -29,13 +54,12 @@ import org.apache.yoko.orb.OB.IORUtil;
 // any further requests to arrive (or any requests in the process of
 // being dispatched).
 //
-final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OB.OAInterface {
+final class POAOAInterface_impl extends LocalObject implements OAInterface {
     static final Logger logger = Logger.getLogger(POAOAInterface_impl.class.getName());
     //
     // The ORBInstance
     //
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    private ORBInstance orbInstance_;
 
     //
     // The POAManager implementation
@@ -45,7 +69,7 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
     //
     // The boot manager implementation
     //
-    private org.apache.yoko.orb.OB.BootManager_impl bootManagerImpl_;
+    private BootManager_impl bootManagerImpl_;
 
     //
     // Is the POAOAInterface discarding requests?
@@ -57,10 +81,10 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
     // ----------------------------------------------------------------------
 
     POAOAInterface_impl(POAManager_impl poaManager,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance) {
+            ORBInstance orbInstance) {
         poaManager_ = poaManager;
         orbInstance_ = orbInstance;
-        bootManagerImpl_ = (org.apache.yoko.orb.OB.BootManager_impl) orbInstance
+        bootManagerImpl_ = (BootManager_impl) orbInstance
                 .getBootManager();
     }
 
@@ -68,26 +92,26 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
     // Public member implementation
     // ----------------------------------------------------------------------
 
-    public org.apache.yoko.orb.OB.Upcall createUpcall(
-            org.apache.yoko.orb.OB.UpcallReturn upcallReturn,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.apache.yoko.orb.OCI.TransportInfo transportInfo, int requestId,
-            String op, org.apache.yoko.orb.CORBA.InputStream in,
-            org.omg.IOP.ServiceContext[] requestSCL) {
-        org.apache.yoko.orb.OB.Upcall upcall = null;
+    public Upcall createUpcall(
+            UpcallReturn upcallReturn,
+            ProfileInfo profileInfo,
+            TransportInfo transportInfo, int requestId,
+            String op, InputStream in,
+            ServiceContexts requestContexts) {
+        Upcall upcall = null;
         logger.fine("Creating upcall for operation " + op); 
         try {
             //
             // If discarding then throw a TRANSIENT exception
             //
             if (discard_) {
-                throw new org.omg.CORBA.TRANSIENT(
+                throw new TRANSIENT(
                         "Requests are being discarded", 0,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        CompletionStatus.COMPLETED_NO);
             }
 
-            org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData();
-            if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(profileInfo.key, data)) {
+            ObjectKeyData data = new ObjectKeyData();
+            if (ObjectKey.ParseObjectKey(profileInfo.key, data)) {
                 while (true) {
                     //
                     // Locate the POA. This may also throw a TRANSIENT
@@ -97,9 +121,7 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
                     if (poa != null) {
                         logger.fine("Unable to locate POA " + data + " using POAManager " + poaManager_.get_id()); 
                         POA_impl poaImpl = (POA_impl) poa;
-                        upcall = poaImpl._OB_createUpcall(data.oid,
-                                upcallReturn, profileInfo, transportInfo,
-                                requestId, op, in, requestSCL);
+                        upcall = poaImpl._OB_createUpcall(data.oid, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                         //
                         // If _OB_createUpcall returns a nil Upcall object
                         // then we should retry since that means that the
@@ -117,9 +139,9 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
                 // Check to see if the BootManager knows of a reference
                 // for the ObjectKey. If so, forward the request.
                 //
-                org.omg.IOP.IOR ior = bootManagerImpl_._OB_locate(profileInfo.key);
+                IOR ior = bootManagerImpl_._OB_locate(profileInfo.key);
                 if (ior != null) {
-                    throw new org.apache.yoko.orb.OB.LocationForward(ior, false);
+                    throw new LocationForward(ior, false);
                 }
             }
             //
@@ -128,45 +150,39 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
             //
             if (upcall == null) {
                 if (op.equals("_non_existent") || op.equals("_not_existent")) {
-                    upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
-                            upcallReturn, profileInfo, transportInfo,
-                            requestId, op, in, requestSCL);
+                    upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                     upcall.preUnmarshal();
                     upcall.postUnmarshal();
                     upcall.postinvoke();
-                    org.omg.CORBA.portable.OutputStream out = upcall.preMarshal();
+                    OutputStream out = upcall.preMarshal();
                     out.write_boolean(true);
                     upcall.postMarshal();
                 } 
                 else {
-                    throw new org.omg.CORBA.OBJECT_NOT_EXIST(
-                            org.apache.yoko.orb.OB.MinorCodes
-                                    .describeObjectNotExist(org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    throw new OBJECT_NOT_EXIST(
+                            MinorCodes
+                                    .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
+                            MinorCodes.MinorCannotDispatch,
+                            CompletionStatus.COMPLETED_NO);
                 }
             }
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             logger.log(Level.FINE, "System exception creating upcall", ex); 
-            upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
-                    upcallReturn, profileInfo, transportInfo, requestId, op,
-                    in, requestSCL);
+            upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
             upcall.setSystemException(ex);
-        } catch (org.apache.yoko.orb.OB.LocationForward ex) {
+        } catch (LocationForward ex) {
             logger.log(Level.FINE, "Location forward request creating upcall.", ex); 
-            upcall = new org.apache.yoko.orb.OB.Upcall(orbInstance_,
-                    upcallReturn, profileInfo, transportInfo, requestId, op,
-                    in, requestSCL);
+            upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
             upcall.setLocationForward(ex.ior, ex.perm);
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(upcall != null);
+        Assert._OB_assert(upcall != null);
         return upcall;
     }
 
-    public int findByKey(byte[] key, org.omg.IOP.IORHolder ior) {
-        org.apache.yoko.orb.OB.ObjectKeyData data = new org.apache.yoko.orb.OB.ObjectKeyData();
-        if (org.apache.yoko.orb.OB.ObjectKey.ParseObjectKey(key, data)) {
+    public int findByKey(byte[] key, IORHolder ior) {
+        ObjectKeyData data = new ObjectKeyData();
+        if (ObjectKey.ParseObjectKey(key, data)) {
             try {
                 logger.fine("Locate request for object key " + data);  
                 
@@ -174,13 +190,13 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
                 if (poa != null) {
                     POA_impl poaImpl = (POA_impl) poa;
                     poaImpl._OB_locateServant(data.oid);
-                    return org.apache.yoko.orb.OB.OAInterface.OBJECT_HERE;
+                    return OAInterface.OBJECT_HERE;
                 }
-            } catch (org.omg.CORBA.SystemException ex) {
-            } catch (org.apache.yoko.orb.OB.LocationForward fwd) {
+            } catch (SystemException ex) {
+            } catch (LocationForward fwd) {
                 ior.value = fwd.ior;
-                return (fwd.perm) ? org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD_PERM
-                        : org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD;
+                return (fwd.perm) ? OAInterface.OBJECT_FORWARD_PERM
+                        : OAInterface.OBJECT_FORWARD;
             }
         } else {
             //
@@ -190,33 +206,31 @@ final class POAOAInterface_impl extends org.omg.CORBA.LocalObject implements
             logger.fine("Checking boot manager for object with key " + data);  
             ior.value = bootManagerImpl_._OB_locate(key);
             if (ior.value != null) {
-                return org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD;
+                return OAInterface.OBJECT_FORWARD;
             }
         }
-        return org.apache.yoko.orb.OB.OAInterface.UNKNOWN_OBJECT;
+        return OAInterface.UNKNOWN_OBJECT;
     }
 
-    public org.apache.yoko.orb.OCI.ProfileInfo[] getUsableProfiles(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies) {
+    public ProfileInfo[] getUsableProfiles(IOR ior, Policy[] policies) {
         try {
-            org.apache.yoko.orb.OCI.Acceptor[] acceptors = poaManager_
+            Acceptor[] acceptors = poaManager_
                     .get_acceptors();
 
-            java.util.Vector seq = new java.util.Vector();
+            Vector seq = new Vector();
             for (int i = 0; i < acceptors.length; i++) {
-                org.apache.yoko.orb.OCI.ProfileInfo[] seq2 = acceptors[i]
-                        .get_local_profiles(ior);
+                ProfileInfo[] seq2 = acceptors[i].get_local_profiles(ior);
 
                 for (int j = 0; j < seq2.length; j++)
                     seq.addElement(seq2[j]);
             }
 
-            org.apache.yoko.orb.OCI.ProfileInfo[] result = new org.apache.yoko.orb.OCI.ProfileInfo[seq
+            ProfileInfo[] result = new ProfileInfo[seq
                     .size()];
             seq.copyInto(result);
             return result;
-        } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (AdapterInactive ex) {
+            Assert._OB_assert(ex);
             return null;
         }
     }

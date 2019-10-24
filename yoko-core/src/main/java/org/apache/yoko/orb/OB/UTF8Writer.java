@@ -17,15 +17,28 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.omg.CORBA.DATA_CONVERSION;
+
 final class UTF8Writer extends CodeSetWriter {
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        unicodeToUtf8(out, v);
+    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        if ((int) v < 0x80) {
+            // Direct mapping (7 bits) for characters < 0x80
+            writeBuffer.writeByte(v);
+        } else if ((int) v <= 0x7ff) {
+            // 5 free bits (%110xxxxx | %vvvvv)
+            writeBuffer.writeByte((v >>> 6) | 0xc0);
+            writeBuffer.writeByte((v & 0x3f) | 0x80);
+        } else if ((int) v <= 0xffff) {
+            // 4 free bits (%1110xxxx | %vvvv)
+            writeBuffer.writeByte((v >>> 12) | 0xe0);
+            writeBuffer.writeByte(((v >>> 6) & 0x3f) | 0x80);
+            writeBuffer.writeByte((v & 0x3f) | 0x80);
+        } else throw new DATA_CONVERSION();
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        unicodeToUtf8(out, v);
+    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        write_char(writeBuffer, v);
     }
 
     public int count_wchar(char value) {
@@ -35,41 +48,6 @@ final class UTF8Writer extends CodeSetWriter {
             return 2;
         else
             return 3;
-    }
-
-    private void unicodeToUtf8(org.apache.yoko.orb.CORBA.OutputStream out,
-            char value) throws org.omg.CORBA.DATA_CONVERSION {
-        if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
-            if ((int) value < 0x80) {
-                // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.data_[out.buf_.pos_++] = (byte) value;
-            } else if ((int) value < 0x7ff) {
-                // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 6) | 0xc0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (value & 0x3f);
-            } else if ((int) value < 0xffff) {
-                // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 12) | 0xe0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
-            } else
-                throw new org.omg.CORBA.DATA_CONVERSION();
-        } else {
-            if ((int) value < 0x80) {
-                // Direct mapping (7 bits) for characters < 0x80
-                out.buf_.data_[out.buf_.pos_++] = (byte) value;
-            } else if ((int) value <= 0x7ff) {
-                // 5 free bits (%110xxxxx | %vvvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 6) | 0xc0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
-            } else if ((int) value <= 0xffff) {
-                // 4 free bits (%1110xxxx | %vvvv)
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value >>> 12) | 0xe0);
-                out.buf_.data_[out.buf_.pos_++] = (byte) (((value >>> 6) & 0x3f) | 0x80);
-                out.buf_.data_[out.buf_.pos_++] = (byte) ((value & 0x3f) | 0x80);
-            } else
-                throw new org.omg.CORBA.DATA_CONVERSION();
-        }
     }
 
     public void set_flags(int flags) {

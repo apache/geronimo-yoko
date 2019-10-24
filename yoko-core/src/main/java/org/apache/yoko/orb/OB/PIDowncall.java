@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,77 +17,54 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.util.AutoLock;
+import org.apache.yoko.orb.CORBA.Any;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.PortableInterceptor.ArgumentStrategy;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.UNKNOWNHelper;
+import org.omg.CORBA.UnknownUserException;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.PortableInterceptor.ClientRequestInfo;
 
-public class PIDowncall extends Downcall {
-    //
-    // The IOR and the original IOR
-    //
-    protected org.omg.IOP.IOR IOR_;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException;
+import static org.apache.yoko.orb.OB.MinorCodes.describeUnknown;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 
-    protected org.omg.IOP.IOR origIOR_;
+public abstract class PIDowncall extends Downcall {
+    public final IOR effectiveIor;
 
-    //
-    // The PortableInterceptor manager
-    //
-    protected PIManager piManager_;
+    public final IOR originalIor;
 
-    //
-    // Holds the exception ID if state_ is DowncallStateUserException,
-    // DowncallStateSystemException, or DowncallStateFailureException
-    //
-    // In Java, this field is in Downcall
-    //
-    // protected String exId_;
+    protected final PIManager piManager_;
 
-    //
-    // The ClientRequestInfo object provided by the interceptors
-    //
-    protected org.omg.PortableInterceptor.ClientRequestInfo requestInfo_;
-
-    // ----------------------------------------------------------------------
-    // PIDowncall private and protected member implementations
-    // ----------------------------------------------------------------------
+    protected ClientRequestInfo requestInfo_;
 
     void checkForException() throws LocationForward, FailureException {
         try (AutoLock lock = stateLock.getReadLock()) {
-            //
             // If ex_ is set, but exId_ is not, then set it now
-            //
             // TODO: Postpone this in Java?
-            //
             if (ex_ != null && exId_ == null)
                 exId_ = Util.getExceptionId(ex_);
 
             switch (state) {
                 case USER_EXCEPTION:
-                    //
                     // For Java portable stubs, we'll have the repository ID
                     // but not the exception instance, so we pass UNKNOWN to
                     // the interceptors but DO NOT modify the Downcall state.
-                    //
                     if (ex_ == null && exId_ != null) {
-                        org.omg.CORBA.Any any = new org.apache.yoko.orb.CORBA.Any(
-                                orbInstance_);
-                        org.omg.CORBA.UNKNOWN sys = new org.omg.CORBA.UNKNOWN(
-                                MinorCodes
-                                .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException)
-                                + ": " + exId_,
-                                org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                                org.omg.CORBA.CompletionStatus.COMPLETED_YES);
-                        org.omg.CORBA.UNKNOWNHelper.insert(any, sys);
-                        org.omg.CORBA.UnknownUserException unk = new org.omg.CORBA.UnknownUserException(
-                                any);
-                        piManager_.clientReceiveException(requestInfo_, false, unk,
-                                exId_);
+                        org.omg.CORBA.Any any = new Any(orbInstance_);
+                        UNKNOWN sys = new UNKNOWN(describeUnknown(MinorUnknownUserException) + ": " + exId_, MinorUnknownUserException, COMPLETED_YES);
+                        UNKNOWNHelper.insert(any, sys);
+                        UnknownUserException unk = new UnknownUserException(any);
+                        piManager_.clientReceiveException(requestInfo_, false, unk, exId_);
                     }
-                    //
-                    // Only invoke interceptor if a user exception has been
-                    // set
-                    //
-                    if (ex_ != null)
-                        piManager_.clientReceiveException(requestInfo_, false, ex_,
-                                exId_);
+                    // Only invoke interceptor if a user exception has been set
+                    if (ex_ != null) piManager_.clientReceiveException(requestInfo_, false, ex_, exId_);
                     break;
 
                 case SYSTEM_EXCEPTION:
@@ -98,13 +75,9 @@ public class PIDowncall extends Downcall {
                 case FAILURE_EXCEPTION:
                     try {
                         Assert._OB_assert(ex_ != null);
-                        piManager_.clientReceiveException(requestInfo_, true, ex_,
-                                exId_);
-                    } catch (org.omg.CORBA.SystemException ex) {
-                        //
-                        // Ignore any exception translations for failure
-                        // exceptions
-                        //
+                        piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
+                    } catch (SystemException ignored) {
+                        // Ignore any exception translations for failure exceptions
                     }
                     break;
 
@@ -122,33 +95,26 @@ public class PIDowncall extends Downcall {
         }
     }
 
-    // ----------------------------------------------------------------------
-    // PIDowncall public member implementations
-    // ----------------------------------------------------------------------
-
     public PIDowncall(ORBInstance orbInstance, Client client,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
+            ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp,
-            org.omg.IOP.IOR IOR, org.omg.IOP.IOR origIOR,
-            /**/PIManager piManager) {
+            IOR IOR, IOR origIOR,
+            PIManager piManager) {
         super(orbInstance, client, profileInfo, policies, op, resp);
-        IOR_ = IOR;
-        origIOR_ = origIOR;
+        effectiveIor = IOR;
+        originalIor = origIOR;
         piManager_ = piManager;
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
-            throws LocationForward, FailureException {
-        requestInfo_ = piManager_.clientSendRequest(op_, responseExpected_,
-                IOR_, origIOR_, profileInfo_, policies_.value, requestSCL_,
-                replySCL_);
-
+    public final OutputStream preMarshal() throws LocationForward, FailureException {
+        requestInfo_ = piManager_.clientSendRequest(this);
         return super.preMarshal();
     }
 
+    public abstract ArgumentStrategy createArgumentStrategy(ORB orb);
+
     public void postUnmarshal() throws LocationForward, FailureException {
         try (AutoLock lock = stateLock.getReadLock()) {
-            //
             // If the result of this downcall is a user exception, but no user
             // exception could be unmarshalled, then use the system exception
             // UNKNOWN, but keep the original exception ID
@@ -157,13 +123,9 @@ public class PIDowncall extends Downcall {
             // the user exception, not the exception instance. We want to
             // report UNKNOWN to the interceptors, but do not want to change
             // the downcall status if we have the repository ID.
-            //
             if (state == State.USER_EXCEPTION && ex_ == null && exId_ == null) {
                 String id = unmarshalExceptionId();
-                setSystemException(new org.omg.CORBA.UNKNOWN(org.apache.yoko.orb.OB.MinorCodes
-                        .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException)
-                        + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_YES));
+                setSystemException(new UNKNOWN(describeUnknown(MinorUnknownUserException) + ": " + id, MinorUnknownUserException, COMPLETED_YES));
                 exId_ = id;
             }
     
@@ -184,7 +146,7 @@ public class PIDowncall extends Downcall {
         }
     }
 
-    public void setUserException(org.omg.CORBA.UserException ex, String exId) {
+    public void setUserException(UserException ex, String exId) {
         super.setUserException(ex, exId);
         exId_ = exId;
     }

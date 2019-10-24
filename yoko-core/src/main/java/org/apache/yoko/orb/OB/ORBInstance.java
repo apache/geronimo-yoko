@@ -17,14 +17,18 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.concurrent.WeakCountedCache;
+import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.PolicyManagerHelper;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
-
-import org.apache.yoko.orb.OCI.ConnectorInfo;
-import org.apache.yoko.util.Cache;
-import org.apache.yoko.util.concurrent.ReferenceCountedCache;
-import org.apache.yoko.util.concurrent.WeakCountedCache;
+import java.util.concurrent.ThreadFactory;
 
 public final class ORBInstance {
     private boolean destroy_; // True if destroy() was called
@@ -185,8 +189,26 @@ public final class ORBInstance {
         // Create the server and client executors
         // TODO why are these separate?
         //
-        clientExecutor_ = Executors.newCachedThreadPool();
-        serverExecutor_ = Executors.newCachedThreadPool();
+        clientExecutor_ = Executors.newCachedThreadPool(
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread result = new Thread(r);
+                        result.setDaemon(true);
+                        return result;
+                    }
+                }
+        );
+        serverExecutor_ = Executors.newCachedThreadPool(
+                new ThreadFactory() {
+                    @Override
+                    public Thread newThread(Runnable r) {
+                        Thread result = new Thread(r);
+                        result.setDaemon(true);
+                        return result;
+                    }
+                }
+        );
 
         //
         // Use the TypeCode cache?
@@ -371,6 +393,14 @@ public final class ORBInstance {
 
     public PolicyFactoryManager getPolicyFactoryManager() {
         return policyFactoryManager_;
+    }
+
+    public PolicyManager getPolicyManager() {
+        try {
+            return PolicyManagerHelper.narrow(orb_.resolve_initial_references("ORBPolicyManager"));
+        } catch (InvalidName invalidName) {
+            throw new INTERNAL("Could not find PolicyManager");
+        }
     }
 
     public PIManager getPIManager() {

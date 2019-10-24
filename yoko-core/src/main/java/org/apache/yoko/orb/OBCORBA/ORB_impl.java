@@ -17,32 +17,203 @@
 
 package org.apache.yoko.orb.OBCORBA;
 
-import java.security.AccessController;
-import java.util.Properties;
-
+import org.apache.yoko.orb.CORBA.Context;
+import org.apache.yoko.orb.CORBA.ContextList;
+import org.apache.yoko.orb.CORBA.Environment;
+import org.apache.yoko.orb.CORBA.ExceptionList;
+import org.apache.yoko.orb.CORBA.NamedValue;
+import org.apache.yoko.orb.CORBA.ORBPolicyFactory_impl;
+import org.apache.yoko.orb.CORBA.ORBPolicyManager_impl;
+import org.apache.yoko.orb.CORBA.ORBSingleton;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.DynamicAny.DynAnyFactory_impl;
+import org.apache.yoko.orb.IOP.CodecFactory_impl;
+import org.apache.yoko.orb.Messaging.RebindPolicy_impl;
+import org.apache.yoko.orb.Messaging.SyncScopePolicy_impl;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.BootManager_impl;
+import org.apache.yoko.orb.OB.CONNECTION_REUSE_POLICY_ID;
+import org.apache.yoko.orb.OB.CONNECT_TIMEOUT_POLICY_ID;
+import org.apache.yoko.orb.OB.Client;
+import org.apache.yoko.orb.OB.ClientManager;
+import org.apache.yoko.orb.OB.CodeSetIORInterceptor_impl;
+import org.apache.yoko.orb.OB.CodeSetInfo;
+import org.apache.yoko.orb.OB.ConnectTimeoutPolicy_impl;
+import org.apache.yoko.orb.OB.ConnectionReusePolicy_impl;
+import org.apache.yoko.orb.OB.CorbalocURLScheme_impl;
+import org.apache.yoko.orb.OB.CorbanameURLScheme_impl;
+import org.apache.yoko.orb.OB.CoreTraceLevels;
+import org.apache.yoko.orb.OB.DispatchStrategyFactory_impl;
+import org.apache.yoko.orb.OB.FileURLScheme_impl;
+import org.apache.yoko.orb.OB.GIOPIncomingMessage;
+import org.apache.yoko.orb.OB.GIOPOutgoingMessage;
+import org.apache.yoko.orb.OB.INTERCEPTOR_POLICY_ID;
+import org.apache.yoko.orb.OB.IORURLScheme_impl;
+import org.apache.yoko.orb.OB.InitialServiceManager;
+import org.apache.yoko.orb.OB.InterceptorPolicy_impl;
+import org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_POLICY_ID;
+import org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_RELAXED;
+import org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_STRICT;
+import org.apache.yoko.orb.OB.LocateRequestPolicy_impl;
+import org.apache.yoko.orb.OB.LocationTransparencyPolicy_impl;
+import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.orb.OB.Logger_impl;
+import org.apache.yoko.orb.OB.MessageRoutingIORInterceptor_impl;
+import org.apache.yoko.orb.OB.MessageRoutingUtil;
+import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.orb.OB.MultiRequestSender;
+import org.apache.yoko.orb.OB.ORBControl;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ObjectFactory;
+import org.apache.yoko.orb.OB.OptionFilter;
+import org.apache.yoko.orb.OB.OptionFilter.Option;
+import org.apache.yoko.orb.OB.PIManager;
+import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
+import org.apache.yoko.orb.OB.ParseParams;
+import org.apache.yoko.orb.OB.PluginManager;
+import org.apache.yoko.orb.OB.PolicyFactoryManager;
+import org.apache.yoko.orb.OB.ProtocolPolicy_impl;
+import org.apache.yoko.orb.OB.REQUEST_TIMEOUT_POLICY_ID;
+import org.apache.yoko.orb.OB.RETRY_ALWAYS;
+import org.apache.yoko.orb.OB.RETRY_NEVER;
+import org.apache.yoko.orb.OB.RETRY_POLICY_ID;
+import org.apache.yoko.orb.OB.RETRY_STRICT;
+import org.apache.yoko.orb.OB.ReplyTimeoutPolicy_impl;
+import org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl;
+import org.apache.yoko.orb.OB.RetryPolicy_impl;
+import org.apache.yoko.orb.OB.TIMEOUT_POLICY_ID;
+import org.apache.yoko.orb.OB.TimeoutPolicy_impl;
+import org.apache.yoko.orb.OB.URLRegistryPackage.SchemeAlreadyExists;
+import org.apache.yoko.orb.OB.URLRegistry_impl;
+import org.apache.yoko.orb.OB.UnknownExceptionStrategy;
+import org.apache.yoko.orb.OB.UnknownExceptionStrategy_impl;
+import org.apache.yoko.orb.OB.ValueFactoryManager;
+import org.apache.yoko.orb.OB.Version;
+import org.apache.yoko.orb.OB.ZERO_PORT_POLICY_ID;
+import org.apache.yoko.orb.OB.ZeroPortPolicy_impl;
+import org.apache.yoko.orb.OBMessageRouting.DecayPolicyFactory_impl;
+import org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicyFactory_impl;
+import org.apache.yoko.orb.OBMessageRouting.LimitedPingPolicyFactory_impl;
+import org.apache.yoko.orb.OBMessageRouting.ResumePolicyFactory_impl;
+import org.apache.yoko.orb.OBMessageRouting.UnlimitedPingPolicyFactory_impl;
+import org.apache.yoko.orb.OBMessaging.ExceptionHolderFactory_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.IMRORTFactory_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.ORBInitInfo_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.PersistentORTFactory_impl;
+import org.apache.yoko.orb.OBPortableInterceptor.TransientORTFactory_impl;
+import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
+import org.apache.yoko.orb.OCI.AccFactoryRegistry;
+import org.apache.yoko.orb.OCI.AccFactoryRegistry_impl;
+import org.apache.yoko.orb.OCI.ConFactoryRegistry;
+import org.apache.yoko.orb.OCI.ConFactoryRegistry_impl;
+import org.apache.yoko.orb.OCI.Plugin;
+import org.apache.yoko.orb.PortableServer.Delegate;
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
-import org.apache.yoko.orb.util.AutoLock;
-import org.apache.yoko.orb.util.AutoReadWriteLock;
-import org.apache.yoko.orb.util.GetSystemPropertyAction;
 import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.GetSystemPropertyAction;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.apache.yoko.util.concurrent.AutoReadWriteLock;
+import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
+import org.omg.CORBA.ARG_IN;
+import org.omg.CORBA.ARG_INOUT;
+import org.omg.CORBA.ARG_OUT;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.Contained;
+import org.omg.CORBA.ContainedPackage.Description;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.NVList;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.OperationDef;
+import org.omg.CORBA.OperationDefHelper;
+import org.omg.CORBA.OperationDescription;
+import org.omg.CORBA.OperationDescriptionHelper;
+import org.omg.CORBA.ParameterDescription;
+import org.omg.CORBA.ParameterMode;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyError;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.Repository;
+import org.omg.CORBA.RepositoryHelper;
+import org.omg.CORBA.Request;
+import org.omg.CORBA.ServiceDetail;
+import org.omg.CORBA.ServiceInformation;
+import org.omg.CORBA.ServiceInformationHolder;
+import org.omg.CORBA.StringSeqHolder;
+import org.omg.CORBA.ValueDefHelper;
+import org.omg.CORBA.WrongTransaction;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.CORBA.portable.ValueFactory;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHelper;
+import org.omg.IOP.TaggedProfile;
+import org.omg.MessageRouting.Router;
+import org.omg.MessageRouting.RouterListHolder;
+import org.omg.Messaging.MAX_HOPS_POLICY_TYPE;
+import org.omg.Messaging.NO_REBIND;
+import org.omg.Messaging.NO_RECONNECT;
+import org.omg.Messaging.QUEUE_ORDER_POLICY_TYPE;
+import org.omg.Messaging.REBIND_POLICY_TYPE;
+import org.omg.Messaging.RELATIVE_REQ_TIMEOUT_POLICY_TYPE;
+import org.omg.Messaging.RELATIVE_RT_TIMEOUT_POLICY_TYPE;
+import org.omg.Messaging.REPLY_END_TIME_POLICY_TYPE;
+import org.omg.Messaging.REPLY_PRIORITY_POLICY_TYPE;
+import org.omg.Messaging.REPLY_START_TIME_POLICY_TYPE;
+import org.omg.Messaging.REQUEST_END_TIME_POLICY_TYPE;
+import org.omg.Messaging.REQUEST_PRIORITY_POLICY_TYPE;
+import org.omg.Messaging.REQUEST_START_TIME_POLICY_TYPE;
+import org.omg.Messaging.ROUTING_POLICY_TYPE;
+import org.omg.Messaging.SYNC_NONE;
+import org.omg.Messaging.SYNC_SCOPE_POLICY_TYPE;
+import org.omg.Messaging.SYNC_WITH_SERVER;
+import org.omg.Messaging.SYNC_WITH_TARGET;
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+import org.omg.Messaging.TRANSPARENT;
+import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
+import org.omg.PortableInterceptor.ORBInitializer;
+import org.omg.PortableInterceptor.PolicyFactory;
+import org.omg.PortableServer.Servant;
+
+import java.applet.Applet;
+import java.io.BufferedInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.security.AccessController;
+import java.util.Enumeration;
+import java.util.Hashtable;
+import java.util.Properties;
+import java.util.StringTokenizer;
+import java.util.Vector;
+
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
 
 // This class must be public and not final
-public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
+public class ORB_impl extends ORBSingleton {
     //
     // All registered ORBInitializers
     //
-    private java.util.Hashtable orbInitializers_ = new java.util.Hashtable();
+    private Hashtable orbInitializers_ = new Hashtable();
 
     //
     // The ORB Control
     //
-    private org.apache.yoko.orb.OB.ORBControl orbControl_;
+    private ORBControl orbControl_;
 
     //
     // Has the ORB been destroyed?
@@ -52,27 +223,27 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     //
     // The OCI Plugin Manager
     //
-    private org.apache.yoko.orb.OB.PluginManager pluginManager_;
+    private PluginManager pluginManager_;
 
     //
     // The ORBInstance object
     //
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+    private ORBInstance orbInstance_;
 
     //
     // Default set of policies
     //
-    private java.util.Vector policies_ = new java.util.Vector();
+    private Vector policies_ = new Vector();
 
     //
     // The ORB option filter
     //
-    private static org.apache.yoko.orb.OB.OptionFilter orbOptionFilter_;
+    private static OptionFilter orbOptionFilter_;
 
     //
     // The OA option filter
     //
-    private static org.apache.yoko.orb.OB.OptionFilter oaOptionFilter_;
+    private static OptionFilter oaOptionFilter_;
 
     //
     // Whether DII operations should raise system exceptions
@@ -91,56 +262,49 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     // already been processed, which doesn't occur until set_parameters
     // is called.
     //
-    private void initialize(org.omg.CORBA.StringSeqHolder args, String orbId,
-            String serverId, String serverInstance, int concModel,
-            org.apache.yoko.orb.OB.CoreTraceLevels coreTraceLevels,
-            java.util.Properties properties,
-            org.apache.yoko.orb.OB.Logger logger, int nativeCs, int nativeWcs,
-            int defaultWcs) {
-        String javaVersion = getSystemProperty("java.version");
-        float version = Float.parseFloat(javaVersion.substring(0, 3));
-        if (version < 1.3f) {
-            throw new org.omg.CORBA.INITIALIZE("Unsupported Java version: "
-                    + version);
-        }
-
+    private void initialize(StringSeqHolder args, String orbId,
+                            String serverId, String serverInstance, int concModel,
+                            CoreTraceLevels coreTraceLevels,
+                            Properties properties,
+                            Logger logger, int nativeCs, int nativeWcs,
+                            int defaultWcs) {
         try (AutoLock writeLock = destroyLock_.getWriteLock()) {
             destroy_ = false;
 
             //
             // Create the ORBControl
             //
-            orbControl_ = new org.apache.yoko.orb.OB.ORBControl();
+            orbControl_ = new ORBControl();
 
             //
             // Create the OCI Plugin Manager
             //
-            pluginManager_ = new org.apache.yoko.orb.OB.PluginManager(this);
+            pluginManager_ = new PluginManager(this);
 
             //
             // Create the ORBInstance object
             //
             //
-            org.apache.yoko.orb.OB.InitialServiceManager initServiceManager = new org.apache.yoko.orb.OB.InitialServiceManager();
-            org.apache.yoko.orb.OB.ClientManager clientManager = new org.apache.yoko.orb.OB.ClientManager(
+            InitialServiceManager initServiceManager = new InitialServiceManager();
+            ClientManager clientManager = new ClientManager(
                     concModel);
-            org.apache.yoko.orb.OB.ObjectFactory objectFactory = new org.apache.yoko.orb.OB.ObjectFactory();
-            org.apache.yoko.orb.OB.PolicyFactoryManager pfManager = new org.apache.yoko.orb.OB.PolicyFactoryManager();
-            org.apache.yoko.orb.OB.PIManager piManager = new org.apache.yoko.orb.OB.PIManager(
+            ObjectFactory objectFactory = new ObjectFactory();
+            PolicyFactoryManager pfManager = new PolicyFactoryManager();
+            PIManager piManager = new PIManager(
                     this);
-            org.apache.yoko.orb.OB.ValueFactoryManager valueFactoryManager = new org.apache.yoko.orb.OB.ValueFactoryManager();
-            org.apache.yoko.orb.IOP.CodecFactory_impl codecFactory = new org.apache.yoko.orb.IOP.CodecFactory_impl();
-            org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl pmFactory = new org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl();
-            org.apache.yoko.orb.OB.MultiRequestSender multiRequestSender = new org.apache.yoko.orb.OB.MultiRequestSender();
-            org.apache.yoko.orb.OB.DispatchStrategyFactory_impl dsf = new org.apache.yoko.orb.OB.DispatchStrategyFactory_impl();
-            org.apache.yoko.orb.OB.BootManager_impl bootManager = new org.apache.yoko.orb.OB.BootManager_impl(this);
-            org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry = new org.apache.yoko.orb.OCI.ConFactoryRegistry_impl();
-            org.apache.yoko.orb.OCI.AccFactoryRegistry accFactoryRegistry = new org.apache.yoko.orb.OCI.AccFactoryRegistry_impl();
-            org.apache.yoko.orb.OB.UnknownExceptionStrategy unknownExceptionStrategy = new org.apache.yoko.orb.OB.UnknownExceptionStrategy_impl(
+            ValueFactoryManager valueFactoryManager = new ValueFactoryManager();
+            CodecFactory_impl codecFactory = new CodecFactory_impl();
+            POAManagerFactory_impl pmFactory = new POAManagerFactory_impl();
+            MultiRequestSender multiRequestSender = new MultiRequestSender();
+            DispatchStrategyFactory_impl dsf = new DispatchStrategyFactory_impl();
+            BootManager_impl bootManager = new BootManager_impl(this);
+            ConFactoryRegistry conFactoryRegistry = new ConFactoryRegistry_impl();
+            AccFactoryRegistry accFactoryRegistry = new AccFactoryRegistry_impl();
+            UnknownExceptionStrategy unknownExceptionStrategy = new UnknownExceptionStrategy_impl(
                     this);
-            org.apache.yoko.orb.OB.URLRegistry_impl urlRegistry = new org.apache.yoko.orb.OB.URLRegistry_impl();
+            URLRegistry_impl urlRegistry = new URLRegistry_impl();
 
-            orbInstance_ = new org.apache.yoko.orb.OB.ORBInstance(this, orbId,
+            orbInstance_ = new ORBInstance(this, orbId,
                     serverId, serverInstance, objectFactory, clientManager,
                     pfManager, piManager, initServiceManager,
                     valueFactoryManager, codecFactory, pmFactory,
@@ -158,22 +322,22 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             dsf._OB_setORBInstance(orbInstance_);
             try {
                 urlRegistry
-                .add_scheme(new org.apache.yoko.orb.OB.IORURLScheme_impl(
+                .add_scheme(new IORURLScheme_impl(
                         orbInstance_));
                 urlRegistry
-                .add_scheme(new org.apache.yoko.orb.OB.FileURLScheme_impl(
+                .add_scheme(new FileURLScheme_impl(
                         false, urlRegistry));
                 urlRegistry
-                .add_scheme(new org.apache.yoko.orb.OB.FileURLScheme_impl(
+                .add_scheme(new FileURLScheme_impl(
                         true, urlRegistry));
                 urlRegistry
-                .add_scheme(new org.apache.yoko.orb.OB.CorbalocURLScheme_impl(
+                .add_scheme(new CorbalocURLScheme_impl(
                         orbInstance_));
                 urlRegistry
-                .add_scheme(new org.apache.yoko.orb.OB.CorbanameURLScheme_impl(
+                .add_scheme(new CorbanameURLScheme_impl(
                         this, urlRegistry));
-            } catch (org.apache.yoko.orb.OB.URLRegistryPackage.SchemeAlreadyExists ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (SchemeAlreadyExists ex) {
+                Assert._OB_assert(ex);
             }
 
             //
@@ -189,7 +353,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             //
             // Create the DynamicAny::DynAnyFactory object
             //
-            org.omg.DynamicAny.DynAnyFactory dynAnyFactory = new org.apache.yoko.orb.DynamicAny.DynAnyFactory_impl(
+            DynAnyFactory dynAnyFactory = new DynAnyFactory_impl(
                     orbInstance_);
 
             //
@@ -213,8 +377,8 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                         accFactoryRegistry);
                 initServiceManager.addInitialReference("URLRegistry",
                         urlRegistry);
-            } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (InvalidName ex) {
+                Assert._OB_assert(ex);
             }
 
             //
@@ -226,20 +390,20 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     prop = "iiop";
                 int pos = 0;
                 while (pos != -1) {
-                    java.util.Vector paramList = new java.util.Vector();
-                    pos = org.apache.yoko.orb.OB.ParseParams.parse(prop, pos,
+                    Vector paramList = new Vector();
+                    pos = ParseParams.parse(prop, pos,
                             paramList);
                     String name = (String) paramList.firstElement();
                     paramList.removeElementAt(0);
                     String[] params = new String[paramList.size()];
                     paramList.copyInto(params);
 
-                    org.apache.yoko.orb.OCI.Plugin plugin = pluginManager_
+                    Plugin plugin = pluginManager_
                             .initPlugin(name, args);
                     if (plugin == null) {
                         String err = "OCI client initialization failed "
                                 + "for `" + name + "'";
-                        throw new org.omg.CORBA.INITIALIZE(err);
+                        throw new INITIALIZE(err);
                     } else
                         plugin.init_client(params);
                 }
@@ -254,20 +418,20 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     prop = "iiop";
                 int pos = 0;
                 while (pos != -1) {
-                    java.util.Vector paramList = new java.util.Vector();
-                    pos = org.apache.yoko.orb.OB.ParseParams.parse(prop, pos,
+                    Vector paramList = new Vector();
+                    pos = ParseParams.parse(prop, pos,
                             paramList);
                     String name = (String) paramList.firstElement();
                     paramList.removeElementAt(0);
                     String[] params = new String[paramList.size()];
                     paramList.copyInto(params);
 
-                    org.apache.yoko.orb.OCI.Plugin plugin = pluginManager_
+                    Plugin plugin = pluginManager_
                             .initPlugin(name, args);
                     if (plugin == null) {
                         String err = "OCI server initialization failed "
                                 + "for `" + name + "'";
-                        throw new org.omg.CORBA.INITIALIZE(err);
+                        throw new INITIALIZE(err);
                     } else
                         plugin.init_server(params);
                 }
@@ -284,10 +448,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             //
             try {
                 piManager.addIORInterceptor(
-                        new org.apache.yoko.orb.OB.CodeSetIORInterceptor_impl(
+                        new CodeSetIORInterceptor_impl(
                                 nativeCs, nativeWcs), false);
-            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (DuplicateName ex) {
+                Assert._OB_assert(ex);
             }
             
             //
@@ -297,8 +461,8 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 piManager.addIORInterceptor(new YasfIORInterceptor(), true);
                 piManager.addClientRequestInterceptor(new YasfClientInterceptor());
                 piManager.addServerRequestInterceptor(new YasfServerInterceptor(piManager.allocateSlotId()));
-            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (DuplicateName ex) {
+                Assert._OB_assert(ex);
             }
             //
             // Install interceptors for Custom Marshal Stream Format negotiation
@@ -307,8 +471,8 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 piManager.addIORInterceptor(new CmsfIORInterceptor(), false);
                 piManager.addClientRequestInterceptor(new CmsfClientInterceptor());
                 piManager.addServerRequestInterceptor(new CmsfServerInterceptor(piManager.allocateSlotId()));
-            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (DuplicateName ex) {
+                Assert._OB_assert(ex);
             }
 
             //
@@ -318,23 +482,23 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 //
                 // Get the router list from configuration data
                 //
-                org.omg.MessageRouting.RouterListHolder routerListHolder = new org.omg.MessageRouting.RouterListHolder();
-                routerListHolder.value = new org.omg.MessageRouting.Router[0];
+                RouterListHolder routerListHolder = new RouterListHolder();
+                routerListHolder.value = new Router[0];
 
-                org.apache.yoko.orb.OB.MessageRoutingUtil
+                MessageRoutingUtil
                 .getRouterListFromConfig(orbInstance_, routerListHolder);
                 piManager
                 .addIORInterceptor(
-                        new org.apache.yoko.orb.OB.MessageRoutingIORInterceptor_impl(
+                        new MessageRoutingIORInterceptor_impl(
                                 routerListHolder.value), false);
-            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (DuplicateName ex) {
+                Assert._OB_assert(ex);
             }
 
             //
             // Register the valuetype factory for ExceptionHolders
             //
-            org.omg.CORBA.portable.ValueFactory exhFactory = new org.apache.yoko.orb.OBMessaging.ExceptionHolderFactory_impl();
+            ValueFactory exhFactory = new ExceptionHolderFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/Messaging/ExceptionHolder:1.0", exhFactory);
 
@@ -342,27 +506,27 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             // Register the appropriate router admin factory for each
             // router admin policy.
             //
-            org.omg.CORBA.portable.ValueFactory routerAdminPolicyFactory = new org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicyFactory_impl();
+            ValueFactory routerAdminPolicyFactory = new ImmediateSuspendPolicyFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/MessageRouting/ImmediateSuspendPolicy:1.0",
                     routerAdminPolicyFactory);
 
-            routerAdminPolicyFactory = new org.apache.yoko.orb.OBMessageRouting.UnlimitedPingPolicyFactory_impl();
+            routerAdminPolicyFactory = new UnlimitedPingPolicyFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/MessageRouting/UnlimitedPingPolicy:1.0",
                     routerAdminPolicyFactory);
 
-            routerAdminPolicyFactory = new org.apache.yoko.orb.OBMessageRouting.LimitedPingPolicyFactory_impl();
+            routerAdminPolicyFactory = new LimitedPingPolicyFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/MessageRouting/LimitedPingPolicy:1.0",
                     routerAdminPolicyFactory);
 
-            routerAdminPolicyFactory = new org.apache.yoko.orb.OBMessageRouting.DecayPolicyFactory_impl();
+            routerAdminPolicyFactory = new DecayPolicyFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/MessageRouting/DecayPolicy:1.0",
                     routerAdminPolicyFactory);
 
-            routerAdminPolicyFactory = new org.apache.yoko.orb.OBMessageRouting.ResumePolicyFactory_impl();
+            routerAdminPolicyFactory = new ResumePolicyFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:omg.org/MessageRouting/ResumePolicy:1.0",
                     routerAdminPolicyFactory);
@@ -371,21 +535,21 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             // Register the valuetype factory for the persistent POA Object
             // Reference Template and the IMR Object Reference Template.
             //
-            org.omg.CORBA.portable.ValueFactory ortFactory = new org.apache.yoko.orb.OBPortableInterceptor.TransientORTFactory_impl(
+            ValueFactory ortFactory = new TransientORTFactory_impl(
                     orbInstance_);
             valueFactoryManager
             .registerValueFactory(
                     "IDL:orb.yoko.apache.org/OBPortableInterceptor/TransientORT:1.0",
                     ortFactory);
 
-            ortFactory = new org.apache.yoko.orb.OBPortableInterceptor.PersistentORTFactory_impl(
+            ortFactory = new PersistentORTFactory_impl(
                     orbInstance_);
             valueFactoryManager
             .registerValueFactory(
                     "IDL:orb.yoko.apache.org/OBPortableInterceptor/PersistentORT:1.0",
                     ortFactory);
 
-            ortFactory = new org.apache.yoko.orb.OBPortableInterceptor.IMRORTFactory_impl();
+            ortFactory = new IMRORTFactory_impl();
             valueFactoryManager.registerValueFactory(
                     "IDL:orb.yoko.apache.org/OBPortableInterceptor/IMRORT:1.0",
                     ortFactory);
@@ -401,7 +565,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             // Note that a SecurityException may be raised for applets.
             //
             try {
-                java.util.Properties sysProperties = System.getProperties();
+                Properties sysProperties = System.getProperties();
                 instantiateORBInitializers(sysProperties, logger);
             } catch (SecurityException ex) {
                 // Ignore
@@ -413,20 +577,20 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             // since no interceptors will be called.
             //
             if (!orbInitializers_.isEmpty()) {
-                org.apache.yoko.orb.OBPortableInterceptor.ORBInitInfo_impl info = new org.apache.yoko.orb.OBPortableInterceptor.ORBInitInfo_impl(
+                ORBInitInfo_impl info = new ORBInitInfo_impl(
                         this, args.value, orbId, piManager, initServiceManager,
                         codecFactory);
 
-                java.util.Enumeration e = orbInitializers_.elements();
+                Enumeration e = orbInitializers_.elements();
                 while (e.hasMoreElements()) {
-                    ((org.omg.PortableInterceptor.ORBInitializer) e
+                    ((ORBInitializer) e
                             .nextElement()).pre_init(info);
                 }
 
                 // TODO: change state
                 e = orbInitializers_.elements();
                 while (e.hasMoreElements()) {
-                    ((org.omg.PortableInterceptor.ORBInitializer) e
+                    ((ORBInitializer) e
                             .nextElement()).post_init(info);
                 }
 
@@ -456,7 +620,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
     protected void finalize() throws Throwable {
         if (orbInstance_ != null) {
-            org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
+            Logger logger = orbInstance_.getLogger();
             logger.debug("ORB.destroy() was not called. "
                     + "This may result in resource leaks.");
         }
@@ -465,10 +629,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     }
 
     private void initializeDefaultPolicies() {
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-        java.util.Properties properties = orbInstance_.getProperties();
+        Logger logger = orbInstance_.getLogger();
+        Properties properties = orbInstance_.getProperties();
 
-        java.util.Enumeration keys = properties.keys();
+        Enumeration keys = properties.keys();
         while (keys.hasMoreElements()) {
             String key = (String) keys.nextElement();
             if (!key.startsWith("yoko.orb.policy."))
@@ -476,7 +640,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             String value = properties.getProperty(key);
 
             if (key.equals("yoko.orb.policy.protocol")) {
-                java.util.StringTokenizer tokenizer = new java.util.StringTokenizer(
+                StringTokenizer tokenizer = new StringTokenizer(
                         value, ", ");
                 String[] seq = new String[tokenizer.countTokens()];
                 int n = 0;
@@ -487,10 +651,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.protocol: `" + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.ProtocolPolicy_impl p = new org.apache.yoko.orb.OB.ProtocolPolicy_impl(
+                ProtocolPolicy_impl p = new ProtocolPolicy_impl(
                         seq);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.connection_reuse")) {
@@ -504,10 +668,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                             + "yoko.orb.policy.connection_reuse: `" + value
                             + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.ConnectionReusePolicy_impl p = new org.apache.yoko.orb.OB.ConnectionReusePolicy_impl(
+                ConnectionReusePolicy_impl p = new ConnectionReusePolicy_impl(
                         b);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.zero_port")) {
@@ -521,10 +685,10 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                             + "yoko.orb.policy.zero_port: `" + value
                             + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.ZeroPortPolicy_impl p = new org.apache.yoko.orb.OB.ZeroPortPolicy_impl(
+                ZeroPortPolicy_impl p = new ZeroPortPolicy_impl(
                         b);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.retry")
@@ -535,25 +699,25 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             } else if (key.equals("yoko.orb.policy.timeout")) {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    org.apache.yoko.orb.OB.TimeoutPolicy_impl p = new org.apache.yoko.orb.OB.TimeoutPolicy_impl(
+                    TimeoutPolicy_impl p = new TimeoutPolicy_impl(
                             val);
                     policies_.addElement(p);
                 }
             } else if (key.equals("yoko.orb.policy.location_transparency")) {
                 short val;
                 if (value.equals("strict"))
-                    val = org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_STRICT.value;
+                    val = LOCATION_TRANSPARENCY_STRICT.value;
                 else if (value.equals("relaxed"))
-                    val = org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_RELAXED.value;
+                    val = LOCATION_TRANSPARENCY_RELAXED.value;
                 else {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.location_transparency: `"
                             + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.LocationTransparencyPolicy_impl p = new org.apache.yoko.orb.OB.LocationTransparencyPolicy_impl(
+                LocationTransparencyPolicy_impl p = new LocationTransparencyPolicy_impl(
                         val);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.interceptor")) {
@@ -566,23 +730,37 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.interceptor: `" + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.InterceptorPolicy_impl p = new org.apache.yoko.orb.OB.InterceptorPolicy_impl(
+                InterceptorPolicy_impl p = new InterceptorPolicy_impl(
                         b);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.connect_timeout")) {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    org.apache.yoko.orb.OB.ConnectTimeoutPolicy_impl p = new org.apache.yoko.orb.OB.ConnectTimeoutPolicy_impl(
+                    ConnectTimeoutPolicy_impl p = new ConnectTimeoutPolicy_impl(
                             val);
                     policies_.addElement(p);
                 }
             } else if (key.equals("yoko.orb.policy.request_timeout")) {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl p = new org.apache.yoko.orb.OB.RequestTimeoutPolicy_impl(
+                    RequestTimeoutPolicy_impl p = new RequestTimeoutPolicy_impl(
+                            val);
+                    policies_.addElement(p);
+                }
+            } else if (key.equals("yoko.orb.policy.request_timeout")) {
+                int val = Integer.parseInt(value);
+                if (val != -1) {
+                    RequestTimeoutPolicy_impl p = new RequestTimeoutPolicy_impl(
+                            val);
+                    policies_.addElement(p);
+                }
+            } else if (key.equals("yoko.orb.policy.reply_timeout")) {
+                int val = Integer.parseInt(value);
+                if (val != -1) {
+                    ReplyTimeoutPolicy_impl p = new ReplyTimeoutPolicy_impl(
                             val);
                     policies_.addElement(p);
                 }
@@ -596,48 +774,48 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.locate_request: `" + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.OB.LocateRequestPolicy_impl p = new org.apache.yoko.orb.OB.LocateRequestPolicy_impl(
+                LocateRequestPolicy_impl p = new LocateRequestPolicy_impl(
                         b);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.rebind")) {
                 short val;
                 if (value.equals("transparent"))
-                    val = org.omg.Messaging.TRANSPARENT.value;
+                    val = TRANSPARENT.value;
                 else if (value.equals("no_rebind"))
-                    val = org.omg.Messaging.NO_REBIND.value;
+                    val = NO_REBIND.value;
                 else if (value.equals("no_reconnect"))
-                    val = org.omg.Messaging.NO_RECONNECT.value;
+                    val = NO_RECONNECT.value;
                 else {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.rebind: `" + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.Messaging.RebindPolicy_impl p = new org.apache.yoko.orb.Messaging.RebindPolicy_impl(
+                RebindPolicy_impl p = new RebindPolicy_impl(
                         val);
                 policies_.addElement(p);
             } else if (key.equals("yoko.orb.policy.sync_scope")) {
                 short val;
                 if (value.equals("none"))
-                    val = org.omg.Messaging.SYNC_NONE.value;
+                    val = SYNC_NONE.value;
                 else if (value.equals("transport"))
-                    val = org.omg.Messaging.SYNC_WITH_TRANSPORT.value;
+                    val = SYNC_WITH_TRANSPORT.value;
                 else if (value.equals("server"))
-                    val = org.omg.Messaging.SYNC_WITH_SERVER.value;
+                    val = SYNC_WITH_SERVER.value;
                 else if (value.equals("target"))
-                    val = org.omg.Messaging.SYNC_WITH_TARGET.value;
+                    val = SYNC_WITH_TARGET.value;
                 else {
                     String err = "ORB.init: invalid value for "
                             + "yoko.orb.policy.sync_scope: `" + value + "'";
                     logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    throw new INITIALIZE(err);
                 }
 
-                org.apache.yoko.orb.Messaging.SyncScopePolicy_impl p = new org.apache.yoko.orb.Messaging.SyncScopePolicy_impl(
+                SyncScopePolicy_impl p = new SyncScopePolicy_impl(
                         val);
                 policies_.addElement(p);
             }
@@ -653,7 +831,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             else {
                 String err = "ORB.init: unknown property `" + key + "'";
                 logger.error(err);
-                throw new org.omg.CORBA.INITIALIZE(err);
+                throw new INITIALIZE(err);
             }
         }
 
@@ -661,7 +839,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // Set the default policies, if not already set
         //
         if (properties.getProperty("yoko.orb.policy.connection_reuse") == null) {
-            org.apache.yoko.orb.OB.ConnectionReusePolicy_impl p = new org.apache.yoko.orb.OB.ConnectionReusePolicy_impl(
+            ConnectionReusePolicy_impl p = new ConnectionReusePolicy_impl(
                     true);
             policies_.addElement(p);
         }
@@ -669,7 +847,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         // Set the retry policy
         //
-        short retry_mode = org.apache.yoko.orb.OB.RETRY_STRICT.value;
+        short retry_mode = RETRY_STRICT.value;
         int retry_interval = 0;
         int max_retries = 1;
         boolean retry_remote = false;
@@ -677,16 +855,16 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         String value;
         if ((value = properties.getProperty("yoko.orb.policy.retry")) != null) {
             if (value.equals("never"))
-                retry_mode = org.apache.yoko.orb.OB.RETRY_NEVER.value;
+                retry_mode = RETRY_NEVER.value;
             else if (value.equals("strict"))
-                retry_mode = org.apache.yoko.orb.OB.RETRY_STRICT.value;
+                retry_mode = RETRY_STRICT.value;
             else if (value.equals("always"))
-                retry_mode = org.apache.yoko.orb.OB.RETRY_ALWAYS.value;
+                retry_mode = RETRY_ALWAYS.value;
             else {
                 String err = "ORB.init: invalid value for "
                         + "yoko.orb.policy.retry: `" + value + "'";
                 logger.error(err);
-                throw new org.omg.CORBA.INITIALIZE(err);
+                throw new INITIALIZE(err);
             }
         }
         if ((value = properties.getProperty("yoko.orb.policy.retry.interval")) != null) {
@@ -696,7 +874,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 String err = "ORB.init: invalid value for "
                         + "yoko.orb.policy.retry.interval: `" + value + "'";
                 logger.error(err, ex);
-                throw new org.omg.CORBA.INITIALIZE(err);
+                throw new INITIALIZE(err);
             }
         }
         if ((value = properties.getProperty("yoko.orb.policy.retry.max")) != null) {
@@ -706,107 +884,107 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 String err = "ORB.init: invalid value for "
                         + "yoko.orb.policy.retry.max: `" + value + "'";
                 logger.error(err, ex);
-                throw new org.omg.CORBA.INITIALIZE(err);
+                throw new INITIALIZE(err);
             }
         }
         if ((value = properties.getProperty("yoko.orb.policy.retry.remote")) != null)
             retry_remote = value.equals("true");
 
-        org.apache.yoko.orb.OB.RetryPolicy_impl p = new org.apache.yoko.orb.OB.RetryPolicy_impl(
+        RetryPolicy_impl p = new RetryPolicy_impl(
                 retry_mode, retry_interval, max_retries, retry_remote);
         policies_.addElement(p);
 
         //
         // Create the ORBPolicyManager
         //
-        org.omg.CORBA.PolicyManager pm = new org.apache.yoko.orb.CORBA.ORBPolicyManager_impl(
+        PolicyManager pm = new ORBPolicyManager_impl(
                 policies_);
-        org.apache.yoko.orb.OB.InitialServiceManager initServiceManager = orbInstance_
+        InitialServiceManager initServiceManager = orbInstance_
                 .getInitialServiceManager();
         try {
             initServiceManager.addInitialReference("ORBPolicyManager", pm);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InvalidName ex) {
+            Assert._OB_assert(ex);
         }
-        org.apache.yoko.orb.OB.ObjectFactory objectFactory = orbInstance_
+        ObjectFactory objectFactory = orbInstance_
                 .getObjectFactory();
         objectFactory.setPolicyManager(pm);
 
         //
         // Register the default PolicyFactory policies for the ORB
         //
-        org.apache.yoko.orb.OB.PolicyFactoryManager pfm = orbInstance_
+        PolicyFactoryManager pfm = orbInstance_
                 .getPolicyFactoryManager();
 
-        org.omg.PortableInterceptor.PolicyFactory factory = new org.apache.yoko.orb.CORBA.ORBPolicyFactory_impl();
+        PolicyFactory factory = new ORBPolicyFactory_impl();
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.CONNECTION_REUSE_POLICY_ID.value,
+                CONNECTION_REUSE_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.ZERO_PORT_POLICY_ID.value,
+                ZERO_PORT_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID.value, factory, true);
-        pfm.registerPolicyFactory(org.apache.yoko.orb.OB.RETRY_POLICY_ID.value,
+                PROTOCOL_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(RETRY_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.TIMEOUT_POLICY_ID.value, factory, true);
+                TIMEOUT_POLICY_ID.value, factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.LOCATION_TRANSPARENCY_POLICY_ID.value,
+                LOCATION_TRANSPARENCY_POLICY_ID.value,
                 factory, true);
-        pfm.registerPolicyFactory(org.omg.Messaging.REBIND_POLICY_TYPE.value,
+        pfm.registerPolicyFactory(REBIND_POLICY_TYPE.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.SYNC_SCOPE_POLICY_TYPE.value, factory, true);
+                SYNC_SCOPE_POLICY_TYPE.value, factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.INTERCEPTOR_POLICY_ID.value, factory,
+                INTERCEPTOR_POLICY_ID.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.CONNECT_TIMEOUT_POLICY_ID.value,
+                CONNECT_TIMEOUT_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.apache.yoko.orb.OB.REQUEST_TIMEOUT_POLICY_ID.value,
+                REQUEST_TIMEOUT_POLICY_ID.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REQUEST_START_TIME_POLICY_TYPE.value,
+                REQUEST_START_TIME_POLICY_TYPE.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REQUEST_END_TIME_POLICY_TYPE.value, factory,
+                REQUEST_END_TIME_POLICY_TYPE.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REPLY_START_TIME_POLICY_TYPE.value, factory,
+                REPLY_START_TIME_POLICY_TYPE.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REPLY_END_TIME_POLICY_TYPE.value, factory,
+                REPLY_END_TIME_POLICY_TYPE.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.RELATIVE_REQ_TIMEOUT_POLICY_TYPE.value,
+                RELATIVE_REQ_TIMEOUT_POLICY_TYPE.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.RELATIVE_RT_TIMEOUT_POLICY_TYPE.value,
+                RELATIVE_RT_TIMEOUT_POLICY_TYPE.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE.value, factory,
+                BIDIRECTIONAL_POLICY_TYPE.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REQUEST_PRIORITY_POLICY_TYPE.value, factory,
+                REQUEST_PRIORITY_POLICY_TYPE.value, factory,
                 true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.REPLY_PRIORITY_POLICY_TYPE.value, factory,
+                REPLY_PRIORITY_POLICY_TYPE.value, factory,
                 true);
-        pfm.registerPolicyFactory(org.omg.Messaging.ROUTING_POLICY_TYPE.value,
+        pfm.registerPolicyFactory(ROUTING_POLICY_TYPE.value,
                 factory, true);
-        pfm.registerPolicyFactory(org.omg.Messaging.MAX_HOPS_POLICY_TYPE.value,
+        pfm.registerPolicyFactory(MAX_HOPS_POLICY_TYPE.value,
                 factory, true);
         pfm.registerPolicyFactory(
-                org.omg.Messaging.QUEUE_ORDER_POLICY_TYPE.value, factory, true);
+                QUEUE_ORDER_POLICY_TYPE.value, factory, true);
     }
 
-    private void instantiateORBInitializers(java.util.Properties properties,
-            org.apache.yoko.orb.OB.Logger logger) {
+    private void instantiateORBInitializers(Properties properties,
+                                            Logger logger) {
         final String magic = "org.omg.PortableInterceptor.ORBInitializerClass.";
 
-        java.util.Enumeration e = properties.keys();
+        Enumeration e = properties.keys();
         while (e.hasMoreElements()) {
             String key = (String) e.nextElement();
             if (key.startsWith(magic)) {
@@ -819,7 +997,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                     try {
                         // get the appropriate class for the loading.
                         ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                        org.omg.PortableInterceptor.ORBInitializer init = (org.omg.PortableInterceptor.ORBInitializer) 
+                        ORBInitializer init = (ORBInitializer)
                                 ProviderLocator.loadClass(initClass, getClass(), loader).newInstance();
                         orbInitializers_.put(initClass, init);
                     }
@@ -841,40 +1019,40 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     }
 
     private static boolean loadConfigFile(String configFile,
-            java.util.Properties properties,
-            org.apache.yoko.orb.OB.Logger logger) {
+            Properties properties,
+            Logger logger) {
         //
         // Load the contents of the configuration file
         //
-        java.io.InputStream in = null;
+        InputStream in = null;
 
         //
         // Try to open URL connection first
         //
         try {
             try {
-                java.net.URL url = new java.net.URL(configFile);
+                URL url = new URL(configFile);
                 in = url.openStream();
-            } catch (java.net.MalformedURLException e) {
+            } catch (MalformedURLException e) {
                 //
                 // Try to open plain file, if `configFile' is not a
                 // URL specification
                 //
-                in = new java.io.FileInputStream(configFile);
+                in = new FileInputStream(configFile);
             }
-        } catch (java.io.IOException ex) {
+        } catch (IOException ex) {
             logger.warning("ORB.init: could not load configuration " + "file "
                     + configFile, ex);
         }
 
         if (in != null) {
             try {
-                java.io.BufferedInputStream bin = new java.io.BufferedInputStream(
+                BufferedInputStream bin = new BufferedInputStream(
                         in);
                 properties.load(bin);
                 in.close();
                 return true;
-            } catch (java.io.IOException ex) {
+            } catch (IOException ex) {
                 logger.warning("ORB.init: could not load configuration "
                         + "file " + configFile, ex);
             }
@@ -883,7 +1061,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         return false;
     }
 
-    private static String[] parseAppletParams(java.applet.Applet app) {
+    private static String[] parseAppletParams(Applet app) {
         String[] args = new String[0];
 
         //
@@ -891,7 +1069,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         String paramList = app.getParameter("ORBparams");
         if (paramList != null) {
-            java.util.StringTokenizer p = new java.util.StringTokenizer(
+            StringTokenizer p = new StringTokenizer(
                     paramList);
 
             args = new String[p.countTokens()];
@@ -904,9 +1082,9 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         return args;
     }
 
-    private void setParameters(org.omg.CORBA.StringSeqHolder args,
-            java.util.Properties properties,
-            org.apache.yoko.orb.OB.Logger logger) {
+    private void setParameters(StringSeqHolder args,
+                               Properties properties,
+                               Logger logger) {
         if (args.value == null)
             args.value = new String[0];
 
@@ -914,7 +1092,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // Initialize the Logger
         //
         if (logger == null)
-            logger = new org.apache.yoko.orb.OB.Logger_impl();
+            logger = new Logger_impl();
 
         //
         // Initialize the properties
@@ -940,23 +1118,23 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         String orbId = "";
         String serverId = "";
         String serverInstance = "";
-        int concModel = org.apache.yoko.orb.OB.Client.Blocking;
-        int nativeCs = org.apache.yoko.orb.OB.CodeSetDatabase.ISOLATIN1;
-        int nativeWcs = org.apache.yoko.orb.OB.CodeSetDatabase.UTF16;
+        int concModel = Client.Blocking;
+        int nativeCs = ISO_LATIN_1.id;
+        int nativeWcs = UTF_16.id;
         int defaultWcs = 0;
 
-        java.util.Enumeration keys = properties.keys();
+        Enumeration keys = properties.keys();
         while (keys.hasMoreElements()) {
             String key = (String) keys.nextElement();
             if (!key.startsWith("yoko.orb."))
                 continue;
 
             String value = properties.getProperty(key);
-            org.apache.yoko.orb.OB.Assert._OB_assert(value != null);
+            Assert._OB_assert(value != null);
 
             if (key.equals("yoko.orb.conc_model")) {
                 if (value.equals("threaded")) {
-                    concModel = org.apache.yoko.orb.OB.Client.Threaded;
+                    concModel = Client.Threaded;
                 }
                 else {
                     logger.warning("ORB.init: unknown value for "
@@ -973,12 +1151,9 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 // The server name must begin with an alpha-numeric
                 // character
                 //
-                if (value.length() == 0
-                        || !Character.isLetterOrDigit(value.charAt(0))) {
-                    String err = "ORB.init: illegal value for "
-                            + "yoko.orb.server_name: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                if (value.length() == 0 || !Character.isLetterOrDigit(value.charAt(0))) {
+                    logger.error("ORB.init: illegal value for yoko.orb.server_name: " + value);
+                    throw new INITIALIZE("ORB.init: illegal value for yoko.orb.server_name: " + value);
                 }
                 serverId = value;
             } else if (key.equals("yoko.orb.server_instance")) {
@@ -989,57 +1164,42 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 else
                     raiseDIIExceptions_ = false;
             } else if (key.equals("yoko.orb.native_cs")) {
-                int csid = org.apache.yoko.orb.OB.CodeSetDatabase.instance()
-                        .nameToId(value);
-                if (csid != 0
-                        && csid != org.apache.yoko.orb.OB.CodeSetDatabase.UTF8)
+                int csid = CodeSetInfo
+                        .getRegistryIdForName(value);
+                if (csid != 0 && csid != UTF_8.id)
                     nativeCs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.native_cs: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.native_cs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_cs: " + value);
                 }
             } else if (key.equals("yoko.orb.native_wcs")) {
-                int csid = org.apache.yoko.orb.OB.CodeSetDatabase.instance()
-                        .nameToId(value);
-                if (csid != 0
-                        && csid != org.apache.yoko.orb.OB.CodeSetDatabase.UTF8)
+                int csid = CodeSetInfo.getRegistryIdForName(value);
+                if (csid != 0 && csid != UTF_8.id)
                     nativeWcs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.native_wcs: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.default_wcs")) {
-                int csid = org.apache.yoko.orb.OB.CodeSetDatabase.instance()
-                        .nameToId(value);
-                if (csid != 0
-                        && csid != org.apache.yoko.orb.OB.CodeSetDatabase.UTF8)
+                int csid = CodeSetInfo
+                        .getRegistryIdForName(value);
+                if (csid != 0 && csid != UTF_8.id)
                     defaultWcs = csid;
                 else {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.default_wcs: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.extended_wchar")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.extended_wchar: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
                 }
             } else if (key.equals("yoko.orb.default_init_ref")) {
                 if (value.length() == 0)
-                    logger.warning("ORB.init: invalid value for "
-                            + "yoko.orb.default_init_ref");
-            } else if (key.equals("yoko.orb.server_timeout")
-                    || key.equals("yoko.orb.server_shutdown_timeout")) {
+                    logger.warning("ORB.init: invalid value for yoko.orb.default_init_ref");
+            } else if (key.equals("yoko.orb.server_timeout") || key.equals("yoko.orb.server_shutdown_timeout")) {
                 // Used by GIOPServerWorker
-            } else if (key.equals("yoko.orb.client_timeout")
-                    || key.equals("yoko.orb.client_shutdown_timeout")) {
+            } else if (key.equals("yoko.orb.client_timeout") || key.equals("yoko.orb.client_shutdown_timeout")) {
                 // Used by GIOPClientWorker
             } else if (key.startsWith("yoko.orb.service.")) {
                 // Ignore
@@ -1051,23 +1211,17 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 // Ignore
             } else if (key.equals("yoko.orb.use_type_code_cache")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    String err = "ORB.init: unknown value for "
-                            + "yoko.orb.use_type_code_cache: " + value;
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
+                    throw new INITIALIZE("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
                 }
             } else if (key.equals("yoko.orb.giop.max_message_size")) {
                 try {
                     int max = Integer.valueOf(value).intValue();
-                    org.apache.yoko.orb.OB.GIOPIncomingMessage
-                    .setMaxMessageSize(max);
-                    org.apache.yoko.orb.OB.GIOPOutgoingMessage
-                    .setMaxMessageSize(max);
+                    GIOPIncomingMessage.setMaxMessageSize(max);
+                    GIOPOutgoingMessage.setMaxMessageSize(max);
                 } catch (NumberFormatException ex) {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.giop.max_message_size: " + value;
-                    logger.error(err, ex);
-                    throw new org.omg.CORBA.INITIALIZE(err);
+                    logger.error("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value, ex);
+                    throw new INITIALIZE("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value);
                 }
             } else if (key.equals("yoko.orb.ami_workers")) {
                 // ignore
@@ -1079,7 +1233,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         // Parse the tracing levels from the properties
         //
-        org.apache.yoko.orb.OB.CoreTraceLevels coreTraceLevels = new org.apache.yoko.orb.OB.CoreTraceLevels(
+        CoreTraceLevels coreTraceLevels = new CoreTraceLevels(
                 logger, properties);
 
         //
@@ -1098,27 +1252,27 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     public String[] list_initial_services() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             return orbInstance_.getInitialServiceManager().listInitialServices();
         }
     }
 
     public org.omg.CORBA.Object resolve_initial_references(
-            String identifier) throws org.omg.CORBA.ORBPackage.InvalidName {
+            String identifier) throws InvalidName {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
             if (destroy_) {
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
             }
 
-            org.apache.yoko.orb.OB.InitialServiceManager initServiceManager = orbInstance_
+            InitialServiceManager initServiceManager = orbInstance_
                     .getInitialServiceManager();
 
             org.omg.CORBA.Object obj = null;
 
             try {
                 obj = initServiceManager.resolveInitialReferences(identifier);
-            } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+            } catch (InvalidName ex) {
                 //
                 // If the service is the RootPOA and it hasn't yet been
                 // initialized, create it. We could put in some automatic method
@@ -1137,11 +1291,11 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
     public void register_initial_reference(String name,
             org.omg.CORBA.Object obj)
-                    throws org.omg.CORBA.ORBPackage.InvalidName {
+                    throws InvalidName {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
 
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             orbInstance_.getInitialServiceManager().addInitialReference(name, obj);
         }
@@ -1150,52 +1304,48 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     public String object_to_string(org.omg.CORBA.Object p) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-            org.omg.IOP.IOR ior;
+            IOR ior;
 
             if (p == null) {
-                ior = new org.omg.IOP.IOR("", new org.omg.IOP.TaggedProfile[0]);
+                ior = new IOR("", new TaggedProfile[0]);
             } else {
-                if (p instanceof org.omg.CORBA.LocalObject)
-                    throw new org.omg.CORBA.MARSHAL(
-                            org.apache.yoko.orb.OB.MinorCodes
-                            .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject),
-                            org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                if (p instanceof LocalObject)
+                    throw new MARSHAL(
+                            MinorCodes
+                            .describeMarshal(MinorCodes.MinorLocalObject),
+                            MinorCodes.MinorLocalObject,
+                            CompletionStatus.COMPLETED_NO);
 
-                org.apache.yoko.orb.CORBA.Delegate delegate = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) p)
+                org.apache.yoko.orb.CORBA.Delegate delegate = (org.apache.yoko.orb.CORBA.Delegate) (((ObjectImpl) p)
                         ._get_delegate());
                 ior = delegate._OB_origIOR();
             }
 
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                    buf);
+            try (OutputStream out = new OutputStream()) {
+                out._OB_writeEndian();
+                IORHelper.write(out, ior);
 
-            out._OB_writeEndian();
-            org.omg.IOP.IORHelper.write(out, ior);
-
-            String str = org.apache.yoko.orb.OB.HexConverter.octetsToAscii(buf
-                    .data(), buf.length());
-            return "IOR:" + str;
+                return "IOR:" + out.writtenBytesToAscii();
+            }
         }
     }
 
     public org.omg.CORBA.Object string_to_object(String ior) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             return orbInstance_.getObjectFactory().stringToObject(ior);
         }
     }
 
-    public org.omg.CORBA.NVList create_list(int count) {
+    public NVList create_list(int count) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
 
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             if (count < 0)
                 count = 0;
@@ -1207,18 +1357,18 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     /**
      * @deprecated Deprecated by CORBA 2.3.
      */
-    public org.omg.CORBA.NVList create_operation_list(
-            org.omg.CORBA.OperationDef oper) {
+    public NVList create_operation_list(
+            OperationDef oper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
 
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         //
         // Get operation description
         //
-        org.omg.CORBA.ContainedPackage.Description d = oper.describe();
-        org.omg.CORBA.OperationDescription desc = org.omg.CORBA.OperationDescriptionHelper
+        Description d = oper.describe();
+        OperationDescription desc = OperationDescriptionHelper
                 .extract(d.value);
 
         //
@@ -1227,27 +1377,27 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         org.apache.yoko.orb.CORBA.NVList list = new org.apache.yoko.orb.CORBA.NVList(
                 this);
         for (int i = 0; i < desc.parameters.length; i++) {
-            org.omg.CORBA.ParameterDescription par = desc.parameters[i];
+            ParameterDescription par = desc.parameters[i];
 
-            org.omg.CORBA.Any any = create_any();
+            Any any = create_any();
             any.type(par.type);
 
             int flags = 0;
             switch (par.mode.value()) {
-                case org.omg.CORBA.ParameterMode._PARAM_IN:
-                    flags = org.omg.CORBA.ARG_IN.value;
+                case ParameterMode._PARAM_IN:
+                    flags = ARG_IN.value;
                     break;
 
-                case org.omg.CORBA.ParameterMode._PARAM_OUT:
-                    flags = org.omg.CORBA.ARG_OUT.value;
+                case ParameterMode._PARAM_OUT:
+                    flags = ARG_OUT.value;
                     break;
 
-                case org.omg.CORBA.ParameterMode._PARAM_INOUT:
-                    flags = org.omg.CORBA.ARG_INOUT.value;
+                case ParameterMode._PARAM_INOUT:
+                    flags = ARG_INOUT.value;
                     break;
 
                 default:
-                    org.apache.yoko.orb.OB.Assert._OB_assert(false);
+                    Assert._OB_assert(false);
             }
 
             list.add_value(par.name, any, flags);
@@ -1257,84 +1407,84 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         }
     }
 
-    public  org.omg.CORBA.NVList create_operation_list(
+    public  NVList create_operation_list(
             org.omg.CORBA.Object oper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
 
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.omg.CORBA.OperationDef def = org.omg.CORBA.OperationDefHelper
+        OperationDef def = OperationDefHelper
                 .narrow(oper);
         return create_operation_list(def);
         }
     }
 
     public org.omg.CORBA.NamedValue create_named_value(
-            String name, org.omg.CORBA.Any value, int flags) {
+            String name, Any value, int flags) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        return new org.apache.yoko.orb.CORBA.NamedValue(name, value, flags);
+        return new NamedValue(name, value, flags);
         }
     }
 
     public org.omg.CORBA.ExceptionList create_exception_list() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        return new org.apache.yoko.orb.CORBA.ExceptionList();
+        return new ExceptionList();
         }
     }
 
     public org.omg.CORBA.ContextList create_context_list() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        return new org.apache.yoko.orb.CORBA.ContextList();
+        return new ContextList();
         }
     }
 
     public org.omg.CORBA.Context get_default_context() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        return new org.apache.yoko.orb.CORBA.Context(this, "");
+        return new Context(this, "");
         }
     }
 
     public org.omg.CORBA.Environment create_environment() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        return new org.apache.yoko.orb.CORBA.Environment();
+        return new Environment();
         }
     }
 
     public void send_multiple_requests_oneway(
-            org.omg.CORBA.Request[] requests) {
+            Request[] requests) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.MultiRequestSender multi = orbInstance_
+        MultiRequestSender multi = orbInstance_
                 .getMultiRequestSender();
         multi.sendMultipleRequestsOneway(requests);
         }
     }
 
     public void send_multiple_requests_deferred(
-            org.omg.CORBA.Request[] requests) {
+            Request[] requests) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.MultiRequestSender multi = orbInstance_
+        MultiRequestSender multi = orbInstance_
                 .getMultiRequestSender();
         multi.sendMultipleRequestsDeferred(requests);
         }
@@ -1343,35 +1493,35 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     public boolean poll_next_response() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.MultiRequestSender multi = orbInstance_
+        MultiRequestSender multi = orbInstance_
                 .getMultiRequestSender();
         return multi.pollNextResponse();
         }
     }
 
-    public org.omg.CORBA.Request get_next_response()
-            throws org.omg.CORBA.WrongTransaction {
+    public Request get_next_response()
+            throws WrongTransaction {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.MultiRequestSender multi = orbInstance_
+        MultiRequestSender multi = orbInstance_
                 .getMultiRequestSender();
         return multi.getNextResponse();
         }
     }
 
     public boolean get_service_information(short service_type,
-            org.omg.CORBA.ServiceInformationHolder service_info) {
+            ServiceInformationHolder service_info) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        service_info.value = new org.omg.CORBA.ServiceInformation();
+        service_info.value = new ServiceInformation();
         service_info.value.service_options = new int[0];
-        service_info.value.service_details = new org.omg.CORBA.ServiceDetail[0];
+        service_info.value.service_details = new ServiceDetail[0];
         return false;
         }
     }
@@ -1383,7 +1533,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         //
         // Ensure that other threads get a chance to execute if
@@ -1402,7 +1552,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
         orbControl_.performWork();
         }
     }
@@ -1459,7 +1609,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             // Has the ORB been destroyed yet?
             //
             if (destroy_)
-                throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+                throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             //
             // Shutdown both the server & client side of the ORB
@@ -1494,77 +1644,74 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
 
     public org.omg.CORBA.portable.OutputStream create_output_stream() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                buf);
-        out._OB_ORBInstance(orbInstance_);
-        return out;
+            OutputStream out = new OutputStream();
+            out._OB_ORBInstance(orbInstance_);
+            return out;
         }
     }
 
     public org.omg.CORBA.Object get_value_def(String repid)
-            throws org.omg.CORBA.BAD_PARAM {
+            throws BAD_PARAM {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         try {
             org.omg.CORBA.Object obj = resolve_initial_references("InterfaceRepository");
-            org.omg.CORBA.Repository repository = org.omg.CORBA.RepositoryHelper
+            Repository repository = RepositoryHelper
                     .narrow(obj);
-            org.omg.CORBA.Contained cont = repository.lookup_id(repid);
+            Contained cont = repository.lookup_id(repid);
             if (cont != null)
-                return org.omg.CORBA.ValueDefHelper.narrow(cont);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
+                return ValueDefHelper.narrow(cont);
+        } catch (InvalidName ex) {
         }
 
-        throw new org.omg.CORBA.BAD_PARAM("Repository lookup failed for "
+        throw new BAD_PARAM("Repository lookup failed for "
                 + repid);
         }
     }
 
-    public void set_delegate(java.lang.Object wrapper) {
+    public void set_delegate(Object wrapper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         try {
-            org.omg.PortableServer.Servant servant = (org.omg.PortableServer.Servant) wrapper;
+            Servant servant = (Servant) wrapper;
             servant
-            ._set_delegate(new org.apache.yoko.orb.PortableServer.Delegate(
+            ._set_delegate(new Delegate(
                     this));
         } catch (ClassCastException ex) {
-            throw (org.omg.CORBA.BAD_PARAM)new org.omg.CORBA.BAD_PARAM(
+            throw (BAD_PARAM)new BAD_PARAM(
                     "Argument is not of type "
                             + "org.omg.PortableServer." + "Servant").initCause(ex);
         }
         }
     }
 
-    protected void set_parameters(String[] args, java.util.Properties properties) {
-        setParameters(new org.omg.CORBA.StringSeqHolder(args), properties, null);
+    protected void set_parameters(String[] args, Properties properties) {
+        setParameters(new StringSeqHolder(args), properties, null);
     }
 
-    protected void set_parameters(java.applet.Applet app,
-            java.util.Properties properties) {
+    protected void set_parameters(Applet app,
+                                  Properties properties) {
         String[] args = parseAppletParams(app);
-        setParameters(new org.omg.CORBA.StringSeqHolder(args), properties, null);
+        setParameters(new StringSeqHolder(args), properties, null);
     }
 
     // ------------------------------------------------------------------
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public static org.omg.CORBA.ORB init(String[] args,
-            java.util.Properties props, org.apache.yoko.orb.OB.Logger logger) {
-        return init(new org.omg.CORBA.StringSeqHolder(args), props, logger);
+    public static ORB init(String[] args,
+            Properties props, Logger logger) {
+        return init(new StringSeqHolder(args), props, logger);
     }
 
-    public static org.omg.CORBA.ORB init(org.omg.CORBA.StringSeqHolder args,
-            java.util.Properties props, org.apache.yoko.orb.OB.Logger logger) {
+    public static ORB init(StringSeqHolder args,
+                                         Properties props, Logger logger) {
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
 
@@ -1589,7 +1736,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
             }
         } catch (Throwable ex) {
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
+            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: "
                     + orbClassName + '\n' + ex.getMessage()).initCause(ex);
         }
 
@@ -1598,15 +1745,8 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         return orb;
     }
 
-    public static org.omg.CORBA.ORB init(java.applet.Applet app,
-            java.util.Properties props, org.apache.yoko.orb.OB.Logger logger) {
-        String javaVersion = getSystemProperty("java.vm.version");
-        float version = Float.parseFloat(javaVersion);
-        if (version < 1.5) {
-            throw new org.omg.CORBA.INITIALIZE("Unsupported Java version: "
-                    + version);
-        }
-
+    public static ORB init(Applet app,
+                                         Properties props, Logger logger) {
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
         ORB_impl orb;
@@ -1630,22 +1770,22 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
             }
         } catch (Throwable ex) {
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE("Invalid ORB class: "
+            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: "
                     + orbClassName + '\n' + ex.getMessage()).initCause(ex);
         }
 
         String[] args = parseAppletParams(app);
-        orb.setParameters(new org.omg.CORBA.StringSeqHolder(args), props,
+        orb.setParameters(new StringSeqHolder(args), props,
                 logger);
 
         return orb;
     }
 
     static public String[] ParseArgs(String[] args,
-            java.util.Properties properties,
-            org.apache.yoko.orb.OB.Logger logger) {
+            Properties properties,
+            Logger logger) {
         if (logger == null)
-            logger = new org.apache.yoko.orb.OB.Logger_impl();
+            logger = new Logger_impl();
 
         //
         // If the yoko.config property is defined, and the yoko.config_loaded
@@ -1664,7 +1804,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // Create list with options supported by the ORB
         //
         if (orbOptionFilter_ == null) {
-            orbOptionFilter_ = new org.apache.yoko.orb.OB.OptionFilter(
+            orbOptionFilter_ = new OptionFilter(
                     "ORB.init", "-ORB");
             orbOptionFilter_.add("id", 1);
             orbOptionFilter_.add("service", 2);
@@ -1696,7 +1836,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // Create list with options supported by the Object Adaptor
         //
         if (oaOptionFilter_ == null) {
-            oaOptionFilter_ = new org.apache.yoko.orb.OB.OptionFilter(
+            oaOptionFilter_ = new OptionFilter(
                     "ORB.init", "-OA");
             oaOptionFilter_.add("host", 1); // Deprecated
             oaOptionFilter_.add("port", 1); // Deprecated
@@ -1723,7 +1863,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                         String msg = "ORB.init: argument expected "
                                 + "for -ORBconfig";
                         logger.error(msg);
-                        throw new org.omg.CORBA.INITIALIZE(msg);
+                        throw new INITIALIZE(msg);
                     }
 
                     configFile = args[i + 1];
@@ -1763,7 +1903,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         // Process each argument. Turn each argument into an appropriate
         // property.
         //
-        org.apache.yoko.orb.OB.OptionFilter.Option[] options = orbOptionFilter_
+        Option[] options = orbOptionFilter_
                 .parse(logger, args);
         for (int i = 0; i < options.length; i++) {
             String name = options[i].name;
@@ -1791,7 +1931,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
                     logger.error("ORB.init: invalid value for -ORBInitRef");
-                    throw new org.omg.CORBA.INITIALIZE();
+                    throw new INITIALIZE();
                 }
                 String svc = value[0].substring(0, n);
                 String url = value[0].substring(n + 1);
@@ -1802,7 +1942,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
                     logger.error("ORB.init: invalid value for -ORBproperty");
-                    throw new org.omg.CORBA.INITIALIZE();
+                    throw new INITIALIZE();
                 }
                 String propName = value[0].substring(0, n);
                 String propValue = value[0].substring(n + 1);
@@ -1823,7 +1963,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
             } else if (name.equals("threaded")) {
                 properties.put("yoko.orb.conc_model", "threaded");
             } else if (name.equals("version")) {
-                logger.info(org.apache.yoko.orb.OB.Version.getVersion());
+                logger.info(Version.getVersion());
             } else if (name.equals("native_cs")) {
                 properties.put("yoko.orb.native_cs", value[0]);
             } else if (name.equals("native_wcs")) {
@@ -1874,23 +2014,23 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         return args;
     }
 
-    public org.omg.CORBA.Policy create_policy(int type,
-            org.omg.CORBA.Any any) throws org.omg.CORBA.PolicyError {
+    public Policy create_policy(int type,
+            Any any) throws PolicyError {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         return orbInstance_.getPolicyFactoryManager().createPolicy(type, any);
         }
     }
 
-    public org.omg.CORBA.portable.ValueFactory register_value_factory(
-            String id, org.omg.CORBA.portable.ValueFactory factory) {
+    public ValueFactory register_value_factory(
+            String id, ValueFactory factory) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.ValueFactoryManager valueFactoryManager = orbInstance_
+        ValueFactoryManager valueFactoryManager = orbInstance_
                 .getValueFactoryManager();
         return valueFactoryManager.registerValueFactory(id, factory);
         }
@@ -1899,21 +2039,21 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     public void unregister_value_factory(String id) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.ValueFactoryManager valueFactoryManager = orbInstance_
+        ValueFactoryManager valueFactoryManager = orbInstance_
                 .getValueFactoryManager();
         valueFactoryManager.unregisterValueFactory(id);
         }
     }
 
-    public org.omg.CORBA.portable.ValueFactory lookup_value_factory(
+    public ValueFactory lookup_value_factory(
             String id) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        org.apache.yoko.orb.OB.ValueFactoryManager valueFactoryManager = orbInstance_
+        ValueFactoryManager valueFactoryManager = orbInstance_
                 .getValueFactoryManager();
         return valueFactoryManager.lookupValueFactory(id);
         }
@@ -1923,29 +2063,29 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public java.util.Properties properties() {
+    public Properties properties() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         return orbInstance_.getProperties();
         }
     }
 
-    public org.apache.yoko.orb.OB.Logger logger() {
+    public Logger logger() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         return orbInstance_.getLogger();
         }
     }
 
-    public org.apache.yoko.orb.OB.UnknownExceptionStrategy set_unknown_exception_strategy(
-            org.apache.yoko.orb.OB.UnknownExceptionStrategy strategy) {
+    public UnknownExceptionStrategy set_unknown_exception_strategy(
+            UnknownExceptionStrategy strategy) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST("ORB is destroyed");
+            throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
         return orbInstance_.setUnknownExceptionStrategy(strategy);
         }
@@ -1966,7 +2106,7 @@ public class ORB_impl extends org.apache.yoko.orb.CORBA.ORBSingleton {
         return raiseDIIExceptions_;
     }
 
-    public org.apache.yoko.orb.OB.ORBInstance _OB_ORBInstance() {
+    public ORBInstance _OB_ORBInstance() {
         return orbInstance_;
     }
 

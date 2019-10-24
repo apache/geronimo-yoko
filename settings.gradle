@@ -1,0 +1,18 @@
+rootProject.name = 'yoko'
+include ':yoko-osgi'
+include ':yoko-spec-corba'
+include ':yoko-rmi-spec'
+include ':yoko-util'
+include ':yoko-rmi-impl'
+include ':yoko-core'
+include ':yoko-test'
+include ':yoko-jdk-supplement'
+
+project(':yoko-osgi').projectDir = "$rootDir/yoko-osgi" as File
+project(':yoko-spec-corba').projectDir = "$rootDir/yoko-spec-corba" as File
+project(':yoko-rmi-spec').projectDir = "$rootDir/yoko-rmi-spec" as File
+project(':yoko-util').projectDir = "$rootDir/yoko-util" as File
+project(':yoko-rmi-impl').projectDir = "$rootDir/yoko-rmi-impl" as File
+project(':yoko-core').projectDir = "$rootDir/yoko-core" as File
+project(':yoko-test').projectDir = "$rootDir/yoko-test" as File
+project(':yoko-jdk-supplement').projectDir = "$rootDir/yoko-jdk-supplement" as File

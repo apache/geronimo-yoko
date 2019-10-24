@@ -18,139 +18,110 @@
 package org.apache.yoko.orb.DynamicAny;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.TypeCode;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
+
+import java.nio.Buffer;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection;
+import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final public class DynValueReader {
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
 
-    private org.omg.DynamicAny.DynAnyFactory factory_;
+    private final DynAnyFactory factory_;
 
-    private java.util.Hashtable instanceTable_;
-
-    private boolean truncateOK_;
+    private final Map<Integer, DynAny> instanceTable_;
 
     public boolean mustTruncate;
 
-    public DynValueReader(org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.DynamicAny.DynAnyFactory factory, boolean truncateOK) {
-        orbInstance_ = orbInstance;
+    public DynValueReader(ORBInstance orbInstance, DynAnyFactory factory, boolean truncateOK) {
         factory_ = factory;
-        truncateOK_ = truncateOK;
         mustTruncate = false;
-        instanceTable_ = new java.util.Hashtable(131);
+        instanceTable_ = new HashMap<>(131);
     }
 
-    public org.omg.DynamicAny.DynAny readValue(InputStream in,
-            org.omg.CORBA.TypeCode tc)
-            throws org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode {
-        //
+    public DynAny readValue(InputStream in, TypeCode tc) throws InconsistentTypeCode {
         // See if we already have a DynValue for this position
-        //
-        org.omg.DynamicAny.DynAny result = getValue(in, tc);
-        if (result != null)
-            return result;
+        DynAny result = getValue(in, tc);
+        if (result != null) return result;
 
-        //
         // Read the tag and attempt to process an indirection.
-        //
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
-        int save = buf.pos_;
         int tag = in.read_long();
-        int curPos = save; // buf.cur_ - 4;
+        final int save = in.getPosition() - 4;
 
         try {
-            if (tag == -1)
-                return readIndirection(in);
-        } catch (org.omg.CORBA.MARSHAL ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            if (tag == -1) return readIndirection(in);
+        } catch (MARSHAL ex) {
+            Assert._OB_assert(ex);
             return null;
         }
 
-        //
         // Prepare a new DynValue and reference it as a possible
         // target for indirection.
-        //
         DynAnyFactory_impl factory_impl = (DynAnyFactory_impl) factory_;
         result = factory_impl.prepare_dyn_any_from_type_code(tc, this);
 
-        //
         // Skip null valueType
-        //
         if (tag != 0) {
-            int startPos = curPos;// - buf.data_;
-            indexValue(startPos, result);
+            indexValue(save, result);
         }
 
-        //
         // Restore the position of the input stream and populate the
         // DynValue (unmarshal)
-        //
-        in._OB_pos(save);
+        in.setPosition(save);
         DynAny_impl impl = (DynAny_impl) result;
         impl._OB_unmarshal(in);
 
         return result;
     }
 
-    protected void indexValue(int startPos, org.omg.DynamicAny.DynAny dv) {
-        instanceTable_.put(new Integer(startPos), dv);
+    protected void indexValue(int startPos, DynAny dv) {
+        instanceTable_.put(startPos, dv);
     }
 
-    private org.omg.DynamicAny.DynAny readIndirection(InputStream in)
-            throws org.omg.CORBA.MARSHAL {
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
+    private DynAny readIndirection(InputStream in) throws MARSHAL {
         int offs = in.read_long();
-        int startPos = buf.pos_ - 4 + offs;
+        int startPos = in.getPosition() - 4 + offs;
 
-        org.omg.DynamicAny.DynAny result = (org.omg.DynamicAny.DynAny) instanceTable_
-                .get(new Integer(startPos));
+        DynAny result = instanceTable_.get(startPos);
 
-        if (result == null) {
-            throw new org.omg.CORBA.MARSHAL(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection, 
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-        }
-
+        if (result == null) throw new MARSHAL(describeMarshal(MinorReadInvalidIndirection), MinorReadInvalidIndirection, COMPLETED_NO);
         return result;
     }
 
-    private org.omg.DynamicAny.DynAny getValue(InputStream in,
-            org.omg.CORBA.TypeCode tc) {
-        //
+    private DynAny getValue(InputStream in, TypeCode tc) {
         // See if we already have a reference for the DynValue marshalled
         // at the current position of the stream (the record would have
         // been created earlier by DynValueWriter).
-        //
-        org.apache.yoko.orb.OCI.Buffer buf = in._OB_buffer();
-        int startPos = buf.pos_;
+        int startPos = in.getPosition();
 
-        org.omg.DynamicAny.DynAny orig = (org.omg.DynamicAny.DynAny) instanceTable_
-                .get(new Integer(startPos));
+        DynAny orig = (DynAny) instanceTable_.get(startPos);
 
-        if (orig == null)
-            return null;
+        if (orig == null) return null;
 
-        //
         // We found an existing DynValue. Now we have to advance the
         // Input Stream by unmarshalling a temporary copy of the DynValue.
-        //
         DynAnyFactory_impl factory_impl = (DynAnyFactory_impl) factory_;
-        org.omg.DynamicAny.DynAny copy = null;
+        DynAny copy = null;
 
         try {
             copy = factory_impl.prepare_dyn_any_from_type_code(tc, this);
-        } catch (org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (InconsistentTypeCode ex) {
+            Assert._OB_assert(ex);
         }
 
         DynAny_impl impl = (DynAny_impl) copy;
         impl._OB_unmarshal(in);
 
-        //
         // Return the original value (not the copy)
-        //
         return orig;
     }
 }

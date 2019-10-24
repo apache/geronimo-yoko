@@ -760,10 +760,10 @@ public final class Client extends test.common.TestBase {
     private static String readRef(BufferedReader in) throws Exception {
         String line = in.readLine();
         if (line == null) {
-            throw new RuntimeException("Unknown Server error");
+            throw new RuntimeException("Unknown InsServer error");
         } else if (!!!line.equals("ref:")) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
-                pw.println("Server error:");
+                pw.println("InsServer error:");
                 do {
                     pw.print('\t');
                     pw.println(line);

@@ -23,39 +23,53 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.ServerSocket;
-
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
-import org.omg.IOP.IOR;
+import org.omg.CSIIOP.TransportAddress;
+import org.omg.IOP.TaggedComponent;
 
-//
-// IDL:orb.yoko.apache.org/OCI/IIOP/AcceptorInfo:1.0
-//
-/**
- *
- * Information on an IIOP OCI Acceptor object.
- *
- * @see Acceptor
- * @see AcceptorInfo
- *
- **/
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 public interface ExtendedConnectionHelper
 {
-    public void init(ORB orb, String parms);
+    void init(ORB orb, String parms);
 
-    public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException;
+    /**
+     * The host may be encoded as described in {@link #getEndpoints(TaggedComponent, Policy[])}.
+     * Implementors should use and {@link Util#isEncodedHost(String)}, {@link Util#decodeHost(String)},
+     * and {@link Util#decodeHostInfo(String)} to retrieve the encoded information.
+     */
+    Socket createSocket(String host, int port) throws IOException;
 
-    public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException;
+    Socket createSelfConnection(InetAddress address, int port) throws IOException;
 
-    public ServerSocket createServerSocket(int port, int backlog, String[] params)  throws IOException, ConnectException;
+    ServerSocket createServerSocket(int port, int backlog, String[] params)  throws IOException;
 
-    public ServerSocket createServerSocket(int port, int backlog, InetAddress address, String[] params) throws IOException, ConnectException;
+    ServerSocket createServerSocket(int port, int backlog, InetAddress address, String[] params) throws IOException;
 
+    /**
+     * The component tags this helper knows about, e.g. TAG_CSI_SEC_MECH_LIST.
+     *
+     * @return an array of known tags, possibly empty but not null
+     */
+    int[] tags();
+
+    /**
+     * The policy-compliant endpoints from the specified tagged component.
+     * <br>
+     * Note that the host strings in the endpoints may encode additional information.
+     * Implementors should use {@link Util#encodeHost(String, String, String)} to encode the information.
+     *
+     * @param taggedComponent the tagged component to examine for endpoints:
+     *                        note that <code>taggedComponent.tag</code> must be in <code>this.tags()</code>
+     *
+     * @param policies the policies against which to filter the possible endpoints
+     *
+     * @return a possibly empty but non-null array of endpoints
+     */
+    TransportAddress[] getEndpoints(TaggedComponent taggedComponent, Policy[] policies);
 }
 

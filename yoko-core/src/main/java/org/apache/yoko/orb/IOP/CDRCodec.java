@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -16,90 +16,68 @@
  */
 
 package org.apache.yoko.orb.IOP;
+import org.apache.yoko.orb.CORBA.Any;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.TypeCode;
+import org.omg.IOP.Codec;
 import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.omg.IOP.CodecPackage.TypeMismatch;
 
-final class CDRCodec extends org.omg.CORBA.LocalObject implements
-        org.omg.IOP.Codec {
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
+final class CDRCodec extends LocalObject implements Codec {
+    private ORBInstance orbInstance_;
 
     public byte[] encode(org.omg.CORBA.Any data) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                buf);
-        out._OB_ORBInstance(orbInstance_);
-        out._OB_writeEndian();
-        out.write_any(data);
-
-        byte[] result = new byte[buf.length()];
-        System.arraycopy(buf.data(), 0, result, 0, buf.length());
-        return result;
+        try (OutputStream out = new OutputStream()) {
+            out._OB_ORBInstance(orbInstance_);
+            out._OB_writeEndian();
+            out.write_any(data);
+            return out.copyWrittenBytes();
+        }
     }
 
-    public org.omg.CORBA.Any decode(byte[] data)
-            throws org.omg.IOP.CodecPackage.FormatMismatch {
+    public org.omg.CORBA.Any decode(byte[] data) throws FormatMismatch {
         try {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                    buf, 0, false);
+            InputStream in = new InputStream(data);
             in._OB_ORBInstance(orbInstance_);
             in._OB_readEndian();
 
             return in.read_any();
-        } catch (org.omg.CORBA.MARSHAL ex) {
-            throw (org.omg.IOP.CodecPackage.FormatMismatch)new 
-                org.omg.IOP.CodecPackage.FormatMismatch().initCause(ex); 
+        } catch (MARSHAL ex) {
+            throw (FormatMismatch)new FormatMismatch().initCause(ex);
         }
     }
 
     public byte[] encode_value(org.omg.CORBA.Any data) {
-        org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-        org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                buf);
-        out._OB_ORBInstance(orbInstance_);
-        out._OB_writeEndian();
-        data.write_value(out);
-
-        byte[] result = new byte[buf.length()];
-        System.arraycopy(buf.data(), 0, result, 0, buf.length());
-        return result;
-    }
-
-    public org.omg.CORBA.Any decode_value(byte[] data, org.omg.CORBA.TypeCode tc)
-            throws org.omg.IOP.CodecPackage.FormatMismatch,
-            org.omg.IOP.CodecPackage.TypeMismatch {
-        if (tc == null)
-            throw new org.omg.IOP.CodecPackage.TypeMismatch();
-
-        try {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer(
-                    data, data.length);
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                    buf, 0, false);
-            in._OB_ORBInstance(orbInstance_);
-            in._OB_readEndian();
-
-            org.apache.yoko.orb.CORBA.Any any = new org.apache.yoko.orb.CORBA.Any(
-                    orbInstance_, tc, null);
-            any.read_value(in, tc);
-
-            return any;
-        } catch (org.omg.CORBA.MARSHAL ex) {
-            throw (org.omg.IOP.CodecPackage.FormatMismatch)new 
-                org.omg.IOP.CodecPackage.FormatMismatch().initCause(ex); 
+        try (OutputStream out = new OutputStream()) {
+            out._OB_ORBInstance(orbInstance_);
+            out._OB_writeEndian();
+            data.write_value(out);
+            return out.copyWrittenBytes();
         }
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
+    public org.omg.CORBA.Any decode_value(byte[] data, TypeCode tc) throws FormatMismatch, TypeMismatch {
+        if (tc == null) throw new TypeMismatch();
 
-    CDRCodec(org.apache.yoko.orb.OB.ORBInstance orbInstance) {
+        try {
+            InputStream in = new InputStream(data);
+            in._OB_ORBInstance(orbInstance_);
+            in._OB_readEndian();
+
+            Any any = new Any(orbInstance_, tc, null);
+            any.read_value(in, tc);
+
+            return any;
+        } catch (MARSHAL ex) {
+            throw (FormatMismatch)new FormatMismatch().initCause(ex);
+        }
+    }
+
+    CDRCodec(ORBInstance orbInstance) {
         orbInstance_ = orbInstance;
     }
 }

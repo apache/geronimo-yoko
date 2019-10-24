@@ -20,25 +20,31 @@ package org.apache.yoko.orb.DynamicAny;
 import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.DynamicAny.DynAny;
+import org.omg.DynamicAny.DynAnyFactory;
+import org.omg.DynamicAny.DynAnyPackage.InvalidValue;
+import org.omg.DynamicAny.DynAnyPackage.TypeMismatch;
+import org.omg.DynamicAny.DynValueBox;
 
-final class DynValueBox_impl extends DynValueCommon_impl implements
-        org.omg.DynamicAny.DynValueBox {
-    private org.omg.DynamicAny.DynAny component_;
+final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox {
+    private DynAny component_;
 
-    private org.omg.CORBA.TypeCode boxedType_;
+    private TypeCode boxedType_;
 
     private int index_;
 
-    DynValueBox_impl(org.omg.DynamicAny.DynAnyFactory factory,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            org.omg.CORBA.TypeCode type) {
+    DynValueBox_impl(DynAnyFactory factory, ORBInstance orbInstance, TypeCode type) {
         super(factory, orbInstance, type);
 
         try {
             boxedType_ = origType_.content_type();
-        } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+        } catch (BadKind ex) {
+            Assert._OB_assert(ex);
         }
 
         //
@@ -71,16 +77,15 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public synchronized void assign(org.omg.DynamicAny.DynAny dyn_any)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void assign(DynAny dyn_any) throws TypeMismatch {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return;
 
         if (!dyn_any.type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         DynValueBox_impl dv = (DynValueBox_impl) dyn_any;
         if (dv.is_null())
@@ -95,37 +100,32 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         notifyParent();
     }
 
-    public synchronized void from_any(org.omg.CORBA.Any value)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+    public synchronized void from_any(org.omg.CORBA.Any value) throws TypeMismatch, InvalidValue {
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
         //
         // Convert value to an ORBacus Any - the JDK implementation
         // of TypeCode.equivalent() raises NO_IMPLEMENT
         //
-        Any val = null;
+        Any val;
         try {
             val = (Any) value;
         } catch (ClassCastException ex) {
             try {
                 val = new Any(value);
             } catch (NullPointerException e) {
-                throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                    org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+                throw (InvalidValue)new InvalidValue().initCause(e);
             }
         }
 
         if (!val._OB_type().equivalent(type_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
-        org.omg.CORBA.portable.InputStream in = null;
+        org.omg.CORBA.portable.InputStream in;
         try {
             in = val.create_input_stream();
         } catch (NullPointerException e) {
-            throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+            throw (InvalidValue)new InvalidValue().initCause(e);
         }
 
         _OB_unmarshal((InputStream) in);
@@ -140,17 +140,17 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
 
     public synchronized org.omg.CORBA.Any to_any() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (is_null())
             return new Any(orbInstance_, type_, null);
         else {
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            OutputStream out = new OutputStream(buf);
-            out._OB_ORBInstance(orbInstance_);
-            _OB_marshal(out);
-            InputStream in = (InputStream) out.create_input_stream();
-            return new Any(orbInstance_, type_, in);
+            try (OutputStream out = new OutputStream()) {
+                out._OB_ORBInstance(orbInstance_);
+                _OB_marshal(out);
+                InputStream in = out.create_input_stream();
+                return new Any(orbInstance_, type_, in);
+            }
         }
     }
 
@@ -158,9 +158,9 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         return to_any();
     }
 
-    public synchronized boolean equal(org.omg.DynamicAny.DynAny dyn_any) {
+    public synchronized boolean equal(DynAny dyn_any) {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (this == dyn_any)
             return true;
@@ -176,9 +176,9 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         return component_.equal(impl.component_);
     }
 
-    public synchronized org.omg.DynamicAny.DynAny copy() {
+    public synchronized DynAny copy() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         DynValueBox_impl result = new DynValueBox_impl(factory_, orbInstance_,
                 type_);
@@ -186,8 +186,8 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         if (!is_null()) {
             try {
                 result.set_boxed_value_as_dyn_any(component_);
-            } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (TypeMismatch ex) {
+                Assert._OB_assert(ex);
             }
         }
 
@@ -214,7 +214,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
             return false;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(index_ == -1);
+        Assert._OB_assert(index_ == -1);
         index_++;
         return true;
     }
@@ -223,61 +223,46 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         return (is_null() ? 0 : 1);
     }
 
-    public synchronized org.omg.DynamicAny.DynAny current_component()
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
-        if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+    public synchronized DynAny current_component() {
+        if (destroyed_) throw new OBJECT_NOT_EXIST();
 
-        if (index_ == -1)
-            return null;
+        if (index_ == -1) return null;
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(index_ == 0);
+        Assert._OB_assert(index_ == 0);
         return component_;
     }
 
-    public synchronized org.omg.CORBA.Any get_boxed_value()
-            throws org.omg.DynamicAny.DynAnyPackage.InvalidValue {
-        if (is_null())
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+    public synchronized org.omg.CORBA.Any get_boxed_value() throws InvalidValue {
+        if (is_null()) throw new InvalidValue();
 
         return component_.to_any();
     }
 
-    public synchronized void set_boxed_value(org.omg.CORBA.Any boxed)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch,
-            org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized void set_boxed_value(org.omg.CORBA.Any boxed) throws TypeMismatch, InvalidValue {
         //
         // Convert value to an ORBacus Any - the JDK implementation
         // of TypeCode.equivalent() raises NO_IMPLEMENT
         //
-        Any val = null;
+        Any val;
         try {
             val = (Any) boxed;
         } catch (ClassCastException ex) {
             try {
                 val = new Any(boxed);
             } catch (NullPointerException e) {
-                throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
-                    org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(e);
+                throw (InvalidValue)new InvalidValue().initCause(e);
             }
         }
 
         if (!val._OB_type().equivalent(boxedType_))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         boolean isNull = is_null();
 
         try {
             set_to_value();
             component_.from_any(val);
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
-            //
-            // Restore previous state if necessary
-            //
-            if (isNull)
-                set_to_null();
-            throw ex;
-        } catch (org.omg.DynamicAny.DynAnyPackage.InvalidValue ex) {
+        } catch (TypeMismatch | InvalidValue ex) {
             //
             // Restore previous state if necessary
             //
@@ -291,26 +276,23 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         notifyParent();
     }
 
-    public synchronized org.omg.DynamicAny.DynAny get_boxed_value_as_dyn_any()
-            throws org.omg.DynamicAny.DynAnyPackage.InvalidValue {
+    public synchronized DynAny get_boxed_value_as_dyn_any() throws InvalidValue {
         if (is_null())
-            throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
+            throw new InvalidValue();
 
         return component_;
     }
 
-    public synchronized void set_boxed_value_as_dyn_any(
-            org.omg.DynamicAny.DynAny boxed)
-            throws org.omg.DynamicAny.DynAnyPackage.TypeMismatch {
+    public synchronized void set_boxed_value_as_dyn_any(DynAny boxed) throws TypeMismatch {
         if (!boxedType_.equivalent(boxed.type()))
-            throw new org.omg.DynamicAny.DynAnyPackage.TypeMismatch();
+            throw new TypeMismatch();
 
         boolean isNull = is_null();
 
         try {
             set_to_value();
             component_.assign(boxed);
-        } catch (org.omg.DynamicAny.DynAnyPackage.TypeMismatch ex) {
+        } catch (TypeMismatch ex) {
             //
             // Restore previous state if necessary
             //
@@ -343,14 +325,13 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
                 impl._OB_marshal(out);
 
                 out._OB_endValue();
-            } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (BadKind ex) {
+                Assert._OB_assert(ex);
             }
         }
     }
 
-    synchronized void _OB_marshal(OutputStream out,
-            DynValueWriter dynValueWriter) {
+    synchronized void _OB_marshal(OutputStream out, DynValueWriter dynValueWriter) {
         _OB_marshal(out);
     }
 
@@ -358,7 +339,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         //
         // Peek at value tag
         //
-        int save = in._OB_pos();
+        int save = in.getPosition();
         int ind = 0;
         int tag = in.read_long();
 
@@ -371,10 +352,10 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
             // Indirection - rewind to offset
             //
             int offs = in.read_long();
-            ind = in._OB_pos(); // save position after offset
-            in._OB_pos(in._OB_pos() - 4 + offs);
+            ind = in.getPosition(); // save position after offset
+            in.setPosition(in.getPosition() - 4 + offs);
         } else
-            in._OB_pos(save); // restore tag position
+            in.setPosition(save); // restore tag position
 
         set_to_value();
 
@@ -392,14 +373,14 @@ final class DynValueBox_impl extends DynValueCommon_impl implements
         // Restore position after indirection
         //
         if (ind != 0)
-            in._OB_pos(ind);
+            in.setPosition(ind);
 
         notifyParent();
     }
 
     synchronized Any _OB_currentAny() {
         if (destroyed_)
-            throw new org.omg.CORBA.OBJECT_NOT_EXIST();
+            throw new OBJECT_NOT_EXIST();
 
         if (index_ == 0) {
             DynAny_impl impl = (DynAny_impl) component_;

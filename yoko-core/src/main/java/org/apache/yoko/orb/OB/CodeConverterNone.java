@@ -17,55 +17,43 @@
 
 package org.apache.yoko.orb.OB;
 
-final class CodeConverterNone extends CodeConverterBase {
-    // ------------------------------------------------------------------
-    // Constructor
-    // ------------------------------------------------------------------
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.INV_OBJREF;
 
+import static org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.apache.yoko.orb.OB.MinorCodes.describeInvObjref;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+final class CodeConverterNone extends CodeConverterBase {
     CodeConverterNone(CodeSetInfo fromSet, CodeSetInfo toSet) {
         super(fromSet, toSet);
     }
-
-    // ------------------------------------------------------------------
-    // Public member implementations
-    // ------------------------------------------------------------------
 
     public boolean conversionRequired() {
         return true;
     }
 
-    public char read_wchar(org.apache.yoko.orb.CORBA.InputStream in, int len) {
-        throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet),
-                org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+    public char read_wchar(ReadBuffer readBuffer, int len) {
+        throw new BAD_PARAM(describeBadParam(MinorNoWcharCodeSet), MinorNoWcharCodeSet, COMPLETED_NO);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v) {
-        throw new org.omg.CORBA.INV_OBJREF(org.apache.yoko.orb.OB.MinorCodes
-                .describeInvObjref(org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired),
-                org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+    public void write_wchar(OutputStream out, char v) {
+        throw new INV_OBJREF(describeInvObjref(MinorWcharCodeSetRequired), MinorWcharCodeSetRequired, COMPLETED_NO);
     }
 
     public int read_count_wchar(char value) {
-        throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet),
-                org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new BAD_PARAM(describeBadParam(MinorNoWcharCodeSet), MinorNoWcharCodeSet, COMPLETED_NO);
     }
 
     public int write_count_wchar(char v) {
-        throw new org.omg.CORBA.INV_OBJREF(org.apache.yoko.orb.OB.MinorCodes
-                .describeInvObjref(org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired),
-                org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new INV_OBJREF(describeInvObjref(MinorWcharCodeSetRequired), MinorWcharCodeSetRequired, COMPLETED_NO);
     }
 
     public char convert(char v) {
-        throw new org.omg.CORBA.INV_OBJREF(org.apache.yoko.orb.OB.MinorCodes
-                .describeInvObjref(org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired),
-                org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new INV_OBJREF(describeInvObjref(MinorWcharCodeSetRequired), MinorWcharCodeSetRequired, COMPLETED_NO);
     }
 }

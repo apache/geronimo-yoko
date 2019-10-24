@@ -21,7 +21,7 @@ import org.omg.CORBA_2_3.portable.InputStream;
 import org.omg.CosNaming.*;
 import org.omg.PortableInterceptor.*;
 import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
-import test.util.Skellington;
+import testify.iiop.Skellington;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;

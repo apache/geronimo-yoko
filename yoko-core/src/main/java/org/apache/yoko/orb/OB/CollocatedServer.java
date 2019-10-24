@@ -17,22 +17,37 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHolder;
+
+import java.util.Enumeration;
+import java.util.Hashtable;
 import java.util.logging.Logger;
 
 final public class CollocatedServer extends Server implements UpcallReturn {
-    static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
+    private static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
     //
     // The next request ID and the corresponding mutex
     //
     private int nextRequestId_;
 
-    private java.lang.Object nextRequestIdMutex_ = new java.lang.Object();
+    private final Object nextRequestIdMutex_ = new Object();
 
     //
     // The call map
     //
-    private java.util.Hashtable callMap_;
+    private final Hashtable callMap_;
 
     //
     // True if destroy() was called
@@ -47,7 +62,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     //
     // The object adapter interface
     //
-    private OAInterface oaInterface_;
+    private final OAInterface oaInterface_;
 
     // ----------------------------------------------------------------------
     // CollocatedServer private and protected member implementations
@@ -60,7 +75,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     public CollocatedServer(OAInterface oaInterface, int concModel) {
         super(concModel);
         nextRequestId_ = 0;
-        callMap_ = new java.util.Hashtable(13);
+        callMap_ = new Hashtable(13);
         destroy_ = false;
         hold_ = true;
         oaInterface_ = oaInterface;
@@ -88,14 +103,14 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         //
         // Set the status of all downcalls, and empty the call map
         //
-        java.util.Enumeration e = callMap_.keys();
+        Enumeration e = callMap_.keys();
         while (e.hasMoreElements()) {
             Downcall down = (Downcall) callMap_.get(e.nextElement());
             Assert._OB_assert(down != null);
             Assert._OB_assert(down.pending());
-            down.setFailureException(new org.omg.CORBA.INITIALIZE(
-                    "ORB has been destroyed", org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO));
+            down.setFailureException(new INITIALIZE(
+                    "ORB has been destroyed", MinorCodes.MinorORBDestroyed,
+                    CompletionStatus.COMPLETED_NO));
         }
         callMap_.clear();
 
@@ -158,50 +173,46 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 try {
                     logger.fine("Waiting for hold to be released"); 
                     wait();
-                } catch (InterruptedException ex) {
+                } catch (InterruptedException ignored) {
                 }
             }
 
             if (destroy_) {
-                down.setFailureException(new org.omg.CORBA.TRANSIENT(
+                down.setFailureException(new TRANSIENT(
                         "Collocated server has already been destroyed", 0,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO));
+                        CompletionStatus.COMPLETED_NO));
                 return true;
             }
 
             //
             // Collect the Upcall data
             //
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo = down.profileInfo();
+            ProfileInfo profileInfo = down.profileInfo();
             int reqId = down.requestId();
             String op = down.operation();
-            org.apache.yoko.orb.CORBA.OutputStream out = down.output();
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            buf.consume(out._OB_buffer());
-            org.omg.IOP.ServiceContext[] requestSCL = down.getRequestSCL();
+            OutputStream out = down.output();
+            ServiceContexts requestContexts = down.getRequestContexts();
 
             //
             // Is this a locate request?
             //
             if (op.charAt(0) == '_' && op.equals("_locate")) {
-                org.omg.IOP.IORHolder ior = new org.omg.IOP.IORHolder();
+                IORHolder ior = new IORHolder();
                 switch (oaInterface_.findByKey(profileInfo.key, ior)) {
-                case org.apache.yoko.orb.OB.OAInterface.UNKNOWN_OBJECT:
-                    down
-                            .setSystemException(new org.omg.CORBA.OBJECT_NOT_EXIST());
+                case OAInterface.UNKNOWN_OBJECT:
+                    down.setSystemException(new OBJECT_NOT_EXIST());
                     break;
 
-                case org.apache.yoko.orb.OB.OAInterface.OBJECT_HERE:
-                    org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                            buf, 0, false);
+                case OAInterface.OBJECT_HERE:
+                    InputStream in = new InputStream(out.getBufferReader());
                     down.setNoException(in);
                     break;
 
-                case org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD:
+                case OAInterface.OBJECT_FORWARD:
                     down.setLocationForward(ior.value, false);
                     break;
 
-                case org.apache.yoko.orb.OB.OAInterface.OBJECT_FORWARD_PERM:
+                case OAInterface.OBJECT_FORWARD_PERM:
                     down.setLocationForward(ior.value, true);
                     break;
 
@@ -216,7 +227,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 //
                 // Put the Downcall in the call map
                 //
-                callMap_.put(new Integer(reqId), down);
+                callMap_.put(reqId, down);
 
                 //
                 // From here on, we consider the Downcall as pending
@@ -224,8 +235,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setPending();
 
                 up = oaInterface_.createUpcall(this, profileInfo, null, reqId,
-                        op, new org.apache.yoko.orb.CORBA.InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestContexts);
             } else {
                 //
                 // This is a oneway call, and if there was no exception so
@@ -234,8 +244,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setNoException(null);
 
                 up = oaInterface_.createUpcall(null, profileInfo, null, reqId,
-                        op, new org.apache.yoko.orb.CORBA.InputStream(buf, 0,
-                                false), requestSCL);
+                        op, new InputStream(out.getBufferReader()), requestContexts);
             }
         }
 
@@ -247,10 +256,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         //
         up.invoke();
 
-        if (down.responseExpected())
-            return false;
-        else
-            return true;
+        return !down.responseExpected();
     }
 
     public boolean receive(Downcall down, boolean block) {
@@ -266,9 +272,9 @@ final public class CollocatedServer extends Server implements UpcallReturn {
             // is used, and query the state directly instead.
             //
             return down.waitUntilCompleted(block);
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             synchronized (this) {
-                callMap_.remove(new Integer(down.requestId()));
+                callMap_.remove(down.requestId());
                 down.setFailureException(ex);
                 return true;
             }
@@ -296,153 +302,97 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     //
     // Get the usable profiles
     //
-    public org.apache.yoko.orb.OCI.ProfileInfo[] getUsableProfiles(
-            org.omg.IOP.IOR ior, org.omg.CORBA.Policy[] policies) {
+    public ProfileInfo[] getUsableProfiles(
+            IOR ior, Policy[] policies) {
         return oaInterface_.getUsableProfiles(ior, policies);
     }
 
-    public void upcallBeginReply(Upcall upcall,
-            org.omg.IOP.ServiceContext[] replySCL) {
+    public void upcallBeginReply(Upcall upcall, ServiceContexts replyContexts) {
         upcall.createOutputStream(0);
+        if (replyContexts.isEmpty()) return;
+        synchronized (this) {
+            Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
-        if (replySCL.length > 0) {
-            synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(new Integer(upcall
-                        .requestId()));
-
-                //
-                // Might be null if the request timed out or destroyed
-                //
-                if (down != null)
-                    down.setReplySCL(replySCL);
-            }
+            //
+            // Might be null if the request timed out or destroyed
+            //
+            if (down != null) down.setReplyContexts(replyContexts);
         }
     }
 
     public synchronized void upcallEndReply(Upcall upcall) {
-        Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
-
-        //
-        // Might be null if the request timed out or destroyed
-        //
-        if (down != null) // Might be null if the request timed out
-        {
-            org.apache.yoko.orb.CORBA.OutputStream out = upcall.output();
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            buf.consume(out._OB_buffer());
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                    buf, 0, false);
-            down.setNoException(in);
-            callMap_.remove(new Integer(down.requestId()));
-        }
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
+        if (down == null) return ; // Might be null if the request timed out
+        OutputStream out = upcall.output();
+        InputStream in = new InputStream(out.getBufferReader());
+        down.setNoException(in);
+        callMap_.remove(down.requestId());
     }
 
-    public void upcallBeginUserException(Upcall upcall,
-            org.omg.IOP.ServiceContext[] replySCL) {
+    public void upcallBeginUserException(Upcall upcall, ServiceContexts replyContexts) {
         upcall.createOutputStream(0);
-
-        if (replySCL.length > 0) {
-            synchronized (this) {
-                Downcall down = (Downcall) callMap_.get(new Integer(upcall.requestId()));
-
-                //
-                // Might be null if the request timed out or destroyed
-                //
-                if (down != null)
-                    down.setReplySCL(replySCL);
-            }
+        if (replyContexts.isEmpty()) return;
+        synchronized (this) {
+            Downcall down = (Downcall) callMap_.get(upcall.requestId());
+            // Might be null if the request timed out or destroyed
+            if (down != null) down.setReplyContexts(replyContexts);
         }
     }
 
     public synchronized void upcallEndUserException(Upcall upcall) {
-        Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
-        //
         // Might be null if the request timed out or destroyed
-        //
-        if (down != null) {
-            org.apache.yoko.orb.CORBA.OutputStream out = upcall.output();
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            buf.consume(out._OB_buffer());
-            org.apache.yoko.orb.CORBA.InputStream in = new org.apache.yoko.orb.CORBA.InputStream(
-                    buf, 0, false);
-            down.setUserException(in);
-            callMap_.remove(new Integer(down.requestId()));
-        }
+        if (down == null) return;
+        OutputStream out = upcall.output();
+        InputStream in = new InputStream(out.getBufferReader());
+        down.setUserException(in);
+        callMap_.remove(down.requestId());
     }
 
     //
     // NOTE: Not used in Java
     //
-    public void upcallUserException(Upcall upcall,
-            org.omg.CORBA.UserException ex,
-            org.omg.IOP.ServiceContext[] replySCL) {
+    public void upcallUserException(Upcall upcall, UserException ex, ServiceContexts replyContexts) {
         //
         // We marshal to preserve 100% location transparency. If we would
-        // set the exception in the Downcall directly as shown below, then
+        // set the exception in the Downcall directly, then
         // we wouldn't get an UNKNOWN exception if we're calling from the
         // DII without setting the exception TypeCode.
         //
 
-        /*
-         * synchronized(this) { Downcall down = (Downcall)callMap_.get(new
-         * Integer(upcall.requestId()));
-         *  // // Might be null if the request timed out or destroyed // if(down !=
-         * null) { if(replySCL.length > 0) down.setReplySCL(replySCL);
-         * down.setUserException(ex); callMap_.remove(new
-         * Integer(down.requestId()); } }
-         */
-
-        upcallBeginUserException(upcall, replySCL);
-        org.apache.yoko.orb.CORBA.OutputStream out = upcall.output();
+        upcallBeginUserException(upcall, replyContexts);
+        OutputStream out = upcall.output();
         try {
             //
             // Cannot marshal the exception in Java without the helper
             //
             // ex._OB_marshal(out);
             Assert._OB_assert(false);
-        } catch (org.omg.CORBA.SystemException e) {
-            try {
-                upcall.marshalEx(e);
-            } catch (LocationForward f) {
-                Assert._OB_assert(ex); // shouldn't happen
-            }
+        } catch (SystemException e) {
+            upcall.marshalEx(e);
         }
         upcallEndUserException(upcall);
     }
 
-    public synchronized void upcallSystemException(Upcall upcall,
-            org.omg.CORBA.SystemException ex,
-            org.omg.IOP.ServiceContext[] replySCL) {
-        Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
-
-        //
-        // Might be null if the request timed out or destroyed
-        //
-        if (down != null) {
-            if (replySCL.length > 0)
-                down.setReplySCL(replySCL);
-            down.setSystemException(ex);
-            callMap_.remove(new Integer(down.requestId()));
-        }
+    public synchronized void upcallSystemException(Upcall upcall, SystemException ex, ServiceContexts replyContexts) {
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
+        if (down == null) return; // Might be null if the request timed out or destroyed
+        down.setReplyContexts(replyContexts);
+        down.setSystemException(ex);
+        callMap_.remove(down.requestId());
     }
 
-    public synchronized void upcallForward(Upcall upcall, org.omg.IOP.IOR ior,
-            boolean perm, org.omg.IOP.ServiceContext[] replySCL) {
-        Downcall down = (Downcall) callMap_
-                .get(new Integer(upcall.requestId()));
+    public synchronized void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContexts replyContexts) {
+        Downcall down = (Downcall) callMap_.get(upcall.requestId());
 
         //
         // Might be null if the request timed out or destroyed
         //
         if (down != null) {
-            if (replySCL.length > 0)
-                down.setReplySCL(replySCL);
+            down.setReplyContexts(replyContexts);
             down.setLocationForward(ior, perm);
-            callMap_.remove(new Integer(down.requestId()));
+            callMap_.remove(down.requestId());
         }
     }
 

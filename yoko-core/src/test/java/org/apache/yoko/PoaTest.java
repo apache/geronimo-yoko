@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -17,6 +16,29 @@
  */
 package org.apache.yoko;
 
+import test.poa.TestActivate;
+import test.poa.TestAdapterActivatorServer;
+import test.poa.TestClient;
+import test.poa.TestCollocated;
+import test.poa.TestCreate;
+import test.poa.TestDeactivate;
+import test.poa.TestDefaultServantServer;
+import test.poa.TestDestroy;
+import test.poa.TestDispatchStrategyClient;
+import test.poa.TestDispatchStrategyServer;
+import test.poa.TestFind;
+import test.poa.TestLocationForwardClient;
+import test.poa.TestLocationForwardServerMain;
+import test.poa.TestMisc;
+import test.poa.TestMultipleOrbsClient;
+import test.poa.TestMultipleOrbsServer;
+import test.poa.TestMultipleOrbsThreadedClient;
+import test.poa.TestMultipleOrbsThreadedServer;
+import test.poa.TestPOAManagerClient;
+import test.poa.TestPOAManagerServer;
+import test.poa.TestServantActivatorServer;
+import test.poa.TestServantLocatorServer;
+
 public class PoaTest extends AbstractOrbTestBase {
 
     public void setUp() throws Exception {
@@ -24,70 +46,70 @@ public class PoaTest extends AbstractOrbTestBase {
         setWaitForFile("Test.ref");
     }
     public void testActivate() throws Exception {
-        client.invokeMain("test.poa.TestActivate");
+        client.invokeMain(TestActivate.class);
     }
 
     public void testDeactivate() throws Exception {
-        client.invokeMain("test.poa.TestDeactivate");
+        client.invokeMain(TestDeactivate.class);
     }
 
     public void testCollocated() throws Exception {
-        client.invokeMain("test.poa.TestCollocated");
+        client.invokeMain(TestCollocated.class);
     }
 
     public void testCreate() throws Exception {
-        client.invokeMain("test.poa.TestCreate");
+        client.invokeMain(TestCreate.class);
     }
 
     public void testDestroy() throws Exception {
-        client.invokeMain("test.poa.TestDestroy");
+        client.invokeMain(TestDestroy.class);
     }
 
     public void testFind() throws Exception {
-        client.invokeMain("test.poa.TestFind");
+        client.invokeMain(TestFind.class);
     }
 
     public void testMisc() throws Exception {
-        client.invokeMain("test.poa.TestMisc");
+        client.invokeMain(TestMisc.class);
     }
 
     public void testDefaultServant() throws Exception {
-        runServerClientTest("test.poa.TestDefaultServantServer");
+        runServerClientTest(TestDefaultServantServer.class);
     }
 
     public void testServantActivatorServer() throws Exception {
-        runServerClientTest("test.poa.TestServantActivatorServer");
+        runServerClientTest(TestServantActivatorServer.class);
     }
 
     public void testServantLocatorServer() throws Exception {
-        runServerClientTest("test.poa.TestServantLocatorServer");
+        runServerClientTest(TestServantLocatorServer.class);
     }
 
     public void testLocationForwardServer() throws Exception {
-        runServerClientTest("test.poa.TestLocationForwardServerMain", "test.poa.TestLocationForwardClient");
+        runServerClientTest(TestLocationForwardServerMain.class, TestLocationForwardClient.class);
     }
 
     public void testAdapterActivatorServer() throws Exception {
-        runServerClientTest("test.poa.TestAdapterActivatorServer");
+        runServerClientTest(TestAdapterActivatorServer.class);
     }
 
     public void testPoaManagerServer() throws Exception {
-        runServerClientTest("test.poa.TestPOAManagerServer", "test.poa.TestPOAManagerClient");
+        runServerClientTest(TestPOAManagerServer.class, TestPOAManagerClient.class);
     }
 
     public void testDispatchStrategyServer() throws Exception {
-        runServerClientTest("test.poa.TestDispatchStrategyServer", "test.poa.TestDispatchStrategyClient");
+        runServerClientTest(TestDispatchStrategyServer.class, TestDispatchStrategyClient.class);
     }
 
     public void testMultipleOrbsServer() throws Exception {
-        runServerClientTest("test.poa.TestMultipleOrbsServer", "test.poa.TestMultipleOrbsClient");
+        runServerClientTest(TestMultipleOrbsServer.class, TestMultipleOrbsClient.class);
     }
 
     public void testMultipleOrbsThreadedServer() throws Exception {
-        runServerClientTest("test.poa.TestMultipleOrbsThreadedServer", "test.poa.TestMultipleOrbsThreadedClient");
+        runServerClientTest(TestMultipleOrbsThreadedServer.class, TestMultipleOrbsThreadedClient.class);
     }
 
-    private void runServerClientTest(String serverClass) throws Exception {
-        runServerClientTest(serverClass, "test.poa.TestClient");
+    private void runServerClientTest(Class<?> serverClass) throws Exception {
+        runServerClientTest(serverClass, TestClient.class);
     }
 }

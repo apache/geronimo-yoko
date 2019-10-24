@@ -17,24 +17,49 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+
 public final class Net {
     //
     // Compare two hosts strings for equality. These don't necessarily
     // mean they are string comparable... for instance www.cnn.com and
     // 64.236.24.12 could be the same host
     //
-    public static boolean CompareHosts(String host1, String host2) {
+    private static final String LOOPBACK_NAME = "127.0.0.1";
+
+    public static boolean CompareHosts(final String host1, final String host2, final boolean matchLoopback) {
+        // compare name matches
+        if (host1.equals(host2) || (matchLoopback && host2.equals(LOOPBACK_NAME))) return true;
         try {
-            java.net.InetAddress addr1 = java.net.InetAddress.getByName(host1);
-            java.net.InetAddress addr2 = java.net.InetAddress.getByName(host2);
-
-            if (addr1.equals(addr2))
-                return true;
-        } catch (java.net.UnknownHostException ex) {
-            return false;
+            // compare address matches
+            return AccessController.doPrivileged(new PrivilegedExceptionAction<Boolean>() {
+                @Override
+                public Boolean run() throws UnknownHostException {
+                    InetAddress addr1 = InetAddress.getByName(host1);
+                    InetAddress addr2 = InetAddress.getByName(host2);
+                    return (addr1.equals(addr2) ||
+                            (matchLoopback && addr2.equals(InetAddress.getByName(LOOPBACK_NAME))));
+                }
+            });
+        } catch (PrivilegedActionException e) {
+            try {
+                throw e.getException();
+            } catch (RuntimeException re) {
+                throw re;
+            } catch (UnknownHostException uhe) {
+                return false;
+            } catch (Exception e2) {
+                throw new RuntimeException("Unexpected exception", e2);
+            }
         }
+    }
 
-        return false;
+    public static boolean CompareHosts(final String host1, final String host2) {
+        return CompareHosts(host1, host2, false);
     }
 
     //

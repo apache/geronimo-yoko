@@ -1,0 +1,17 @@
+-runfw: org.apache.felix.framework
+-runee: JavaSE-1.8
+
+# We don't have any resolution happening here so
+# we must list all the bundles we need explicitly.
+#
+-runbundles: \
+  osgi.enroute.junit.wrapper,         \
+  osgi.enroute.hamcrest.wrapper,      \
+  org.apache.yoko.osgi,               \
+  org.apache.yoko.spec-corba,         \
+  org.apache.yoko.rmi-spec,           \
+  org.apache.yoko.rmi-impl,           \
+  org.apache.yoko.core,               \
+  org.apache.yoko.util,               \
+  org.apache.servicemix.bundles.bcel, \
+  org.apache.yoko.test

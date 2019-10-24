@@ -17,28 +17,19 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+
 public interface UpcallReturn {
-    //
     // Called upon return of the upcall
-    //
-    void upcallBeginReply(Upcall upcall, org.omg.IOP.ServiceContext[] scl);
-
+    void upcallBeginReply(Upcall upcall, ServiceContexts contexts);
     void upcallEndReply(Upcall upcall);
-
-    void upcallBeginUserException(Upcall upcall,
-            org.omg.IOP.ServiceContext[] scl);
-
+    void upcallBeginUserException(Upcall upcall, ServiceContexts contexts);
     void upcallEndUserException(Upcall upcall);
-
-    void upcallUserException(Upcall upcall, org.omg.CORBA.UserException ex,
-            org.omg.IOP.ServiceContext[] scl);
-
-    void upcallSystemException(Upcall upcall,
-            org.omg.CORBA.SystemException exception,
-            org.omg.IOP.ServiceContext[] scl);
-
-    void upcallForward(Upcall upcall, org.omg.IOP.IOR ior, boolean perm,
-            org.omg.IOP.ServiceContext[] scl);
-
+    void upcallUserException(Upcall upcall, UserException ex, ServiceContexts contexts);
+    void upcallSystemException(Upcall upcall, SystemException exception, ServiceContexts contexts);
+    void upcallForward(Upcall upcall, IOR ior, boolean perm, ServiceContexts contexts);
     boolean replySent();
 }

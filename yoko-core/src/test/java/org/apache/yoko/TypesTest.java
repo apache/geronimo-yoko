@@ -1,11 +1,10 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,23 +16,25 @@
  */
 package org.apache.yoko;
 
-public class TypesTest extends AbstractOrbTestBase {
-    public void testConst() throws Exception {
-	client.invokeMain("test.types.TestConst");
-    }
-    public void testTypeCode() throws Exception {
-	client.invokeMain("test.types.TestTypeCode");
-    }
-    public void testAny() throws Exception {
-	client.invokeMain("test.types.TestAny");
-    }
-    public void testDynAny() throws Exception {
-	client.invokeMain("test.types.TestDynAny");
-    }
-    public void testPortableTypes() throws Exception {
-	client.invokeMain("test.types.TestPortableTypes");
-    }
-    public void testUnion() throws Exception {
-	client.invokeMain("test.types.TestUnion");
-    }
+import org.junit.jupiter.api.Test;
+import test.types.TestAny;
+import test.types.TestDynAny;
+import test.types.TestPortableTypes;
+import test.types.TestTypeCode;
+import test.types.TestUnion;
+import testify.jupiter.ConfigurePartRunner;
+import testify.parts.PartRunner;
+
+@ConfigurePartRunner
+class TypesTest {
+    @Test
+    void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }
+    @Test
+    void testAny(PartRunner runner) { runner.forkMain(TestAny.class); }
+    @Test
+    void testDynAny(PartRunner runner) { runner.forkMain(TestDynAny.class); }
+    @Test
+    void testPortableTypes(PartRunner runner) { runner.forkMain(TestPortableTypes.class); }
+    @Test
+    void testUnion(PartRunner runner) { runner.forkMain(TestUnion.class); }
 }

@@ -17,16 +17,11 @@
 
 package test.pi;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.File;
-import java.io.FileWriter;
-import java.io.PrintWriter;
-import java.util.Properties;
-
 import org.omg.CORBA.Any;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryHelper;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
 import org.omg.PortableServer.ID_ASSIGNMENT_POLICY_ID;
 import org.omg.PortableServer.IMPLICIT_ACTIVATION_POLICY_ID;
@@ -47,13 +42,21 @@ import org.omg.PortableServer.SERVANT_RETENTION_POLICY_ID;
 import org.omg.PortableServer.ServantLocator;
 import org.omg.PortableServer.ServantRetentionPolicyValue;
 import org.omg.PortableServer.ServantRetentionPolicyValueHelper;
+import test.common.TestBase;
 
-public final class Server extends test.common.TestBase {
+import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
+import java.util.Properties;
+
+import static org.junit.Assert.*;
+
+public final class Server extends TestBase {
     private static String refFile = "TestInterface.ref";
 
     private static TestLocator_impl locatorImpl;
 
-    static void ServerRegisterInterceptors(java.util.Properties props) {
+    static void ServerRegisterInterceptors(Properties props) {
         props.put("org.omg.PortableInterceptor.ORBInitializerClass." + "test.pi.ServerORBInitializer_impl", "");
     }
 
@@ -113,7 +116,7 @@ public final class Server extends test.common.TestBase {
                 ServantLocator locator = locatorImpl._this(orb);
                 persistentPOA.set_servant_manager(locator);
 
-                org.omg.IOP.CodecFactory factory = org.omg.IOP.CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
+                CodecFactory factory = CodecFactoryHelper.narrow(orb.resolve_initial_references("CodecFactory"));
                 assertTrue(factory != null);
 
                 ServerRequestInterceptor interceptor = new ServerTestInterceptor_impl(orb, factory);
@@ -166,7 +169,7 @@ public final class Server extends test.common.TestBase {
     }
 
     public static void main(String[] args) throws Exception {
-        java.util.Properties props = new Properties();
+        Properties props = new Properties();
         props.putAll(System.getProperties());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");

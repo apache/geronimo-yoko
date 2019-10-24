@@ -17,8 +17,23 @@
 
 package org.apache.yoko.rmi.impl;
 
-import static java.util.Arrays.asList;
-import static java.util.Collections.unmodifiableSet;
+import org.apache.yoko.rmi.util.StringUtil;
+import org.omg.CORBA.AttributeDescription;
+import org.omg.CORBA.Initializer;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.OperationDescription;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.VM_NONE;
+import org.omg.CORBA.ValueDefPackage.FullValueDescription;
+import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.CORBA.portable.UnknownException;
+import org.omg.SendingContext.CodeBase;
+import org.omg.SendingContext.CodeBaseHelper;
+import org.omg.SendingContext.RunTime;
+import sun.reflect.ReflectionFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -51,24 +66,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.rmi.util.StringUtil;
-import org.omg.CORBA.AttributeDescription;
-import org.omg.CORBA.Initializer;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.OperationDescription;
-import org.omg.CORBA.TypeCode;
-import org.omg.CORBA.VM_NONE;
-import org.omg.CORBA.ValueMember;
-import org.omg.CORBA.ValueDefPackage.FullValueDescription;
-import org.omg.CORBA.portable.InputStream;
-import org.omg.CORBA.portable.OutputStream;
-import org.omg.CORBA.portable.UnknownException;
-import org.omg.SendingContext.CodeBase;
-import org.omg.SendingContext.CodeBaseHelper;
-import org.omg.SendingContext.RunTime;
-
-import sun.reflect.ReflectionFactory;
+import static java.util.Arrays.asList;
+import static java.util.Collections.unmodifiableSet;
 
 class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
@@ -111,6 +110,12 @@ class ValueDescriptor extends TypeDescriptor {
     }
 
     protected boolean isEnum() { return false; }
+
+    @Override
+    protected final RemoteInterfaceDescriptor genRemoteInterface() {
+        if (!!!java.rmi.Remote.class.isAssignableFrom(type)) return super.genRemoteInterface();
+        return RemoteDescriptor.genMostSpecificRemoteInterface(type, repo);
+    }
 
     @Override
     protected String genRepId() {
@@ -559,7 +564,7 @@ class ValueDescriptor extends TypeDescriptor {
         }
     }
 
-    public Serializable readValue(final InputStream in, final Map<Integer, Object> offsetMap, final Integer offset) {
+    public Serializable readValue(final InputStream in, final Map<Integer, Serializable> offsetMap, final Integer offset) {
         final Serializable value = createBlankInstance();
 
         offsetMap.put(offset, value);
@@ -716,7 +721,7 @@ class ValueDescriptor extends TypeDescriptor {
 
             if (cmsfVersion == 2) {
                 // use a wrapped reader to open the secondary custom valuetype
-                ObjectReader wrapper = new CustomMarshaledObjectReader(reader);
+                ObjectReader wrapper = CustomMarshaledObjectReader.wrap(reader);
                 readSerializable(_read_object_method == null ? reader : wrapper, value);
                 // invoke close to skip to the end of the secondary custom valuetype
                 wrapper.close();

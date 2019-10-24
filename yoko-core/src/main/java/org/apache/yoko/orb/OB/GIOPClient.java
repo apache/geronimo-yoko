@@ -19,24 +19,29 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
+import org.omg.BiDirPolicy.BOTH;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHelper;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
+import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
@@ -46,8 +51,11 @@ import javax.rmi.CORBA.ValueHandler;
 import java.util.ArrayList;
 import java.util.List;
 
-import static javax.rmi.CORBA.Util.*;
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static javax.rmi.CORBA.Util.createValueHandler;
+import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class GIOPClient extends Client {
     protected ORBInstance orbInstance_; // The ORB instance
@@ -92,7 +100,7 @@ final class GIOPClient extends Client {
     //
     protected synchronized GIOPConnection getWorker(boolean create, final int timeout) {
         if (destroy_)
-            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
         if (connection_ == null)
             reuseInboundConnection();
@@ -194,7 +202,7 @@ final class GIOPClient extends Client {
             // Was there a timeout?
             //
             if (transport == null)
-                throw new NO_RESPONSE("Connection timeout", 0, CompletionStatus.COMPLETED_NO);
+                throw new NO_RESPONSE("Connection timeout", 0, COMPLETED_NO);
         } else {
             transport = connector_.connect();
             Assert._OB_assert(transport != null);
@@ -213,31 +221,21 @@ final class GIOPClient extends Client {
             CodeSetContext ctx = new CodeSetContext();
             CodeConverters conv = codeConverters();
 
-            if (conv.outputCharConverter != null)
-                ctx.char_data = conv.outputCharConverter.getTo().rgy_value;
-            else
-                ctx.char_data = CodeSetDatabase.ISOLATIN1;
-
-            if (conv.outputWcharConverter != null)
-                ctx.wchar_data = conv.outputWcharConverter.getTo().rgy_value;
-            else
-                ctx.wchar_data = orbInstance_.getNativeWcs();
+            ctx.char_data = conv.outputCharConverter == null ? ISO_LATIN_1.id : conv.outputCharConverter.getDestinationCodeSet().id;
+            ctx.wchar_data = conv.outputWcharConverter == null ? orbInstance_.getNativeWcs() : conv.outputWcharConverter.getDestinationCodeSet().id;
 
             // Create encapsulation for CONV_FRAME::CodeSetContext
-            Buffer buf = new Buffer();
-            OutputStream outCSC = new OutputStream(buf);
-            outCSC._OB_writeEndian();
-            CodeSetContextHelper.write(outCSC, ctx);
+            try (OutputStream outCSC = new OutputStream()) {
+                outCSC._OB_writeEndian();
+                CodeSetContextHelper.write(outCSC, ctx);
 
-            // Create service context containing the
-            // CONV_FRAME::CodeSetContext encapsulation
-            codeSetSC_ = new ServiceContext();
-            codeSetSC_.context_id = CodeSets.value;
+                // Create service context containing the
+                // CONV_FRAME::CodeSetContext encapsulation
+                codeSetSC_ = new ServiceContext();
+                codeSetSC_.context_id = CodeSets.value;
 
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeSetSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeSetSC_.context_data, 0, len);
+                codeSetSC_.context_data = outCSC.copyWrittenBytes();
+            }
         }
         if (codeBaseSC_ == null) {
 
@@ -245,30 +243,20 @@ final class GIOPClient extends Client {
             CodeBase codeBase = CodeBaseHelper.narrow(valueHandler.getRunTimeCodeBase());
 
 
-            Buffer buf = new Buffer();
-            OutputStream outCBC = new OutputStream(buf);
-            outCBC._OB_writeEndian();
-            CodeBaseHelper.write(outCBC, codeBase);
+            try (OutputStream outCBC = new OutputStream()) {
+                outCBC._OB_writeEndian();
+                CodeBaseHelper.write(outCBC, codeBase);
 
-            codeBaseSC_ = new ServiceContext();
-            codeBaseSC_.context_id = org.omg.IOP.SendingContextRunTime.value;
-
-            int len = buf.length();
-            byte[] data = buf.data();
-            codeBaseSC_.context_data = new byte[len];
-            System.arraycopy(data, 0, codeBaseSC_.context_data, 0, len);
+                codeBaseSC_ = new ServiceContext();
+                codeBaseSC_.context_id = SendingContextRunTime.value;
+                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
+            }
         }
-        //
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
         // here because the list of policies can change from one invocation to
         // the next. Instead, we need to get the policies and build the
         // service context each time we make an invocation.
-        //
     }
-
-    // ----------------------------------------------------------------------
-    // GIOPClient package member implementations
-    // ----------------------------------------------------------------------
 
     GIOPClient(ORBInstance orbInstance,
                Connector connector, int concModel,
@@ -280,10 +268,6 @@ final class GIOPClient extends Client {
         destroy_ = false;
         bidirWorker_ = bidirEnable;
     }
-
-    // ----------------------------------------------------------------------
-    // GIOPClient public member implementations
-    // ----------------------------------------------------------------------
 
     /** Destroy the client */
     public synchronized void destroy() {
@@ -299,23 +283,13 @@ final class GIOPClient extends Client {
         return connection_.getNewRequestId();
     }
 
-    //
-    // get a list of ServiceContexts that have to be sent on an AMI router
-    // request
-    //
-    public ServiceContext[] getAMIRouterSCL() {
-        //
+    // get a list of ServiceContexts that have to be sent on an AMI router request
+    public ServiceContexts getAMIRouterContexts() {
         // initialize the service contexts if they haven't already been
-        //
         initServiceContexts();
 
-        ServiceContext[] scl = new ServiceContext[1];
-        scl[0] = codeSetSC_;
-
-        //
         // return the list
-        //
-        return scl;
+        return ServiceContexts.unmodifiable(codeSetSC_);
     }
 
     /** Get all profiles that are usable with this client */
@@ -331,16 +305,13 @@ final class GIOPClient extends Client {
     }
 
     /** Get the OCI Connector info */
-    public org.apache.yoko.orb.OCI.ConnectorInfo connectorInfo() {
+    public ConnectorInfo connectorInfo() {
         return connector_.get_info();
     }
 
     /** Get the OCI Transport info */
-    public org.apache.yoko.orb.OCI.TransportInfo transportInfo() {
-        //
-        // Get the connection, but do not create a new one if there is none
-        // available
-        //
+    public TransportInfo transportInfo() {
+        // Get the connection, but do not create a new one if there is none available
         GIOPConnection connection = getWorker(false, -1);
 
         if (connection == null)
@@ -350,62 +321,50 @@ final class GIOPClient extends Client {
         return transport.get_info();
     }
 
-    //
-    // Start a downcall, returning a downcall emitter and an
-    // OutputStream for marshalling a request
-    //
+    // Start a downcall, returning a downcall emitter and an OutputStream for marshalling a request
     public DowncallEmitter startDowncall(Downcall down, OutputStreamHolder out) {
         GIOPConnection connection;
         try {
-            //
-            // Get the worker, creating a new one if there is none
-            // available
-            //
+            // Get the worker, creating a new one if there is none available
             connection = getWorker(true, down.policies().connectTimeout);
-        } catch (org.omg.CORBA.SystemException ex) {
-            Assert
-                    ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
+        } catch (SystemException ex) {
+            Assert._OB_assert(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
             return null;
         }
 
         try {
-            //
             // We only need to add a code set context if we're GIOP
-            // version 1.1 or higher, and if no messages have been sent so
-            // far
-            //
+            // version 1.1 or higher, and if no messages have been sent so far
             byte major = down.profileInfo().major;
             byte minor = down.profileInfo().minor;
             if (!connection.requestSent() && (major > 1 || minor >= 1)) {
-                CoreTraceLevels coreTraceLevels = orbInstance_
-                        .getCoreTraceLevels();
+                CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
                 if (coreTraceLevels.traceConnections() >= 2) {
                     CodeConverters conv = codeConverters();
                     String msg = "sending transmission code sets";
                     msg += "\nchar code set: ";
                     if (conv.outputCharConverter != null) {
-                        msg += conv.outputCharConverter.getTo().description;
+                        msg += conv.outputCharConverter.getDestinationCodeSet().description;
                     } else {
-                        CodeSetInfo info = CodeSetDatabase.instance().getCodeSetInfo(orbInstance_.getNativeCs());
-                        msg += info != null ? info.description : null;
+                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeCs());
+                        msg += info == null ? null : info.description;
                     }
                     msg += "\nwchar code set: ";
                     if (conv.outputWcharConverter != null)
-                        msg += conv.outputWcharConverter.getTo().description;
+                        msg += conv.outputWcharConverter.getDestinationCodeSet().description;
                     else {
-                        CodeSetInfo info = CodeSetDatabase.instance()
-                                .getCodeSetInfo(orbInstance_.getNativeWcs());
-                        msg += info != null ? info.description : null;
+                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeWcs());
+                        msg += info == null ? null : info.description;
                     }
                     orbInstance_.getLogger().trace("outgoing", msg);
                 }
 
                 Assert._OB_assert(codeSetSC_ != null);
-                down.addToRequestSCL(codeSetSC_);
+                down.addToRequestContexts(codeSetSC_);
 
                 Assert._OB_assert(codeBaseSC_ != null);
-                down.addToRequestSCL(codeBaseSC_);
+                down.addToRequestContexts(codeBaseSC_);
 
             }
 
@@ -417,43 +376,28 @@ final class GIOPClient extends Client {
             if ((major > 1) || ((major == 1) && (minor >= 2)))
                 validGIOPVersion = true;
 
-            if (validGIOPVersion
-                    && (down.policies().biDirMode == org.omg.BiDirPolicy.BOTH.value)) {
+            if (validGIOPVersion && (down.policies().biDirMode == BOTH.value)) {
                 Transport t = connection.transport();
 
-                ServiceContext contexts[] = t.get_info()
-                        .get_service_contexts(down.policies().value);
-                for (ServiceContext context : contexts) down.addToRequestSCL(context);
+                ServiceContexts contexts = t.get_info().get_service_contexts(down.policies().value);
+                for (ServiceContext context : contexts) down.addToRequestContexts(context);
             }
 
-            ProfileInfo profileInfo = down
-                    .profileInfo();
-            Buffer buf = new Buffer(
-                    12);
-            buf.pos(12);
-            out.value = new OutputStream(buf,
-                    codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
+            ProfileInfo profileInfo = down.profileInfo();
+            out.value = new OutputStream(Buffer.createWriteBuffer(12).padAll(), codeConverters(), GiopVersion.get(profileInfo.major, profileInfo.minor));
 
-            //
             // Create GIOP outgoing message
-            //
-            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(
-                    orbInstance_, out.value, profileInfo);
+            GIOPOutgoingMessage outgoing = new GIOPOutgoingMessage(orbInstance_, out.value, profileInfo);
 
-            //
             // Write header
-            //
-            String op = down.operation();
-            if (op.charAt(0) == '_' && op.equals("_locate"))
+            if (down.operation().equals("_locate"))
                 outgoing.writeLocateRequestHeader(down.requestId());
             else
-                outgoing.writeRequestHeader(down.requestId(), down.operation(),
-                        down.responseExpected(), down.getRequestSCL());
+                outgoing.writeRequestHeader(down.requestId(), down.operation(), down.responseExpected(), down.requestContexts);
 
             return connection.emitterInterface();
-        } catch (org.omg.CORBA.SystemException ex) {
-            Assert
-                    ._OB_assert(ex.completed == CompletionStatus.COMPLETED_NO);
+        } catch (SystemException ex) {
+            Assert._OB_assert(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
             return null;
         }
@@ -484,7 +428,7 @@ final class GIOPClient extends Client {
         GIOPConnection connection = getWorker(false, -1);
         Assert._OB_assert(connection != null);
         Transport transport = connection.transport();
-        return transport.mode() == org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
+        return transport.mode() == SendReceiveMode.SendReceive;
     }
 
     @Override

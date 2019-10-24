@@ -215,7 +215,7 @@ public final class TestDispatchStrategyServer extends test.common.TestBase {
             org.omg.CORBA.Object cusObjRef = cusPOA.id_to_reference(cusObjId);
 
             //
-            // Create Test Server
+            // Create Test InsServer
             //
             TestInfo[] info = new TestInfo[5];
             info[0] = new TestInfo();

@@ -39,30 +39,18 @@ public class Util {
         File javaHome = new File(System.getProperty("java.home"));
         File javaBin = new File(new File(javaHome, "bin"), "java");
 
-        // Get current class path
-        URLClassLoader cl = (URLClassLoader) Util.class.getClassLoader();
-        URL[] classPathUrls = cl.getURLs();
-
         // Construct list of arguments
-        List binArgs = new ArrayList();
+        List<String> binArgs = new ArrayList<String>();
 
         // First argument is the java binary to run
         binArgs.add(javaBin.getPath());
 
         // Add the classpath to argument list
         binArgs.add("-classpath");
-        String classPath = ""
-                + new File(classPathUrls[0].getPath().replaceAll("%20", " "));
-        for (int i = 1; i < classPathUrls.length; i++) {
-            classPath += File.pathSeparator
-                    + new File(classPathUrls[i].getPath()
-                            .replaceAll("%20", " "));
-        }
-        classPath += "";
-        binArgs.add(classPath);
+        binArgs.add(System.getProperty("java.class.path"));
 
         // Add properties to argument list
-        Enumeration en = props.keys();
+        Enumeration<Object> en = props.keys();
         while (en.hasMoreElements()) {
             String key = (String) en.nextElement();
             binArgs.add("-D" + key + "=" + props.getProperty(key));

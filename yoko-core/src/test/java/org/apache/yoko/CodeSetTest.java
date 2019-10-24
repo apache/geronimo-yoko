@@ -1,5 +1,4 @@
-/**
- *
+/*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -17,9 +16,12 @@
  */
 package org.apache.yoko;
 
+import test.codesets.Client;
+import test.codesets.Server;
+
 public class CodeSetTest extends AbstractOrbTestBase {
-    private static final String SERVER_CLASS = "test.codesets.Server";
-    private static final String CLIENT_CLASS = "test.codesets.Client";
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
     private static final String OUTPUT_FILE = "TestCodeSets.ref";
 
     public void setUp() throws Exception {

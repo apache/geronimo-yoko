@@ -1,0 +1,234 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+package testify.bus;
+
+import org.junit.jupiter.api.Assertions;
+import testify.io.EasyCloseable;
+import testify.streams.BiStream;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+
+import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+/**
+ * Enable multiple threads to communicate asynchronously.
+ */
+class SimpleBusImpl implements SimpleBus, EasyCloseable {
+    private final ExecutorService threadPool = Executors.newCachedThreadPool();
+    private final ConcurrentMap<String, Object> properties = new ConcurrentSkipListMap<>();
+    private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
+    private volatile Throwable originalError = null;
+    private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
+    private final UserBusImpl globalUserBus = new UserBusImpl(this);
+    private final EventBusImpl globalEventBus = new EventBusImpl(globalUserBus);
+    private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
+    private final LogBusImpl globalLogBus = new LogBusImpl(globalEventBus, loggingShortcuts);
+    private final Bus globalBus = new BusImpl(globalLogBus);
+
+    @Override
+    public Bus global() {
+        return globalBus;
+    }
+
+    @Override
+    public Bus forUser(String user) { return userBusMap.computeIfAbsent(user, this::newBus); }
+
+    private Bus newBus(String user) {
+        return new BusImpl(newLogBus(user), globalBus);
+    }
+
+    private LogBusImpl newLogBus(String user) {
+        return new LogBusImpl(newEventBus(user), loggingShortcuts);
+    }
+
+    private EventBusImpl newEventBus(String user) {
+        return new EventBusImpl(newUserBus(user), globalEventBus);
+    }
+
+    private UserBusImpl newUserBus(String user) {
+        return new UserBusImpl(user, this, globalUserBus);
+    }
+
+    @Override
+    public SimpleBusImpl put(String key, String value) {
+        // store the reference
+        Object previous = properties.put(key, requireNonNull(value));
+        // notify any waiting threads
+        if (previous instanceof CountDownLatch) ((CountDownLatch) previous).countDown();
+        // kick off callbacks on (potentially) separate threads
+        Optional.ofNullable(callbacks.get(key))
+                .map(Queue::stream).orElse(Stream.empty())
+                .forEach(action -> threadPool.execute(() -> action.accept(value)));
+        return this;
+    }
+
+    @Override
+    public boolean hasKey(String key) {
+        return Optional.ofNullable(properties.get(key))
+                .map(Object::getClass)
+                .filter(String.class::equals)
+                .isPresent();
+    }
+
+    @Override
+    public String peek(String key) {
+        try { return (String) properties.get(key); }
+        catch (ClassCastException e) { return null; }
+    }
+
+    @Override
+    public String get(String key) {
+        try {
+            Object obj = properties.computeIfAbsent(key, s -> new CountDownLatch(1));
+            // if it wasn't there, block until it arrives
+            if (obj instanceof CountDownLatch) ((CountDownLatch) obj).await(10, SECONDS);
+            // rethrow any stored error
+            //noinspection ThrowableNotThrown
+            reThrowErrorIfPresent();
+            // it's there now, so return it
+            return (String) properties.get(key);
+        } catch (InterruptedException e) {
+            storeError(new InterruptedException("Interrupted while waiting for key: " + key).initCause(e));
+        } catch (ClassCastException e) {
+            storeError(new TimeoutException("Timed out waiting for key: " + key));
+        }
+        throw requireNonNull(reThrowErrorIfPresent()); // there must be an error by now
+    }
+
+    @Override
+    public SimpleBusImpl onMsg(String key, Consumer<String> action) {
+        // register the callback
+        callbacks.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>()).add(action);
+        return this;
+    }
+
+    @SuppressWarnings("SameReturnValue")
+    private Error reThrowErrorIfPresent() {
+        if (originalError == null) return null;
+        throw new IllegalStateException(originalError);
+    }
+
+    void storeError(Throwable t) {
+        // only do this for the first error
+        if (originalError != null) return;
+        // log the error
+        System.err.println("Bus error: " + t);
+        System.err.println("Bus state: " + this);
+        // must set the error before waking any threads
+        originalError = t;
+        // wake any waiting threads — they will receive an error
+        BiStream.of(properties).narrowValues(CountDownLatch.class).values().forEach(CountDownLatch::countDown);
+    }
+
+    @Override
+    public BiStream<String, String> biStream() {
+        return BiStream.of(properties).narrowValues(String.class);
+    }
+
+    private <T> T collect(Supplier<T> supplier, Function<T,BiConsumer<String, String>> accumulator) {
+        T t = supplier.get();
+        biStream().forEach(accumulator.apply(t));
+        return t;
+    }
+
+    @Override
+    public void easyClose() throws Exception {
+        System.out.println("### shutting down thread pool");
+        threadPool.shutdown();
+        System.out.println("### awaiting thread pool termination");
+        threadPool.awaitTermination(200, MILLISECONDS);
+        System.out.println("### calling shutdownNow() ");
+        List<?> list = threadPool.shutdownNow();
+        System.out.println("### shutdownNow returned " + list.size() + " item(s).");
+        if (threadPool.isTerminated()) return;
+        throw new Error("Unable to shut down thread pool: " + threadPool.shutdownNow());
+    }
+
+    @Override
+    public String toString() {
+        return format(this.biStream());
+    }
+
+    private static String format(BiStream<String, String> bis) {
+        StringBuilder sb = new StringBuilder("{");
+        bis.forEach((k, v) -> sb.append("\n\t").append(k).append(" -> ").append(v));
+        if (sb.length() == 1) return "{}";
+        sb.append("\n}");
+        return sb.toString();
+    }
+
+    private enum Test {
+        ;
+        public static void main(String...args) throws ExecutionException, InterruptedException {
+            try (SimpleBusImpl simpleBus = new SimpleBusImpl()) {
+
+                // try an asynchronous get
+                final ExecutorService xs = Executors.newSingleThreadExecutor();
+                try {
+                    final Future<String> msg = xs.submit(() -> simpleBus.get("msg"));
+                    Assertions.assertFalse(msg.isDone());
+                    simpleBus.put("msg", "hello");
+                    Assertions.assertTrue(msg.isDone());
+                    Assertions.assertEquals("hello", msg.get());
+                    System.out.println("Correctly retrieved message: " + msg.get());
+                } finally {
+                    xs.shutdown();
+                }
+
+                {
+                    // register a callback
+                    CompletableFuture<String> msg = new CompletableFuture<>();
+                    simpleBus.onMsg("msg", msg::complete);
+                    // check the callback has not been called
+                    Assertions.assertFalse(msg.isDone());
+                    // put a new message
+                    simpleBus.put("msg", "world");
+                    // wait for the callback to be called
+                    // check the callback has been called correctly
+                    Assertions.assertEquals("world", msg.get());
+                    System.out.println("Correctly retrieved message: " + msg.get());
+                }
+            }
+
+        }
+    }
+}
+
+

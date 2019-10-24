@@ -17,57 +17,82 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.OB.LocationForward;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.ObjectFactory;
+import org.apache.yoko.orb.OB.PIDowncall;
+import org.apache.yoko.orb.OB.Util;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.util.CollectionExtras;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.apache.yoko.util.yasf.YasfThreadLocal;
 import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.INV_POLICY;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UnknownUserException;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedProfile;
+import org.omg.PortableInterceptor.ClientRequestInfo;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
+import org.omg.PortableInterceptor.ForwardRequest;
+import org.omg.PortableInterceptor.LOCATION_FORWARD;
+import org.omg.PortableInterceptor.SUCCESSFUL;
+import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
+import org.omg.PortableInterceptor.USER_EXCEPTION;
 
-final public class ClientRequestInfo_impl extends RequestInfo_impl implements
-        org.omg.PortableInterceptor.ClientRequestInfo {
-    //
-    // Sequence of ClientRequestInterceptors to call on reply
-    //
-    private java.util.Vector interceptors_ = new java.util.Vector();
+import java.util.List;
 
-    //
-    // The effective IOR
-    //
-    private org.omg.IOP.IOR IOR_;
+import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPolicyType;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
+import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
-    //
-    // The original IOR
-    //
-    private org.omg.IOP.IOR origIOR_;
+final public class ClientRequestInfo_impl extends RequestInfo_impl implements ClientRequestInfo {
+    private final List<ClientRequestInterceptor> interceptors = newSynchronizedList();
+    private final IOR effectiveIor;
+    private final IOR originalIor;
+    private final ProfileInfo profileInfo;
+    /**
+     * <em>This is really complicated! </em>
+     * <br>
+     * These are the new thread-context slots for the PI Current for this request's interception points.
+     * <br>
+     * <strong>
+     *     The spec actually says <strong>each</strong> interception point should have its own
+     *     context. That would mean we do not need this field as we never need to retrieve or reuse
+     *     the thread-scope context for an interception point.
+     *     TODO: try fixing this?
+     * </strong> (See CORBA 3.0.3 21.4.4.6 paragraph 3)
+     */
+    private final Any[] newThreadScopePICurrentSlotData;
 
-    //
-    // The ProfileInfo
-    //
-    private org.apache.yoko.orb.OCI.ProfileInfo profileInfo_;
-
-    //
-    // Slot data for the request PICurrent
-    //
-    protected org.omg.CORBA.Any[] currentSlots_;
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java mapping
-    // ------------------------------------------------------------------
-
-    //
     // Returns the target object on which the current request was invoked.
     //
     // Client side:
     //
     // send_request: yes send_poll: yes receive_reply: yes
     // receive_exception: yes receive_other: yes
-    //
     public org.omg.CORBA.Object target() {
-        org.apache.yoko.orb.OB.ObjectFactory factory = orbInstance_
-                .getObjectFactory();
-        return factory.createObject(origIOR_);
+        ObjectFactory factory = orbInstance.getObjectFactory();
+        return factory.createObject(originalIor);
     }
 
-    //
     // Returns the actual target object on which the current request was
     // invoked.
     //
@@ -75,11 +100,9 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
     //
     // send_request: yes send_poll: yes receive_reply: yes
     // receive_exception: yes receive_other: yes
-    //
     public org.omg.CORBA.Object effective_target() {
-        org.apache.yoko.orb.OB.ObjectFactory factory = orbInstance_
-                .getObjectFactory();
-        return factory.createObject(IOR_);
+        ObjectFactory factory = orbInstance.getObjectFactory();
+        return factory.createObject(effectiveIor);
     }
 
     //
@@ -90,93 +113,71 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
     // send_request: yes send_poll: yes receive_reply: yes
     // receive_exception: yes receive_other: yes
     //
-    public org.omg.IOP.TaggedProfile effective_profile() {
-        for (int i = 0; i < IOR_.profiles.length; i++)
-            if (IOR_.profiles[i].tag == profileInfo_.id) {
-                org.omg.IOP.TaggedProfile result = new org.omg.IOP.TaggedProfile();
-                result.tag = IOR_.profiles[i].tag;
-                result.profile_data = new byte[IOR_.profiles[i].profile_data.length];
-                System.arraycopy(IOR_.profiles[i].profile_data, 0,
-                        result.profile_data, 0,
-                        IOR_.profiles[i].profile_data.length);
+    public TaggedProfile effective_profile() {
+        for (final TaggedProfile profile : effectiveIor.profiles) {
+            if (profile.tag == profileInfo.id) {
+                TaggedProfile result = new TaggedProfile();
+                result.tag = profile.tag;
+                result.profile_data = new byte[profile.profile_data.length];
+                System.arraycopy(profile.profile_data, 0, result.profile_data, 0, profile.profile_data.length);
                 return result;
             }
-
-        //
-        // This shouldn't happen
-        //
-        org.apache.yoko.orb.OB.Assert._OB_assert(false);
-        return null;
+        }
+        throw _OB_assert("There should have been a tagged profile matching the profile info.");
     }
 
-    //
     // If the result of the invocation is an exception this is the result.
     //
     // Client side:
     //
     // send_request: no send_poll: no receive_reply: no
     // receive_exception: yes receive_other: no
-    //
-    public org.omg.CORBA.Any received_exception() {
+    public Any received_exception() {
         //
         // If status is not SYSTEM_EXCEPTION or USER_EXCEPTION then this
         // is a BAD_INV_ORDER exception
         //
-        if (status_ != org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                && status_ != org.omg.PortableInterceptor.USER_EXCEPTION.value)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (replyStatus != SYSTEM_EXCEPTION.value && replyStatus != USER_EXCEPTION.value)
+            throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
 
         //
         // UnknownUserException? Extract the contained UserException.
         //
-        org.omg.CORBA.UnknownUserException unk = null;
+        UnknownUserException unk = null;
         try {
-            unk = (org.omg.CORBA.UnknownUserException) receivedException_;
-        } catch (ClassCastException ex) {
+            unk = (UnknownUserException) receivedException;
+        } catch (ClassCastException ignored) {
         }
         if (unk != null)
             return unk.except;
 
-        org.omg.CORBA.Any any = orb_.create_any();
-        org.apache.yoko.orb.OB.Util.insertException(any, receivedException_);
+        Any any = orb.create_any();
+        Util.insertException(any, receivedException);
 
         return any;
     }
 
-    //
     // If the result of the invocation is an exception this the
-    // respository id of the exception
+    // repository id of the exception
     //
     // Client side:
     //
     // send_request: no send_poll: no receive_reply: no
     // receive_exception: yes receive_other: no
-    //
     public String received_exception_id() {
         //
         // If status is not SYSTEM_EXCEPTION or USER_EXCEPTION then this
         // is a BAD_INV_ORDER exception
         //
-        if (status_ != org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                && status_ != org.omg.PortableInterceptor.USER_EXCEPTION.value)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        if (replyStatus != SYSTEM_EXCEPTION.value && replyStatus != USER_EXCEPTION.value)
+            throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
 
-        if (receivedId_ == null)
-            receivedId_ = org.apache.yoko.orb.OB.Util
-                    .getExceptionId(receivedException_);
+        if (receivedId == null)
+            receivedId = Util.getExceptionId(receivedException);
 
-        return receivedId_;
+        return receivedId;
     }
 
-    //
     // Return the TaggedComponent with the given ID in the effective
     // profile.
     //
@@ -184,289 +185,157 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements
     //
     // send_request: yes send_poll: no receive_reply: yes
     // receive_exception: yes receive_other: yes
-    //
-    public org.omg.IOP.TaggedComponent get_effective_component(int id) {
-        for (int i = 0; i < profileInfo_.components.length; i++)
-            if (profileInfo_.components[i].tag == id) {
-                org.omg.IOP.TaggedComponent result = new org.omg.IOP.TaggedComponent();
-                result.tag = profileInfo_.components[i].tag;
-                result.component_data = new byte[profileInfo_.components[i].component_data.length];
-                System.arraycopy(profileInfo_.components[i].component_data, 0,
+    public TaggedComponent get_effective_component(int id) {
+        for (int i = 0; i < profileInfo.components.length; i++)
+            if (profileInfo.components[i].tag == id) {
+                TaggedComponent result = new TaggedComponent();
+                result.tag = profileInfo.components[i].tag;
+                result.component_data = new byte[profileInfo.components[i].component_data.length];
+                System.arraycopy(profileInfo.components[i].component_data, 0,
                         result.component_data, 0,
-                        profileInfo_.components[i].component_data.length);
+                        profileInfo.components[i].component_data.length);
                 return result;
             }
 
-        throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId)
-                        + ": " + id,
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new BAD_PARAM(describeBadParam(MinorInvalidComponentId) + ": " + id, MinorInvalidComponentId, COMPLETED_NO);
     }
 
-    //
     // Return all TaggedComponents with the given ID in all profiles.
     //
     // Client side:
     //
     // send_request: yes send_poll: no receive_reply: yes
     // receive_exception: yes receive_other: yes
-    //
-    public org.omg.IOP.TaggedComponent[] get_effective_components(int id) {
-        throw new org.omg.CORBA.NO_IMPLEMENT(); // TODO: implement this
+    public TaggedComponent[] get_effective_components(int id) {
+        throw new NO_IMPLEMENT(); // TODO: implement this
     }
 
-    //
     // Returns the policy of the given type in effect for this request.
     //
     // Client side:
     //
     // send_request: yes send_poll: no receive_reply: yes
     // receive_exception: yes receive_other: yes
-    //
-    public org.omg.CORBA.Policy get_request_policy(int type) {
-        for (int i = 0; i < policies_.length; i++) {
-            if (policies_[i].policy_type() == type) {
-                return policies_[i];
-            }
+    public Policy get_request_policy(int type) {
+        for (Policy policy : policies) {
+            if (policy.policy_type() == type)return policy;
         }
 
         // if the target policy was not in the current policy list, check to see
         // if the type has even been registered.  If it is valid, return null
         // to indicate we ain't got one.
-        if (orbInstance_.getPolicyFactoryManager().isPolicyRegistered(type)) {
+        if (orbInstance.getPolicyFactoryManager().isPolicyRegistered(type)) {
             return null;
         }
 
-        throw new org.omg.CORBA.INV_POLICY(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeInvPolicy(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPolicyType),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPolicyType,
-                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+        throw new INV_POLICY(describeInvPolicy(MinorInvalidPolicyType), MinorInvalidPolicyType, COMPLETED_NO);
     }
 
-    //
     // Add a service context for this request.
     //
     // Client side:
     //
     // send_request: yes send_poll: no receive_reply: no
     // receive_exception: no receive_other: no
-    //
-    public void add_request_service_context(org.omg.IOP.ServiceContext sc,
-            boolean addReplace) {
-        //
-        // This isn't valid in any call other than send_request (note that
-        // send_poll isn't currently implemented)
-        //
-        if (status_ >= 0)
-            throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+    public void add_request_service_context(ServiceContext sc, boolean addReplace) {
+        // This isn't valid in any call other than send_request (note that send_poll isn't currently implemented)
+        if (replyStatus >= 0) throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
 
-        addServiceContext(requestSCL_, sc, addReplace);
+        requestContexts.mutable().add(sc, addReplace);
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
-
-    //
-    // No arguments
-    //
-    public ClientRequestInfo_impl(org.omg.CORBA.ORB orb, int id, String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance, Current_impl current) {
-        super(orb, id, op, responseExpected, requestSCL, replySCL, orbInstance,
-                policies, current);
-
-        IOR_ = IOR;
-        origIOR_ = origIOR;
-        profileInfo_ = profileInfo;
-
-        argStrategy_ = new ArgumentStrategyNull(orb);
-        status_ = NO_REPLY;
-        currentSlots_ = current_._OB_newSlotTable();
+    public ClientRequestInfo_impl(ORB orb, ORBInstance orbInstance, Current_impl current, PIDowncall dc) {
+        super(orb, orbInstance, current, dc);
+        this.effectiveIor = dc.effectiveIor;
+        this.originalIor = dc.originalIor;
+        this.profileInfo = dc.profileInfo();
+        this.newThreadScopePICurrentSlotData = piCurrent._OB_newSlotTable();
+        this.replyStatus = NO_REPLY;
+        this.argStrategy = dc.createArgumentStrategy(orb);
     }
 
-    //
-    // DII style arguments
-    //
-    public ClientRequestInfo_impl(org.omg.CORBA.ORB orb, int id, String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            Current_impl current, org.omg.CORBA.NVList args,
-            org.omg.CORBA.NamedValue result,
-            org.omg.CORBA.ExceptionList exceptions) {
-        super(orb, id, op, responseExpected, requestSCL, replySCL, orbInstance,
-                policies, current);
 
-        IOR_ = IOR;
-        origIOR_ = origIOR;
-        profileInfo_ = profileInfo;
-
-        argStrategy_ = new ArgumentStrategyDII(orb, args, result, exceptions);
-        status_ = NO_REPLY;
-        currentSlots_ = current_._OB_newSlotTable();
-    }
-
-    //
-    // SII style arguments
-    //
-    public ClientRequestInfo_impl(org.omg.CORBA.ORB orb, int id, String op,
-            boolean responseExpected, org.omg.IOP.IOR IOR,
-            org.omg.IOP.IOR origIOR,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
-            org.omg.CORBA.Policy[] policies, java.util.Vector requestSCL,
-            java.util.Vector replySCL,
-            org.apache.yoko.orb.OB.ORBInstance orbInstance,
-            Current_impl current,
-            org.apache.yoko.orb.OB.ParameterDesc[] argDesc,
-            org.apache.yoko.orb.OB.ParameterDesc retDesc,
-            org.omg.CORBA.TypeCode[] exceptionTC) {
-        super(orb, id, op, responseExpected, requestSCL, replySCL, orbInstance,
-                policies, current);
-
-        IOR_ = IOR;
-        origIOR_ = origIOR;
-        profileInfo_ = profileInfo;
-
-        argStrategy_ = new ArgumentStrategySII(orb, argDesc, retDesc,
-                exceptionTC);
-        status_ = NO_REPLY;
-        currentSlots_ = current_._OB_newSlotTable();
-    }
-
-    public void _OB_request(java.util.Vector interceptors)
-            throws org.apache.yoko.orb.OB.LocationForward {
-        //
+    public void _OB_request(List<ClientRequestInterceptor> interceptors) throws LocationForward {
         // The PICurrent needs a new set of slot data
-        //
-        slots_ = current_._OB_currentSlotData();
-        popCurrent_ = true;
-        current_._OB_pushSlotData(currentSlots_);
+        requestSlotData = piCurrent._OB_currentSlotData();
+        currentNeedsPopping = true;
+        piCurrent._OB_pushSlotData(newThreadScopePICurrentSlotData);
 
-        //
-        // The result not available, arguments and exceptions are
-        // available
-        //
-        argStrategy_.setResultAvail(false);
-        argStrategy_.setArgsAvail(true);
-        argStrategy_.setExceptAvail(true);
+        // result not available, arguments and exceptions available
+        argStrategy.setResultAvail(false);
+        argStrategy.setArgsAvail(true);
+        argStrategy.setExceptAvail(true);
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            java.util.Enumeration e = interceptors.elements();
-            while (e.hasMoreElements()) {
-                org.omg.PortableInterceptor.ClientRequestInterceptor interceptor = (org.omg.PortableInterceptor.ClientRequestInterceptor) e
-                        .nextElement();
+            for(ClientRequestInterceptor interceptor: interceptors) {
                 try {
                     interceptor.send_request(this);
-                    interceptors_.addElement(interceptor);
-                } catch (org.omg.CORBA.SystemException ex) {
-                    status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
-                    receivedException_ = ex;
+                    this.interceptors.add(interceptor);
+                } catch (SystemException ex) {
+                    replyStatus = SYSTEM_EXCEPTION.value;
+                    receivedException = ex;
                     _OB_reply();
-                } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-                    status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
-                    org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
-                            ._get_delegate());
-                    forwardReference_ = p._OB_IOR();
+                } catch (ForwardRequest ex) {
+                    replyStatus = LOCATION_FORWARD.value;
+                    Delegate p = (Delegate) (((ObjectImpl) ex.forward)._get_delegate());
+                    forwardReference = p._OB_IOR();
                     _OB_reply();
                 }
             }
         }
 
-        if (popCurrent_) {
-            popCurrent_ = false;
-            current_._OB_popSlotData();
-        }
+        popCurrent();
     }
 
-    public void _OB_reply() throws org.apache.yoko.orb.OB.LocationForward {
-        if (!popCurrent_) {
-            popCurrent_ = true;
-            current_._OB_pushSlotData(currentSlots_);
+    public void _OB_reply() throws LocationForward {
+        if (!currentNeedsPopping) {
+            currentNeedsPopping = true;
+            piCurrent._OB_pushSlotData(newThreadScopePICurrentSlotData);
         }
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            int curr = interceptors_.size() - 1;
-            while (!interceptors_.isEmpty()) {
+            for (ClientRequestInterceptor i: CollectionExtras.removeInReverse(interceptors)) {
                 try {
-                    org.omg.PortableInterceptor.ClientRequestInterceptor i = (org.omg.PortableInterceptor.ClientRequestInterceptor) interceptors_
-                            .elementAt(curr);
-
-                    if (status_ == org.omg.PortableInterceptor.SUCCESSFUL.value) {
-                        //
-                        // The result, arguments are available
-                        //
-                        argStrategy_.setResultAvail(true);
-
+                    switch (replyStatus) {
+                    case SUCCESSFUL.value:
+                        // result, arguments are available
+                        argStrategy.setResultAvail(true);
                         i.receive_reply(this);
-                    } else if (status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value
-                            || status_ == org.omg.PortableInterceptor.USER_EXCEPTION.value) {
-                        //
-                        // The result, arguments not available
-                        //
-                        argStrategy_.setResultAvail(false);
-                        argStrategy_.setArgsAvail(false);
-
+                        break;
+                    case SYSTEM_EXCEPTION.value:
+                    case USER_EXCEPTION.value:
+                        // result, arguments not available
+                        argStrategy.setResultAvail(false);
+                        argStrategy.setArgsAvail(false);
                         i.receive_exception(this);
-                    } else {
-                        //
-                        // The result, arguments not available
-                        //
-                        argStrategy_.setResultAvail(false);
-                        argStrategy_.setArgsAvail(false);
-
+                        break;
+                    default:
+                        // result, arguments not available
+                        argStrategy.setResultAvail(false);
+                        argStrategy.setArgsAvail(false);
                         i.receive_other(this);
+                        break;
                     }
-                } catch (org.omg.CORBA.SystemException ex) {
-                    status_ = org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value;
-                    receivedException_ = ex;
-                    receivedId_ = null;
-                } catch (org.omg.PortableInterceptor.ForwardRequest ex) {
-                    status_ = org.omg.PortableInterceptor.LOCATION_FORWARD.value;
-                    org.apache.yoko.orb.CORBA.Delegate p = (org.apache.yoko.orb.CORBA.Delegate) (((org.omg.CORBA.portable.ObjectImpl) ex.forward)
-                            ._get_delegate());
-                    forwardReference_ = p._OB_IOR();
+                } catch (SystemException ex) {
+                    replyStatus = SYSTEM_EXCEPTION.value;
+                    receivedException = ex;
+                    receivedId = null;
+                } catch (ForwardRequest ex) {
+                    replyStatus = LOCATION_FORWARD.value;
+                    Delegate p = (Delegate) (((ObjectImpl) ex.forward)._get_delegate());
+                    forwardReference = p._OB_IOR();
                 }
-                interceptors_.removeElementAt(curr);
-                --curr;
             }
         }
 
-        //
-        // If a set of slots was provided to the
-        // PortableInterceptor::Current implementation then the slots have
-        // to be popped
-        //
-        if (popCurrent_) {
-            popCurrent_ = false;
-            current_._OB_popSlotData();
-        }
+        popCurrent();
 
-        //
-        // Raise the appropriate exception, if necessary. Can't use a
-        // switch statement -- the values are not integer constants
-        //
-        if (status_ == org.omg.PortableInterceptor.SYSTEM_EXCEPTION.value)
-            throw (org.omg.CORBA.SystemException) receivedException_;
-        if (status_ == org.omg.PortableInterceptor.LOCATION_FORWARD.value)
-            throw new org.apache.yoko.orb.OB.LocationForward(forwardReference_,
-                    false);
+        // Raise the appropriate exception, if necessary.
+        switch (replyStatus) {
+        case SYSTEM_EXCEPTION.value: throw (SystemException)receivedException;
+        case LOCATION_FORWARD.value: throw new LocationForward(forwardReference, false);
+        }
     }
 }

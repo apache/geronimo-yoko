@@ -1,0 +1,10 @@
+dependencies {
+  compile project(":yoko-rmi-spec")
+}
+
+jar {
+  manifest {
+    instruction 'Bundle-Description' , 'Apache Yoko Implementation Utilities'
+    instruction 'Export-Package'     , '*'
+  }
+}

@@ -1,11 +1,8 @@
 package org.apache.yoko.orb.cmsf;
 
-import java.io.IOException;
-import java.util.Arrays;
-
-import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
 import org.omg.IOP.RMICustomMaxStreamFormat;
@@ -58,9 +55,7 @@ public enum CmsfVersion {
     static CmsfVersion readData(byte[] data) {
         if (data == null) return CMSFv1;
         int cmsf = 1;
-        Buffer buf = new Buffer(data, data.length);
-        try (org.apache.yoko.orb.CORBA.InputStream in = 
-                new org.apache.yoko.orb.CORBA.InputStream(buf, 0, false)) {
+        try (InputStream in = new InputStream(data)) {
             in._OB_readEndian();
             cmsf = in.read_octet();
         } catch (Exception e) {
@@ -70,14 +65,10 @@ public enum CmsfVersion {
     }
     
     private static byte[] genData(byte value) {
-        Buffer buf = new Buffer(2);
-        try (org.apache.yoko.orb.CORBA.OutputStream out = 
-                new org.apache.yoko.orb.CORBA.OutputStream(buf)) {
+        try (OutputStream out = new OutputStream(2)) {
             out._OB_writeEndian();
             out.write_octet(value);
-            return Arrays.copyOf(buf.data(), buf.length());
-        } catch (IOException e) {
-            throw (INTERNAL)(new INTERNAL(e.getMessage())).initCause(e);
+            return out.copyWrittenBytes();
         }
     }
 }

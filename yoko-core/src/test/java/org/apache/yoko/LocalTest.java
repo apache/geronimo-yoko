@@ -1,5 +1,4 @@
-/**
- *
+/*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -17,9 +16,12 @@
  */
 package org.apache.yoko;
 
+import test.local.Client;
+import test.local.Server;
+
 public class LocalTest extends AbstractOrbTestBase {
-    private static final String SERVER_CLASS = "test.local.Server";
-    private static final String CLIENT_CLASS = "test.local.Client";
+    private static final Class<?> SERVER_CLASS = Server.class;
+    private static final Class<?> CLIENT_CLASS = Client.class;
     private static final String OUTPUT_FILE = "Test.ref";
 
     public void setUp() throws Exception {

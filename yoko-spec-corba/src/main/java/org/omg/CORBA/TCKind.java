@@ -178,4 +178,44 @@ public class TCKind implements org.omg.CORBA.portable.IDLEntity {
     private java.lang.Object readResolve() throws java.io.ObjectStreamException {
         return from_int(value());
     }
+
+    @Override
+    public String toString() {
+        switch (this.value_) {
+        case _tk_null: return "_tk_null";
+        case _tk_void: return "_tk_void";
+        case _tk_short: return "_tk_short";
+        case _tk_long: return "_tk_long";
+        case _tk_ushort: return "_tk_ushort";
+        case _tk_ulong: return "_tk_ulong";
+        case _tk_float: return "_tk_float";
+        case _tk_double: return "_tk_double";
+        case _tk_boolean: return "_tk_boolean";
+        case _tk_char: return "_tk_char";
+        case _tk_octet: return "_tk_octet";
+        case _tk_any: return "_tk_any";
+        case _tk_TypeCode: return "_tk_TypeCode";
+        case _tk_Principal: return "_tk_Principal";
+        case _tk_objref: return "_tk_objref";
+        case _tk_struct: return "_tk_struct";
+        case _tk_union: return "_tk_union";
+        case _tk_enum: return "_tk_enum";
+        case _tk_string: return "_tk_string";
+        case _tk_sequence: return "_tk_sequence";
+        case _tk_array: return "_tk_array";
+        case _tk_alias: return "_tk_alias";
+        case _tk_except: return "_tk_except";
+        case _tk_longlong: return "_tk_longlong";
+        case _tk_ulonglong: return "_tk_ulonglong";
+        case _tk_longdouble: return "_tk_longdouble";
+        case _tk_wchar: return "_tk_wchar";
+        case _tk_wstring: return "_tk_wstring";
+        case _tk_fixed: return "_tk_fixed";
+        case _tk_value: return "_tk_value";
+        case _tk_value_box: return "_tk_value_box";
+        case _tk_native: return "_tk_native";
+        case _tk_abstract_interface: return "_tk_abstract_interface";
+        default: return "TCKind(" + value_ + ")";
+        }
+    }
 }

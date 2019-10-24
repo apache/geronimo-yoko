@@ -17,63 +17,49 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.omg.CORBA.DATA_CONVERSION;
+
 final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;
 
-    public void write_char(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        out.buf_.data_[out.buf_.pos_++] = (byte) (v & 0xff);
+    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        writeBuffer.writeByte(v & 0xff);
     }
 
-    public void write_wchar(org.apache.yoko.orb.CORBA.OutputStream out, char v)
-            throws org.omg.CORBA.DATA_CONVERSION {
-        if (OB_Extras.COMPAT_WIDE_MARSHAL == true) {
-            out.buf_.data_[out.buf_.pos_] = (byte) (v >> 8);
-            out.buf_.data_[out.buf_.pos_ + 1] = (byte) v;
-        } else {
-            //
-            // we don't support surrogate paired characters
-            //
-            org.apache.yoko.orb.OB.Assert._OB_assert(v < 0xD800 || v > 0xDFFF);
+    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+        //
+        // we don't support surrogate paired characters
+        //
+        Assert._OB_assert(v < 0xD800 || v > 0xDFFF);
 
-            //
-            // if this character is the same character as the BOM, then we
-            // need to escape it with the Big Endian BOM
-            //
-            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0)
-                    && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
-                out.buf_.data_[out.buf_.pos_++] = (byte) 0xFE;
-                out.buf_.data_[out.buf_.pos_++] = (byte) 0xFF;
-            }
-
-            //
-            // we always write our UTF-16 characters in Big Endian format
-            //
-            out.buf_.data_[out.buf_.pos_++] = (byte) (v >>> 8);
-            out.buf_.data_[out.buf_.pos_++] = (byte) (v & 0xff);
-
-            //
-            // turn off the FIRST_CHAR flag
-            //
-            Flags_ &= ~CodeSetWriter.FIRST_CHAR;
+        //
+        // if this character is the same character as the BOM, then we
+        // need to escape it with the Big Endian BOM
+        //
+        if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == (char) 0xFEFF || v == (char) 0xFFFE)) {
+            writeBuffer.writeByte(0xFE);
+            writeBuffer.writeByte(0xFF);
         }
+
+        //
+        // we always write our UTF-16 characters in Big Endian format
+        //
+        writeBuffer.writeChar(v);
+
+        //
+        // turn off the FIRST_CHAR flag
+        //
+        Flags_ &= ~CodeSetWriter.FIRST_CHAR;
     }
 
     public int count_wchar(char v) {
-        if (OB_Extras.COMPAT_WIDE_MARSHAL == false) {
-            //
-            // we don't support surrogate paired characters
-            //
-            org.apache.yoko.orb.OB.Assert._OB_assert(v < (char) 0xD800
-                    || v > (char) 0xDFFF);
+        // we don't support surrogate paired characters
+        Assert._OB_assert(v < (char) 0xD800 || v > (char) 0xDFFF);
 
-            //
-            // we need to escape the first character if its a BOM
-            //
-            if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0)
-                    && (v == 0xFEFF || v == 0xFFFE))
-                return 4;
-        }
+        // we need to escape the first character if its a BOM
+        if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == 0xFEFF || v == 0xFFFE))
+            return 4;
 
         return 2;
     }

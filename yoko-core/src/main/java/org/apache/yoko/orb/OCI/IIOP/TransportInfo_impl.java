@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,18 +17,18 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.net.Socket;
-import java.util.Objects;
-
 import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OB.Net;
-import org.apache.yoko.orb.OCI.*;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.CLIENT_SIDE;
+import org.apache.yoko.orb.OCI.SERVER_SIDE;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.BiDirPolicy.BidirectionalPolicy;
 import org.omg.BiDirPolicy.BidirectionalPolicyHelper;
 import org.omg.CORBA.LocalObject;
-import org.omg.CORBA.NO_RESOURCES;
 import org.omg.CORBA.Policy;
 import org.omg.IIOP.BiDirIIOPServiceContext;
 import org.omg.IIOP.BiDirIIOPServiceContextHelper;
@@ -37,17 +37,14 @@ import org.omg.IOP.BI_DIR_IIOP;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TAG_INTERNET_IOP;
 
+import java.net.Socket;
+
 public final class TransportInfo_impl extends LocalObject implements TransportInfo {
     private enum Origin{CLIENT(CLIENT_SIDE.value), SERVER(SERVER_SIDE.value); final short value; Origin(int v) {value = (short)v;}}
     private final Socket socket;
     private final Origin origin;
     private final ListenerMap listenMap_;
     private volatile ListenPoint[] listenPoints_ = null;
-
-
-    // ------------------------------------------------------------------
-    // Standard IDL to Java Mapping
-    // ------------------------------------------------------------------
 
     public String id() {
         return PLUGIN_ID.value;
@@ -91,133 +88,79 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
 
     public short remote_port() {return (short)socket.getPort();}
 
-    public ServiceContext[] get_service_contexts(Policy[] policies) {
-        ServiceContext[] scl;
-        boolean bHaveBidir = false;
-
+    public ServiceContexts get_service_contexts(Policy[] policies) {
         for (Policy policy : policies) {
             if (policy.policy_type() == BIDIRECTIONAL_POLICY_TYPE.value) {
-                BidirectionalPolicy p = BidirectionalPolicyHelper
-                        .narrow(policy);
-                if (p.value() == BOTH.value)
-                    bHaveBidir = true;
-                break;
+                BidirectionalPolicy p = BidirectionalPolicyHelper.narrow(policy);
+                if (p.value() == BOTH.value) {
+                    BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
+                    biDirCtxt.listen_points = listenMap_.getListenPoints();
+
+                    try (OutputStream out = new OutputStream()) {
+                        out._OB_writeEndian();
+                        BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
+                        // Create and fill the return context list
+                        return ServiceContexts.unmodifiable(new ServiceContext(BI_DIR_IIOP.value, out.copyWrittenBytes()));
+                    }
+                }
             }
         }
 
-        if (bHaveBidir) {
-            BiDirIIOPServiceContext biDirCtxt = new BiDirIIOPServiceContext();
-            biDirCtxt.listen_points = listenMap_.getListenPoints();
-
-            org.apache.yoko.orb.OCI.Buffer buf = new org.apache.yoko.orb.OCI.Buffer();
-            org.apache.yoko.orb.CORBA.OutputStream out = new org.apache.yoko.orb.CORBA.OutputStream(
-                    buf);
-
-            out._OB_writeEndian();
-            org.omg.IIOP.BiDirIIOPServiceContextHelper.write(out, biDirCtxt);
-
-            //
-            // Fill in the bidir service context
-            //
-            org.omg.IOP.ServiceContext context = new org.omg.IOP.ServiceContext();
-            context.context_id = org.omg.IOP.BI_DIR_IIOP.value;
-            context.context_data = buf.data();
-
-            //
-            // Create and fill the return context list
-            //
-            scl = new org.omg.IOP.ServiceContext[1];
-            scl[0] = context;
-            return scl;
-        }
-
-        //
-        // we don't have a bidir service context so return an array of
-        // length 0
-        //
-        scl = new org.omg.IOP.ServiceContext[0];
-        return scl;
+        // we don't have a bidir service context so return an array of length 0
+        return ServiceContexts.EMPTY;
     }
 
-    public void handle_service_contexts(org.omg.IOP.ServiceContext[] contexts) {
-        for (ServiceContext context : contexts) {
-            if (context.context_id == BI_DIR_IIOP.value) {
-                byte[] pOct = context.context_data;
-                int len = context.context_data.length;
+    public void handle_service_contexts(ServiceContexts contexts) {
+        ServiceContext context = contexts.get(BI_DIR_IIOP.value);
+        if (context == null) return;
+        InputStream in = new InputStream(context.context_data);
+        in._OB_readEndian();
 
-                Buffer buf = new Buffer(pOct, len);
-                InputStream in = new InputStream(buf, 0, false);
-                in._OB_readEndian();
+        // unmarshal the octets back to the bidir format
+        BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
 
-                //
-                // unmarshal the octets back to the bidir format
-                //
-                BiDirIIOPServiceContext biDirCtxt = BiDirIIOPServiceContextHelper.read(in);
-
-                //
-                // save the listening points in the transport
-                //
-                _OB_setListenPoints(biDirCtxt.listen_points);
-
-                break;
-            }
-        }
+        // save the listening points in the transport
+        _OB_setListenPoints(biDirCtxt.listen_points);
     }
 
-    public synchronized boolean received_bidir_SCL() {
+    public synchronized boolean received_bidir_service_context() {
         return listenPoints_ != null && (listenPoints_.length > 0);
     }
 
     public synchronized boolean endpoint_alias_match(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
-        //
         // we only deal with Connectors that are of our specific type,
         // namely IIOP connectors (and ConnectorInfos)
-        //
-        org.apache.yoko.orb.OCI.IIOP.ConnectorInfo_impl infoImpl;
+        ConnectorInfo_impl infoImpl;
         try {
-            infoImpl = (org.apache.yoko.orb.OCI.IIOP.ConnectorInfo_impl) connInfo;
+            infoImpl = (ConnectorInfo_impl) connInfo;
         } catch (ClassCastException ex) {
             return false;
         }
 
-        //
         // compare the endpoint information in this connector with the
         // various endpoint inforamtion in our listenMap_
-        //
-        if (listenPoints_ == null)
-            return false;
+        if (listenPoints_ == null) return false;
 
         short port = infoImpl.remote_port();
         String host = infoImpl.remote_addr();
 
         for (ListenPoint aListenPoints_ : listenPoints_) {
-            if ((aListenPoints_.port == port)
-                    && Net.CompareHosts(
-                    aListenPoints_.host, host))
-                return true;
+            if (aListenPoints_.port != port) continue;
+            if (Net.CompareHosts(aListenPoints_.host, host)) return true;
         }
 
         return false;
     }
 
-    public synchronized org.omg.IIOP.ListenPoint[] _OB_getListenPoints() {
-        return listenPoints_;
-    }
-
-    public synchronized void _OB_setListenPoints(org.omg.IIOP.ListenPoint[] lp) {
+    private synchronized void _OB_setListenPoints(ListenPoint[] lp) {
         listenPoints_ = lp;
     }
 
-    // ------------------------------------------------------------------
-    // Yoko internal functions
-    // Application programs must not use these functions directly
-    // ------------------------------------------------------------------
     private TransportInfo_impl(Socket socket, Origin origin, ListenerMap lm) {
         this.socket = socket;
         this.origin = origin;
         listenMap_ = lm;
     }
-
 
     // client-side constructor
     TransportInfo_impl(Transport_impl transport, ListenerMap lm) {

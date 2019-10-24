@@ -17,15 +17,18 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.*;
-
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.omg.CORBA.LocalObject;
 import org.omg.IOP.TAG_INTERNET_IOP;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 
 /**
  * Immutable memo of the endpoint details for a connection. The InetAddress
@@ -77,7 +80,8 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
     private InetAddress getInetAddress() {
         if (addr == null) synchronized (this) {
             if (addr == null) try {
-                addr = InetAddress.getByName(host);
+                String h = Util.decodeHost(this.host);
+                addr = Util.getInetAddress(h);
             } catch (UnknownHostException ex) {
                 throw asCommFailure(ex);
             }
@@ -101,4 +105,9 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
 
     @Override
     public int hashCode() {return 31*port + getInetAddress().hashCode();}
+
+    @Override
+    public String toString() {
+        return "[" + host + ":" + port + "]";
+    }
 }

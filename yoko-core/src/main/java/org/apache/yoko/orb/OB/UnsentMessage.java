@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,19 +17,23 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.ReadBuffer;
+
 public final class UnsentMessage {
-    public org.apache.yoko.orb.OCI.Buffer buf;
+    private final ReadBuffer readBuffer;
+    public final Downcall down;
 
-    public Downcall down;
-
-    UnsentMessage(org.apache.yoko.orb.OCI.Buffer buf) {
-        this.buf = buf;
-        this.buf.pos(0);
+    UnsentMessage(ReadBuffer readBuffer) {
+        this.down = null;
+        this.readBuffer = readBuffer.clone().rewindToStart();
     }
 
     UnsentMessage(Downcall down) {
         this.down = down;
-        this.buf = down.output()._OB_buffer();
-        this.buf.pos(0);
+        this.readBuffer = down.output().getBufferReader();
+    }
+
+    ReadBuffer getBufferReader() {
+        return readBuffer.clone();
     }
 }

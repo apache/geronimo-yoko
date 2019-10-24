@@ -17,7 +17,17 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.TypeCode;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.BAD_TYPECODE;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.StructMember;
+import org.omg.CORBA.UnionMember;
+import org.omg.CORBA.VM_ABSTRACT;
+import org.omg.CORBA.ValueMember;
+import org.omg.CORBA_2_4.TCKind;
 
 public final class TypeCodeFactory {
     //
@@ -79,7 +89,7 @@ public final class TypeCodeFactory {
                     || kind == org.omg.CORBA.TCKind.tk_void
                     || kind == org.omg.CORBA.TCKind.tk_except)
                 return false;
-        } catch (org.omg.CORBA.BAD_TYPECODE ex) {
+        } catch (BAD_TYPECODE ex) {
             // TypeCode may be recursive
         }
 
@@ -175,8 +185,8 @@ public final class TypeCodeFactory {
 
         case org.omg.CORBA.TCKind._tk_value:
             tc = createValueTC("IDL:omg.org/CORBA/ValueBase:1.0", "ValueBase",
-                    org.omg.CORBA.VM_ABSTRACT.value, null,
-                    new org.omg.CORBA.ValueMember[0]);
+                    VM_ABSTRACT.value, null,
+                    new ValueMember[0]);
             break;
 
         default:
@@ -189,42 +199,42 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createStructTC(String id, String name,
-            org.omg.CORBA.StructMember[] members) {
+            StructMember[] members) {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         for (int i = 0; i < members.length; i++) {
             if (!checkName(members[i].name))
-                throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                throw new BAD_PARAM(MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidMemberName)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberName,
+                        CompletionStatus.COMPLETED_NO);
             if (!checkType(members[i].type))
-                throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType)
+                throw new BAD_TYPECODE(MinorCodes
+                        .describeBadTypecode(MinorCodes.MinorInvalidMemberType)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberType,
+                        CompletionStatus.COMPLETED_NO);
             for (int j = i + 1; j < members.length; j++)
                 if (members[i].name.length() > 0
                         && members[i].name.equalsIgnoreCase(members[j].name)) {
-                    throw new org.omg.CORBA.BAD_PARAM(
+                    throw new BAD_PARAM(
                             MinorCodes
-                                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                                    .describeBadParam(MinorCodes.MinorInvalidMemberName)
                                     + ": " + members[i].name,
-                            org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            MinorCodes.MinorInvalidMemberName,
+                            CompletionStatus.COMPLETED_NO);
                 }
         }
 
@@ -253,19 +263,19 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createUnionTC(String id, String name,
             org.omg.CORBA.TypeCode discriminator_type,
-            org.omg.CORBA.UnionMember[] members) {
+            UnionMember[] members) {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         org.omg.CORBA.TypeCode origDisc = TypeCode
                 ._OB_getOrigType(discriminator_type);
@@ -283,38 +293,38 @@ public final class TypeCodeFactory {
             break;
 
         default:
-            throw new org.omg.CORBA.BAD_PARAM(
+            throw new BAD_PARAM(
                     MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidDiscriminatorType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidDiscriminatorType,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            .describeBadParam(MinorCodes.MinorInvalidDiscriminatorType),
+                    MinorCodes.MinorInvalidDiscriminatorType,
+                    CompletionStatus.COMPLETED_NO);
         }
 
         for (int i = 0; i < members.length; i++) {
             if (!checkName(members[i].name))
-                throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                throw new BAD_PARAM(MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidMemberName)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberName,
+                        CompletionStatus.COMPLETED_NO);
             if (!checkType(members[i].type))
-                throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType)
+                throw new BAD_TYPECODE(MinorCodes
+                        .describeBadTypecode(MinorCodes.MinorInvalidMemberType)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberType,
+                        CompletionStatus.COMPLETED_NO);
             org.omg.CORBA.TypeCode labelType = members[i].label.type();
             org.omg.CORBA.TypeCode origLabelType = TypeCode
                     ._OB_getOrigType(labelType);
             org.omg.CORBA.TCKind kind = origLabelType.kind();
             if (kind != org.omg.CORBA.TCKind.tk_octet
                     && !origLabelType.equivalent(discriminator_type)) {
-                throw new org.omg.CORBA.BAD_PARAM(
+                throw new BAD_PARAM(
                         MinorCodes
-                                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleLabelType)
+                                .describeBadParam(MinorCodes.MinorIncompatibleLabelType)
                                 + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleLabelType,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorIncompatibleLabelType,
+                        CompletionStatus.COMPLETED_NO);
             }
             for (int j = i + 1; j < members.length; j++) {
                 if (kind != org.omg.CORBA.TCKind.tk_octet) {
@@ -323,12 +333,12 @@ public final class TypeCodeFactory {
                     if (origLabelType.equivalent(otherLabelType)
                             && compareLabels(kind, members[i].label,
                                     members[j].label)) {
-                        throw new org.omg.CORBA.BAD_PARAM(
+                        throw new BAD_PARAM(
                                 MinorCodes
-                                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateLabel)
+                                        .describeBadParam(MinorCodes.MinorDuplicateLabel)
                                         + ": " + members[i].name,
-                                org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateLabel,
-                                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                                MinorCodes.MinorDuplicateLabel,
+                                CompletionStatus.COMPLETED_NO);
                     }
                 }
             }
@@ -346,15 +356,15 @@ public final class TypeCodeFactory {
                     ._OB_convertForeignTypeCode(discriminator_type);
         }
 
-        tc.labels_ = new org.apache.yoko.orb.CORBA.Any[members.length];
+        tc.labels_ = new Any[members.length];
         tc.memberNames_ = new String[members.length];
         tc.memberTypes_ = new TypeCode[members.length];
 
         for (int i = 0; i < members.length; i++) {
             try {
-                tc.labels_[i] = (org.apache.yoko.orb.CORBA.Any) members[i].label;
+                tc.labels_[i] = (Any) members[i].label;
             } catch (ClassCastException ex) {
-                tc.labels_[i] = new org.apache.yoko.orb.CORBA.Any(
+                tc.labels_[i] = new Any(
                         members[i].label);
             }
 
@@ -377,31 +387,31 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         for (int i = 0; i < members.length; i++) {
             if (!checkName(members[i]))
-                throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
-                        + ": " + members[i], org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                throw new BAD_PARAM(MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidMemberName)
+                        + ": " + members[i], MinorCodes.MinorInvalidMemberName,
+                        CompletionStatus.COMPLETED_NO);
             for (int j = i + 1; j < members.length; j++)
                 if (members[i].length() > 0
                         && members[i].equalsIgnoreCase(members[j])) {
-                    throw new org.omg.CORBA.BAD_PARAM(
+                    throw new BAD_PARAM(
                             MinorCodes
-                                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                                    .describeBadParam(MinorCodes.MinorInvalidMemberName)
                                     + ": " + members[i],
-                            org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            MinorCodes.MinorInvalidMemberName,
+                            CompletionStatus.COMPLETED_NO);
                 }
         }
 
@@ -423,20 +433,20 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkType(original_type))
-            throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_TYPECODE(MinorCodes
+                    .describeBadTypecode(MinorCodes.MinorInvalidMemberType),
+                    MinorCodes.MinorInvalidMemberType,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -455,42 +465,42 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createExceptionTC(String id,
-            String name, org.omg.CORBA.StructMember[] members) {
+            String name, StructMember[] members) {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         for (int i = 0; i < members.length; i++) {
             if (!checkName(members[i].name))
-                throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                throw new BAD_PARAM(MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidMemberName)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberName,
+                        CompletionStatus.COMPLETED_NO);
             if (!checkType(members[i].type))
-                throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType)
+                throw new BAD_TYPECODE(MinorCodes
+                        .describeBadTypecode(MinorCodes.MinorInvalidMemberType)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberType,
+                        CompletionStatus.COMPLETED_NO);
             for (int j = i + 1; j < members.length; j++)
                 if (members[i].name.length() > 0
                         && members[i].name.equalsIgnoreCase(members[j].name)) {
-                    throw new org.omg.CORBA.BAD_PARAM(
+                    throw new BAD_PARAM(
                             MinorCodes
-                                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                                    .describeBadParam(MinorCodes.MinorInvalidMemberName)
                                     + ": " + members[i].name,
-                            org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            MinorCodes.MinorInvalidMemberName,
+                            CompletionStatus.COMPLETED_NO);
                 }
         }
 
@@ -522,15 +532,15 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -580,10 +590,10 @@ public final class TypeCodeFactory {
         Assert._OB_assert(bound >= 0);
 
         if (!checkType(element_type))
-            throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_TYPECODE(MinorCodes
+                    .describeBadTypecode(MinorCodes.MinorInvalidMemberType),
+                    MinorCodes.MinorInvalidMemberType,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -600,7 +610,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createRecursiveSequenceTC(int bound,
             int offset) {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+        throw new NO_IMPLEMENT();
     }
 
     public static org.omg.CORBA.TypeCode createArrayTC(int length,
@@ -608,10 +618,10 @@ public final class TypeCodeFactory {
         Assert._OB_assert(length > 0);
 
         if (!checkType(element_type))
-            throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_TYPECODE(MinorCodes
+                    .describeBadTypecode(MinorCodes.MinorInvalidMemberType),
+                    MinorCodes.MinorInvalidMemberType,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -628,54 +638,54 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createValueTC(String id, String name,
             short type_modifier, org.omg.CORBA.TypeCode concrete_base,
-            org.omg.CORBA.ValueMember[] members) {
+            ValueMember[] members) {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
         if (concrete_base != null) {
             try {
                 org.omg.CORBA.TypeCode origBaseType = TypeCode
                         ._OB_getOrigType(concrete_base);
                 if (origBaseType.kind() != org.omg.CORBA.TCKind.tk_value)
-                    throw new org.omg.CORBA.BAD_TYPECODE();
+                    throw new BAD_TYPECODE();
                 // TODO: No standard minor code
-            } catch (org.omg.CORBA.BAD_TYPECODE ex) {
+            } catch (BAD_TYPECODE ex) {
                 // TypeCode may be recursive
             }
         }
 
         for (int i = 0; i < members.length; i++) {
             if (!checkName(members[i].name))
-                throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                throw new BAD_PARAM(MinorCodes
+                        .describeBadParam(MinorCodes.MinorInvalidMemberName)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberName,
+                        CompletionStatus.COMPLETED_NO);
             if (!checkType(members[i].type))
-                throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType)
+                throw new BAD_TYPECODE(MinorCodes
+                        .describeBadTypecode(MinorCodes.MinorInvalidMemberType)
                         + ": " + members[i].name,
-                        org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                        MinorCodes.MinorInvalidMemberType,
+                        CompletionStatus.COMPLETED_NO);
             if (!CHECK_IDL_NAMES) continue;
             for (int j = i + 1; j < members.length; j++)
                 if (members[i].name.length() > 0
                         && members[i].name.equalsIgnoreCase(members[j].name)) {
-                    throw new org.omg.CORBA.BAD_PARAM(
+                    throw new BAD_PARAM(
                             MinorCodes
-                                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName)
+                                    .describeBadParam(MinorCodes.MinorInvalidMemberName)
                                     + ": " + members[i].name,
-                            org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberName,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                            MinorCodes.MinorInvalidMemberName,
+                            CompletionStatus.COMPLETED_NO);
                 }
         }
 
@@ -718,20 +728,20 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkType(boxed_type))
-            throw new org.omg.CORBA.BAD_TYPECODE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidMemberType,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_TYPECODE(MinorCodes
+                    .describeBadTypecode(MinorCodes.MinorInvalidMemberType),
+                    MinorCodes.MinorInvalidMemberType,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -751,15 +761,15 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -774,10 +784,10 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -791,15 +801,15 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
@@ -815,19 +825,19 @@ public final class TypeCodeFactory {
         Assert._OB_assert(id != null && name != null);
 
         if (!checkId(id))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidId,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidId)
+                    + ": " + id, MinorCodes.MinorInvalidId,
+                    CompletionStatus.COMPLETED_NO);
         if (!checkName(name))
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName)
-                    + ": " + name, org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName)
+                    + ": " + name, MinorCodes.MinorInvalidName,
+                    CompletionStatus.COMPLETED_NO);
 
         TypeCode tc = new TypeCode();
 
-        tc.kind_ = org.omg.CORBA_2_4.TCKind.tk_local_interface;
+        tc.kind_ = TCKind.tk_local_interface;
         tc.id_ = id;
         tc.name_ = name;
 

@@ -176,8 +176,6 @@ public abstract class ORB {
 
         ORB orb = newOrb(props);
 
-        ORBSingleton_ = orb;
-
         orb.set_parameters(args, props);
 
         return orb;
@@ -186,11 +184,9 @@ public abstract class ORB {
     public static ORB init(java.applet.Applet app, java.util.Properties props) {
         ORB orb = newOrb(props);
 
-        ORBSingleton_ = orb;
-
         orb.set_parameters(app, props);
 
-        return ORBSingleton_;
+        return orb;
     }
 
     private static ORB newOrb(Properties props) {

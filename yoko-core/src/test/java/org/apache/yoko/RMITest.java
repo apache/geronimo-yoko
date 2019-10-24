@@ -1,6 +1,5 @@
-/**
- *
- * Licensed to the Apache Software Foundation (ASF) under one or more
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -17,6 +16,9 @@
  */
 package org.apache.yoko;
 
+import test.rmi.ClientMain;
+import test.rmi.ServerMain;
+
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -26,10 +28,10 @@ public class RMITest extends AbstractOrbTestBase {
     public void testRMI() throws Exception {
         server.launch();
         Files.deleteIfExists(Paths.get(REF_FILE));
-        server.invokeMainAsync("test.rmi.ServerMain");
+        server.invokeMainAsync(ServerMain.class);
         setWaitForFile(REF_FILE);
         waitForFile();
-        client.invokeMain("test.rmi.ClientMain");
+        client.invokeMain(ClientMain.class);
         server.exit(0);
     }
 }

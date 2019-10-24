@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,8 +17,28 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
-abstract class ArgumentStrategy {
-    protected org.omg.CORBA.ORB orb_; // Java only
+import org.apache.yoko.orb.OB.PIArgsDowncall;
+import org.apache.yoko.orb.OB.PIDIIDowncall;
+import org.apache.yoko.orb.OB.PIVoidDowncall;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.TypeCode;
+import org.omg.Dynamic.Parameter;
+
+public abstract class ArgumentStrategy {
+    public static ArgumentStrategy create(ORB orb, PIVoidDowncall downcall) {
+        return new ArgumentStrategyNull(orb);
+    }
+
+    public static ArgumentStrategy create(ORB orb, PIArgsDowncall pad) {
+        return new ArgumentStrategySII(orb, pad.argDesc_, pad.retDesc_, pad.exceptionTC_);
+    }
+
+    public static ArgumentStrategy create(ORB orb, PIDIIDowncall pdd) {
+        return new ArgumentStrategyDII(orb, pdd.args_, pdd.result_, pdd.exceptionList_);
+    }
+
+    protected final ORB orb_;
 
     //
     // Are arguments available?
@@ -40,7 +60,7 @@ abstract class ArgumentStrategy {
     //
     protected boolean exceptNeverAvail_;
 
-    ArgumentStrategy(org.omg.CORBA.ORB orb) {
+    ArgumentStrategy(ORB orb) {
         orb_ = orb;
         argsAvail_ = false;
         resultAvail_ = false;
@@ -51,22 +71,22 @@ abstract class ArgumentStrategy {
     //
     // Get the arguments
     //
-    abstract org.omg.Dynamic.Parameter[] arguments();
+    abstract Parameter[] arguments();
 
     //
     // Get the exceptions
     //
-    abstract org.omg.CORBA.TypeCode[] exceptions();
+    abstract TypeCode[] exceptions();
 
     //
     // Get the result
     //
-    abstract org.omg.CORBA.Any result();
+    abstract Any result();
 
     //
     // Set the result (server side only)
     //
-    abstract void setResult(org.omg.CORBA.Any any);
+    abstract void setResult(Any any);
 
     //
     // Are the args available?

@@ -18,7 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
-class RMIStubInitializer implements org.apache.yoko.rmi.util.stub.StubInitializer {
+public class RMIStubInitializer implements org.apache.yoko.rmi.util.stub.StubInitializer {
     public RMIStubInitializer() {
 
     }

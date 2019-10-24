@@ -3,6 +3,7 @@ package org.apache.yoko.util.concurrent;
 import org.apache.yoko.util.Fifa;
 import org.apache.yoko.util.Fifo;
 
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Objects.requireNonNull;
@@ -41,8 +42,8 @@ class ConcurrentFifo<T> implements Fifo<T>, Fifa<T> {
      * deadlock.
      */
 
-    private final Head<T> head = new Head<>();
-    private final Foot<T> foot = new Foot<>(head);
+    final Head<T> head = new Head<>();
+    final Foot<T> foot = new Foot<>(head);
     protected final AtomicInteger size = new AtomicInteger(0);
 
     @Override
@@ -50,25 +51,14 @@ class ConcurrentFifo<T> implements Fifo<T>, Fifa<T> {
 
     /**
      * Get, without removing it, the oldest remaining element from this FIFO.
-     * This method does not block and returns an answer consistent with the state of the FIFO at some point.
      *
      * @return the oldest remaining element or <code>null</code> if the FIFO was empty
      */
     @Override
     public T peek() {
-        return recursivePeek(head);
-    }
-
-    /**
-     * Find the first non-null value.
-     */
-    private T recursivePeek(PNode<T> start) {
-        synchronized (start) {
-            NNode<T> nn = start.next();
-            if (nn == foot) return null;
-            VNode<T> node = (VNode<T>) nn;
-            T result = node.get();
-            return (result == null) ? recursivePeek(node) : result;
+        synchronized(head) {
+            NNode<T> n = head.next();
+            return n == foot ? null : ((VNode<T>) n).get();
         }
     }
 
@@ -80,17 +70,18 @@ class ConcurrentFifo<T> implements Fifo<T>, Fifa<T> {
      */
     @Override
     public Place<T> put(T elem) {
-        do {
-            final PNode<T> pnode = foot.prev();
+        Objects.requireNonNull(elem);
+        RETRY: do {
+            final PNode<T> prev = foot.prev();
             // lock penultimate node
-            synchronized (pnode) {
+            synchronized (prev) {
                 // RETRY if structure changed
-                if (pnode.next() != foot) continue;
+                if (prev.next() != foot) continue RETRY;
                 // create a new node
                 final VNode<T> node = createNode(elem);
                 // insert new node
                 synchronized (node) {
-                    node.insertAfter(pnode);
+                    node.insertAfter(prev);
                     size.incrementAndGet();
                 }
                 // return place in queue
@@ -115,25 +106,9 @@ class ConcurrentFifo<T> implements Fifo<T>, Fifa<T> {
      */
     @Override
     public T remove() {
-        return recursiveRemove(head);
-    }
-
-    /**
-     * Find and remove the first non-null value
-     */
-    private T recursiveRemove(PNode<T> start) {
-        synchronized (start) {
-            NNode<T> nn = start.next();
-            if (nn == foot) return null;
-            VNode<T> node = (VNode<T>) nn;
-            T result = node.get();
-            if (result == null)
-                return recursiveRemove(node);
-            synchronized (node) {
-                node.delete();
-                size.decrementAndGet();
-                return result;
-            }
+        synchronized (head) {
+            NNode<T> n = head.next();
+            return n == foot ? null : remove0((VNode<T>) n);
         }
     }
 
@@ -143,22 +118,28 @@ class ConcurrentFifo<T> implements Fifo<T>, Fifa<T> {
      *         otherwise <code>null</code>
      */
     protected T remove(VNode<T> node) {
-        do {
+        RETRY: do {
             // retrieve previous node
-            final PNode<T> pNode = node.prev();
+            final PNode<T> prev = node.prev();
             // FAIL if node already deleted
-            if (pNode == null) return null;
+            if (prev == null) return null;
             // lock previous node
-            synchronized (pNode) {
+            synchronized (prev) {
                 // RETRY if structure has changed
-                if (pNode.next() != node) continue;
-                // Remove node from chain and report success
-                synchronized (node) {
-                    node.delete();
-                    size.decrementAndGet();
-                }
-                return node.get();
+                if (prev.next() != node) continue RETRY;
+                return remove0(node);
+
             }
         } while (true);
+    }
+
+    private T remove0(VNode<T> node) {
+        assert Thread.holdsLock(node.prev());
+        // Remove node from chain and report success
+        synchronized (node) {
+            node.delete();
+            size.decrementAndGet();
+        }
+        return node.get();
     }
 }

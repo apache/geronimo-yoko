@@ -17,17 +17,28 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.Vector;
+import org.apache.yoko.orb.CORBA.InputStream;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.CORBA.OutputStreamHolder;
+import org.apache.yoko.orb.IOP.MutableServiceContexts;
+import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OCI.GiopVersion;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.util.concurrent.AutoLock;
+import org.apache.yoko.util.concurrent.AutoReadWriteLock;
+import org.omg.CORBA.CompletionStatus;
+import org.omg.CORBA.NO_RESPONSE;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.UNKNOWN;
+import org.omg.CORBA.UserException;
+import org.omg.IOP.IOR;
+import org.omg.IOP.ServiceContext;
+import org.omg.Messaging.SYNC_WITH_TRANSPORT;
+
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 
-import org.apache.yoko.orb.OCI.GiopVersion;
-import org.apache.yoko.orb.util.AutoLock;
-import org.apache.yoko.orb.util.AutoReadWriteLock;
-import org.omg.CORBA.CompletionStatus;
-import org.omg.CORBA.NO_RESPONSE;
-import org.omg.IOP.IOR;
-import org.omg.IOP.ServiceContext;
+import static org.apache.yoko.util.ObjectFormatter.format;
 
 public class Downcall {
     /** The ORBInstance object */
@@ -42,7 +53,7 @@ public class Downcall {
     private DowncallEmitter emitter_;
 
     /** Information about the IOR profile */
-    protected org.apache.yoko.orb.OCI.ProfileInfo profileInfo_;
+    protected ProfileInfo profileInfo_;
 
     /** The list of policies */
     protected RefCountPolicyList policies_;
@@ -57,10 +68,10 @@ public class Downcall {
     protected final boolean responseExpected_;
 
     /** The marshalled headers and parameters */
-    private org.apache.yoko.orb.CORBA.OutputStream out_;
+    private OutputStream out_;
 
     /** Holds the results of the operation */
-    private org.apache.yoko.orb.CORBA.InputStream in_;
+    private InputStream in_;
 
     /** The state of this invocation */
     protected enum State { UNSENT, PENDING, NO_EXCEPTION, USER_EXCEPTION, SYSTEM_EXCEPTION, FAILURE_EXCEPTION, FORWARD, FORWARD_PERM }
@@ -90,9 +101,8 @@ public class Downcall {
     protected IOR forwardIOR_;
 
     /** The request and reply service contexts */
-    protected Vector<ServiceContext> requestSCL_ = new Vector<>();
-
-    protected Vector<ServiceContext> replySCL_ = new Vector<>();
+    public final ServiceContexts requestContexts = new ServiceContexts();
+    public final ServiceContexts replyContexts = new ServiceContexts();
 
     // ----------------------------------------------------------------------
     // Downcall private and protected member implementations
@@ -115,11 +125,11 @@ public class Downcall {
                     // update the stack trace to have the caller's stack rather than the 
                     // receiver thread. 
                     ex_.fillInStackTrace();    
-                    throw (org.omg.CORBA.SystemException) ex_;
+                    throw (SystemException) ex_;
 
                 case FAILURE_EXCEPTION:
                     Assert._OB_assert(ex_ != null);
-                    throw new FailureException((org.omg.CORBA.SystemException) ex_);
+                    throw new FailureException((SystemException) ex_);
 
                 case FORWARD:
                     Assert._OB_assert(forwardIOR_ != null);
@@ -136,8 +146,8 @@ public class Downcall {
     }
 
     /** Required for use by subclasses */
-    protected final org.apache.yoko.orb.CORBA.OutputStream preMarshalBase() throws LocationForward, FailureException {
-        org.apache.yoko.orb.CORBA.OutputStreamHolder out = new org.apache.yoko.orb.CORBA.OutputStreamHolder();
+    protected final OutputStream preMarshalBase() throws LocationForward, FailureException {
+        OutputStreamHolder out = new OutputStreamHolder();
         emitter_ = client_.startDowncall(this, out);
         out_ = out.value;
         checkForException();
@@ -149,7 +159,7 @@ public class Downcall {
     // ----------------------------------------------------------------------
 
     public Downcall(ORBInstance orbInstance, Client client,
-            org.apache.yoko.orb.OCI.ProfileInfo profileInfo,
+            ProfileInfo profileInfo,
             RefCountPolicyList policies, String op, boolean resp) {
         orbInstance_ = orbInstance;
         logger_ = orbInstance_.getLogger(); 
@@ -181,7 +191,7 @@ public class Downcall {
         return client_;
     }
 
-    public final org.apache.yoko.orb.OCI.ProfileInfo profileInfo() {
+    public final ProfileInfo profileInfo() {
         return profileInfo_;
     }
 
@@ -205,40 +215,36 @@ public class Downcall {
         return responseExpected_;
     }
 
-    public final org.apache.yoko.orb.CORBA.OutputStream output() {
+    public final OutputStream output() {
         return out_;
     }
 
-    public final org.apache.yoko.orb.CORBA.InputStream input() {
+    public final InputStream input() {
         return in_;
     }
 
-    public final org.omg.IOP.ServiceContext[] getRequestSCL() {
-        org.omg.IOP.ServiceContext[] scl = new org.omg.IOP.ServiceContext[requestSCL_
-                .size()];
-        requestSCL_.copyInto(scl);
-        return scl;
+    public final ServiceContexts getRequestContexts() {
+        return requestContexts;
     }
 
-    public final void addToRequestSCL(org.omg.IOP.ServiceContext sc) {
-        requestSCL_.addElement(sc);
+    public final void addToRequestContexts(ServiceContext sc) {
+        requestContexts.mutable().add(sc);
     }
 
-    public final void setReplySCL(org.omg.IOP.ServiceContext[] scl) {
-        // Don't create a new Vector
-        Assert._OB_assert(replySCL_.size() == 0);
-        replySCL_.setSize(scl.length);
-        for (int i = 0; i < scl.length; i++)
-            replySCL_.setElementAt(scl[i], i);
+    public final void setReplyContexts(ServiceContexts contexts) {
+        if (!replyContexts.isEmpty() && logger_.isDebugEnabled()) {
+            logger_.debug("Expected empty reply contexts, but found " + replyContexts.size());
+            for (ServiceContext sc : contexts) logger_.debug("\t" + format(sc));
+        }
+        final MutableServiceContexts mutable = replyContexts.mutable();
+        for (ServiceContext sc: contexts) mutable.add(sc, true);
     }
 
-    public org.apache.yoko.orb.CORBA.OutputStream preMarshal()
-            throws LocationForward, FailureException {
+    public OutputStream preMarshal() throws LocationForward, FailureException {
         return preMarshalBase();
     }
 
-    public final void marshalEx(org.omg.CORBA.SystemException ex)
-            throws LocationForward, FailureException {
+    public final void marshalEx(SystemException ex) throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
         Assert._OB_assert(false);
@@ -292,7 +298,7 @@ public class Downcall {
     public final void oneway() throws LocationForward, FailureException {
         Assert._OB_assert(!responseExpected_);
 
-        if (policies_.syncScope == org.omg.Messaging.SYNC_WITH_TRANSPORT.value) {
+        if (policies_.syncScope == SYNC_WITH_TRANSPORT.value) {
             boolean finished = emitter_.send(this, true);
             Assert._OB_assert(finished);
             checkForException();
@@ -332,12 +338,12 @@ public class Downcall {
             return false;
     }
 
-    public final org.apache.yoko.orb.CORBA.InputStream preUnmarshal()
+    public final InputStream preUnmarshal()
             throws LocationForward, FailureException {
         return in_;
     }
 
-    public final void unmarshalEx(org.omg.CORBA.SystemException ex)
+    public final void unmarshalEx(SystemException ex)
             throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
@@ -356,10 +362,10 @@ public class Downcall {
         //
         try (AutoLock lock = stateLock.getReadLock()) {
             if (state == State.USER_EXCEPTION && ex_ == null && exId_ == null)
-                setSystemException(new org.omg.CORBA.UNKNOWN(org.apache.yoko.orb.OB.MinorCodes
-                        .describeUnknown(org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_YES));
+                setSystemException(new UNKNOWN(MinorCodes
+                        .describeUnknown(MinorCodes.MinorUnknownUserException),
+                        MinorCodes.MinorUnknownUserException,
+                        CompletionStatus.COMPLETED_YES));
             checkForException();
         }
     }
@@ -367,9 +373,9 @@ public class Downcall {
     public final String unmarshalExceptionId() {
         try (AutoLock lock = stateLock.getReadLock()) {
             Assert._OB_assert(state == State.USER_EXCEPTION);
-            int pos = in_._OB_pos();
+            int pos = in_.getPosition();
             String id = in_.read_string();
-            in_._OB_pos(pos);
+            in_.setPosition(pos);
             return id;
         }
     }
@@ -418,7 +424,7 @@ public class Downcall {
         }
     }
 
-    public final void setNoException(org.apache.yoko.orb.CORBA.InputStream in) {
+    public final void setNoException(InputStream in) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             state = State.NO_EXCEPTION;
             if (in == null) {
@@ -434,7 +440,7 @@ public class Downcall {
         }
     }
 
-    public final void setUserException(org.apache.yoko.orb.CORBA.InputStream in) {
+    public final void setUserException(InputStream in) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(in != null);
             Assert._OB_assert(responseExpected_);
@@ -447,7 +453,7 @@ public class Downcall {
         }
     }
 
-    public void setUserException(org.omg.CORBA.UserException ex, String exId) {
+    public void setUserException(UserException ex, String exId) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(responseExpected_);
             Assert._OB_assert(ex_ == null);
@@ -457,7 +463,7 @@ public class Downcall {
         }
     }
 
-    public final void setUserException(org.omg.CORBA.UserException ex) {
+    public final void setUserException(UserException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(responseExpected_);
             Assert._OB_assert(ex_ == null);
@@ -478,7 +484,7 @@ public class Downcall {
         }
     }
 
-    public final void setSystemException(org.omg.CORBA.SystemException ex) {
+    public final void setSystemException(SystemException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(responseExpected_);
             Assert._OB_assert(ex_ == null);
@@ -489,7 +495,7 @@ public class Downcall {
         }
     }
 
-    public final void setFailureException(org.omg.CORBA.SystemException ex) {
+    public final void setFailureException(SystemException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert._OB_assert(ex_ == null);
             state = State.FAILURE_EXCEPTION;
