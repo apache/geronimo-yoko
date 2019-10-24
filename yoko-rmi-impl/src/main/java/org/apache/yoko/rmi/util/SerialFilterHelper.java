@@ -20,9 +20,12 @@ import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
 import org.omg.CORBA.portable.InputStream;
 
 import java.io.InvalidClassException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.security.AccessController.doPrivileged;
 
 /**
  * This is a helper class to access the JDK's serial filter.
@@ -45,7 +48,12 @@ public enum SerialFilterHelper {
             filterAdapter = new JavaIoFilterAdapter();
         } catch (Throwable t1) {
             try {
-                filterAdapter = new SunMiscFilterAdapter();
+                filterAdapter = doPrivileged(new PrivilegedExceptionAction<FilterAdapter>() {
+                    @Override
+                    public FilterAdapter run() {
+                        return new SunMiscFilterAdapter();
+                    }
+                });
             } catch (Throwable t2) {
                 filterAdapter = new NullFilterAdapter();
             }
