@@ -16,11 +16,11 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.OBCORBA.ORB_impl;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.IIOP.FragmentedMessageTest.ClientSideFragmenter;
+import org.apache.yoko.orb.OCI.IIOP.FragmentedMessageTest.ServerSideFragmenter;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
@@ -36,6 +36,10 @@ import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
+import testify.bus.Bus;
+import testify.jupiter.ConfigureOrb;
+import testify.jupiter.ConfigureServer;
+import testify.parts.ServerPart;
 
 import javax.rmi.PortableRemoteObject;
 import java.io.IOException;
@@ -54,14 +58,18 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * course of an invocation so that message passes via a port relay that splits messages into
  * fragments before sending them on.
  */
+@ConfigureServer(
+        value = FragmentedMessageTest.Server.class,
+        newProcess = false,
+        orb = @ConfigureOrb(initialize = ServerSideFragmenter.class) // server orb config
+)
+@ConfigureOrb(iiopConnectionHelper = ClientSideFragmenter.class) // client orb config
 public class FragmentedMessageTest {
-    private Echo stub;
-    private EchoImpl impl;
+    private static final EchoImpl impl = new EchoImpl();
+    private static Echo stub;
 
     enum Constants {
         ;
-        public static final String[] SERVER_ORB_ARGS = new String[]{"-ORBproperty", "org.omg.PortableInterceptor.ORBInitializerClass." + ServerSideFragmenter.class.getName() + "=true"};
-        public static final String[] CLIENT_ORB_ARGS = new String[]{"-IIOPconnectionHelper", ClientSideFragmenter.class.getName()};
         public static final int MAX_MESSAGE_SIZE = 1024;
         private static final String PAYLOAD = "To be, or not to be, that is the question: " +
                 "Whether 'tis nobler in the mind to suffer " +
@@ -111,53 +119,31 @@ public class FragmentedMessageTest {
                 throw (INTERNAL) new INTERNAL().initCause(e);
             }
         }
-
-
     }
 
-    private ORB clientOrb;
-    private ORB serverOrb;
+    public static class Server extends ServerPart {
+        @Override
+        protected void run(ORB serverOrb, Bus bus) throws Exception {
+            POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
+            rootPoa.the_POAManager().activate();
+            _EchoImpl_Tie tie = new _EchoImpl_Tie();
+            tie.setTarget(FragmentedMessageTest.impl);
+            rootPoa.activate_object(tie);
+            bus.put("ior", serverOrb.object_to_string(tie._this_object(serverOrb)));
+        }
+    }
 
-    @BeforeEach
-    public void setup() throws Exception {
-        serverOrb = ORB.init(Constants.SERVER_ORB_ARGS, null);
-        ORB_impl serverOrbImpl = (ORB_impl) serverOrb;
-        System.out.println("Created server orb");
-
-        POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
-        System.out.println("Retrieved root POA");
-
-        rootPoa.the_POAManager().activate();
-        System.out.println("Activated the root POA manager");
-
-        impl = new EchoImpl();
-        System.out.println("Created implementation object");
-        _EchoImpl_Tie tie = new _EchoImpl_Tie();
-        tie.setTarget(impl);
-        System.out.println("Retrieved tie: " + tie);
-        byte[] id = rootPoa.activate_object(tie);
-        System.out.println("Activated object");
-
-        final String ior = serverOrb.object_to_string(tie._this_object(serverOrb));
-        System.out.println("Created ior via server ORB: " + ior);
-
-        clientOrb = ORB.init(Constants.CLIENT_ORB_ARGS, null);
-        System.out.println("Created client orb");
-
+    @BeforeAll
+    public static void setup(ORB clientOrb, Bus bus) throws Exception {
+        String ior = bus.get("ior");
         stub = (Echo) PortableRemoteObject.narrow(clientOrb.string_to_object(ior), Echo.class);
     }
 
     @Test
-    public void testFragmentBigJavaString() throws Exception {
+    public void testFragmentingBigJavaString() throws Exception {
         String result = stub.echo(Constants.PAYLOAD);
         assertThat("String should have been transmitted correctly.", impl.lastMessage, equalTo(Constants.PAYLOAD));
         assertThat("String should have been returned correctly.", result, equalTo(impl.lastMessage));
-    }
-
-    @AfterEach
-    public void teardown() throws Exception {
-        clientOrb.destroy();
-        serverOrb.destroy();
     }
 
     /**
