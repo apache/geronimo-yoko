@@ -20,6 +20,10 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.platform.commons.support.AnnotationSupport;
+import org.junit.platform.commons.support.HierarchyTraversalMode;
+import org.junit.platform.commons.support.ReflectionSupport;
+import org.omg.CORBA.ORB;
 import testify.bus.Bus;
 import testify.parts.PartRunner;
 import testify.parts.ServerPart;
@@ -29,7 +33,14 @@ import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import java.lang.reflect.Method;
+import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.platform.commons.support.ModifierSupport.isPublic;
+import static org.junit.platform.commons.support.ModifierSupport.isStatic;
 import static testify.jupiter.OrbSteward.args;
 import static testify.jupiter.OrbSteward.props;
 
@@ -40,7 +51,7 @@ import static testify.jupiter.OrbSteward.props;
 @ConfigurePartRunner
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigureServer {
-    Class<? extends ServerPart> value();
+    Class<? extends ServerPart> value() default DefaultServerPart.class;
     String name() default "server";
     boolean newProcess() default false;
     String[] jvmArgs() default {};
@@ -79,7 +90,10 @@ class ServerSteward extends Steward<ConfigureServer> {
         // does this part run in a thread or a new process?
         if (config.newProcess()) runner.useNewJVMWhenForking(config.jvmArgs());
         else runner.useNewThreadWhenForking();
-        ServerPart.launch(runner, config.value(), this.name, props(config.orb()), args(config.orb()));
+        final ServerPart part = config.value() == DefaultServerPart.class
+                        ? new DefaultServerPart(ctx)
+                        : ServerPart.createPart(config.value());
+        ServerPart.launch(runner, part, this.name, props(config.orb()), args(config.orb()));
     }
 
     static ServerSteward getInstance(ExtensionContext ctx) {
@@ -89,11 +103,59 @@ class ServerSteward extends Steward<ConfigureServer> {
 
 class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus> {
     @Override
-    public void beforeAll(ExtensionContext ctx) throws Exception { ServerSteward.getInstance(ctx).startServer(ctx); }
+    public void beforeAll(ExtensionContext ctx) throws Exception {
+        ServerSteward.getInstance(ctx).startServer(ctx);
+    }
+
     @Override
     public boolean supportsParameter(ParameterContext ctx) { return ctx.getParameter().getType() == Bus.class; }
     @Override
     // Since the ServerSteward was retrieved from BeforeAll (i.e. in the test class context),
     // that is the one that will be found and reused from here (even if this is a test method context)
     public Bus resolveParameter(ExtensionContext ctx)  { return ServerSteward.getInstance(ctx).getBus(ctx); }
+}
+
+class DefaultServerPart extends ServerPart {
+    private final List<Method> methods;
+
+    DefaultServerPart(ExtensionContext ctx) {
+        final Class<?> testClass = ctx.getRequiredTestClass();
+        final List<Method> methods = AnnotationSupport.findAnnotatedMethods(testClass, ServerBeforeAll.class, HierarchyTraversalMode.TOP_DOWN);
+        assertFalse(methods.isEmpty(), () -> ""
+                + "The @" + ConfigureServer.class.getSimpleName()
+                + " annotation on class " + testClass.getName()
+                + " must have a class value OR the test must annotate a static method with"
+                + " @" + ServerBeforeAll.class.getSimpleName());
+        for (Method m: methods) {
+            assertTrue(isStatic(m), () -> ""
+                    + "The @" + ServerBeforeAll.class.getSimpleName()
+                    + " annotation must be used on only public static methods."
+                    + " It has been used on the non-static method: " + m);
+            assertTrue(isPublic(m), () -> ""
+                    + "The @" + ServerBeforeAll.class.getSimpleName()
+                    + " annotation must be used on only public static methods."
+                    + " It has been used on the non-public method: " + m);
+            for (Class<?> paramType: m.getParameterTypes()) {
+                if (paramType == ORB.class) continue;
+                if (paramType == Bus.class) continue;
+                fail("@" + ServerBeforeAll.class.getSimpleName()
+                        + " does not support parameter of type " + paramType.getName()
+                        + " on method " + m);
+            }
+        }
+        this.methods = methods;
+    }
+
+    @Override
+    protected void run(ORB orb, Bus bus) throws Exception {
+        for (Method m: methods) {
+            final Class<?>[] types = m.getParameterTypes();
+            Object[] params = new Object[types.length];
+            for (int i = 0; i < params.length; i++) {
+                if (types[i] == ORB.class) params[i] = orb;
+                else params[i] = bus;
+            }
+            ReflectionSupport.invokeMethod(m, null, params);
+        }
+    }
 }

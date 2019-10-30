@@ -16,8 +16,20 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
-public class EchoImpl implements Echo {
-    String lastMessage;
+import testify.bus.Bus;
+import testify.bus.StringRef;
+
+class EchoImpl implements Echo {
+    private enum BusKey implements StringRef {MESSAGE}
+    final Bus bus;
+
+    EchoImpl(Bus bus) {this.bus = bus;}
+
     @Override
-    public String echo(String s) { return lastMessage = s; }
+    public String echo(String s) {
+        bus.put(BusKey.MESSAGE, s);
+        return s;
+    }
+
+    static String getLastMessage(Bus bus) { return bus.get(BusKey.MESSAGE); }
 }

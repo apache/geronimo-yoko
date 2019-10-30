@@ -65,13 +65,15 @@ public abstract class ServerPart implements Serializable {
         bus.log("orb.run() completed.");
     }
 
-    public static final void launch(PartRunner runner, Class<? extends ServerPart> serverClass, String name, Properties props, String... args) {
-        final ServerPart server;
+    public static void launch(PartRunner runner, ServerPart part, String name, Properties props, String[] args) {
+        part.props = props;
+        part.args = args;
+        runner.fork(name, part::run, bus -> bus.put(Event.STOP));
+    }
+
+    public static ServerPart createPart(Class<? extends ServerPart> serverClass) {
         try {
-            server = serverClass.getConstructor().newInstance();
-            server.props = props;
-            server.args = args;
-            runner.fork(name, server::run, bus -> bus.put(Event.STOP));
+            return serverClass.getConstructor().newInstance();
         } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new Error("Could not construct " + serverClass + ". Make sure it has an accessible default constructor", e);
         }
