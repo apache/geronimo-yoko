@@ -39,7 +39,7 @@ import org.omg.PortableServer.POAHelper;
 import testify.bus.Bus;
 import testify.jupiter.ConfigureOrb;
 import testify.jupiter.ConfigureServer;
-import testify.parts.ServerPart;
+import testify.jupiter.ServerBeforeAll;
 
 import javax.rmi.PortableRemoteObject;
 import java.io.IOException;
@@ -58,10 +58,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * course of an invocation so that message passes via a port relay that splits messages into
  * fragments before sending them on.
  */
-@ConfigureServer(
-        value = FragmentedMessageTest.Server.class,
-        orb = @ConfigureOrb(initialize = ServerSideFragmenter.class) // server orb config
-)
+@ConfigureServer(orb = @ConfigureOrb(initialize = ServerSideFragmenter.class)) // server orb config
 @ConfigureOrb(iiopConnectionHelper = ClientSideFragmenter.class) // client orb config
 public class FragmentedMessageTest {
     private static Echo stub;
@@ -118,17 +115,15 @@ public class FragmentedMessageTest {
         Field PORT_FIELD = getField(Acceptor_impl.class, "port_");
     }
 
-    public static class Server extends ServerPart {
-        @Override
-        protected void run(ORB serverOrb, Bus bus) throws Exception {
-            POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
-            rootPoa.the_POAManager().activate();
-            _EchoImpl_Tie tie = new _EchoImpl_Tie();
-            EchoImpl impl = new EchoImpl(bus);
-            tie.setTarget(impl);
-            rootPoa.activate_object(tie);
-            bus.put("ior", serverOrb.object_to_string(tie._this_object(serverOrb)));
-        }
+    @ServerBeforeAll
+    public static void startServer(ORB serverOrb, Bus bus) throws Exception {
+        POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
+        rootPoa.the_POAManager().activate();
+        _EchoImpl_Tie tie = new _EchoImpl_Tie();
+        EchoImpl impl = new EchoImpl(bus);
+        tie.setTarget(impl);
+        rootPoa.activate_object(tie);
+        bus.put("ior", serverOrb.object_to_string(tie._this_object(serverOrb)));
     }
 
     @BeforeAll
