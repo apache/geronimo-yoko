@@ -60,18 +60,25 @@ import static org.hamcrest.MatcherAssert.assertThat;
  */
 @ConfigureServer(
         value = FragmentedMessageTest.Server.class,
-        newProcess = false,
         orb = @ConfigureOrb(initialize = ServerSideFragmenter.class) // server orb config
 )
 @ConfigureOrb(iiopConnectionHelper = ClientSideFragmenter.class) // client orb config
 public class FragmentedMessageTest {
-    private static final EchoImpl impl = new EchoImpl();
     private static Echo stub;
 
-    enum Constants {
-        ;
-        public static final int MAX_MESSAGE_SIZE = 1024;
-        private static final String PAYLOAD = "To be, or not to be, that is the question: " +
+    private static Field getField(Class<?> cls, String name) {
+        try {
+            Field f = cls.getDeclaredField(name);
+            f.setAccessible(true);
+            return f;
+        } catch (NoSuchFieldException e) {
+            throw (INTERNAL) new INTERNAL().initCause(e);
+        }
+    }
+
+    private interface Constants {
+        int MAX_MESSAGE_SIZE = 1024;
+        String PAYLOAD = "To be, or not to be, that is the question: " +
                 "Whether 'tis nobler in the mind to suffer " +
                 "The slings and arrows of outrageous fortune, " +
                 "Or to take Arms against a Sea of troubles, " +
@@ -106,19 +113,9 @@ public class FragmentedMessageTest {
                 "And lose the name of Action. Soft you now, " +
                 "The fair Ophelia? Nymph, in thy Orisons " +
                 "Be all my sins remember'd.";
-        private static final int FRAG_TAG = 0xDEADFEED; // mmm, brains...
-        private static final Field ACCEPTORS_FIELD;
-        private static final Field PORT_FIELD;
-        static {
-            try {
-                ACCEPTORS_FIELD = IORInfo_impl.class.getDeclaredField("acceptors_");
-                ACCEPTORS_FIELD.setAccessible(true);
-                PORT_FIELD = Acceptor_impl.class.getDeclaredField("port_");
-                PORT_FIELD.setAccessible(true);
-            } catch (Exception e) {
-                throw (INTERNAL) new INTERNAL().initCause(e);
-            }
-        }
+        int FRAG_TAG = 0xDEADFEED; // mmm, brains...
+        Field ACCEPTORS_FIELD = getField(IORInfo_impl.class, "acceptors_");
+        Field PORT_FIELD = getField(Acceptor_impl.class, "port_");
     }
 
     public static class Server extends ServerPart {
@@ -127,7 +124,8 @@ public class FragmentedMessageTest {
             POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
             rootPoa.the_POAManager().activate();
             _EchoImpl_Tie tie = new _EchoImpl_Tie();
-            tie.setTarget(FragmentedMessageTest.impl);
+            EchoImpl impl = new EchoImpl(bus);
+            tie.setTarget(impl);
             rootPoa.activate_object(tie);
             bus.put("ior", serverOrb.object_to_string(tie._this_object(serverOrb)));
         }
@@ -140,10 +138,10 @@ public class FragmentedMessageTest {
     }
 
     @Test
-    public void testFragmentingBigJavaString() throws Exception {
+    public void testFragmentingBigJavaString(Bus bus) throws Exception {
         String result = stub.echo(Constants.PAYLOAD);
-        assertThat("String should have been transmitted correctly.", impl.lastMessage, equalTo(Constants.PAYLOAD));
-        assertThat("String should have been returned correctly.", result, equalTo(impl.lastMessage));
+        assertThat("String should have been transmitted correctly.", EchoImpl.getLastMessage(bus), equalTo(Constants.PAYLOAD));
+        assertThat("String should have been returned correctly.", result, equalTo(Constants.PAYLOAD));
     }
 
     /**

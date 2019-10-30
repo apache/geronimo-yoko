@@ -16,6 +16,8 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
+import testify.bus.StringRef;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
