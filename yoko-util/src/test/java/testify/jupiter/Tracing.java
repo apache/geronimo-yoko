@@ -16,7 +16,6 @@
  */
 package testify.jupiter;
 
-import testify.bus.Bus;
 import testify.bus.LogLevel;
 import testify.parts.PartRunner;
 
@@ -28,7 +27,7 @@ import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.bus.LogLevel.*;
+import static testify.bus.LogLevel.DEFAULT;
 
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)

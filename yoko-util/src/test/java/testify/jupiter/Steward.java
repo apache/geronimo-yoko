@@ -27,13 +27,30 @@ import java.lang.reflect.AnnotatedElement;
 import java.util.Optional;
 import java.util.function.Function;
 
+/**
+ * This class provides the mechanism to create, store, and retrieve
+ * an instance of an object for managing some orthogonal aspect of a
+ * test or test case.
+ *
+ * Since this is to be used with an annotation, the annotated member
+ * will not provide a location for the annotation to store its artifacts.
+ * Instead, the Jupiter extension context store for a type-specific namespace
+ * is retrieved, and the test class is used as the key.
+ *
+ * So, for a given extension context, artifact type, and annotated test class,
+ * there will exist at most one such artifact. This artifact will be retrieved
+ * and used by the implementing child class to allow state to be propagated from
+ * one method invocation to another during the handling of the specified annotation
+ *
+ * @param <A> the annotation type to be used
+ */
 class Steward<A extends Annotation> implements CloseableResource {
     private final Class<A> annotationClass;
     private final String missingAnnotationSuffix;
 
     protected Steward(Class<A> annotationClass) {
         this.annotationClass = annotationClass;
-        this.missingAnnotationSuffix =  String.format(" does not use the @%s annotation", annotationClass.getSimpleName());
+        this.missingAnnotationSuffix = String.format(" does not use the @%s annotation", annotationClass.getSimpleName());
     }
 
     protected <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {

@@ -14,9 +14,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.params.provider;
+package testify.jupiter;
 
-import org.apiguardian.api.API;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
@@ -33,12 +32,9 @@ import java.util.Arrays;
 import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
-import static org.apiguardian.api.API.Status.EXPERIMENTAL;
-
 @Target({ ElementType.ANNOTATION_TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@API(status = EXPERIMENTAL, since = "5.0")
 @ArgumentsSource(ClassSource.Provider.class)
 public @interface ClassSource {
     Class[] value();

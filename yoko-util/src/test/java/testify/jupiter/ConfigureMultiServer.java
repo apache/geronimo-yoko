@@ -40,7 +40,6 @@ import static java.util.stream.Collectors.toList;
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(MultiServerExtension.class)
 @ConfigurePartRunner
-
 public @interface ConfigureMultiServer {
     ConfigureServer[] value();
 }
