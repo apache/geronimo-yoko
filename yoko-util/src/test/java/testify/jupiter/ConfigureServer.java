@@ -20,25 +20,33 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.support.HierarchyTraversalMode;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
+import testify.jupiter.ConfigureServer.RunAtServerStartup;
+import testify.jupiter.ConfigureServer.UseWithServerOrb;
 import testify.parts.PartRunner;
 import testify.parts.ServerPart;
 
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.Properties;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
 import static testify.jupiter.OrbSteward.args;
@@ -46,10 +54,10 @@ import static testify.jupiter.OrbSteward.props;
 
 @Repeatable(ConfigureMultiServer.class)
 @ExtendWith(ServerExtension.class)
-@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
+@Target({ANNOTATION_TYPE, TYPE})
 @ConfigureOrb
 @ConfigurePartRunner
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RUNTIME)
 public @interface ConfigureServer {
     Class<? extends ServerPart> value() default DefaultServerPart.class;
     String name() default "server";
@@ -59,6 +67,23 @@ public @interface ConfigureServer {
      * Define the config for the ORB this server will use.
      */
     ConfigureOrb orb() default @ConfigureOrb;
+
+    /**
+     * Annotate methods to be run in the server on ORB startup
+     */
+    @Target({ANNOTATION_TYPE, METHOD})
+    @Retention(RUNTIME)
+    @interface RunAtServerStartup {
+        /** A regular expression to match which servers to run against */
+        String value() default ".*";
+    }
+
+    @Target({ANNOTATION_TYPE, TYPE})
+    @Retention(RUNTIME)
+    @interface UseWithServerOrb {
+        /** A regular expression to match which servers to run against */
+        String value() default ".*";
+    }
 }
 
 class ServerSteward extends Steward<ConfigureServer> {
@@ -91,10 +116,20 @@ class ServerSteward extends Steward<ConfigureServer> {
         if (config.newProcess()) runner.useNewJVMWhenForking(config.jvmArgs());
         else runner.useNewThreadWhenForking();
         final ServerPart part = config.value() == DefaultServerPart.class
-                        ? new DefaultServerPart(ctx)
+                        ? new DefaultServerPart(config.name(), ctx)
                         : ServerPart.createPart(config.value());
-        ServerPart.launch(runner, part, this.name, props(config.orb()), args(config.orb()));
+
+
+        final Properties props = props(config.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        final String[] args = args(config.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        ServerPart.launch(runner, part, this.name, props, args);
     }
+
+    boolean isServerOrbModifier(Class<?> c) {
+        return findAnnotation(c, UseWithServerOrb.class).map(this::matchesAnnotation).orElse(false);
+    }
+
+    boolean matchesAnnotation(UseWithServerOrb anno) { return Pattern.matches(anno.value(), this.name); }
 
     static ServerSteward getInstance(ExtensionContext ctx) {
         return Steward.getInstanceForContext(ctx, ServerSteward.class, ServerSteward::new);
@@ -116,34 +151,53 @@ class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus>
 }
 
 class DefaultServerPart extends ServerPart {
+    private final String serverName;
     private final List<Method> methods;
 
-    DefaultServerPart(ExtensionContext ctx) {
+    DefaultServerPart(String serverName, ExtensionContext ctx) {
+        this.serverName = serverName;
         final Class<?> testClass = ctx.getRequiredTestClass();
-        final List<Method> methods = AnnotationSupport.findAnnotatedMethods(testClass, ServerBeforeAll.class, HierarchyTraversalMode.TOP_DOWN);
+        this.methods = findAnnotatedMethods(testClass, RunAtServerStartup.class, HierarchyTraversalMode.TOP_DOWN)
+                .stream()
+                .peek(this::assertMethodIsStatic)
+                .peek(this::assertMethodIsPublic)
+                .peek(this::assertParameterTypesAreValid)
+                .filter(this::methodIsForThisServer)
+                .collect(Collectors.toList());
         assertFalse(methods.isEmpty(), () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName()
                 + " annotation on class " + testClass.getName()
                 + " must have a class value OR the test must annotate a static method with"
-                + " @" + ServerBeforeAll.class.getSimpleName());
-        for (Method m: methods) {
-            assertTrue(isStatic(m), () -> ""
-                    + "The @" + ServerBeforeAll.class.getSimpleName()
-                    + " annotation must be used on only public static methods."
-                    + " It has been used on the non-static method: " + m);
-            assertTrue(isPublic(m), () -> ""
-                    + "The @" + ServerBeforeAll.class.getSimpleName()
-                    + " annotation must be used on only public static methods."
-                    + " It has been used on the non-public method: " + m);
-            for (Class<?> paramType: m.getParameterTypes()) {
-                if (paramType == ORB.class) continue;
-                if (paramType == Bus.class) continue;
-                fail("@" + ServerBeforeAll.class.getSimpleName()
-                        + " does not support parameter of type " + paramType.getName()
-                        + " on method " + m);
-            }
+                + " @" + RunAtServerStartup.class.getSimpleName());
+    }
+
+    private boolean methodIsForThisServer(Method m) {
+        String pattern = findAnnotation(m, RunAtServerStartup.class).orElseThrow(Error::new).value();
+        return Pattern.matches(pattern, serverName);
+    }
+
+    private void assertMethodIsStatic(Method m) {
+        assertTrue(isStatic(m), () -> ""
+                + "The @" + RunAtServerStartup.class.getSimpleName()
+                + " annotation must be used on only public static methods."
+                + " It has been used on the non-static method: " + m);
+    }
+
+    private void assertMethodIsPublic(Method m) {
+        assertTrue(isPublic(m), () -> ""
+                + "The @" + RunAtServerStartup.class.getSimpleName()
+                + " annotation must be used on only public static methods."
+                + " It has been used on the non-public method: " + m);
+    }
+
+    private void assertParameterTypesAreValid(Method m) {
+        for (Class<?> paramType: m.getParameterTypes()) {
+            if (paramType == ORB.class) continue;
+            if (paramType == Bus.class) continue;
+            fail("@" + RunAtServerStartup.class.getSimpleName()
+                    + " does not support parameter of type " + paramType.getName()
+                    + " on method " + m);
         }
-        this.methods = methods;
     }
 
     @Override

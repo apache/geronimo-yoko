@@ -24,38 +24,54 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
-import testify.jupiter.OrbSteward.NullIiopConnectionHelper;
 
 import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Properties;
+import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.TYPE;
-import static java.util.Arrays.asList;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.platform.commons.support.AnnotationSupport.isAnnotated;
+import static org.junit.platform.commons.support.ModifierSupport.isPublic;
+import static org.junit.platform.commons.support.ModifierSupport.isStatic;
 import static testify.jupiter.OrbSteward.getOrb;
+import static testify.streams.Collectors.requireNoMoreThanOne;
 
 @ExtendWith(OrbExtension.class)
 @Target({ANNOTATION_TYPE, TYPE})
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RUNTIME)
 public @interface ConfigureOrb {
     String args() default "";
     String props() default "";
-    Class<? extends ORBInitializer>[] initialize() default {};
-    Class<?> iiopConnectionHelper() default NullIiopConnectionHelper.class;
+
+    @Target({ANNOTATION_TYPE, TYPE})
+    @Retention(RUNTIME)
+    @interface UseWithOrb {}
 }
 
 class OrbSteward extends Steward<ConfigureOrb> {
-    static interface NullIiopConnectionHelper{}
-    private static final String[] TEMPLATE_STRING_ARRAY = {};
-    final ORB orb;
+    private static final Class<?> CONNECTION_HELPER_CLASS;
+
+    static {
+        try {
+            CONNECTION_HELPER_CLASS = Class.forName("org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper");
+        } catch (ClassNotFoundException e) {
+            throw new Error();
+        }
+    }
+
+    @SuppressWarnings("unused")
+    interface NullIiopConnectionHelper{}
+    private final ORB orb;
     private OrbSteward(Class<?> testClass) {
         super(ConfigureOrb.class);
         ConfigureOrb cfg = getAnnotation(testClass);
-        this.orb = ORB.init(args(cfg), props(cfg)); }
+        this.orb = ORB.init(args(cfg, testClass, this::isOrbModifier), props(cfg, testClass, this::isOrbModifier)); }
 
     @Override
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
@@ -65,18 +81,38 @@ class OrbSteward extends Steward<ConfigureOrb> {
         orb.destroy();
     }
 
-    /** Extract the orb arguments from a {@link ConfigureOrb} annotation */
-    static String[] args(ConfigureOrb cfg) {
-        List<String> args = new ArrayList<>(asList(cfg.args().split(" ")));
-        // if an iiop connection helper has been provided, add the appropriate arg
-        if (cfg.iiopConnectionHelper() != NullIiopConnectionHelper.class) {
-            args.add("-IIOPconnectionHelper");
-            args.add(cfg.iiopConnectionHelper().getName());
-        }
-        return args.toArray(TEMPLATE_STRING_ARRAY);
+    private boolean isOrbModifier(Class<?> c) { return isAnnotated(c, ConfigureOrb.UseWithOrb.class); }
+
+    /** Check that the supplied types are known types to be used as ORB extensions */
+    private static void validateOrbModifierType(Class type) {
+        assertTrue(isStatic(type), "Class " + type.getName() + " should be static");
+        assertTrue(isPublic(type), "Class " + type.getName() + " should be public");
+        // we know about ORB initializers
+        if (ORBInitializer.class.isAssignableFrom(type)) return;
+        // we also know about ConnectionHelpers
+        if (CONNECTION_HELPER_CLASS.isAssignableFrom(type)) return;
+        // we don't know about anything else!
+        fail("Type " + type + " cannot be used with an ORB");
     }
+
+    /** Extract the orb arguments from a {@link ConfigureOrb} annotation */
+    static String[] args(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
+        return getNestedModifierTypes(testClass, nestedClassFilter)
+                .filter(CONNECTION_HELPER_CLASS::isAssignableFrom)
+                .collect(requireNoMoreThanOne("Only one connection helper can be configured but two were supplied: %s, %s"))
+                .map(helper -> cfg.args() + " -IIOPconnectionHelper " + helper.getName())
+                .orElse(cfg.args())
+                .split(" ");
+    }
+
+    private static Stream<Class<?>> getNestedModifierTypes(Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
+        return Stream.of(testClass.getDeclaredClasses())
+                .filter(nestedClassFilter)
+                .peek(OrbSteward::validateOrbModifierType);
+    }
+
     /** Extract the orb properties from a {@link ConfigureOrb} annotation */
-    static Properties props(ConfigureOrb cfg) {
+    static Properties props(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
         Properties props = new Properties();
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
@@ -86,13 +122,17 @@ class OrbSteward extends Steward<ConfigureOrb> {
             props.put(arr[0], arr.length < 2 ? "" : arr[1]);
         }
         // add initializer properties for each specified initializer class
-        for (Class<? extends ORBInitializer> initializer: cfg.initialize()) {
-            String name = ORBInitializer.class.getName() + "Class." + initializer.getName();
-            // blow up if this has been specified twice since this suggests a configuration error
-            Assertions.assertFalse(props.contains(name), initializer.getName() + " should only be configured in one place");
-            props.put(name, "true");
-        }
+        getNestedModifierTypes(testClass, nestedClassFilter)
+                .filter(ORBInitializer.class::isAssignableFrom)
+                .forEachOrdered(initializer -> addORBInitializerProp(props,  (Class<? extends ORBInitializer>) initializer));
         return props;
+    }
+
+    private static void addORBInitializerProp(Properties props, Class<? extends ORBInitializer> initializer) {
+        String name = ORBInitializer.class.getName() + "Class." + initializer.getName();
+        // blow up if this has been specified twice since this suggests a configuration error
+        Assertions.assertFalse(props.contains(name), initializer.getName() + " should only be configured in one place");
+        props.put(name, "true");
     }
 
     /** Get a client ORB */
@@ -103,7 +143,7 @@ class OrbSteward extends Steward<ConfigureOrb> {
 class OrbExtension implements Extension, BeforeAllCallback, SimpleParameterResolver<ORB> {
     @Override
     // to ensure the ORB is created only once per test class, create the steward here
-    public void beforeAll(ExtensionContext ctx) throws Exception { getOrb(ctx); }
+    public void beforeAll(ExtensionContext ctx) { getOrb(ctx); }
 
     @Override
     // assume that any child class of org.omg.CORBA.ORB will be satisfied

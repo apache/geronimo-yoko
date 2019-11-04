@@ -18,7 +18,6 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.IIOP.FragmentedMessageTest.ClientSideFragmenter;
-import org.apache.yoko.orb.OCI.IIOP.FragmentedMessageTest.ServerSideFragmenter;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -39,7 +38,7 @@ import org.omg.PortableServer.POAHelper;
 import testify.bus.Bus;
 import testify.jupiter.ConfigureOrb;
 import testify.jupiter.ConfigureServer;
-import testify.jupiter.ServerBeforeAll;
+import testify.jupiter.ConfigureServer.RunAtServerStartup;
 
 import javax.rmi.PortableRemoteObject;
 import java.io.IOException;
@@ -58,8 +57,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * course of an invocation so that message passes via a port relay that splits messages into
  * fragments before sending them on.
  */
-@ConfigureServer(orb = @ConfigureOrb(initialize = ServerSideFragmenter.class)) // server orb config
-@ConfigureOrb(iiopConnectionHelper = ClientSideFragmenter.class) // client orb config
+@ConfigureServer
+@ConfigureOrb
 public class FragmentedMessageTest {
     private static Echo stub;
 
@@ -115,7 +114,7 @@ public class FragmentedMessageTest {
         Field PORT_FIELD = getField(Acceptor_impl.class, "port_");
     }
 
-    @ServerBeforeAll
+    @RunAtServerStartup
     public static void startServer(ORB serverOrb, Bus bus) throws Exception {
         POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
         rootPoa.the_POAManager().activate();
@@ -143,6 +142,7 @@ public class FragmentedMessageTest {
      * Look out for tagged components from the {@link ServerSideFragmenter} and redirect traffic via the specified
      * alternative port.
      */
+    @ConfigureOrb.UseWithOrb
     public static class ClientSideFragmenter implements ExtendedConnectionHelper {
         private ConnectionHelper connHelper = new DefaultConnectionHelper();
 
@@ -193,6 +193,7 @@ public class FragmentedMessageTest {
      * Specifically, it inserts one that describes an alternative port.
      * The {@link ClientSideFragmenter} sees this component and then redirects the traffic via the alternative port.
      */
+    @ConfigureServer.UseWithServerOrb
     public static class ServerSideFragmenter extends LocalObject implements IORInterceptor, ORBInitializer {
         private volatile Relay relay;
 
