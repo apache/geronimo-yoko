@@ -47,7 +47,7 @@ public @interface ClassSource {
         }
 
         @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             final Method method = context.getRequiredTestMethod();
             final Class<?>[] parameterTypes = method.getParameterTypes();
             // Check parameters can all be classes

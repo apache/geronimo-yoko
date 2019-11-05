@@ -20,6 +20,7 @@ import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
 import testify.bus.Bus;
 import testify.bus.TypeRef;
+import testify.bus.VoidRef;
 
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
@@ -28,10 +29,7 @@ import java.util.Properties;
 import static testify.bus.LogLevel.ERROR;
 
 public abstract class ServerPart implements Serializable {
-    private enum ClassParam implements TypeRef<Class<? extends ServerPart>> {SERVER_CLASS}
-    private enum PropsParam implements TypeRef<Properties> {ORB_PROPS}
-    private enum ArgsParam implements TypeRef<String[]> {ORB_ARGS}
-    private enum Event implements TypeRef<Void> {STOP}
+    private enum Event implements VoidRef {STOP}
 
     private String[] args;
     private Properties props;

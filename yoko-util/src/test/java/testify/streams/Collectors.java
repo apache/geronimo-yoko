@@ -21,7 +21,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collector;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public enum Collectors {;
     /**
@@ -35,24 +35,24 @@ public enum Collectors {;
 
     private static class AtMostOneCollector<T> implements Collector<T, AtMostOneCollector<T>, Optional<T>> {
         final String assertionText;
-        Optional<T> elem = Optional.empty();
+        T elem;
 
         private AtMostOneCollector(String assertionText) {this.assertionText = assertionText;}
 
         void accumulate(T t){
-            assertFalse(elem.isPresent(), () -> String.format(assertionText, elem.get(), t));
-            elem = Optional.ofNullable(t);
+            assertNull(elem, () -> String.format(assertionText, elem, t));
+            elem = t;
         }
 
-        AtMostOneCollector combine(AtMostOneCollector<T> acc) {
-            acc.elem.ifPresent(this::accumulate);
+        AtMostOneCollector combine(AtMostOneCollector<T> that) {
+            if (that.elem != null) accumulate(that.elem);
             return this;
         }
 
-        public Supplier<AtMostOneCollector<T>> supplier() { return () -> new AtMostOneCollector(assertionText); }
+        public Supplier<AtMostOneCollector<T>> supplier() { return () -> new AtMostOneCollector<>(assertionText); }
         public BiConsumer<AtMostOneCollector<T>, T> accumulator() { return AtMostOneCollector::accumulate; }
         public BinaryOperator<AtMostOneCollector<T>> combiner() { return AtMostOneCollector::combine; }
-        public Function<AtMostOneCollector<T>, Optional<T>> finisher() { return c -> c.elem; }
+        public Function<AtMostOneCollector<T>, Optional<T>> finisher() { return c -> Optional.ofNullable(c.elem); }
         public Set<Characteristics> characteristics() { return EnumSet.of(Characteristics.UNORDERED); }
     }
 }

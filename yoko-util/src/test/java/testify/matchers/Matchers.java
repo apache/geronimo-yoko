@@ -25,9 +25,9 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 
+@SuppressWarnings("unchecked")
 public enum Matchers {
     ;
-    @SuppressWarnings("unchecked")
     public static <T> Matcher<Iterable<T>> consistsOf(final T...elems) {
         return new BaseMatcher<Iterable<T>>() {
             Iterable<T> iterable;
@@ -55,7 +55,7 @@ public enum Matchers {
         };
     }
 
-    public static Matcher<Iterable<?>> isEmpty() {
-        return (Matcher) consistsOf(/*nothing*/);
+    public static <T> Matcher<Iterable<T>> isEmpty() {
+        return consistsOf(/*nothing*/);
     }
 }

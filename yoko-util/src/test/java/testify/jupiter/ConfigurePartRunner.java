@@ -34,11 +34,10 @@ import static testify.jupiter.PartRunnerSteward.getPartRunner;
 public @interface ConfigurePartRunner {}
 
 class PartRunnerSteward extends Steward<ConfigurePartRunner> {
-    final PartRunner partRunner;
+    private final PartRunner partRunner;
 
     private PartRunnerSteward(Class<?> testClass) {
         super(ConfigurePartRunner.class);
-        ConfigurePartRunner config = getAnnotation(testClass);
         this.partRunner = PartRunner.create();
         TracingSteward.addTraceSettings(partRunner, testClass);
     }

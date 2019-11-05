@@ -1,6 +1,5 @@
 package testify.iiop;
 
-import org.junit.Assert;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -22,24 +21,28 @@ import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.lang.reflect.Method;
-import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public abstract class Skellington extends Servant implements Tie, Remote {
-    private final Collection<Class<? extends Remote>> interfaceClasses;
     private final String[] ids;
 
     public Skellington() {
-        Set<Class<? extends Remote>> ifaces = new HashSet<>();
-        for (Class<?> c = this.getClass(); c != Object.class; c = c.getSuperclass()) {
+        final ValueHandler vh = Util.createValueHandler();
+        this.ids = findRemoteInterfaces(this.getClass())
+                .map(vh::getRMIRepositoryID)
+                .collect(Collectors.toList())
+                .toArray(new String[0]);
+    }
+
+    private static Stream<Class<? extends Remote>> findRemoteInterfaces(final Class<?> forClass) {
+        Set<Class<? extends Remote>> ifaces = new TreeSet<>((c1, c2) -> c1.getName().compareTo(c2.getName()));
+        for (Class<?> c = forClass; c != Object.class; c = c.getSuperclass()) {
             NEXT_CLASS: for (Class<?> iface: c.getInterfaces()) {
                 if (Remote.class.isAssignableFrom(iface)) {
                     for (Method m : iface.getMethods()) {
@@ -52,25 +55,7 @@ public abstract class Skellington extends Servant implements Tie, Remote {
                 }
             }
         }
-        final ValueHandler vh = Util.createValueHandler();
-        this.interfaceClasses = Collections.unmodifiableSet(ifaces);
-        this.ids = new String[interfaceClasses.size()];
-        int index = 0;
-        for (Class<?> c : interfaceClasses)
-            this.ids[index++] = vh.getRMIRepositoryID(c);
-    }
-
-    @SuppressWarnings("unchecked")
-    public Skellington(Class<? extends Remote>... interfaces) {
-        final ValueHandler vh = Util.createValueHandler();
-        ids = new String[interfaces.length];
-        List<Class<? extends Remote>> iflst = new ArrayList<>();
-        for (int i = 0; i < interfaces.length; i++) {
-            Assert.assertTrue(interfaces[i].isInterface());
-            iflst.add(interfaces[i]);
-            ids[i] = vh.getRMIRepositoryID(interfaces[i]);
-        }
-        this.interfaceClasses = Collections.unmodifiableList(iflst);
+        return ifaces.stream();
     }
 
     @Override
@@ -84,7 +69,7 @@ public abstract class Skellington extends Servant implements Tie, Remote {
     }
 
     @Override
-    public void deactivate() throws NoSuchObjectException {
+    public void deactivate() {
         try{
             _poa().deactivate_object(_poa().servant_to_id(this));
         } catch (WrongPolicy |ObjectNotActive |ServantNotActive ignored){}

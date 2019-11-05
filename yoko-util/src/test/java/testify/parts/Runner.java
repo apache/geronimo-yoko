@@ -20,7 +20,7 @@ import testify.bus.InterProcessBus;
 
 import java.util.concurrent.TimeUnit;
 
-public interface Runner<J> {
+interface Runner<J> {
     J fork(InterProcessBus centralBus, NamedPart part);
 
     boolean join(J job, long timeout, TimeUnit unit) throws InterruptedException;

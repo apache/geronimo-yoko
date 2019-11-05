@@ -13,8 +13,9 @@ import java.util.Formatter;
  *
  * Always uses a byte order marker of 0x00 (i.e. big-endian).
  */
+@SuppressWarnings("UnusedReturnValue")
 public class HexBuilder {
-    private Formatter f = new Formatter();
+    private final Formatter f = new Formatter();
     private int len = 0;
 
     public static HexBuilder buildHex() {
@@ -22,7 +23,7 @@ public class HexBuilder {
     }
 
     /** align on an n-byte boundary */
-    public HexBuilder align(int n) {
+    private HexBuilder align(int n) {
         assert n == 2 || n == 4 || n == 8 || n == 16;
         while (len % n > 0) {
             f.format("%s", "BD");

@@ -18,6 +18,7 @@ package testify.bus;
 
 import testify.io.EasyCloseable;
 
+@SuppressWarnings("UnusedReturnValue")
 public interface InterProcessBus extends SimpleBus, EasyCloseable {
     InterProcessBus addProcess(String name, Process proc);
 

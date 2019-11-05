@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 
 interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
     @Override
-    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); };
+    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
 
     Stream<P> provideArgs(ExtensionContext ctx);
 }

@@ -25,6 +25,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -73,7 +74,7 @@ public class ProcessRunner implements Runner<Process>{
         return !p.isAlive();
     }
 
-    Process exec(String name) {
+    private Process exec(String name) {
         final String pathToJava;
         try { pathToJava = Paths.get(System.getProperty("java.home"), "bin", "java").toRealPath().toString(); }
         catch (IOException e) { throw new IOError(e); }
@@ -97,7 +98,7 @@ public class ProcessRunner implements Runner<Process>{
                 .map((k, v) -> String.format("-D%s=%s", k, v))
                 .forEach(argList::add);
         // Add any requested JVM arguments
-        Stream.of(jvmArgs).forEach(argList::add);
+        argList.addAll(Arrays.asList(jvmArgs));
         // Add main class
         argList.add(ProcessRunner.class.getName());
         argList.add(name);

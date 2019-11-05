@@ -24,8 +24,8 @@ import java.util.function.Consumer;
 import static java.util.Objects.requireNonNull;
 
 class UserBusImpl implements UserBus {
-    public static final String DELIMITER = "::";
-    public static final String GLOBAL_USER = "global";
+    private static final String DELIMITER = "::";
+    private static final String GLOBAL_USER = "global";
 
     final String user;
     final SimpleBus simpleBus;
@@ -45,7 +45,7 @@ class UserBusImpl implements UserBus {
         this.global = this;
     }
 
-    public static String validate(String name) {
+    private static String validate(String name) {
         if (requireNonNull(name).contains(UserBusImpl.DELIMITER))
             throw new Error("Names may not contain '" + UserBusImpl.DELIMITER + "' (name was '" + name + "')");
         return name;

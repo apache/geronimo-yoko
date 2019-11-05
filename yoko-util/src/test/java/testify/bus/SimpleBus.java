@@ -20,6 +20,7 @@ import testify.streams.BiStream;
 
 import java.util.function.Consumer;
 
+@SuppressWarnings("UnusedReturnValue")
 public interface SimpleBus {
     SimpleBus put(String key, String value);
     boolean hasKey(String key);

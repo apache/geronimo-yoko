@@ -19,7 +19,7 @@ import static org.junit.Assert.*;
 
 @RunWith(Parameterized.class)
 public class HexConverterTest {
-    public static final String[] TEST_DATA = " 00 aa 7f 80 ff 0000 7fff 8000 ffff 00000000 7fffffff 80000000 ffffffff".split(" ");
+    private static final String[] TEST_DATA = " 00 aa 7f 80 ff 0000 7fff 8000 ffff 00000000 7fffffff 80000000 ffffffff".split(" ");
 
     static {assert TEST_DATA[0].equals("");} // just in case anyone deletes the leading space
 

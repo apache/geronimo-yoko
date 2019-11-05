@@ -45,17 +45,11 @@ public enum SerialUtil {
     public static <T> T unstringify(String string) {
         if (string == null) return null;
         if (string.equals("<null>")) return null;
-        try { return readObject(Base64.getDecoder().decode(string)); }
-        catch (IOException e) { throw new IOError(e); }
-        catch (ClassNotFoundException e) { throw wrapAsError(e); }
-    }
-
-    private static NoClassDefFoundError wrapAsError(ClassNotFoundException e) {
-        return (NoClassDefFoundError) new NoClassDefFoundError(e.getMessage()).initCause(e);
+        return readObject(Base64.getDecoder().decode(string));
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T readObject(byte[] bytes) throws IOException, ClassNotFoundException {
+    private static <T> T readObject(byte[] bytes) {
         try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
             return throwIfException((T)in.readObject());
         } catch (RuntimeException|Error e) {

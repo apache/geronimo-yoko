@@ -37,8 +37,6 @@ final class NamedPart implements TestPart {
         this.uid = NamedPart.class.getSimpleName() + '[' + name + '#' + instance + ']';
     }
 
-    private String resultKey() { return uid + ".result"; }
-
     public void run(Bus bus) {
         try {
             bus.log("part started");
@@ -59,6 +57,5 @@ final class NamedPart implements TestPart {
     }
 
     public void waitForStart(Bus bus) { bus.forUser(uid).get(Event.STARTED); }
-
     public void waitForEnd(Bus bus) { bus.forUser(uid).get(Event.ENDED); }
 }

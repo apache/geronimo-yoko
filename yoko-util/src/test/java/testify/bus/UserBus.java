@@ -20,13 +20,12 @@ import testify.streams.BiStream;
 
 import java.util.function.Consumer;
 
-import static java.util.Objects.requireNonNull;
-
 // Although some of the methods here are fluent in design
 // (i.e. they return a Bus object suitable for method chaining)
 // the internal implementations are expected to return null.
 // The fluency is an affordance purely for the code calling
 // objects accessible outside the package.
+@SuppressWarnings("UnusedReturnValue")
 interface UserBus {
     String user();
     Bus forUser(String user);

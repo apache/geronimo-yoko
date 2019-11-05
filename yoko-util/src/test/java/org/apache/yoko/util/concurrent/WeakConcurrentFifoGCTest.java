@@ -156,7 +156,7 @@ public class WeakConcurrentFifoGCTest {
         assertThat(fifo.remove(), is(LONG_LIVED_STRING));
     }
 
-    public void driveGC() throws Exception {
+    private void driveGC() {
         WeakReference<?> ref = new WeakReference<>(new Object());
         do {
             System.out.print("gc ");

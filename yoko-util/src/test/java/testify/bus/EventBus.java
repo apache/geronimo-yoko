@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 // the internal implementations are expected to return null.
 // The fluency is an affordance purely for the code calling
 // objects accessible outside the package.
+@SuppressWarnings("UnusedReturnValue")
 interface EventBus {
     <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key);
     <K extends Enum<K> & TypeRef<T>, T> T get(K key);

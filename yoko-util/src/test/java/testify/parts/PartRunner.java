@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 
 import static testify.bus.LogLevel.DEFAULT;
 
+@SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
     /**
