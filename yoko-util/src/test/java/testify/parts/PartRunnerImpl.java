@@ -22,7 +22,6 @@ import testify.bus.LogLevel;
 import testify.bus.InterProcessBus;
 import testify.io.EasyCloseable;
 
-import java.util.Arrays;
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -41,8 +40,8 @@ import static testify.bus.LogLevel.INFO;
 import static testify.bus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
-    public static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
-    final InterProcessBus centralBus = InterProcessBus.createMaster();
+    private static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
+    private final InterProcessBus centralBus = InterProcessBus.createMaster();
     private final Bus bus = centralBus.global()
             .logToSysErr(URGENT_LEVELS)
             .logToSysOut(complementOf(URGENT_LEVELS))
@@ -99,19 +98,16 @@ class PartRunnerImpl implements PartRunner {
 
     private PartRunner addHook(HookType hookType, String partName, EasyCloseable hook) {
         hookNames.put(hook, partName);
-        switch (hookType) {
-        case PRE_JOIN:
+        if (hookType == HookType.PRE_JOIN) {
             hooks.get(hookType).add(hook);
             return this;
-        default:
-            hooks.get(hookType).addFirst(hook);
-            return this;
         }
+        hooks.get(hookType).addFirst(hook);
+        return this;
     }
 
     @Override
     public PartRunner endWith(String partName, Consumer<Bus> endAction) {
-        ;
         return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus.forUser(partName)));
     }
 
@@ -196,7 +192,7 @@ class PartRunnerImpl implements PartRunner {
     private enum Test {
         ;
         @SuppressWarnings("CodeBlock2Expr")
-        public static void main(String[] args) throws Exception{
+        public static void main(String[] args) {
             for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
                 runner.fork("part1", bus -> {
                     bus.put("a", "Hello");

@@ -25,6 +25,7 @@ import java.util.function.Supplier;
 // the internal implementations are expected to return null.
 // The fluency is an affordance purely for the code calling
 // objects accessible outside the package.
+@SuppressWarnings("UnusedReturnValue")
 interface LogBus {
     String isLoggingEnabled(LogLevel level);
     Bus enableLogging(String... patterns);

@@ -40,12 +40,12 @@ import static java.util.stream.Collectors.toList;
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(MultiServerExtension.class)
 @ConfigurePartRunner
-public @interface ConfigureMultiServer {
+@interface ConfigureMultiServer {
     ConfigureServer[] value();
 }
 
 class MultiServerSteward extends Steward<ConfigureMultiServer> {
-    final List<ServerSteward> stewards;
+    private final List<ServerSteward> stewards;
 
     private MultiServerSteward(Class<?> testClass) {
         super(ConfigureMultiServer.class, ConfigureServer.class);

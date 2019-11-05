@@ -45,7 +45,7 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
             "|Please consider reporting this to the maintainers of .*" +
             "|Use --illegal-access=warn to enable warnings of further illegal reflective access operations" +
             "|All illegal access operations will be denied in a future release)$");
-    public static final BiConsumer<StringBuilder, StringBuilder> DO_NOT_ACCEPT_PARALLELISM = (x, y) -> {
+    private static final BiConsumer<StringBuilder, StringBuilder> DO_NOT_ACCEPT_PARALLELISM = (x, y) -> {
     throw new IllegalStateException("Sequential streams must never be processed in parallel. Bad JVM!");
 };
 

@@ -28,14 +28,14 @@ public class MultiException extends RuntimeException {
     private static final String SEP = "--------------------------------------------------------------------------------";
     private static final String NULL_COUNT_FORMAT = SEP + "%n%d \u2715 null%n" + SEP + "%n";
     private static final String ENTRY_FORMAT = "%n" + SEP + "%n%d \u2715 %s" + SEP + "%n";
-    private Map<String, Integer> map = new TreeMap<>();
+    private final Map<String, Integer> map = new TreeMap<>();
     private int nullCount;
 
     public boolean isEmpty() {
         return map.isEmpty();
     }
 
-    public Integer add(Throwable t) {
+    private Integer add(Throwable t) {
         if (t == null) return nullCount++;
         String desc = getDescription(t);
         Integer count = map.get(desc);

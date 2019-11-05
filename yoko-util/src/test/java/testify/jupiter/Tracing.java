@@ -45,7 +45,7 @@ enum TracingSteward {
     static void addTraceSettings(PartRunner runner, AnnotatedElement elem) {
         findAnnotation(elem, Tracing.class).ifPresent(trc -> TracingSteward.addTraceSettings(runner, trc));
     }
-    static void addTraceSettings(PartRunner runner, Tracing config, String...parts) {
+    private static void addTraceSettings(PartRunner runner, Tracing config, String... parts) {
         if (config.disabled()) return;
         if (config.value().isEmpty() || config.classes().length > 0) {
             final LogLevel level = config.level();

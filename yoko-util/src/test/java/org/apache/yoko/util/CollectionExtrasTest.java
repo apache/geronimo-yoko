@@ -16,6 +16,7 @@ import static org.junit.Assert.*;
 import static testify.matchers.Matchers.consistsOf;
 import static testify.matchers.Matchers.isEmpty;
 
+@SuppressWarnings("unchecked")
 public class CollectionExtrasTest {
     @Test
     public void testRemoveInReverseEmptyList() {

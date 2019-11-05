@@ -10,7 +10,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
 
 public enum ByteArrayMatchers {;
-    static final byte[] EMPTY_BYTE_ARRAY = {};
+    private static final byte[] EMPTY_BYTE_ARRAY = {};
 
     public static Matcher<byte[]> emptyByteArray() { return equalTo(EMPTY_BYTE_ARRAY); }
 

@@ -44,16 +44,16 @@ import java.util.function.Function;
  *
  * @param <A> the annotation type to be used
  */
-public class Steward<A extends Annotation> implements CloseableResource {
+class Steward<A extends Annotation> implements CloseableResource {
     private final Class<A> annotationClass;
     private final String missingAnnotationSuffix;
 
-    protected Steward(Class<A> annotationClass) {
+    Steward(Class<A> annotationClass) {
         this.annotationClass = annotationClass;
         this.missingAnnotationSuffix = String.format(" does not use the @%s annotation", annotationClass.getSimpleName());
     }
 
-    protected <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {
+    <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {
         this.annotationClass = annotationClass;
         validateRepeatableRelationship(annotationClass, contentClass);
         this.missingAnnotationSuffix = String.format(" does not use multiple @%s annotations", contentClass.getSimpleName());
@@ -65,15 +65,15 @@ public class Steward<A extends Annotation> implements CloseableResource {
         throw new Error(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
     }
 
-    protected static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
+    static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
         return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
     }
 
-    private final Optional<A> findAnnotation(AnnotatedElement elem){
+    private Optional<A> findAnnotation(AnnotatedElement elem){
         return AnnotationSupport.findAnnotation(elem, annotationClass);
     }
 
-    protected final A getAnnotation(AnnotatedElement elem) {
+    final A getAnnotation(AnnotatedElement elem) {
         return findAnnotation(elem).orElseThrow(() -> new Error(elem + missingAnnotationSuffix));
     }
 

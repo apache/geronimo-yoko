@@ -7,7 +7,7 @@ import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Spy;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -34,7 +34,7 @@ public class ReferenceCountedCacheTest {
     private static final ConcurrentLinkedQueue<Integer> createdInts = new ConcurrentLinkedQueue<>();
     private static final ConcurrentLinkedQueue<Integer> deletedInts = new ConcurrentLinkedQueue<>();
     private static class StringToInteger implements KeyedFactory<String, Integer>, Cache.Cleaner<Integer> {
-        @SuppressWarnings("CachedNumberConstructorCall")
+        @SuppressWarnings({"CachedNumberConstructorCall", "deprecation"})
         @Override
         public Integer create(String key) {
             Integer result = new Integer(key);
@@ -58,9 +58,10 @@ public class ReferenceCountedCacheTest {
     StringToInteger factory;
     @Spy
     BadFactory badFactory;
-    ReferenceCountedCache<String, Integer> cache;
-    volatile CyclicBarrier startBarrier, endBarrier;
-    volatile boolean retrieving = true;
+    private ReferenceCountedCache<String, Integer> cache;
+    private volatile CyclicBarrier startBarrier;
+    private volatile CyclicBarrier endBarrier;
+    private volatile boolean retrieving = true;
 
     @After
     public void setup() {
@@ -134,7 +135,7 @@ public class ReferenceCountedCacheTest {
     @Test
     public void testReleaseResults() {
         cache = new ReferenceCountedCache<>(factory, 3, 5);
-        Reference<Integer> r0, r1, r2, r3, r4, r5;
+        Reference<Integer> r0, r1, r2, r3;
         r0 = cache.getOrCreate("0", factory);
         r1 = cache.getOrCreate("1", factory);
         r2 = cache.getOrCreate("2", factory);
@@ -239,7 +240,7 @@ public class ReferenceCountedCacheTest {
         Retriever(int bound) { this.bound = bound; }
 
         @Override
-        public List<Integer> call() throws Exception {
+        public List<Integer> call() {
             List<Integer> list = new ArrayList<>();
             try {
                 startBarrier.await();
@@ -261,7 +262,7 @@ public class ReferenceCountedCacheTest {
 
     class Cleaner implements Callable<Long> {
         @Override
-        public Long call() throws Exception {
+        public Long call() {
             long cleaned = 0;
             while (retrieving) cleaned += cache.clean();
             return cleaned;

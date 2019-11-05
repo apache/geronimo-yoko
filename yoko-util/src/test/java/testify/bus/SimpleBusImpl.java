@@ -162,12 +162,6 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         return BiStream.of(properties).narrowValues(String.class);
     }
 
-    private <T> T collect(Supplier<T> supplier, Function<T,BiConsumer<String, String>> accumulator) {
-        T t = supplier.get();
-        biStream().forEach(accumulator.apply(t));
-        return t;
-    }
-
     @Override
     public void easyClose() throws Exception {
         System.out.println("### shutting down thread pool");

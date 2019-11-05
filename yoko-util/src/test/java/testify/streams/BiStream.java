@@ -32,7 +32,7 @@ public interface BiStream<K, V> {
     boolean tryAdvance(BiConsumer<K, V> action);
 
     default void forEach(BiConsumer<K, V> action) {
-        while (tryAdvance(action));
+        while (tryAdvance(action)) continue;
     }
 
     default BiStream<K, V> filterKeys(Function<K, Boolean> filter) {

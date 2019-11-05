@@ -125,11 +125,11 @@ class ServerSteward extends Steward<ConfigureServer> {
         ServerPart.launch(runner, part, this.name, props, args);
     }
 
-    boolean isServerOrbModifier(Class<?> c) {
+    private boolean isServerOrbModifier(Class<?> c) {
         return findAnnotation(c, UseWithServerOrb.class).map(this::matchesAnnotation).orElse(false);
     }
 
-    boolean matchesAnnotation(UseWithServerOrb anno) { return Pattern.matches(anno.value(), this.name); }
+    private boolean matchesAnnotation(UseWithServerOrb anno) { return Pattern.matches(anno.value(), this.name); }
 
     static ServerSteward getInstance(ExtensionContext ctx) {
         return Steward.getInstanceForContext(ctx, ServerSteward.class, ServerSteward::new);
@@ -138,7 +138,7 @@ class ServerSteward extends Steward<ConfigureServer> {
 
 class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus> {
     @Override
-    public void beforeAll(ExtensionContext ctx) throws Exception {
+    public void beforeAll(ExtensionContext ctx) {
         ServerSteward.getInstance(ctx).startServer(ctx);
     }
 
@@ -201,7 +201,7 @@ class DefaultServerPart extends ServerPart {
     }
 
     @Override
-    protected void run(ORB orb, Bus bus) throws Exception {
+    protected void run(ORB orb, Bus bus) {
         for (Method m: methods) {
             final Class<?>[] types = m.getParameterTypes();
             Object[] params = new Object[types.length];
