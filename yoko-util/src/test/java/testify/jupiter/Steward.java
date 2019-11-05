@@ -44,7 +44,7 @@ import java.util.function.Function;
  *
  * @param <A> the annotation type to be used
  */
-class Steward<A extends Annotation> implements CloseableResource {
+public class Steward<A extends Annotation> implements CloseableResource {
     private final Class<A> annotationClass;
     private final String missingAnnotationSuffix;
 
@@ -65,7 +65,7 @@ class Steward<A extends Annotation> implements CloseableResource {
         throw new Error(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
     }
 
-    static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
+    protected static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
         return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
     }
 
@@ -73,7 +73,7 @@ class Steward<A extends Annotation> implements CloseableResource {
         return AnnotationSupport.findAnnotation(elem, annotationClass);
     }
 
-    final A getAnnotation(AnnotatedElement elem) {
+    protected final A getAnnotation(AnnotatedElement elem) {
         return findAnnotation(elem).orElseThrow(() -> new Error(elem + missingAnnotationSuffix));
     }
 
