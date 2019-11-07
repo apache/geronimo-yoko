@@ -37,15 +37,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.stream.Collectors.joining;
 
 /**
  * Enable multiple threads to communicate asynchronously.
@@ -94,7 +92,8 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         if (previous instanceof CountDownLatch) ((CountDownLatch) previous).countDown();
         // kick off callbacks on (potentially) separate threads
         Optional.ofNullable(callbacks.get(key))
-                .map(Queue::stream).orElse(Stream.empty())
+                .map(Queue::stream)
+                .orElse(Stream.empty())
                 .forEach(action -> threadPool.execute(() -> action.accept(value)));
         return this;
     }
@@ -164,13 +163,9 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
 
     @Override
     public void easyClose() throws Exception {
-        System.out.println("### shutting down thread pool");
         threadPool.shutdown();
-        System.out.println("### awaiting thread pool termination");
         threadPool.awaitTermination(200, MILLISECONDS);
-        System.out.println("### calling shutdownNow() ");
         List<?> list = threadPool.shutdownNow();
-        System.out.println("### shutdownNow returned " + list.size() + " item(s).");
         if (threadPool.isTerminated()) return;
         throw new Error("Unable to shut down thread pool: " + threadPool.shutdownNow());
     }

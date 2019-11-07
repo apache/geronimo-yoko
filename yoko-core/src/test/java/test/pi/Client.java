@@ -17,8 +17,37 @@
 
 package test.pi;
 
-import static org.junit.Assert.assertTrue;
-import static org.omg.CORBA.SetOverrideType.ADD_OVERRIDE;
+import org.apache.yoko.orb.OB.Assert;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.NO_IMPLEMENT;
+import org.omg.CORBA.NO_PERMISSION;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.Request;
+import org.omg.CORBA.StringHolder;
+import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TCKind;
+import org.omg.CORBA.WrongTransaction;
+import org.omg.IOP.Codec;
+import org.omg.IOP.CodecFactory;
+import org.omg.IOP.CodecFactoryHelper;
+import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
+import org.omg.IOP.CodecPackage.FormatMismatch;
+import org.omg.IOP.CodecPackage.InvalidTypeForEncoding;
+import org.omg.IOP.CodecPackage.TypeMismatch;
+import org.omg.IOP.ENCODING_CDR_ENCAPS;
+import org.omg.IOP.Encoding;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
+import org.omg.PortableInterceptor.Current;
+import org.omg.PortableInterceptor.CurrentHelper;
+import org.omg.PortableInterceptor.InvalidSlot;
+import test.pi.TestInterfacePackage.s;
+import test.pi.TestInterfacePackage.sHelper;
+import test.pi.TestInterfacePackage.sHolder;
+import test.pi.TestInterfacePackage.user;
+import test.pi.TestInterfacePackage.userHelper;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -26,38 +55,8 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Properties;
 
-import org.apache.yoko.orb.OB.Assert;
-import org.omg.CORBA.Any;
-import org.omg.CORBA.BAD_INV_ORDER;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.NO_PERMISSION;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.Policy;
-import org.omg.CORBA.Request;
-import org.omg.CORBA.StringHolder;
-import org.omg.CORBA.SystemException;
-import org.omg.CORBA.TCKind;
-import org.omg.CORBA.WrongTransaction;
-import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.IOP.Codec;
-import org.omg.IOP.CodecFactory;
-import org.omg.IOP.CodecFactoryHelper;
-import org.omg.IOP.ENCODING_CDR_ENCAPS;
-import org.omg.IOP.Encoding;
-import org.omg.IOP.CodecFactoryPackage.UnknownEncoding;
-import org.omg.IOP.CodecPackage.FormatMismatch;
-import org.omg.IOP.CodecPackage.InvalidTypeForEncoding;
-import org.omg.IOP.CodecPackage.TypeMismatch;
-import org.omg.PortableInterceptor.ClientRequestInterceptor;
-import org.omg.PortableInterceptor.Current;
-import org.omg.PortableInterceptor.CurrentHelper;
-import org.omg.PortableInterceptor.InvalidSlot;
-
-import test.pi.TestInterfacePackage.s;
-import test.pi.TestInterfacePackage.sHelper;
-import test.pi.TestInterfacePackage.sHolder;
-import test.pi.TestInterfacePackage.user;
-import test.pi.TestInterfacePackage.userHelper;
+import static org.junit.Assert.*;
+import static org.omg.CORBA.SetOverrideType.ADD_OVERRIDE;
 
 public final class Client extends test.common.TestBase {
     private static void TestTranslation(ORB orb, ClientProxyManager manager, TestInterface ti) {
@@ -760,10 +759,10 @@ public final class Client extends test.common.TestBase {
     private static String readRef(BufferedReader in) throws Exception {
         String line = in.readLine();
         if (line == null) {
-            throw new RuntimeException("Unknown InsServer error");
+            throw new RuntimeException("Unknown Server error");
         } else if (!!!line.equals("ref:")) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
-                pw.println("InsServer error:");
+                pw.println("Server error:");
                 do {
                     pw.print('\t');
                     pw.println(line);

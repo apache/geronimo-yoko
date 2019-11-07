@@ -67,10 +67,10 @@ public class TestBase {
     protected static String[] readRef(BufferedReader reader, String[] refStrings) throws IOException {
         String line = reader.readLine();
         if (line == null) {
-            throw new RuntimeException("Unknown InsServer error");
+            throw new RuntimeException("Unknown Server error");
         } else if (!line.equals("ref:")) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
-                pw.println("InsServer error:");
+                pw.println("Server error:");
                 do {
                     pw.print('\t');
                     pw.println(line);

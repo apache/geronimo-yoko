@@ -23,16 +23,16 @@
 
 package test.iiopplugin;
 
+import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.IOP.IOR;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
-
-import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
-import org.omg.CORBA.Policy;
-import org.omg.CORBA.ORB;
-import org.omg.IOP.IOR;
 
 
 public class ServerPlugin implements ConnectionHelper {
@@ -44,7 +44,7 @@ public class ServerPlugin implements ConnectionHelper {
     static private boolean createdServerConnection = false;
 
     public ServerPlugin() {
-        System.out.println("InsServer-side connection helper constructed");
+        System.out.println("Server-side connection helper constructed");
         constructed = true;
     }
 

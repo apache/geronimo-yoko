@@ -203,7 +203,7 @@ class PartRunnerImpl implements PartRunner {
                 }).join();
             }
             for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
-                runner.enableLogging0(INFO, ".*NamedPart", "part4").here(bus -> {
+                runner.enableLogging(INFO, ".*NamedPart", "part4").here(bus -> {
                     System.out.printf("======Testing with %s======%n", runner);
                 }).fork("part1", bus -> {
                     bus.put("a", "foo");

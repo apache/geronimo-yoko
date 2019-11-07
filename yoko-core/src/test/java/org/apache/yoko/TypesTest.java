@@ -22,10 +22,13 @@ import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
-import testify.jupiter.ConfigurePartRunner;
+import testify.bus.LogLevel;
+import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.jupiter.annotation.Tracing;
 import testify.parts.PartRunner;
 
 @ConfigurePartRunner
+@Tracing
 class TypesTest {
     @Test
     void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }

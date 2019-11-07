@@ -67,7 +67,7 @@ final public class TestMultipleOrbsServer extends test.common.TestBase {
             Test test2 = testImpl2._this(orb2);
 
             //
-            // Create Test InsServer in each ORB
+            // Create Test Server in each ORB
             //
             TestInfo[] info = new TestInfo[1];
             info[0] = new TestInfo();
