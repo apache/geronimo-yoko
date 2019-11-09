@@ -154,5 +154,5 @@ class OrbExtension implements Extension, BeforeAllCallback, SimpleParameterResol
     // get the configured ORB for the context,
     // but if the context has a test method, use its parent instead
     // i.e. get an ORB for the test class, not for each test method
-    public ORB resolveParameter(ExtensionContext ctx) { return getOrb(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
+    public ORB resolveParameter(ExtensionContext ctx) { return getOrb(ctx); }
 }

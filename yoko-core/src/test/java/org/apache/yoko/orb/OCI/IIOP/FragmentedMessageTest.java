@@ -16,9 +16,10 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
+import acme.Echo;
+import acme.EchoImpl;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.LocalObject;
@@ -32,16 +33,11 @@ import org.omg.PortableInterceptor.IORInterceptor;
 import org.omg.PortableInterceptor.ORBInitInfo;
 import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
 import org.omg.PortableInterceptor.ORBInitializer;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import testify.bus.Bus;
-import testify.bus.LogLevel;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 
-import javax.rmi.PortableRemoteObject;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
@@ -62,7 +58,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @ConfigureOrb
 @Tracing
 public class FragmentedMessageTest {
-    private static Echo stub;
+    @ConfigureServer.RemoteObject
+    public static Echo stub;
 
     private static Field getField(Class<?> cls, String name) {
         try {
@@ -114,23 +111,6 @@ public class FragmentedMessageTest {
         int FRAG_TAG = 0xDEADFEED; // mmm, brains...
         Field ACCEPTORS_FIELD = getField(IORInfo_impl.class, "acceptors_");
         Field PORT_FIELD = getField(Acceptor_impl.class, "port_");
-    }
-
-    @BeforeServer
-    public static void startServer(ORB serverOrb, Bus bus) throws Exception {
-        POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
-        rootPoa.the_POAManager().activate();
-        _EchoImpl_Tie tie = new _EchoImpl_Tie();
-        EchoImpl impl = new EchoImpl(bus);
-        tie.setTarget(impl);
-        rootPoa.activate_object(tie);
-        bus.put("ior", serverOrb.object_to_string(tie._this_object(serverOrb)));
-    }
-
-    @BeforeAll
-    public static void setup(ORB clientOrb, Bus bus) throws Exception {
-        String ior = bus.get("ior");
-        stub = (Echo) PortableRemoteObject.narrow(clientOrb.string_to_object(ior), Echo.class);
     }
 
     @Test

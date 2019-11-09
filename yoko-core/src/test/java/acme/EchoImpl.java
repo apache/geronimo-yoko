@@ -14,13 +14,22 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.OCI.IIOP;
+package acme;
 
+import testify.bus.Bus;
 import testify.bus.StringRef;
 
-import java.rmi.Remote;
-import java.rmi.RemoteException;
+public class EchoImpl implements Echo {
+    private enum BusKey implements StringRef {MESSAGE}
+    final Bus bus;
 
-public interface Echo extends Remote {
-    String echo(String s) throws RemoteException;
+    public EchoImpl(Bus bus) {this.bus = bus;}
+
+    @Override
+    public String echo(String s) {
+        bus.put(BusKey.MESSAGE, s);
+        return s;
+    }
+
+    public static String getLastMessage(Bus bus) { return bus.get(BusKey.MESSAGE); }
 }

@@ -15,7 +15,11 @@ package testify.jupiter.annotation.iiop;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.Servant;
 import testify.bus.Bus;
+import testify.bus.FieldRef;
 import testify.bus.MethodRef;
 import testify.bus.TypeRef;
 import testify.bus.VoidRef;
@@ -23,8 +27,11 @@ import testify.parts.PartRunner;
 import testify.util.Maps;
 import testify.util.Stack;
 
+import javax.rmi.CORBA.Tie;
 import java.io.Serializable;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.rmi.Remote;
 import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Stream;
@@ -32,11 +39,15 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 import static testify.bus.LogLevel.ERROR;
+import static testify.util.Reflect.getMatchingType;
+import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
     private enum LifeCycle implements VoidRef {STARTED, STOP}
     private enum Invocation implements MethodRef {INVOKE}
+    private enum Instantiation implements FieldRef {INSTANTIATE}
     private enum Result implements TypeRef<Throwable> { RESULT;}
     private static String METHOD_COUNT_PREFIX = "Method#";
 
@@ -92,6 +103,7 @@ final class ServerComms implements Serializable {
         // register the invocation handler
         final Map<Class<?>, Object> params = Maps.of(Bus.class, bus, ORB.class, orb);
         bus.onMsg(Invocation.INVOKE, m -> invoke(m, params, bus));
+        bus.onMsg(Instantiation.INSTANTIATE, f -> instantiate(f, params, orb, bus));
         // tell the client we are ready
         bus.put(LifeCycle.STARTED);
 
@@ -114,10 +126,37 @@ final class ServerComms implements Serializable {
         } catch (Throwable t) {
             // if there was an error, send that back instead
             bus.put(Result.RESULT, t);
-            bus.put(requestId, m + " completed abnormally with exception " + t.toString());
-        } finally {
+            bus.put(requestId, m + " completed abnormally with exception " + t);
         }
     }
+
+    private <IMPL extends Remote & org.omg.CORBA.Object, TIE extends Servant & Tie> void instantiate(Field f, Map<Class<?>, Object> paramMap, ORB orb, Bus bus) {
+        assertServerSide();
+        final String requestId = getNextRequestId();
+        try {
+            IMPL o = newMatchingInstance(f.getType(), "*Impl", paramMap);
+            // set the static field to hold the new object
+            f.set(null, o);
+            // create the tie
+            TIE tie = newMatchingInstance(f.getType(), "_*Impl_Tie");
+            tie.setTarget(o);
+            // do the POA things
+            POA rootPoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
+            rootPoa.the_POAManager().activate();
+            rootPoa.activate_object(tie);
+            // put the IOR on the bus
+            String ior = orb.object_to_string(tie.thisObject());
+            bus.put(f.getName(), ior);
+            // on successful completion, send back a null
+            bus.put(Result.RESULT, null);
+            bus.put(requestId, f + " instantiated normally");
+        } catch (Throwable t) {
+            // if there was an error, send that back instead
+            bus.put(Result.RESULT, t);
+            bus.put(requestId, f + " failed instantiation with exception " + t);
+        }
+    }
+
 
     private String getNextRequestId() {
         methodCount++;
@@ -136,6 +175,16 @@ final class ServerComms implements Serializable {
         throw new MethodInvocationFailed(m, result);
     }
 
+    void instantiate(Field f) throws ServerCommsException {
+        assertClientSide();
+        final String requestId = getNextRequestId();
+        bus.put(Instantiation.INSTANTIATE, f);
+        String info = bus.get(requestId);
+        final Throwable result = bus.get(Result.RESULT);
+        if (result == null) return;
+        throw new FieldInstantiationFailed(f, result);
+    }
+
     static class ServerCommsException extends RuntimeException {
         ServerCommsException(Throwable cause) { super(cause); }
         ServerCommsException(String message, Throwable cause) { super(message, cause); }
@@ -143,5 +192,9 @@ final class ServerComms implements Serializable {
 
     static class MethodInvocationFailed extends ServerCommsException {
         MethodInvocationFailed(Method m, Throwable cause) { super("Received exception from server while trying to invoke method:\n    " + m, cause); }
+    }
+
+    static class FieldInstantiationFailed extends ServerCommsException {
+        FieldInstantiationFailed(Field f, Throwable cause) { super("Received exception from server while trying to instantiate field:\n    " + f, cause); }
     }
 }
