@@ -23,48 +23,9 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
-import static testify.bus.LogLevel.DEFAULT;
-
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
-    /**
-     * Enable logging.
-     * @param level the most detailed level of logging to enable
-     * @param pattern a regular expression to match the classes to debug
-     * @param partNames if empty, all parts will be debugged, otherwise only the parts with the specified names will have debugging enabled
-     * @return this object for call chaining
-     */
-    default PartRunner enableLogging0(LogLevel level, String pattern, String...partNames) {
-        // define how to enable logging for a bus
-        // if no part names were supplied, enable logging globally
-        if (partNames.length == 0) bus().enableLogging(level, pattern);
-        // otherwise, enable logging for each supplied part name
-        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern));
-        return this;
-    }
-
-    /**
-     * Enable {@link LogLevel#DEFAULT} level logging.
-     * @param pattern a regular expression to match the classes to debug
-     * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
-     * @return this object for call chaining
-     */
-    default PartRunner enableLogging(String pattern, String...partNames) { return enableLogging(DEFAULT, pattern, partNames); }
-
-    /**
-     * Enable a range of log levels for the specified classes and partnames.
-     * @param level the most detailed log level to enable
-     * @param classesToTrace the actual classes to trace, or empty to trace all classes
-     * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
-     * @return this object for call chaining
-     */
-    default PartRunner enableLogging(LogLevel level, Class<?>[] classesToTrace, String...partNames) {
-        level.andHigher().forEach(lvl -> {
-            for (Class<?> cls: classesToTrace) enableLogging0(lvl, cls.getName(), partNames);
-        });
-        return this;
-    }
 
     /**
      * Enable a range of log levels for the specified pattern and partnames.
@@ -74,7 +35,10 @@ public interface PartRunner {
      * @return this object for call chaining
      */
     default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
+        // define how to enable logging for a bus
+        // if no part names were supplied, enable logging globally
         if (partNames.length == 0) bus().enableLogging(level, pattern);
+        // otherwise, enable logging for each supplied part name
         else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern));
         return this;
     }

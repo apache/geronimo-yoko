@@ -14,18 +14,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter;
+package testify.jupiter.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import org.junit.platform.commons.support.AnnotationSupport;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.Repeatable;
-import java.lang.reflect.AnnotatedElement;
-import java.util.Optional;
+import java.util.Collections;
+import java.util.List;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This class provides the mechanism to create, store, and retrieve
@@ -44,37 +45,17 @@ import java.util.function.Function;
  *
  * @param <A> the annotation type to be used
  */
-class Steward<A extends Annotation> implements CloseableResource {
-    private final Class<A> annotationClass;
-    private final String missingAnnotationSuffix;
+public class Steward<A extends Annotation> implements CloseableResource {
+    private final AnnotationButler<A> butler;
+    protected final A annotation;
 
-    Steward(Class<A> annotationClass) {
-        this.annotationClass = annotationClass;
-        this.missingAnnotationSuffix = String.format(" does not use the @%s annotation", annotationClass.getSimpleName());
+    protected Steward(Class<A> annotationClass, Class<?> annotatedClass) {
+        this.butler = AnnotationButler.forClass(annotationClass).recruit();
+        this.annotation = butler.getAnnotation(annotatedClass);
     }
 
-    <B extends Annotation> Steward(Class<A> annotationClass, Class<B> contentClass) {
-        this.annotationClass = annotationClass;
-        validateRepeatableRelationship(annotationClass, contentClass);
-        this.missingAnnotationSuffix = String.format(" does not use multiple @%s annotations", contentClass.getSimpleName());
-    }
-
-    private static <A extends Annotation, B extends Annotation> void validateRepeatableRelationship(Class<A> annotationClass, Class<B> contentClass) {
-        Repeatable repeatable = contentClass.getAnnotation(Repeatable.class);
-        if (repeatable != null && repeatable.value() == annotationClass) return;
-        throw new Error(contentClass + " does not declare @Repeatable(" + annotationClass.getSimpleName() + ")");
-    }
-
-    static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
+    protected static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
         return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
-    }
-
-    private Optional<A> findAnnotation(AnnotatedElement elem){
-        return AnnotationSupport.findAnnotation(elem, annotationClass);
-    }
-
-    final A getAnnotation(AnnotatedElement elem) {
-        return findAnnotation(elem).orElseThrow(() -> new Error(elem + missingAnnotationSuffix));
     }
 
     /**
@@ -83,3 +64,25 @@ class Steward<A extends Annotation> implements CloseableResource {
     @Override
     public void close() { /* do nothing */ }
 }
+
+//abstract class MultiSteward<A extends Annotation, C extends Annotation> extends Steward<C> implements Iterable<Steward<A>>{
+//    private final List<Steward<A>> subStewards;
+//
+//    protected MultiSteward(Class<A> annotationClass, Class<C> containerAnnotationClass, Function<C, A[]> valueMethodRef, Class<?> annotatedClass) {
+//        super(containerAnnotationClass, annotatedClass);
+//        validateRepeatableRelationship(annotationClass, containerAnnotationClass);
+//        this.subStewards = Collections.unmodifiableList(
+//                Stream.of(valueMethodRef.apply(annotation))
+//                        .map(c -> )
+//                        .collect(Collectors.toList()));
+//
+//    }
+//
+//    private static <A extends Annotation, B extends Annotation> void validateRepeatableRelationship(Class<B> annotationClass, Class<A> containerAnnotationClass) {
+//        Repeatable repeatable = annotationClass.getAnnotation(Repeatable.class);
+//        if (repeatable != null && repeatable.value() == containerAnnotationClass) return;
+//        throw new Error(annotationClass + " does not declare @Repeatable(" + containerAnnotationClass.getSimpleName() + ")");
+//    }
+//
+//
+//}

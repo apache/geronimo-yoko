@@ -17,14 +17,19 @@
 package testify.parts;
 
 import testify.bus.InterProcessBus;
+import testify.util.SerialUtil;
 
 import java.util.concurrent.TimeUnit;
+
+import static testify.util.SerialUtil.stringify;
+import static testify.util.SerialUtil.unstringify;
 
 enum ThreadRunner implements Runner<Thread> {
     SINGLETON
     ;
     public Thread fork(InterProcessBus centralBus, NamedPart part) {
-        Thread thread = new Thread(() -> part.run(centralBus.forUser(part.name)), part.name);
+        NamedPart remotePart = unstringify(stringify(part));
+        Thread thread = new Thread(() -> remotePart.run(centralBus.forUser(remotePart.name)), remotePart.name);
         thread.setDaemon(true);
         thread.start();
         return thread;

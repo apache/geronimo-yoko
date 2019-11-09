@@ -14,11 +14,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter;
+package testify.jupiter.annotation;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
+import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.ElementType;
@@ -26,34 +27,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static testify.jupiter.PartRunnerSteward.getPartRunner;
+import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
 
 @ExtendWith(PartRunnerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface ConfigurePartRunner {}
-
-class PartRunnerSteward extends Steward<ConfigurePartRunner> {
-    private final PartRunner partRunner;
-
-    private PartRunnerSteward(Class<?> testClass) {
-        super(ConfigurePartRunner.class);
-        this.partRunner = PartRunner.create();
-        TracingSteward.addTraceSettings(partRunner, testClass);
-    }
-
-    @Override
-    // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
-    // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
-    public void close() {
-        partRunner.join();
-    }
-
-    static PartRunner getPartRunner(ExtensionContext ctx) {
-        // PartRunners are always one per test, so get one for the root context
-        return Steward.getInstanceForContext(ctx, PartRunnerSteward.class, PartRunnerSteward::new).partRunner;
-    }
-}
 
 class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
     @Override

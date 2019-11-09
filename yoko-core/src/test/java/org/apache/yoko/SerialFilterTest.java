@@ -25,8 +25,7 @@ import org.omg.PortableServer.Servant;
 import test.rmi.Sample;
 import test.rmi.SampleImpl;
 import testify.bus.Bus;
-import testify.jupiter.ConfigureServer;
-import testify.parts.ServerPart;
+import testify.jupiter.annotation.iiop.ConfigureServer;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
@@ -38,7 +37,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
 
 @ConfigureServer(
-        value = SerialFilterTest.Server.class,
         jvmArgs = {
 //                "-Djava.util.logging.config.class=test.logging.LogJavaSerializationToConsole",
                 "-Djdk.serialFilter=!org.apache.yoko.SerialFilterTest$ForbiddenMessage;"+
@@ -51,18 +49,16 @@ public class SerialFilterTest {
     public static final int MAX_ARR_LEN = 200;
     public static final int MAX_DEPTH = 100;
 
-    public static class Server extends ServerPart {
-        @Override
-        protected void run(ORB orb, Bus bus) throws Exception {
-            POA poa = (POA) orb.resolve_initial_references("RootPOA");
-            poa.the_POAManager().activate();
-            Sample sample = new SampleImpl();
-            Tie tie = Util.getTie(sample);
-            byte[] id = poa.activate_object((Servant) tie);
-            org.omg.CORBA.Object obj = poa.create_reference_with_id(id, ((Servant)tie)._all_interfaces(poa, id)[0]);
-            String ior = orb.object_to_string(obj);
-            bus.put("ior", ior);
-        }
+    @ConfigureServer.BeforeServer
+    public static void startServer(ORB orb, Bus bus) throws Exception {
+        POA poa = (POA) orb.resolve_initial_references("RootPOA");
+        poa.the_POAManager().activate();
+        Sample sample = new SampleImpl();
+        Tie tie = Util.getTie(sample);
+        byte[] id = poa.activate_object((Servant) tie);
+        org.omg.CORBA.Object obj = poa.create_reference_with_id(id, ((Servant)tie)._all_interfaces(poa, id)[0]);
+        String ior = orb.object_to_string(obj);
+        bus.put("ior", ior);
     }
 
     public static class AllowedMessage implements Serializable {

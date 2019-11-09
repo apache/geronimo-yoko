@@ -17,7 +17,6 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.IIOP.FragmentedMessageTest.ClientSideFragmenter;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -36,9 +35,11 @@ import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import testify.bus.Bus;
-import testify.jupiter.ConfigureOrb;
-import testify.jupiter.ConfigureServer;
-import testify.jupiter.ConfigureServer.RunAtServerStartup;
+import testify.bus.LogLevel;
+import testify.jupiter.annotation.Tracing;
+import testify.jupiter.annotation.iiop.ConfigureOrb;
+import testify.jupiter.annotation.iiop.ConfigureServer;
+import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 
 import javax.rmi.PortableRemoteObject;
 import java.io.IOException;
@@ -59,6 +60,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
  */
 @ConfigureServer
 @ConfigureOrb
+@Tracing
 public class FragmentedMessageTest {
     private static Echo stub;
 
@@ -114,7 +116,7 @@ public class FragmentedMessageTest {
         Field PORT_FIELD = getField(Acceptor_impl.class, "port_");
     }
 
-    @RunAtServerStartup
+    @BeforeServer
     public static void startServer(ORB serverOrb, Bus bus) throws Exception {
         POA rootPoa = POAHelper.narrow(serverOrb.resolve_initial_references("RootPOA"));
         rootPoa.the_POAManager().activate();

@@ -31,36 +31,35 @@ public enum SerialUtil {
 
     public static String stringify(Object payload) {
         if (payload == null) return "<null>";
+        return Base64.getEncoder().encodeToString(writeObject(payload));
+    }
+
+    public static <T> T unstringify(String string) {
+        if (string == null || string.equals("<null>")) return null;
+        return readObject(Base64.getDecoder().decode(string));
+    }
+
+    private static byte[] writeObject(Object payload) {
+        final byte[] bytes;
         try (ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
              ObjectOutputStream out = new ObjectOutputStream(byteOut)) {
             out.writeObject(payload);
             out.flush();
-            final byte[] bytes = byteOut.toByteArray();
-            return Base64.getEncoder().encodeToString(bytes);
+            bytes = byteOut.toByteArray();
         } catch (IOException e) {
             throw new IOError(e);
         }
-    }
-
-    public static <T> T unstringify(String string) {
-        if (string == null) return null;
-        if (string.equals("<null>")) return null;
-        return readObject(Base64.getDecoder().decode(string));
+        return bytes;
     }
 
     @SuppressWarnings("unchecked")
     private static <T> T readObject(byte[] bytes) {
         try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
-            return throwIfException((T)in.readObject());
+            return (T)in.readObject();
         } catch (RuntimeException|Error e) {
             throw e;
         } catch (Throwable e) {
             throw (Error)new AssertionFailedError("Unexpected exception:" + e).initCause(e);
         }
-    }
-
-    private static <T> T throwIfException(T t) throws Throwable {
-        if (t instanceof Throwable) throw (Throwable)t;
-        return t;
     }
 }

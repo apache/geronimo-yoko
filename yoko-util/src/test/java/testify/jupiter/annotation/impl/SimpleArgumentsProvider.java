@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter;
+package testify.jupiter.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.provider.Arguments;
@@ -22,7 +22,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 
 import java.util.stream.Stream;
 
-interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
+public interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
     @Override
     default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
 

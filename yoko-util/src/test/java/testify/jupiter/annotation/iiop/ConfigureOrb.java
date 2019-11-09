@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter;
+package testify.jupiter.annotation.iiop;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
@@ -24,6 +24,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
+import testify.jupiter.annotation.impl.SimpleParameterResolver;
+import testify.jupiter.annotation.impl.Steward;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -39,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.isAnnotated;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
-import static testify.jupiter.OrbSteward.getOrb;
+import static testify.jupiter.annotation.iiop.OrbSteward.getOrb;
 import static testify.streams.Collectors.requireNoMoreThanOne;
 
 @ExtendWith(OrbExtension.class)
@@ -69,9 +71,8 @@ class OrbSteward extends Steward<ConfigureOrb> {
     interface NullIiopConnectionHelper{}
     private final ORB orb;
     private OrbSteward(Class<?> testClass) {
-        super(ConfigureOrb.class);
-        ConfigureOrb cfg = getAnnotation(testClass);
-        this.orb = ORB.init(args(cfg, testClass, this::isOrbModifier), props(cfg, testClass, this::isOrbModifier)); }
+        super(ConfigureOrb.class, testClass);
+        this.orb = ORB.init(args(annotation, testClass, this::isOrbModifier), props(annotation, testClass, this::isOrbModifier)); }
 
     @Override
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.

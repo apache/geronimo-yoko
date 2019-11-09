@@ -3,7 +3,7 @@ package org.apache.yoko.rmi.impl;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.omg.CORBA.portable.IDLEntity;
-import testify.jupiter.ClassSource;
+import testify.jupiter.annotation.ClassSource;
 
 import javax.rmi.CORBA.ClassDesc;
 import java.io.Externalizable;
