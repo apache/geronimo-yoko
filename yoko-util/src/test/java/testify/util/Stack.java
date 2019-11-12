@@ -16,7 +16,12 @@
  */
 package testify.util;
 
+import testify.streams.BiStream;
+
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public enum Stack {
     ;
@@ -63,7 +68,21 @@ public enum Stack {
         } catch (IndexOutOfBoundsException e) {
             throw new Error("Could not find caller matching class " + callingClass.getName() + " in stack " + Arrays.toString(stack));
         }
+    }
 
+    /**
+     * For the provided elements, find the one that matches the most recent calling method name.
+     * The <code>Objects.toString()</code> of each element will be compared to the names of the methods in the call stack.
+     * @param elems
+     */
+    @SafeVarargs
+    public static <T> T matchByCallingMethod(T... elems) {
+        final HashMap<String, T> elemMap = BiStream.ofValues(Objects::toString, elems).collect(HashMap::new, map -> map::put);
+        return Stream.of(new Throwable().getStackTrace())
+                .map(StackTraceElement::getMethodName)
+                .map(elemMap::get)
+                .findFirst()
+                .orElseThrow(NoSuchMethodError::new);
     }
 
 }

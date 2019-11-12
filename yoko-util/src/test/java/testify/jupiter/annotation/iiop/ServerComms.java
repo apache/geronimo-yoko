@@ -28,6 +28,8 @@ import testify.util.Maps;
 import testify.util.Stack;
 
 import javax.rmi.CORBA.Tie;
+import javax.rmi.CORBA.Util;
+import javax.rmi.PortableRemoteObject;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -39,9 +41,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.platform.commons.support.ReflectionSupport.newInstance;
 import static testify.bus.LogLevel.ERROR;
-import static testify.util.Reflect.getMatchingType;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
@@ -138,7 +138,14 @@ final class ServerComms implements Serializable {
             // set the static field to hold the new object
             f.set(null, o);
             // create the tie
-            TIE tie = newMatchingInstance(f.getType(), "_*Impl_Tie");
+            if (!!! (o instanceof PortableRemoteObject)) {
+                PortableRemoteObject.exportObject(o);
+            }
+            TIE tie = (TIE)Util.getTie(o);
+            if (tie == null) {
+                // try creating the tie directly
+                tie = newMatchingInstance(f.getType(), "_*Impl_Tie");
+            }
             tie.setTarget(o);
             // do the POA things
             POA rootPoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));

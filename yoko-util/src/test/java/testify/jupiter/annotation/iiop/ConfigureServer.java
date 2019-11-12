@@ -125,7 +125,6 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertStatic()
                 .assertFieldTypes(Remote.class)
                 .assertFieldHasMatchingConcreteType("*Impl", ORB.class, Bus.class)
-                .assertFieldHasMatchingConcreteType("_*Impl_Tie")
                 .filter(anno -> anno.value().equals(this.name))
                 .recruit()
                 .findFields(testClass);
@@ -163,7 +162,6 @@ class ServerSteward extends Steward<ConfigureServer> {
         // does this part run in a thread or a new process?
         if (annotation.newProcess()) runner.useNewJVMWhenForking(annotation.jvmArgs());
         else runner.useNewThreadWhenForking();
-
 
         final Properties props = props(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
         final String[] args = args(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
