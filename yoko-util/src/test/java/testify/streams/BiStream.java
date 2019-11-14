@@ -24,6 +24,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -83,8 +84,20 @@ public interface BiStream<K, V> {
     default Stream<K> keys() { return map((k, v) -> k); }
     default Stream<V> values() { return map((k, v) -> v); }
 
+    default <R> R collect(Supplier<R> supplier, Function<R, BiConsumer<K, V>> accumulator) {
+        R result = supplier.get();
+        forEach(accumulator.apply(result));
+        return result;
+    }
+
     static <K, V> BiStream<K, V> of(Map<K, V> map) {
         final Spliterator<Entry<K,V>> split = map.entrySet().spliterator();
         return action -> split.tryAdvance(e -> action.accept(e.getKey(), e.getValue()));
+    }
+
+    @SafeVarargs
+    static <K,V> BiStream<K, V> ofValues(Function<V, K> keyFunction, V... values) {
+        final Spliterator<V> spliterator = Stream.of(values).spliterator();
+        return action -> spliterator.tryAdvance(v -> action.accept(keyFunction.apply(v), v));
     }
 }

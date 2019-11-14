@@ -28,21 +28,25 @@ import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.iiop.ConfigureServer.AfterServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
-import testify.jupiter.annotation.iiop.ServerComms.ServerCommsException;
 import testify.jupiter.annotation.impl.AnnotationButler;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.jupiter.annotation.impl.Steward;
 import testify.parts.PartRunner;
+import testify.util.Reflect;
 
+import javax.rmi.PortableRemoteObject;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.rmi.Remote;
 import java.util.List;
 import java.util.Properties;
 import java.util.regex.Pattern;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -58,7 +62,8 @@ import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
 @ConfigurePartRunner
 @Retention(RUNTIME)
 public @interface ConfigureServer {
-    String value() default "server";
+    String DEFAULT_SERVER_NAME = "server";
+    String value() default DEFAULT_SERVER_NAME;
     boolean newProcess() default false;
     String[] jvmArgs() default {};
     /**
@@ -92,10 +97,22 @@ public @interface ConfigureServer {
         /** A regular expression to match which servers to run against */
         String value() default ".*";
     }
+
+
+    /**
+     * Annotate a field in a test to use it as a remote object
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    public @interface RemoteObject {
+        /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
+        String value() default DEFAULT_SERVER_NAME;
+    }
 }
 
 class ServerSteward extends Steward<ConfigureServer> {
     private final String name;
+    private final List<Field> remoteFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
     private ServerComms serverComms;
@@ -103,6 +120,14 @@ class ServerSteward extends Steward<ConfigureServer> {
     private ServerSteward(Class<?> testClass) {
         super(ConfigureServer.class, testClass);
         this.name = annotation.value();
+        this.remoteFields = AnnotationButler.forClass(ConfigureServer.RemoteObject.class)
+                .assertPublic()
+                .assertStatic()
+                .assertFieldTypes(Remote.class)
+                .assertFieldHasMatchingConcreteType("*Impl", ORB.class, Bus.class)
+                .filter(anno -> anno.value().equals(this.name))
+                .recruit()
+                .findFields(testClass);
         this.beforeMethods = AnnotationButler.forClass(BeforeServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -117,11 +142,10 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .filter(anno -> Pattern.matches(anno.value(), this.name))
                 .recruit()
                 .findMethods(testClass);
-        assertFalse(beforeMethods.isEmpty(), () -> ""
-                + "The @" + ConfigureServer.class.getSimpleName()
-                + " annotation on class " + testClass.getName()
-                + " must have a class value OR the test must annotate a static method with"
-                + " @" + BeforeServer.class.getSimpleName());
+        assertFalse(remoteFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
+                + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
+                + "\n - EITHER the test must annotate a public static method with@" + ConfigureServer.BeforeServer.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with@" + ConfigureServer.RemoteObject.class.getSimpleName());
 
         // blow up if the config is bogus
         if (annotation.newProcess()) return;
@@ -139,11 +163,25 @@ class ServerSteward extends Steward<ConfigureServer> {
         if (annotation.newProcess()) runner.useNewJVMWhenForking(annotation.jvmArgs());
         else runner.useNewThreadWhenForking();
 
-
         final Properties props = props(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
         final String[] args = args(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
         serverComms = new ServerComms(name, props, args);
         serverComms.launch(runner);
+    }
+
+    void instantiateRemoteObjects(ExtensionContext ctx) {
+        // instantiate the remote fields on the server
+        remoteFields.stream().forEach(serverComms::instantiate);
+        // instantiate the stubs on the client
+        ORB clientOrb = OrbSteward.getOrb(ctx);
+        Bus bus = getPartRunner(ctx).bus();
+        remoteFields.stream().forEach(f -> {
+            String name = f.getName();
+            String ior = bus.get(name);
+            Object object = clientOrb.string_to_object(ior);
+            object = PortableRemoteObject.narrow(object, f.getType());
+            Reflect.setStaticField(f, object);
+        });
     }
 
     void beforeServer(ExtensionContext ctx) throws Exception {
@@ -165,12 +203,14 @@ class ServerSteward extends Steward<ConfigureServer> {
     static ServerSteward getInstance(ExtensionContext ctx) {
         return Steward.getInstanceForContext(ctx, ServerSteward.class, ServerSteward::new);
     }
+
 }
 
 class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus>, AfterAllCallback {
     @Override
     public void beforeAll(ExtensionContext ctx) throws Exception {
         ServerSteward.getInstance(ctx).startServer(ctx);
+        ServerSteward.getInstance(ctx).instantiateRemoteObjects(ctx);
         ServerSteward.getInstance(ctx).beforeServer(ctx);
     }
 

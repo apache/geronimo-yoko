@@ -17,19 +17,10 @@
 package org.apache.yoko;
 
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.omg.CORBA.ORB;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.Servant;
 import test.rmi.Sample;
-import test.rmi.SampleImpl;
-import testify.bus.Bus;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 
-import javax.rmi.CORBA.Tie;
-import javax.rmi.CORBA.Util;
-import javax.rmi.PortableRemoteObject;
 import java.io.InvalidClassException;
 import java.io.Serializable;
 
@@ -49,17 +40,8 @@ public class SerialFilterTest {
     public static final int MAX_ARR_LEN = 200;
     public static final int MAX_DEPTH = 100;
 
-    @ConfigureServer.BeforeServer
-    public static void startServer(ORB orb, Bus bus) throws Exception {
-        POA poa = (POA) orb.resolve_initial_references("RootPOA");
-        poa.the_POAManager().activate();
-        Sample sample = new SampleImpl();
-        Tie tie = Util.getTie(sample);
-        byte[] id = poa.activate_object((Servant) tie);
-        org.omg.CORBA.Object obj = poa.create_reference_with_id(id, ((Servant)tie)._all_interfaces(poa, id)[0]);
-        String ior = orb.object_to_string(obj);
-        bus.put("ior", ior);
-    }
+    @ConfigureServer.RemoteObject
+    public static Sample sample;
 
     public static class AllowedMessage implements Serializable {
         final String payload;
@@ -76,20 +58,11 @@ public class SerialFilterTest {
         AllowedLink(AllowedLink next) { this.next = next; }
     }
 
-    private static Sample stub;
-
-    @BeforeAll
-    public static void setup(ORB orb, Bus bus) {
-        String ior = bus.get("ior");
-        Object obj = orb.string_to_object(ior);
-        stub = (Sample)PortableRemoteObject.narrow(obj, Sample.class);
-    }
-
     @Test
     public void testSendingAllowedObject() throws Exception {
         final String msg = "Hello, world!";
-        stub.setSerializable(new AllowedMessage(msg));
-        AllowedMessage actual = (AllowedMessage) stub.getSerializable();
+        sample.setSerializable(new AllowedMessage(msg));
+        AllowedMessage actual = (AllowedMessage) sample.getSerializable();
         assertThat(actual.payload, is(msg));
     }
 
@@ -97,7 +70,7 @@ public class SerialFilterTest {
     public void testSendingForbiddenObject() throws Throwable {
         final String msg = "Hello, world!";
         try {
-            stub.setSerializable(new ForbiddenMessage(msg));
+            sample.setSerializable(new ForbiddenMessage(msg));
             Assertions.fail("ForbiddenMessage should not be demarshalled by the server.");
         } catch (RuntimeException re) {
             try {
@@ -111,7 +84,7 @@ public class SerialFilterTest {
     @Test
     public void testSendingOverlongArray() throws Throwable {
         try {
-            stub.setSerializable(new Object[MAX_ARR_LEN + 1]);
+            sample.setSerializable(new Object[MAX_ARR_LEN + 1]);
             Assertions.fail("demarshalling an Object[MAX_ARR_LEN + 1] should be blocked by the serial filter");
         } catch (RuntimeException re) {
             try {
@@ -130,7 +103,7 @@ public class SerialFilterTest {
         }
         chain = new AllowedLink(chain);
         try {
-            stub.setSerializable(chain);
+            sample.setSerializable(chain);
             Assertions.fail("demarshalling an Object graph nested (MAX_DEPTH + 1) deep should be blocked by the serial filter");
         } catch (RuntimeException re) {
             try {

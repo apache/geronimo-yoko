@@ -13,26 +13,31 @@
 package testify.jupiter.annotation.impl;
 
 import org.junit.platform.commons.support.HierarchyTraversalMode;
+import org.opentest4j.AssertionFailedError;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedFields;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
+import static testify.util.Reflect.getMatchingConstructor;
+import static testify.util.Reflect.getMatchingTypeName;
 
 public class AnnotationButler<A extends Annotation> implements Serializable {
     public static <A extends Annotation> Spec<A> forClass(Class<A> annoType) {
@@ -71,17 +76,48 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                     + " It has been used on the non-public member: " + member);
         }
         public Spec<A> assertParameterTypes(Class<?>... paramTypes) {
-            Set<Class<?>> allowedParamTypes = new HashSet<>(Arrays.asList(paramTypes));
+            Set<Class<?>> allowedParamTypes = new HashSet<>(asList(paramTypes));
             assertions = assertions.andThen(member -> {
                 if (!!!(member instanceof Method)) return;
-                    Method method = (Method)member;
-                    for (Class<?> paramType: method.getParameterTypes()) {
-                        if (allowedParamTypes.contains(paramType)) continue;
-                        fail(annoName + " does not support paramaters of type " + paramType.getSimpleName() + " on method " + method);
-                    }
+                Method method = (Method)member;
+                for (Class<?> paramType: method.getParameterTypes()) {
+                    if (allowedParamTypes.contains(paramType)) continue;
+                    fail(annoName + " does not support parameters of type " + paramType.getSimpleName() + " on method " + method);
+                }
             });
             return this;
         }
+        public Spec<A> assertFieldTypes(Class<?>... fieldTypes) {
+            Set<Class<?>> allowedFieldTypes = new HashSet<>(asList(fieldTypes));
+            assertions = assertions.andThen(member -> {
+                if (!!!(member instanceof Field)) return;
+                Field field = (Field)member;
+                Class<?> fieldType = field.getType();
+                if (allowedFieldTypes.contains(fieldType)) return;
+                for (Class<?> c = fieldType; c != null; c = c.getSuperclass()) {
+                    if (allowedFieldTypes.contains(c)) return;
+                    for (Class<?> iface: c.getInterfaces())
+                        if (allowedFieldTypes.contains(iface)) return;
+                }
+                fail(annoName + " does not support the declared type " + fieldType.getSimpleName() + " of field " + field);
+            });
+            return this;
+        }
+
+        public Spec<A> assertFieldHasMatchingConcreteType(String pattern, Class<?>... allowedConstructorParameterTypes) {
+            assertions = assertions.andThen(member -> {
+                if (!!!(member instanceof Field)) return;
+                Field field = (Field)member;
+                String expectedTypeName = getMatchingTypeName(field.getType(), pattern);
+                try {
+                    getMatchingConstructor(expectedTypeName, allowedConstructorParameterTypes);
+                } catch (AssertionFailedError assertionFailedError) {
+                    throw (Error) fail("Could not process annotation " + annoName + " on field " + field, assertionFailedError);
+                }
+            });
+            return this;
+        }
+
         public Spec<A> filter(Predicate<A> filter) { filters = filters.and(filter); return this; }
         public AnnotationButler<A> recruit() { return new AnnotationButler(annoType, filters, assertions); }
     }
@@ -103,6 +139,16 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                 .peek(this.assertions)
                 .collect(toList());
     }
+
+
+    public List<Field> findFields(Class<?> clazz) {
+        return findAnnotatedFields(clazz, annoType)
+                .stream()
+                .filter(this::filter)
+                .peek(this.assertions)
+                .collect(toList());
+    }
+
 
     private boolean filter(AnnotatedElement elem) {
         return findAnnotation(elem, annoType)
