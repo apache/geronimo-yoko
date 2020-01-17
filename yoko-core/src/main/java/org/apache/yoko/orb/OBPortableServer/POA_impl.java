@@ -1626,7 +1626,7 @@ final public class POA_impl extends LocalObject implements POA {
                             String op, InputStream in,
                             ServiceContexts requestContexts) throws LocationForward {
         // Increment the outstanding request count
-        if (!poaControl_.incrementRequestCount()) {return null;}
+        if (!poaControl_.incrementRequestCount()) return null;
 
         final Upcall upcall;
 
@@ -1644,8 +1644,13 @@ final public class POA_impl extends LocalObject implements POA {
                     // Call the receive_request_service_contexts
                     // interception point
                     //
-                    piUpcall.receiveRequestServiceContexts(rawPolicies_, adapterId_, oid, adapterTemplate_);
-
+                    boolean failed = true;
+                    try {
+                        piUpcall.receiveRequestServiceContexts(rawPolicies_, adapterId_, oid, adapterTemplate_);
+                        failed = false;
+                    } finally {
+                        if (failed) _OB_decrementRequestCount();
+                    }
                     piUpcall.contextSwitch();
                 } else {
                     upcall = new Upcall(orbInstance_, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
