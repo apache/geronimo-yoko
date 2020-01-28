@@ -108,6 +108,6 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
 
     @Override
     public String toString() {
-        return "[" + host + ":" + port + "]";
+        return "[" + host + ":" + (0xFFFF & port) + "]";
     }
 }
