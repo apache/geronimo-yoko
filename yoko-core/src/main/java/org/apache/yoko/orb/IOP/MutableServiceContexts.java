@@ -20,6 +20,7 @@
  import org.omg.IOP.ServiceContext;
 
  import java.util.Map;
+ import java.util.concurrent.ConcurrentMap;
 
  import static java.util.Arrays.copyOf;
  import static org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists;
@@ -51,7 +52,14 @@
      }
 
      private boolean addIfAbsent(ServiceContext context) {
-         return null == contexts.putIfAbsent(context.context_id, copy(context));
+    	 if (contexts instanceof ConcurrentMap) {
+    		 return null == ((ConcurrentMap<Integer, ServiceContext>) contexts).putIfAbsent(context.context_id, copy(context));
+    	 }
+    	 if (contexts.containsKey(context.context_id)) {
+    		 return false;
+    	 }
+    	 contexts.put(context.context_id, copy(context));
+    	 return true;
      }
 
      private static BAD_INV_ORDER newBadInvOrder(int minorCode, int id) {
