@@ -19,10 +19,11 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.ReadBuffer;
-import org.apache.yoko.orb.OCI.WriteBuffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.rmi.util.ObjectUtil;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
 import org.omg.CORBA.NO_RESPONSE;
@@ -32,6 +33,7 @@ import org.omg.GIOP.MsgType_1_1;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,6 +52,11 @@ import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class GIOPConnectionThreaded extends GIOPConnection {
+    private final String label = ObjectUtil.getNextObjectLabel(this.getClass());
+
+    @Override
+    public String toString() { return label + ": state = " + this.state_; }
+
     private static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
     
     // ----------------------------------------------------------------
