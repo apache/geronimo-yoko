@@ -27,8 +27,10 @@ import static java.util.Collections.synchronizedList;
 
 public enum CollectionExtras {
     ;
+
     public static final <T> Iterable<T> removeInReverse(final List<T> list) {
-        final ListIterator<T> listIterator = list.listIterator(list.size()); return new Iterable<T>() {
+        final ListIterator<T> listIterator = list.listIterator(list.size());
+        return new Iterable<T>() {
             @Override
             public Iterator<T> iterator() {
                 return new Iterator<T>() {
@@ -39,21 +41,25 @@ public enum CollectionExtras {
 
                     @Override
                     public T next() {
-                        final T result = listIterator.previous(); listIterator.remove(); return result;
+                        final T result = listIterator.previous();
+                        listIterator.remove();
+                        return result;
                     }
 
-					@Override
-					public void remove() {
-				        throw new UnsupportedOperationException("remove");
-					}
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException("remove");
+                    }
                 };
             }
         };
     }
 
-    public static <T> List<T> newSynchronizedList() { return synchronizedList(new ArrayList<T>()); }
+    public static <T> List<T> newSynchronizedList() {
+        return synchronizedList(new ArrayList<T>());
+    }
 
-    public static <T> Iterable<T> allOf(final Iterable<? extends T>...iterables) {
+    public static <T> Iterable<T> allOf(final Iterable<? extends T>... iterables) {
         return new Iterable<T>() {
             public Iterator<T> iterator() {
                 return new Iterator<T>() {
@@ -61,9 +67,9 @@ public enum CollectionExtras {
                     Iterator<? extends T> iterator = emptyIterator();
 
                     public boolean hasNext() {
-                        for (;;) {
+                        for (; ; ) {
                             if (iterator.hasNext()) return true;
-                            if (! metaIterator.hasNext()) return false;
+                            if (!metaIterator.hasNext()) return false;
                             iterator = metaIterator.next().iterator();
                         }
                     }
@@ -72,10 +78,10 @@ public enum CollectionExtras {
                         return iterator.next();
                     }
 
-					@Override
-					public void remove() {
-				        throw new UnsupportedOperationException("remove");
-					}
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException("remove");
+                    }
                 };
             }
         };
@@ -90,7 +96,7 @@ public enum CollectionExtras {
 
                     public boolean hasNext() {
                         if (next != null) return true;
-                        while(iterator.hasNext()) {
+                        while (iterator.hasNext()) {
                             U elem = iterator.next();
                             if (!type.isInstance(elem)) continue;
                             next = type.cast(elem);
@@ -100,14 +106,17 @@ public enum CollectionExtras {
                     }
 
                     public T next() {
-                        try {return next;}
-                        finally {next = null;}
+                        try {
+                            return next;
+                        } finally {
+                            next = null;
+                        }
                     }
 
-					@Override
-					public void remove() {
-				        throw new UnsupportedOperationException("remove");
-					}
+                    @Override
+                    public void remove() {
+                        throw new UnsupportedOperationException("remove");
+                    }
                 };
             }
         };
