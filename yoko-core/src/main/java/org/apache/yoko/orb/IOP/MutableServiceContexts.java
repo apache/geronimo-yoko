@@ -52,14 +52,15 @@
      }
 
      private boolean addIfAbsent(ServiceContext context) {
-    	 if (contexts instanceof ConcurrentMap) {
-    		 return null == ((ConcurrentMap<Integer, ServiceContext>) contexts).putIfAbsent(context.context_id, copy(context));
-    	 }
-    	 if (contexts.containsKey(context.context_id)) {
-    		 return false;
-    	 }
-    	 contexts.put(context.context_id, copy(context));
-    	 return true;
+         if (contexts instanceof ConcurrentMap) {
+             //noinspection RedundantCast
+             return null == ((ConcurrentMap<Integer, ServiceContext>) contexts).putIfAbsent(context.context_id, copy(context));
+         }
+         if (contexts.containsKey(context.context_id)) {
+             return false;
+         }
+         contexts.put(context.context_id, copy(context));
+         return true;
      }
 
      private static BAD_INV_ORDER newBadInvOrder(int minorCode, int id) {
