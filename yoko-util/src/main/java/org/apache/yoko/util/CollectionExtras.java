@@ -41,6 +41,11 @@ public enum CollectionExtras {
                     public T next() {
                         final T result = listIterator.previous(); listIterator.remove(); return result;
                     }
+
+					@Override
+					public void remove() {
+				        throw new UnsupportedOperationException("remove");
+					}
                 };
             }
         };
@@ -66,6 +71,11 @@ public enum CollectionExtras {
                     public T next() {
                         return iterator.next();
                     }
+
+					@Override
+					public void remove() {
+				        throw new UnsupportedOperationException("remove");
+					}
                 };
             }
         };
@@ -93,6 +103,11 @@ public enum CollectionExtras {
                         try {return next;}
                         finally {next = null;}
                     }
+
+					@Override
+					public void remove() {
+				        throw new UnsupportedOperationException("remove");
+					}
                 };
             }
         };

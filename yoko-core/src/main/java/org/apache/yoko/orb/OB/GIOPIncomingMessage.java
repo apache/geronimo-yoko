@@ -40,6 +40,7 @@ import org.omg.IOP.TaggedProfileHelper;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorFragment;
@@ -108,7 +109,7 @@ final public class GIOPIncomingMessage {
         }
     }
 
-    private Map<Integer, Fragment> fragmentMap; // for GIOP 1.2
+    private ConcurrentMap<Integer, Fragment> fragmentMap; // for GIOP 1.2
 
     private Fragment lastFragment_; // for GIOP 1.1
 
