@@ -1,6 +1,10 @@
 package org.apache.yoko.util.concurrent;
 
-import org.apache.yoko.util.*;
+import org.apache.yoko.util.Cache;
+import org.apache.yoko.util.Factory;
+import org.apache.yoko.util.Fifa;
+import org.apache.yoko.util.KeyedFactory;
+import org.apache.yoko.util.Reference;
 
 import java.lang.ref.ReferenceQueue;
 import java.util.HashMap;
@@ -44,7 +48,7 @@ public class ReferenceCountedCache<K, V> implements Cache<K,V> {
     public Reference<V> get(K key) {
         CountedEntry<K, V> entry = map.get(key);
         if (entry == null) return null;
-        return entry == null ? null : track(entry.obtain());
+        return track(entry.obtain());
     }
 
     @Override
@@ -77,6 +81,10 @@ public class ReferenceCountedCache<K, V> implements Cache<K,V> {
         return track(result);
     }
 
+    /**
+     * This method is the identity transformation.
+     * Sub-classes should override this method to add any tracking behaviour.
+     */
     protected CountedEntry<K,V>.ValueReference track(CountedEntry<K,V>.ValueReference ref) {return ref;}
 
     @Override

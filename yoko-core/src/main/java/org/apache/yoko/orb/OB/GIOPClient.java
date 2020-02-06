@@ -57,12 +57,16 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
 import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
+/**
+ * The client-side of a GIOP connection.
+ */
 final class GIOPClient extends Client {
     protected ORBInstance orbInstance_; // The ORB instance
 
     protected Connector connector_; // The connector
 
     private GIOPConnection connection_;
+    /** The connection cache reference to release on destroy().  */
     private Reference<GIOPConnection> connectionRef;
 
     /** Codesets SC */
@@ -272,10 +276,9 @@ final class GIOPClient extends Client {
     /** Destroy the client */
     public synchronized void destroy() {
         if (destroy_) return;
-        destroy_ = true;
-        connection_ = null;
-        // release the reference if this is an outbound connection
-        if (connectionRef != null) connectionRef.close();
+        try (Reference<?> closeMe = connectionRef) {
+            destroy_ = true;
+        }
     }
 
     /** Get a new request ID */
