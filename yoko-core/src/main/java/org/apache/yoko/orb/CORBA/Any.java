@@ -960,7 +960,7 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public Any(ORBInstance orbInstance) {
-        orbInstance = orbInstance;
+        this.orbInstance = orbInstance;
         type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_null));
         value = null;
     }
@@ -1075,7 +1075,7 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public Any(ORBInstance orbInstance, org.omg.CORBA.TypeCode type, Object value) {
-        orbInstance = orbInstance;
+        this.orbInstance = orbInstance;
         setType(type);
         this.value = value;
     }
@@ -1090,7 +1090,7 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public synchronized void _OB_ORBInstance(ORBInstance orbInstance) {
-        orbInstance = orbInstance;
+        this.orbInstance = orbInstance;
     }
 
     public synchronized org.omg.CORBA.TypeCode _OB_type() {
