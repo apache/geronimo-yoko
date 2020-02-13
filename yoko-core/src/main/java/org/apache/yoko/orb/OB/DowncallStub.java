@@ -378,6 +378,9 @@ public final class DowncallStub {
         try {
             throw ex.exception;
         } catch (COMM_FAILURE|TRANSIENT|NO_RESPONSE forceRetry) {
+            // These exceptions indicate the current connection is never going to work again,
+            // so make sure the client is not re-used
+            clientManager.besmirchClient(client);
         } catch (SystemException systemException) {
             throw ex; // Not "throw e;"!
         }

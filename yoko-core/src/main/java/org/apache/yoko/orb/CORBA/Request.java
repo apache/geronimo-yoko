@@ -16,7 +16,6 @@
  */
 
 package org.apache.yoko.orb.CORBA;
-import java.util.logging.Level;
 
 import org.apache.yoko.orb.OB.Logger;
 
@@ -283,7 +282,7 @@ final public class Request extends org.omg.CORBA.Request {
             RetryInfo info = new RetryInfo();
             while (true) {
                 try {
-                    downcallStub_ = delegate_._OB_getDowncallStub(target_);
+                    downcallStub_ = delegate_._OB_getDowncallStub();
 
                     while (true) {
                         downcall_ = downcallStub_.createPIDIIDowncall(
@@ -303,7 +302,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     } // while(true)
                 } catch (Exception ex) {
-                    delegate_._OB_handleException(target_, ex, info, false);
+                    delegate_._OB_handleException(ex, info, false);
                 }
             } // while(true)
         } catch (org.omg.CORBA.SystemException ex) {
@@ -342,7 +341,7 @@ final public class Request extends org.omg.CORBA.Request {
             RetryInfo info = new RetryInfo();
             while (true) {
                 try {
-                    downcallStub_ = delegate_._OB_getDowncallStub(target_);
+                    downcallStub_ = delegate_._OB_getDowncallStub();
 
                     while (true) {
                         downcall_ = downcallStub_.createPIDIIDowncall(
@@ -362,7 +361,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     } // while(true)
                 } catch (Exception ex) {
-                    delegate_._OB_handleException(target_, ex, info, false);
+                    delegate_._OB_handleException(ex, info, false);
                 }
             } // while(true)
         } catch (org.omg.CORBA.SystemException ex) {
@@ -409,7 +408,7 @@ final public class Request extends org.omg.CORBA.Request {
             RetryInfo info = new RetryInfo();
             while (true) {
                 try {
-                    downcallStub_ = delegate_._OB_getDowncallStub(target_);
+                    downcallStub_ = delegate_._OB_getDowncallStub();
 
                     while (true) {
                         downcall_ = downcallStub_.createPIDIIDowncall(
@@ -429,7 +428,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     } // while(true)
                 } catch (Exception ex) {
-                    delegate_._OB_handleException(target_, ex, info, false);
+                    delegate_._OB_handleException(ex, info, false);
                 }
             } // while(true)
         } catch (org.omg.CORBA.SystemException ex) {
@@ -514,7 +513,7 @@ final public class Request extends org.omg.CORBA.Request {
             while (true) {
                 try {
                     if (send)
-                        downcallStub_ = delegate_._OB_getDowncallStub(target_);
+                        downcallStub_ = delegate_._OB_getDowncallStub();
 
                     while (true) {
                         if (send) {
@@ -542,7 +541,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     } // while(true)
                 } catch (Exception ex) {
-                    delegate_._OB_handleException(target_, ex, info, false);
+                    delegate_._OB_handleException(ex, info, false);
                     send = true;
                 }
             } // while(true)
@@ -604,7 +603,7 @@ final public class Request extends org.omg.CORBA.Request {
             while (true) {
                 try {
                     if (send)
-                        downcallStub_ = delegate_._OB_getDowncallStub(target_);
+                        downcallStub_ = delegate_._OB_getDowncallStub();
 
                     while (true) {
                         if (send) {
@@ -641,7 +640,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     } // while(true)
                 } catch (Exception ex) {
-                    delegate_._OB_handleException(target_, ex, info, false);
+                    delegate_._OB_handleException(ex, info, false);
                     send = true;
                 }
             } // while(true)

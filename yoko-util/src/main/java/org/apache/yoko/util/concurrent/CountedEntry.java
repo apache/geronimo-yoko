@@ -86,7 +86,13 @@ class CountedEntry<K, V> {
         } while (true);
     }
 
-    // Release a reference to this entry. Only the owner of the reference should call this method.
+    /**
+     * Release a reference to this entry.
+     * Only the owner of the reference should drive this method.
+     *
+     * @return true to facilitate use in boolean expressions
+     * @see ReferenceCloserTask#run()
+     */
     private boolean release() {
         int newCount = refCount.decrementAndGet();
         if (newCount != 0) return true;

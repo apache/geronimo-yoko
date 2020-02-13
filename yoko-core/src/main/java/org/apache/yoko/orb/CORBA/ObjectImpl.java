@@ -17,10 +17,6 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-
-import org.apache.yoko.osgi.ProviderLocator;
-
 //
 // ObjectImpl is the base class for proprietary stubs with full
 // interceptor support
@@ -30,12 +26,12 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
             throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
         Delegate delegate = (Delegate) _get_delegate();
-        return delegate._OB_getDowncallStub(this);
+        return delegate._OB_getDowncallStub();
     }
 
     public void _OB_handleException(Exception ex, RetryInfo info) {
         Delegate delegate = (Delegate) _get_delegate();
-        delegate._OB_handleException(this, ex, info, false);
+        delegate._OB_handleException(ex, info, false);
     }
 
     public org.apache.yoko.orb.OB.GIOPOutgoingMessage _OB_ami_router_preMarshal(
@@ -45,7 +41,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
 
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             org.apache.yoko.orb.OB.GIOPOutgoingMessage message = downStub
                     .AMIRouterPreMarshal(operation, responseExpected, out, info);
 
@@ -64,7 +60,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
 
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             downStub.AMIRouterPostMarshal(message, out);
         } catch (org.apache.yoko.orb.OB.LocationForward ex) {
         } catch (org.apache.yoko.orb.OB.FailureException ex) {
@@ -79,7 +75,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
 
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             org.apache.yoko.orb.OB.CodeConverters cc = downStub
                     .setupPollingRequest(sclHolder, out);
 
@@ -99,7 +95,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
         Delegate delegate = (Delegate) _get_delegate();
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             return downStub.getAMIPollTarget();
         } catch (org.apache.yoko.orb.OB.LocationForward ex) {
         } catch (org.apache.yoko.orb.OB.FailureException ex) {
@@ -116,7 +112,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
         Delegate delegate = (Delegate) _get_delegate();
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             return downStub._OB_getORBInstance();
         } catch (org.apache.yoko.orb.OB.LocationForward ex) {
         } catch (org.apache.yoko.orb.OB.FailureException ex) {
@@ -133,7 +129,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
 
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             org.omg.MessageRouting.PersistentRequest req = downStub
                     .ami_poll_request(out, operation, scl);
             return req;
@@ -158,7 +154,7 @@ abstract public class ObjectImpl extends org.omg.CORBA_2_4.portable.ObjectImpl {
         boolean success = false;
         try {
             org.apache.yoko.orb.OB.DowncallStub downStub = delegate
-                    ._OB_getDowncallStub(this);
+                    ._OB_getDowncallStub();
             success = downStub.ami_callback_request(out, reply, info);
         } catch (org.apache.yoko.orb.OB.LocationForward ex) {
         } catch (org.apache.yoko.orb.OB.FailureException ex) {

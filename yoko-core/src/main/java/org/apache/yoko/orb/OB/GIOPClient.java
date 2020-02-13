@@ -29,6 +29,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.rmi.util.ObjectUtil;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
@@ -57,12 +58,24 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
 import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
+/**
+ * The client-side of a GIOP connection.
+ */
 final class GIOPClient extends Client {
-    protected ORBInstance orbInstance_; // The ORB instance
+    private final String label = ObjectUtil.getNextObjectLabel(this.getClass());
 
-    protected Connector connector_; // The connector
+    @Override
+    public String toString() {
+        return label + ": to " + connector_.get_info() + " -- " + connection_;
+    }
 
+    protected ORBInstance orbInstance_;
+
+    protected final Connector connector_;
+
+    /** A lazily final field pointing (eventually) to the single connection for the lifetime of this object */
     private GIOPConnection connection_;
+    /** The connection cache reference to release on destroy().  */
     private Reference<GIOPConnection> connectionRef;
 
     /** Codesets SC */
@@ -72,7 +85,7 @@ final class GIOPClient extends Client {
 
     protected boolean bidirWorker_; // is the worker bidir?
 
-    protected volatile boolean destroy_; // True if destroy() was called
+    private boolean destroy_; // True if destroy() was called
 
     // ----------------------------------------------------------------------
     // GIOPClient private and protected member implementations
@@ -272,10 +285,9 @@ final class GIOPClient extends Client {
     /** Destroy the client */
     public synchronized void destroy() {
         if (destroy_) return;
-        destroy_ = true;
-        connection_ = null;
-        // release the reference if this is an outbound connection
-        if (connectionRef != null) connectionRef.close();
+        try (Reference<?> closeMe = connectionRef) {
+            destroy_ = true;
+        }
     }
 
     /** Get a new request ID */

@@ -64,8 +64,7 @@ public final class ObjectFactory {
         logger.fine("Creating an object of type " + ior.type_id); 
         
         // Create new delegate, set policies and change delegate
-        RefCountPolicyList policyList = new RefCountPolicyList(policies());
-        Delegate p = new Delegate(orbInstance_, ior, ior, policyList);
+        Delegate p = new Delegate(orbInstance_, ior, ior, policies());
 
         // Create new object, set the delegate and return
         ObjectImpl obj = ior.type_id.startsWith("RMI") ? new StubForRemote() : new StubForObject();
