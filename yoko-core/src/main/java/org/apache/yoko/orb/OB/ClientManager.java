@@ -430,6 +430,15 @@ public final class ClientManager {
         }
     }
 
+    /**
+     * Instructs the client manager never to reuse a client or expect any further notification regarding it
+     */
+    public synchronized void besmirchClient(Client client) {
+        reusableClients_.remove(client);
+        allClients_.remove(client);
+        client.destroy();
+    }
+
     public boolean equivalent(IOR ior1, IOR ior2) {
         ConFactoryRegistry conFactoryRegistry = orbInstance_.getConFactoryRegistry();
 

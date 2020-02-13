@@ -85,7 +85,7 @@ final class GIOPClient extends Client {
 
     protected boolean bidirWorker_; // is the worker bidir?
 
-    protected volatile boolean destroy_; // True if destroy() was called
+    private boolean destroy_; // True if destroy() was called
 
     // ----------------------------------------------------------------------
     // GIOPClient private and protected member implementations
