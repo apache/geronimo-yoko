@@ -16,12 +16,7 @@
  */
 package testify.util;
 
-import testify.streams.BiStream;
-
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.stream.Stream;
 
 public enum Stack {
     ;
@@ -46,43 +41,35 @@ public enum Stack {
     }
 
     public static String getCallingFrame(int depth) {
+        return getStackTraceElement(depth + 1).toString();
+    }
+
+    public static StackTraceElement getStackTraceElement(int depth) {
         StackTraceElement[] stack = new Throwable().getStackTrace();
         int i = 0;
         try {
-            while (!"getCallingFrame".equals(stack[i].getMethodName())) i++; // fast forward to this method
+            while (!"getStackTraceElement".equals(stack[i].getMethodName())) i++; // fast forward to this method
             i++; // now at the method that called this one - i.e. depth 0
             i += depth;
-            return stack[i].toString();
+            return stack[i];
         } catch (IndexOutOfBoundsException e) {
             throw new Error("Stack not deep enough to find caller#" + depth + ": " + Arrays.toString(stack));
         }
     }
 
     public static String getCallingFrame(Class<?> callingClass) {
+        return getStackTraceElement(callingClass).toString();
+    }
+
+    public static StackTraceElement getStackTraceElement(Class<?> callingClass) {
         StackTraceElement[] stack = new Throwable().getStackTrace();
         int i = 0;
         try {
             String className = callingClass.getName();
             while (!className.equals(stack[i].getClassName())) i++; // fast forward to the first method from the mentioned class
-            return stack[i].toString();
+            return stack[i];
         } catch (IndexOutOfBoundsException e) {
             throw new Error("Could not find caller matching class " + callingClass.getName() + " in stack " + Arrays.toString(stack));
         }
     }
-
-    /**
-     * For the provided elements, find the one that matches the most recent calling method name.
-     * The <code>Objects.toString()</code> of each element will be compared to the names of the methods in the call stack.
-     * @param elems
-     */
-    @SafeVarargs
-    public static <T> T matchByCallingMethod(T... elems) {
-        final HashMap<String, T> elemMap = BiStream.ofValues(Objects::toString, elems).collect(HashMap::new, map -> map::put);
-        return Stream.of(new Throwable().getStackTrace())
-                .map(StackTraceElement::getMethodName)
-                .map(elemMap::get)
-                .findFirst()
-                .orElseThrow(NoSuchMethodError::new);
-    }
-
 }
