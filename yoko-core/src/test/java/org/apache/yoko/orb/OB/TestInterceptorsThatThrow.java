@@ -152,5 +152,4 @@ public class TestInterceptorsThatThrow {
             assertThat(e.completed, equalTo(COMPLETED_MAYBE));
         }
     }
-
 }
