@@ -21,22 +21,25 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
-import org.omg.CosNaming.NamingContextHelper;
-import org.omg.CosNaming.NamingContextPackage.NotFound;
+import org.omg.PortableInterceptor.ClientRequestInfo;
+import org.omg.PortableInterceptor.ORBInitInfo;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableServer.POA;
 import testify.bus.Bus;
 import testify.bus.StringRef;
 import testify.bus.TypeRef;
 import testify.bus.VoidRef;
+import testify.iiop.TestClientRequestInterceptor;
+import testify.iiop.TestServerRequestInterceptor;
 import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
+import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.parts.PartRunner;
 
 import java.util.Properties;
@@ -44,11 +47,21 @@ import java.util.Properties;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 @ConfigurePartRunner
-@ConfigureOrb(props = "yoko.orb.policy.connection_reuse=false")
+@ConfigureOrb
 public class StringToObjectTest {
     final static String[] NO_ARGS = {};
-    final static NameComponent[] NAME = { new NameComponent("username", "") };
-    String nameServiceUrl;
+    public static final String MY_CONTEXT = "MyContext";
+    public static final NameComponent[] MY_CONTEXT_NC = {new NameComponent(MY_CONTEXT, "")};
+    String url;
+
+    @UseWithOrb
+    public static class ClientInterceptor extends LocalObject implements TestClientRequestInterceptor {
+        public void send_request(ClientRequestInfo ri) { System.out.println("### client interceptor send_request op=" + ri.operation()); }
+        public void send_poll(ClientRequestInfo ri) { System.out.println("### client interceptor send_poll op=" + ri.operation()); }
+        public void receive_reply(ClientRequestInfo ri) { System.out.println("### client interceptor receive_reply op=" + ri.operation()); }
+        public void receive_exception(ClientRequestInfo ri) { System.out.println("### client interceptor receive_exception op=" + ri.operation() + " ex=" + ri.received_exception_id()); }
+        public void receive_other(ClientRequestInfo ri) { System.out.println("### client interceptor receive_other op=" + ri.operation()); }
+    }
 
     @BeforeEach
     public void setup(PartRunner runner) throws Exception {
@@ -58,7 +71,7 @@ public class StringToObjectTest {
         Integer port = runner.bus("server").get(Port.NUMBER);
         String host = runner.bus("server").get(Host.NAME);
         assertNotNull(port);
-        nameServiceUrl = "corbaname::" + host + ":" + port + "/NameService";
+        url = "corbaname::" + host + ":" + port + "/NameService#" + MY_CONTEXT;
     }
 
     @AfterEach
@@ -76,6 +89,8 @@ public class StringToObjectTest {
         Properties props = new Properties();
         props.setProperty(ORBInitializer.class.getName() + "Class." + NameServiceInitializer.class.getName(), "");
         ORB orb = ORB.init(NO_ARGS, props);
+        NamingContext ctx = (NamingContext) orb.resolve_initial_references("NameService");
+        ctx.bind_new_context(MY_CONTEXT_NC);
         POA poa = (POA) orb.resolve_initial_references("RootPOA");
         POAManager_impl pm = (POAManager_impl)poa.the_POAManager();
         pm.activate();
@@ -96,6 +111,8 @@ public class StringToObjectTest {
         bus.get(ServerEvent.RESTART_ORB);
         destroy(orb);
         orb = ORB.init(NO_ARGS, props);
+        ctx = (NamingContext) orb.resolve_initial_references("NameService");
+        ctx.bind_new_context(MY_CONTEXT_NC);
         poa = (POA) orb.resolve_initial_references("RootPOA");
         pm = (POAManager_impl)poa.the_POAManager();
         pm.activate();
@@ -115,24 +132,9 @@ public class StringToObjectTest {
 
     @Test
     public void testRestartServer(PartRunner runner, ORB orb) throws Exception {
-        performLookup(orb);
+        orb.string_to_object(url);
         runner.bus("server").put(ServerEvent.RESTART_ORB);
-        Thread.sleep(2000);
         runner.bus("server").get(ServerEvent.ORB_RESTARTED);
-        performLookup(orb);
-    }
-
-    private void performLookup(ORB orb) throws Exception {
-        System.out.println("Attempting to access name service at " + nameServiceUrl);
-        org.omg.CORBA.Object o = orb.string_to_object(nameServiceUrl);
-        System.out.println(o);
-        NamingContext ctx = NamingContextHelper.narrow(o);
-        try {
-            ctx.resolve(NAME);
-            Assertions.fail();
-        } catch (NotFound e) {
-            System.out.println("Caught NotFound exception, as expected");
-        }
-        System.out.println(ctx);
+        orb.string_to_object(url);
     }
 }
