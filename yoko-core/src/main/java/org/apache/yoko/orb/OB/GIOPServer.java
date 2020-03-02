@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OB.GIOPServerStarter.ServerState;
+
 import java.util.logging.Logger;
 
 final class GIOPServer extends Server {
@@ -60,8 +62,7 @@ final class GIOPServer extends Server {
         try {
             switch (concModel_) {
             case Threaded:
-                starter_ = new GIOPServerStarterThreaded(orbInstance_,
-                        acceptor_, oaInterface_);
+                starter_ = new GIOPServerStarterThreaded(orbInstance_, acceptor_, oaInterface_);
                 break;
             }
         } catch (RuntimeException ex) {
@@ -75,48 +76,36 @@ final class GIOPServer extends Server {
     //
     public void destroy() {
         logger.fine("Destroying GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
-        //
         // Don't destroy twice
-        //
         if (destroy_)
             return;
 
-        //
         // Set the destroy flag
-        //
         destroy_ = true;
 
-        //
         // Close and remove the starter
-        //
         Assert._OB_assert(starter_ != null);
-        starter_.setState(GIOPServerStarter.StateClosed);
+        starter_.setState(ServerState.CLOSED);
         starter_ = null;
     }
 
-    //
     // Hold any new requests that arrive for the Server
-    //
     public void hold() {
         logger.fine("Holding GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
         Assert._OB_assert(!destroy_);
         Assert._OB_assert(starter_ != null);
-        starter_.setState(GIOPServerStarter.StateHolding);
+        starter_.setState(ServerState.HOLDING);
     }
 
-    //
     // Dispatch any requests that arrive for the Server
-    //
     public void activate() {
         logger.fine("Activating GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
         Assert._OB_assert(!destroy_);
         Assert._OB_assert(starter_ != null);
-        starter_.setState(GIOPServerStarter.StateActive);
+        starter_.setState(ServerState.ACTIVE);
     }
 
-    //
     // returns the GIOPServerStarter interface
-    //
     public GIOPServerStarter _OB_getGIOPServerStarter() {
         return starter_;
     }

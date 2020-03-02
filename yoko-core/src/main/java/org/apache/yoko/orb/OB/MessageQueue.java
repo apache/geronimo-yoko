@@ -18,8 +18,8 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.omg.CORBA.SystemException;
 
 import java.util.Vector;
@@ -113,7 +113,7 @@ public class MessageQueue {
 
     // Change the state of the queue due to an exception. Sets the
     // state of all unsent and pending downcalls.
-    public void setException(int state, SystemException ex, boolean notCompleted) {
+    public void setException(SystemException ex, boolean notCompleted) {
         // Always use a completion status of NO for unsent requests.
         while (!unsent_.isEmpty()) {
             UnsentMessage m = unsent_.firstElement();

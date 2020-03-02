@@ -17,18 +17,19 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OB.GIOPConnection.ConnState;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Transport;
 
 import java.util.concurrent.ExecutorService;
-import java.util.logging.Level;
+
+import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.ACTIVE;
+import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.CLOSED;
+import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.HOLDING;
+
 
 final class GIOPServerStarterThreaded extends GIOPServerStarter {
-    //
-    // The starter thread
-    //
     protected final class Starter implements Runnable {
-
         public void run() {
             try {
                 starterRun();
@@ -37,16 +38,11 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             }
 
             logger.fine("Shutting down ORB server listener thread"); 
-            //
-            // Shutdown the acceptor so that no further connections are
-            // accepted
-            //
+            // Shutdown the acceptor so that no further connections are accepted
             logCloseAcceptor();
             acceptor_.shutdown();
 
-            //
-            // Accept all connections which might have queued up in the
-            // listen() backlog
+            // Accept all connections which might have queued up in the listen() backlog
             do {
 
                 try {
@@ -56,17 +52,14 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                         break;
                     }
                     GIOPConnection connection = new GIOPConnectionThreaded(orbInstance_, t, oaInterface_);
-                    connection.setState(GIOPConnection.State.Closing);
+                    connection.setState(ConnState.CLOSING);
                 } catch (org.omg.CORBA.SystemException ex) {
                 }
             } while (true);
 
-            //
             // Close the acceptor
-            //
             acceptor_.close();
             orbInstance_.getServerPhaser().arriveAndDeregister();
-
         }
     }
 
@@ -91,7 +84,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             executor.submit(new Starter());
         } catch (OutOfMemoryError ex) {
             acceptor_.close();
-            state_ = StateClosed;
+            serverState = ServerState.CLOSED;
             throw new org.omg.CORBA.IMP_LIMIT(org.apache.yoko.orb.OB.MinorCodes
                     .describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
                     org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit,
@@ -106,11 +99,11 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
     //
     // Change the state of the worker
     //
-    synchronized public void setState(int state) {
+    synchronized public void setState(ServerState state) {
         //
         // Don't do anything if there is no state change
         //
-        if (state_ == state) {
+        if (serverState == state) {
             return;
         }
         
@@ -120,55 +113,48 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
         // It is not possible to transition backwards, except if we are
         // in holding state
         //
-        if (state_ != StateHolding && state < state_) {
+        if (serverState.cannotTransitionTo(state)) {
+
             return;
         }
 
         switch (state) {
-        case StateActive: {
+        case ACTIVE: {
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(GIOPConnection.State.Active);
+                w.setState(ConnState.ACTIVE);
             }
 
             break;
         }
 
-        case StateHolding:
+        case HOLDING:
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(GIOPConnection.State.Holding);
+                w.setState(ConnState.HOLDING);
             }
             break;
 
-        case StateClosed: {
+        case CLOSED: {
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(GIOPConnection.State.Closing);
+                w.setState(ConnState.CLOSING);
             }
             connections_.removeAllElements();
 
-            //
             // Connect to this starter's acceptor, to unblock the call
             // to accept() in the starter thread
-            //
             try {
                 org.apache.yoko.orb.OCI.Transport tr = acceptor_.connect_self();
                 tr.close();
-            } catch (org.omg.CORBA.SystemException ex) {
-                //
-                // Ignore all system exceptions
-                //
-            }
+            } catch (org.omg.CORBA.SystemException ignored) {}
 
             break;
         }
         }
 
-        //
         // Update the state and notify about the state change
-        //
-        state_ = state;
+        serverState = state;
         notifyAll();
     }
 
@@ -204,7 +190,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                 //
                 // Check whether we are on hold
                 //
-                while (state_ == StateHolding) {
+                while (serverState == HOLDING) {
                     try {
                         logger.fine("Waiting on an inbound connection because the state is holding.  acceptor=" + acceptor_); 
                         wait();
@@ -212,10 +198,10 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                     }
                 }
 
-                logger.fine("Processing an inbound connection with state=" + state_); 
+                logger.fine("Processing an inbound connection with state=" + serverState);
                 if (transport != null) {
                     try {
-                        if (state_ == StateActive) {
+                        if (serverState == ACTIVE) {
                             //
                             // If we're active, we create and add a new
                             // worker to the worker list
@@ -223,7 +209,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
                             connections_.addElement(connection);
-                            connection.setState(GIOPConnection.State.Active);
+                            connection.setState(ConnState.ACTIVE);
                         } else {
                             logger.fine("Processing an inbound connection because state is closed"); 
                             //
@@ -231,13 +217,13 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             // worker, only in order to set it to
                             // StateClosing for proper connection shutdown
                             //
-                            Assert._OB_assert(state_ == StateClosed);
+                            Assert._OB_assert(serverState == CLOSED);
                             logger.fine("Processing an inbound connection because state is closed"); 
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
                             logger.fine("Created connection " + connection); 
 
-                            connection.setState(GIOPConnection.State.Closing);
+                            connection.setState(ConnState.CLOSING);
                             logger.fine("set connection state to closing"); 
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
@@ -246,7 +232,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                     }
                 }
 
-                if (state_ == StateClosed) {
+                if (serverState == CLOSED) {
                     logger.fine("Shutting down server thread"); 
                     break;
                 }

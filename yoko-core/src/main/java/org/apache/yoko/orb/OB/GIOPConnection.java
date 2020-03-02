@@ -64,6 +64,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ACTIVE;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ERROR;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.HOLDING;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
@@ -133,16 +138,16 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /* connection states */
-    public static final class State {
-        public static final int Active = 1;
+    enum ConnState {
+        ACTIVE,
+        HOLDING { boolean cannotTransitionTo(ConnState next) { return next == HOLDING; } },
+        CLOSING,
+        ERROR,
+        CLOSED;
 
-        public static final int Holding = 2;
-
-        public static final int Closing = 3;
-
-        public static final int Error = 4;
-
-        public static final int Closed = 5;
+        boolean cannotTransitionTo(ConnState next) {
+            return this.compareTo(next) > 0;
+        }
     }
 
     /* task to execute when ACM timer signal arrives */
@@ -195,7 +200,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     protected int properties_ = 0;
 
     /** state of this connection */
-    protected int state_ = State.Holding;
+    protected ConnState connState = HOLDING;
 
     /** number of upcalls in progress */
     protected int upcallsInProgress_ = 0;
@@ -380,13 +385,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 break;
 
             default:
-                processException(
-                        State.Error,
-                        new COMM_FAILURE(
-                                describeCommFailure(MinorUnknownMessage),
-                                MinorUnknownMessage,
-                                COMPLETED_MAYBE),
-                        false);
+                processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownMessage), MinorUnknownMessage, COMPLETED_MAYBE), false);
                 break;
         }
 
@@ -396,14 +395,11 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /** process a request message */
     private synchronized Upcall processRequest(GIOPIncomingMessage msg) {
         if ((properties_ & Property.ServerEnabled) == 0) {
-            processException(State.Error, new COMM_FAILURE(
-                    describeCommFailure(MinorWrongMessage),
-                    MinorWrongMessage,
-                    COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return null;
         }
 
-        if (state_ != State.Active) return null;
+        if (connState != ACTIVE) return null;
 
         int reqId;
         BooleanHolder response = new BooleanHolder();
@@ -414,11 +410,11 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             reqId = msg.readRequestHeader(response, target, op, contexts);
             if (target.value.discriminator() != KeyAddr.value) {
-                processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
+                processException(ERROR, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 return null;
             }
         } catch (SystemException ex) {
-            processException(State.Error, ex, false);
+            processException(ERROR, ex, false);
             return null;
         }
 
@@ -469,7 +465,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /** process a reply message */
     private synchronized void processReply(GIOPIncomingMessage msg) {
         if ((properties_ & Property.ClientEnabled) == 0) {
-            processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
 
@@ -480,7 +476,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             reqId = msg.readReplyHeader(status, contexts);
         } catch (SystemException ex) {
-            processException(State.Error, ex, false);
+            processException(ERROR, ex, false);
             return;
         }
 
@@ -489,7 +485,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // Request id is unknown
             //
-            processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId) + ": " + reqId, MinorUnknownReqId, COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId) + ": " + reqId, MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
 
@@ -516,7 +512,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     ex = convertToUnknownExceptionIfAppropriate(ex, in, contexts);
                     down.setSystemException(ex);
                 } catch (SystemException ex) {
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
 
                 break;
@@ -527,7 +523,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, false);
                 } catch (SystemException ex) {
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
 
                 break;
@@ -539,7 +535,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     down.setLocationForward(ior, true);
                     break;
                 } catch (SystemException ex) {
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
             }
 
@@ -547,11 +543,11 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 //
                 // TODO: implement
                 //
-                processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
+                processException(ERROR, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 break;
 
             default:
-                processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorUnknownReplyMessage), MinorUnknownReplyMessage, COMPLETED_MAYBE), false);
+                processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReplyMessage), MinorUnknownReplyMessage, COMPLETED_MAYBE), false);
                 break;
         }
     }
@@ -571,10 +567,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /** process a LocateRequest message */
     private synchronized void processLocateRequest(GIOPIncomingMessage msg) {
         if ((properties_ & Property.ServerEnabled) == 0) {
-            processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
-        _OB_assert(state_ == State.Active);
+        _OB_assert(connState == ACTIVE);
 
         //
         // Make sure the transport can send a reply
@@ -605,7 +601,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             reqId = msg.readLocateRequestHeader(target);
 
             if (target.value.discriminator() != KeyAddr.value) {
-                processException(State.Error, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
+                processException(ERROR, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 return;
             }
 
@@ -654,14 +650,14 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 sendUpcallReply(out.getBufferReader());
             }
         } catch (SystemException ex) {
-            processException(State.Error, ex, false);
+            processException(ERROR, ex, false);
         }
     }
 
     /** process a LocateReply message */
     private synchronized void processLocateReply(GIOPIncomingMessage msg) {
         if ((properties_ & Property.ClientEnabled) == 0) {
-            processException(State.Closed, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
+            processException(CLOSED, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
 
@@ -671,7 +667,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             reqId = msg.readLocateReplyHeader(status);
         } catch (SystemException ex) {
-            processException(State.Error, ex, false);
+            processException(ERROR, ex, false);
             return;
         }
 
@@ -680,7 +676,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // Request id is unknown
             //
-            processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId), MinorUnknownReqId, COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId), MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
 
@@ -689,7 +685,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         //
         String op = down.operation();
         if (!op.equals("_locate")) {
-            processException(State.Error, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
+            processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
 
@@ -719,7 +715,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                                     + "need to set the LocateRequestPolicy\n"
                                     + "to false.");
                     down.setSystemException(ex);
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
                 break;
 
@@ -737,7 +733,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                                     + "need to set the LocateRequestPolicy\n"
                                     + "to false.");
                     down.setSystemException(ex);
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
 
                 break;
@@ -748,14 +744,14 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                     down.setSystemException(ex);
                 } catch (SystemException ex) {
                     down.setSystemException(ex);
-                    processException(State.Error, ex, false);
+                    processException(ERROR, ex, false);
                 }
 
                 break;
 
             case _LOC_NEEDS_ADDRESSING_MODE:
                 // TODO: implement
-                processException(State.Error, new NO_IMPLEMENT(), false);
+                processException(ERROR, new NO_IMPLEMENT(), false);
                 break;
         }
     }
@@ -772,17 +768,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // exception() with the notCompleted parameter set to
             // true.
             //
-            processException(State.Closed, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
+            processException(CLOSED, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
         } else {
-            setState(State.Closed);
+            setState(CLOSED);
         }
     }
 
     /** process a MessageError message */
     private void processMessageError(GIOPIncomingMessage msg) {
-        processException(
-                State.Error,
-                new COMM_FAILURE(describeCommFailure(MinorMessageError), MinorMessageError, COMPLETED_NO), false);
+        processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorMessageError), MinorMessageError, COMPLETED_NO), false);
     }
 
     /** process a Fragment message */
@@ -792,59 +786,49 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** process a system exception */
-    protected boolean processException(int state,SystemException ex, boolean completed) {
-        _OB_assert(state == State.Error || state == State.Closed);
+    protected boolean processException(ConnState state, SystemException ex, boolean completed) {
+        _OB_assert(state == ERROR || state == CLOSED);
 
         orbInstance_.getLogger().debug("processing an exception, state=" + state, ex);
 
         synchronized (this) {
-            //
             // Don't do anything if there is no state change and it is
             // not possible to transition backwards.
-            //
-            if (state <= state_)
-                return false;
+            if (connState.cannotTransitionTo(state)) return false;
 
-            //
-            // update the state
-            //
-            state_ = state;
+            connState = state;
 
             // change the enabled/disable operations and break the cyclic dependency with GIOPClient
             switch (state) {
-                case State.Error:
-                    enabledOps_ &= ~(AccessOp.Read | AccessOp.Write);
-                    enabledOps_ |= AccessOp.Close;
-                    break;
+            case ERROR:
+                enabledOps_ &= ~(AccessOp.Read | AccessOp.Write);
+                enabledOps_ |= AccessOp.Close;
+                break;
 
-                case State.Closed:
-                    enabledOps_ = AccessOp.Nil;
-                    break;
+            case CLOSED:
+                enabledOps_ = AccessOp.Nil;
+                break;
             }
             orbInstance_.getOutboundConnectionCache().remove(outboundConnectionKey, this);
 
             //
             // propagate any exceptions to the message queue
             //
-            messageQueue_.setException(state, ex, completed);
+            messageQueue_.setException(ex, completed);
         }
 
-        //
         // apply the shutdown
-        //
         switch (state) {
-            case State.Error:
-                abortiveShutdown();
-                break;
-            case State.Closed:
-                logClose(true);
-                transport_.close();
-                break;
+        case ERROR:
+            abortiveShutdown();
+            break;
+        case CLOSED:
+            logClose(true);
+            transport_.close();
+            break;
         }
 
-        //
         // set 'this' properties
-        //
         synchronized (this) {
             properties_ |= Property.Destroyed;
         }
@@ -862,7 +846,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // no need to do anything if we are closed
             //
-            if (state_ == State.Closed)
+            if (connState == CLOSED)
                 return;
 
             //
@@ -887,7 +871,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // then shutdown now
         //
         synchronized (this) {
-            if (upcallsInProgress_ == 0 && state_ == State.Closing)
+            if (upcallsInProgress_ == 0 && connState == CLOSING)
                 gracefulShutdown();
         }
     }
@@ -934,7 +918,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         orbInstance_ = orbInstance;
         transport_ = transport;
         outboundConnectionKey = client.connectorInfo();
-        state_ = State.Active;
+        connState = ACTIVE;
         properties_ = Property.CreatedByClient | Property.ClientEnabled;
         enabledOps_ = AccessOp.Read | AccessOp.Write;
 
@@ -1240,12 +1224,6 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         return transport_;
     }
 
-    /** get the state of this connection */
-    synchronized public int state() {
-        _OB_assert(state_ >= State.Active && state_ <= State.Closed);
-        return state_;
-    }
-
     /** check if a request has been sent yet */
     synchronized public boolean requestSent() {
         return (properties_ & Property.RequestSent) != 0;
@@ -1262,142 +1240,74 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** change the state of this connection */
-    public void setState(int newState) {
+    public void setState(ConnState newState) {
         synchronized (this) {
-            if (state_ == newState || (state_ != State.Holding && newState < state_)) {
-                logger.fine("No state change from " +state_  + " to "  + newState);
+            if (connState.cannotTransitionTo(newState)) {
+                logger.fine("No state change from " + connState + " to "  + newState);
                 return;
             }
 
-            //
-            // make sure to update the state since some of the actions
-            // will key off this new state
-            //
-            state_ = newState;
+            // make sure to update the state since some of the actions will key off this new state
+            connState = newState;
         }
 
         switch (newState) {
-            case State.Active:
+        case ACTIVE:
+            // set the new accessible operations
+            synchronized (this) { enabledOps_ = AccessOp.Read | AccessOp.Write; }
+            // start and refresh the connection
+            start();
+            refresh();
+            break;
 
-                //
-                // set the new accessible operations
-                //
-                synchronized (this) {
-                    enabledOps_ = AccessOp.Read | AccessOp.Write;
-                }
+        case HOLDING:
+            // holding connections can't read new messages but can write pending messages
+            synchronized (this) { enabledOps_ &= ~AccessOp.Read; }
+            // pause the connection
+            pause();
+            break;
 
-                //
-                // start and refresh the connection
-                start();
-                refresh();
-                break;
+        case CLOSING:
+            // during the closing, the connection can read/write/close
+            synchronized (this) { enabledOps_ = AccessOp.All; }
+            // gracefully shutdown by sending off pending messages,
+            // reading any messages left on the wire and then closing
+            gracefulShutdown();
+            // refresh this status
+            refresh();
+            break;
 
-            case State.Holding:
+        case ERROR:
+            // we can't read or write in the error state but we can close the connection down
+            synchronized (this) { enabledOps_ = AccessOp.Close; }
+            // there is an error so shutdown abortively
+            abortiveShutdown();
+            // mark the connection as destroyed now
+            synchronized (this) { properties_ |= Property.Destroyed; }
+            // refresh the connection status
+            refresh();
+            break;
 
-                //
-                // holding connections can't read new messages but can write
-                // pending messages
-                //
-                synchronized (this) {
-                    enabledOps_ &= ~AccessOp.Read;
-                }
+        case CLOSED:
+            // once closed, nothing else can take place
+            synchronized (this) { enabledOps_ = AccessOp.Nil; }
+            logClose(true);
+            transport_.close();
+            // mark the connection as destroyed
+            synchronized (this) { properties_ |= Property.Destroyed; }
+            // and refresh the connection
+            refresh();
+            break;
 
-                //
-                // pause the connection
-                //
-                pause();
-                break;
-
-            case State.Closing:
-
-                //
-                // during the closing, the connection can read/write/close
-                //
-                synchronized (this) {
-                    enabledOps_ = AccessOp.All;
-                }
-
-                //
-                // gracefully shutdown by sending off pending messages,
-                // reading any messages left on the wire and then closing
-                //
-                gracefulShutdown();
-
-                //
-                // refresh this status
-                //
-                refresh();
-                break;
-
-            case State.Error:
-
-                //
-                // we can't read or write in the error state but we can
-                // close the connection down
-                //
-                synchronized (this) {
-                    enabledOps_ = AccessOp.Close;
-                }
-
-                //
-                // there is an error so shutdown abortively
-                //
-                abortiveShutdown();
-
-                //
-                // mark the connection as destroyed now
-                //
-                synchronized (this) {
-                    properties_ |= Property.Destroyed;
-                }
-
-                //
-                // refresh the connection status
-                //
-                refresh();
-                break;
-
-            case State.Closed:
-
-                //
-                // once closed, nothing else can take place
-                //
-                synchronized (this) {
-                    enabledOps_ = AccessOp.Nil;
-                }
-
-                //
-                // log the connection closure
-                //
-                logClose(true);
-
-                //
-                // close the transport
-                //
-                transport_.close();
-
-                //
-                // mark the connection as destroyed
-                //
-                synchronized (this) {
-                    properties_ |= Property.Destroyed;
-                }
-
-                //
-                // and refresh the connection
-                //
-                refresh();
-                break;
-
-            default:
-                _OB_assert(false);
-                break;
+        default:
+            _OB_assert(false);
+            break;
         }
     }
 
     /** destroy this connection */
     public void destroy() {
-        setState(State.Closing);
+        setState(CLOSING);
     }
 
     /** callback method when the ACM signals a timeout */

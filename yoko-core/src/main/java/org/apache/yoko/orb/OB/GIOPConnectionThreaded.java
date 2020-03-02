@@ -33,13 +33,15 @@ import org.omg.GIOP.MsgType_1_1;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ERROR;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit;
@@ -55,7 +57,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     private final String label = ObjectUtil.getNextObjectLabel(this.getClass());
 
     @Override
-    public String toString() { return label + ": state = " + this.state_; }
+    public String toString() { return label + ": state = " + this.connState; }
 
     private static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
     
@@ -182,7 +184,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     }
                 }
             } catch (SystemException ex) {
-                processException(State.Closed, ex, false);
+                processException(CLOSED, ex, false);
                 return;
             }
         }
@@ -193,7 +195,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // closes. Instead, we just close the connection, meaning that we
         // can't be 100% sure that the peer gets the last message.
         //
-        processException(State.Closed, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+        processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         arrive();
 
     }
@@ -210,8 +212,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         // don't shutdown if there are pending upcalls
         // 
-        if (upcallsInProgress_ > 0 || state_ != State.Closing) {
-            logger.fine("pending upcalls: " + upcallsInProgress_ + " state: " + state_);
+        if (upcallsInProgress_ > 0 || connState != CLOSING) {
+            logger.fine("pending upcalls: " + upcallsInProgress_ + " state: " + connState);
          
             return;
         }
@@ -252,7 +254,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 logger.log(Level.WARNING, "Could not submit shutdown task", ree);
             }
         } catch (OutOfMemoryError ex) {
-            processException(State.Closed, new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO), false);
+            processException(CLOSED, new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO), false);
         } finally {
             arrive();
         }
@@ -317,7 +319,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     }
                 }
             } catch (SystemException ex) {
-                processException(State.Closed, ex, false);
+                processException(CLOSED, ex, false);
                 return;
             }
         }
@@ -347,7 +349,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // thread may not have terminated yet or the receive thread might
             // set the state to GIOPState::Error before termination.
             //
-            processException(State.Closed, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+            processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         } finally {
             if (receiverLock.isWriteLockedByCurrentThread()) {
                 receiverLock.writeLock().unlock();
@@ -373,7 +375,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 transport_.receive(writer, true);
                 _OB_assert(writer.isComplete());
             } catch (SystemException ex) {
-                processException(State.Closed, ex, false);
+                processException(CLOSED, ex, false);
                 break;
             }
 
@@ -384,7 +386,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 // grow the buffer
                 writer.ensureAvailable(inMsg.size());
             } catch (SystemException ex) {
-                processException(State.Error, ex, false);
+                processException(ERROR, ex, false);
                 break;
             }
 
@@ -395,7 +397,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     transport_.receive(writer, true);
                     _OB_assert(writer.isComplete());
                 } catch (SystemException ex) {
-                    processException(State.Closed, ex, false);
+                    processException(CLOSED, ex, false);
                     break;
                 }
             }
@@ -423,7 +425,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 if (inMsg.consumeBuffer(writer)) upcall = processMessage(inMsg);
 
             } catch (SystemException ex) {
-                processException(State.Error, ex, false);
+                processException(ERROR, ex, false);
                 break;
             }
 
@@ -479,7 +481,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         // shutdown gracefully
         //
-        setState(State.Closing);
+        setState(CLOSING);
     }
 
     //
@@ -503,7 +505,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         //
         synchronized (this) {
             if ((enabledOps_ & AccessOp.Write) == 0) {
-                logger.fine("writing not enabled for this connection"); 
+                logger.fine("writing not enabled for this connection");
                 down.setFailureException(new TRANSIENT());
                 return true;
             }
@@ -578,7 +580,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         }
                     }
                 } catch (SystemException ex) {
-                    processException(State.Closed, ex, false);
+                    processException(CLOSED, ex, false);
                     return true;
                 }
 
@@ -612,7 +614,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                             transport_.send(readBuffer, false);
                         }
                     } catch (SystemException ex) {
-                        processException(State.Closed, ex, false);
+                        processException(CLOSED, ex, false);
                         return true;
                     }
 
@@ -663,7 +665,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             logger.fine("Completed receiving response with Downcall of type " + down.getClass().getName());
             return result; 
         } catch (SystemException ex) {
-            processException(State.Closed, ex, false);
+            processException(CLOSED, ex, false);
             return true;
         }
     }
@@ -713,7 +715,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             } catch (OutOfMemoryError ex) {
                 synchronized (this) {
                     transport_.close();
-                    state_ = State.Closed;
+                    connState = CLOSED;
                     throw new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO);
                 }
             }
@@ -802,7 +804,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     }
                 }
             } catch (SystemException ex) {
-                processException(State.Closed, ex, false);
+                processException(CLOSED, ex, false);
                 return;
             }
         }
