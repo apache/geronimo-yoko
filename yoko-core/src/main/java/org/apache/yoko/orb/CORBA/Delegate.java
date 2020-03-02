@@ -30,8 +30,6 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OBPortableServer.DirectServant;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
-import org.apache.yoko.orb.OCI.ConnectorInfo;
-import org.apache.yoko.orb.OCI.TransportInfo;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.DomainManager;
@@ -706,12 +704,12 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     private void handleTRANSIENT(TRANSIENT e, RetryInfo info) {
-        info.retry++;
+        info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
-        checkRetry(info.retry, e, true);
+        checkRetry(info.getRetry(), e, true);
         CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
         if (coreTraceLevels.traceRetry() > 0) {
-            String msg = "trying again (" + info.retry + ") because server sent a TRANSIENT exception";
+            String msg = "trying again (" + info.getRetry() + ") because server sent a TRANSIENT exception";
             String exMsg = e.getMessage();
             if (exMsg != null) msg += "\n" + exMsg;
             logger.fine("retry: " + msg);
@@ -719,12 +717,12 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     private void handleFailure(FailureException e, RetryInfo info) {
-        info.retry++;
+        info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
-        checkRetry(info.retry, e.exception, false);
+        checkRetry(info.getRetry(), e.exception, false);
         CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
         if (coreTraceLevels.traceRetry() > 0) {
-            String msg = "trying again (" + info.retry + ") because of failure";
+            String msg = "trying again (" + info.getRetry() + ") because of failure";
             String exMsg = e.exception.getMessage();
             if (exMsg != null) {
                 msg += "\n" + exMsg;
@@ -748,8 +746,8 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // The maximum is currently hard-coded to 10. If
         // this is changed, also change the exception
         // description for the minor code.
-        info.hop++;
-        if (info.hop > 10) {
+        info.incrementHopCount();
+        if (info.getHop() > 10) {
             if (coreTraceLevels.traceRetry() > 0) logger.fine("retry: location forward hop count exceeded");
             throw new TRANSIENT(describeTransient(MinorLocationForwardHopCountExceeded), MinorLocationForwardHopCountExceeded, COMPLETED_NO);
         }
