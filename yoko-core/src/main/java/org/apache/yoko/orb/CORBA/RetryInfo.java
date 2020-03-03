@@ -17,12 +17,24 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.rmi.util.ObjectUtil;
+
 //
 // RetryInfo holds counters which track the number of
 // retries and location forward replies
 //
 public class RetryInfo {
-    int retry; // retry count
+    private final String label = ObjectUtil.getNextObjectLabel(RetryInfo.class);
+    private int retry; // retry count
+    private int hop; // forward hop count
 
-    int hop; // forward hop count
+    public int getRetry() { return retry; }
+    public int getHop() { return hop; }
+    public void incrementRetryCount() {
+        retry++;
+    }
+    public void incrementHopCount() { hop++; }
+
+    @Override
+    public String toString() { return label + "{retry=" + retry + ", hop=" + hop + '}'; }
 }

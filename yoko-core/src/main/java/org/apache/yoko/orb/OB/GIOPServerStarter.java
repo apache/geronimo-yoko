@@ -22,6 +22,9 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import java.util.Vector;
 import java.util.logging.Logger;
 
+import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.CLOSED;
+import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.HOLDING;
+
 abstract class GIOPServerStarter {
     static final Logger logger = Logger.getLogger(GIOPServerStarter.class.getName());
     
@@ -33,20 +36,25 @@ abstract class GIOPServerStarter {
 
     protected final Vector connections_ = new java.util.Vector(); // Workers
 
-    public static final int StateActive = 0;
+    enum ServerState {
+        ACTIVE,
+        HOLDING,
+        CLOSED;
+        public boolean cannotTransitionTo(ServerState next) {
+            if (this == next) return true;
+            if (this == HOLDING) return false;
+            return this.compareTo(next) > 0;
+        }
+    }
 
-    public static final int StateHolding = 1;
-
-    public static final int StateClosed = 2;
-
-    protected int state_;
+    protected ServerState serverState;
 
     // ----------------------------------------------------------------------
     // GIOPServer private and protected member implementation
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(state_ == StateClosed);
+        Assert._OB_assert(serverState == CLOSED);
 
         super.finalize();
     }
@@ -84,12 +92,10 @@ abstract class GIOPServerStarter {
         orbInstance_ = orbInstance;
         acceptor_ = acceptor;
         oaInterface_ = oaInterface;
-        state_ = StateHolding; // Must be holding initially
+        serverState = HOLDING; // Must be holding initially
 
         try {
-            //
             // Trace acceptor creation
-            //
             CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
             if (coreTraceLevels.traceConnections() > 0) {
                 org.apache.yoko.orb.OCI.AcceptorInfo info = acceptor_
@@ -99,33 +105,24 @@ abstract class GIOPServerStarter {
                 orbInstance_.getLogger().trace("incoming", msg);
             }
 
-            //
             // Start listening
-            //
             acceptor_.listen();
         } catch (org.omg.CORBA.SystemException ex) {
             acceptor_.close();
-            state_ = StateClosed;
+            serverState = CLOSED;
             throw ex;
         }
     }
 
-    //
     // given a host/port this will search the workers of this
     // GIOPServerStarter for an inbound connection transport
     // which matches the specific connection information.
     // It returns null if not found.
-    //
     public synchronized GIOPConnection getMatchingConnection(org.apache.yoko.orb.OCI.ConnectorInfo connInfo) {
-        //
-        // reap the workers first since we don't want to return a
-        // destroyed transport
-        //
+        // reap the workers first since we don't want to return a destroyed transport
         reapWorkers();
 
-        // 
         // iterate the workers
-        //
         for (int i = 0; i < connections_.size(); i++) {
             GIOPConnection worker = (GIOPConnection) connections_.elementAt(i);
 
@@ -139,14 +136,9 @@ abstract class GIOPServerStarter {
                 return worker;
         }
 
-        // 
         // we never found a match for the transport
-        // 
         return null;
     }
 
-    //
-    // Change the state of the worker
-    //
-    abstract public void setState(int state);
+    abstract public void setState(ServerState state);
 }
