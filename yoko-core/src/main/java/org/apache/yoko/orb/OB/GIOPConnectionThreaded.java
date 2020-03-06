@@ -39,6 +39,8 @@ import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
+import static org.apache.yoko.orb.OB.GIOPConnection.Access.WRITE;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ERROR;
@@ -414,9 +416,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             // the Transport to make sure that no messages can get
             // lost upon close, and to make sure that CloseConnection
             // messages from the peer are processed.
-            synchronized (this) {
-                if ((enabledOps_ & AccessOp.Read) == 0) break;
-            }
+            synchronized (this) { if (connState.forbids(READ)) break; }
 
             // the upcall to invoke
             Upcall upcall = null;
@@ -504,7 +504,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         // TRANSIENT to the caller indicating this
         //
         synchronized (this) {
-            if ((enabledOps_ & AccessOp.Write) == 0) {
+            if (connState.forbids(WRITE)) {
                 logger.fine("writing not enabled for this connection");
                 down.setFailureException(new TRANSIENT());
                 return true;
@@ -722,15 +722,11 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // connection refresh status (from GIOPConnection)
-    //
     public void refresh() {
         boolean msgSentMarked = false;
 
-        //
         // wake up any paused threads
-        // 
         synchronized (holdingMonitor_) {
             if (holding_) {
                 holding_ = false;
@@ -739,18 +735,11 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         }
 
         synchronized (this) {
-
-            //
             // if we can't write messages then don't bother to proceed
-            //
-            if ((enabledOps_ & AccessOp.Write) == 0)
-                return;
+            if (connState.forbids(WRITE)) return;
 
-            //
             // check if we've sent a message before while we are locked
-            //
-            if ((properties_ & Property.RequestSent) != 0)
-                msgSentMarked = true;
+            if ((properties_ & Property.RequestSent) != 0) msgSentMarked = true;
         }
 
         //

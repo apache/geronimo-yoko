@@ -57,13 +57,22 @@ import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
 
+import java.io.WriteAbortedException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Properties;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Collections.unmodifiableSet;
 import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
+import static org.apache.yoko.orb.OB.GIOPConnection.Access.CLOSE;
+import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
+import static org.apache.yoko.orb.OB.GIOPConnection.Access.WRITE;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ACTIVE;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
@@ -103,51 +112,41 @@ import static org.omg.GIOP.MsgType_1_1._Request;
 abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(GIOPConnection.class.getName());
 
-    // ----------------------------------------------------------------
-    // Inner classes
-    // ----------------------------------------------------------------
+    enum Access { READ, WRITE, CLOSE }
 
-    /* access operations class */
-    public static final class AccessOp {
-        public static final int Nil = 0;
-
-        public static final int Read = 1;
-
-        public static final int Write = 2;
-
-        public static final int Close = 4;
-
-        public static final int All = 7;
-    }
-
-    /* connection properties */
     public static final class Property {
         public static final int RequestSent = 1;
-
         public static final int ReplySent = 2;
-
         public static final int Destroyed = 4;
-
         public static final int CreatedByClient = 8;
-
         public static final int ClientEnabled = 16;
-
         public static final int ServerEnabled = 32;
-
         public static final int ClosingLogged = 64;
     }
 
-    /* connection states */
     enum ConnState {
-        ACTIVE,
-        HOLDING { boolean cannotTransitionTo(ConnState next) { return next == HOLDING; } },
-        CLOSING,
-        ERROR,
-        CLOSED;
+        ACTIVE(READ, WRITE),
+        HOLDING(WRITE),
+        CLOSING(READ, WRITE, CLOSE),
+        ERROR(CLOSE),
+        CLOSED();
+
+        private final Set<Access> permissions;
+
+        ConnState() { this.permissions = Collections.EMPTY_SET; }
+
+        ConnState(Access...permissions) {
+            // EnumSet.of() requires an initial element, but it's ok to add the element twice
+            this.permissions = unmodifiableSet(EnumSet.of(permissions[0], permissions));
+        }
 
         boolean cannotTransitionTo(ConnState next) {
+            if (this == next) return true;
+            if (this == HOLDING) return false;
             return this.compareTo(next) > 0;
         }
+
+        boolean forbids(Access op) { return !!!permissions.contains(op); }
     }
 
     /* task to execute when ACM timer signal arrives */
@@ -159,21 +158,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         }
 
         public void run() {
-            //
-            // execute the callback method
-            //
             connection_.ACM_callback();
-
-            //
-            // break cyclic dependency
-            //
             connection_ = null;
         }
     }
-
-    // ----------------------------------------------------------------
-    // Member data
-    // ----------------------------------------------------------------
 
     /** the next request id */
     private final AtomicInteger nextRequestId;
@@ -192,9 +180,6 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** storage space for unsent/pending messages */
     protected final MessageQueue messageQueue_ = new MessageQueue();
-
-    /** enabled processing operations */
-    protected int enabledOps_ = AccessOp.Nil;
 
     /** enabled connection property flags */
     protected int properties_ = 0;
@@ -798,22 +783,9 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
             connState = state;
 
-            // change the enabled/disable operations and break the cyclic dependency with GIOPClient
-            switch (state) {
-            case ERROR:
-                enabledOps_ &= ~(AccessOp.Read | AccessOp.Write);
-                enabledOps_ |= AccessOp.Close;
-                break;
-
-            case CLOSED:
-                enabledOps_ = AccessOp.Nil;
-                break;
-            }
             orbInstance_.getOutboundConnectionCache().remove(outboundConnectionKey, this);
 
-            //
             // propagate any exceptions to the message queue
-            //
             messageQueue_.setException(ex, completed);
         }
 
@@ -911,40 +883,29 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** client-side constructor */
     public GIOPConnection(ORBInstance orbInstance, Transport transport, GIOPClient client) {
-        //
         // set member properties
-        //
         nextRequestId = new AtomicInteger(0xA);
         orbInstance_ = orbInstance;
         transport_ = transport;
         outboundConnectionKey = client.connectorInfo();
         connState = ACTIVE;
         properties_ = Property.CreatedByClient | Property.ClientEnabled;
-        enabledOps_ = AccessOp.Read | AccessOp.Write;
 
-        //
         // read ACM properties
-        //
         String value;
         Properties properties = orbInstance_.getProperties();
 
-        //
         // the shutdown timeout for the client
-        //
         value = properties.getProperty("yoko.orb.client_shutdown_timeout");
         if (value != null)
             shutdownTimeout_ = Integer.parseInt(value);
 
-        //
         // the idle timeout for the client
-        //
         value = properties.getProperty("yoko.orb.client_timeout");
         if (value != null)
             idleTimeout_ = Integer.parseInt(value);
 
-        //
         // Trace new outgoing connection
-        //
         CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
         if (coreTraceLevels.traceConnections() > 0) {
             TransportInfo info = transport_.get_info();
@@ -1253,23 +1214,17 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         switch (newState) {
         case ACTIVE:
-            // set the new accessible operations
-            synchronized (this) { enabledOps_ = AccessOp.Read | AccessOp.Write; }
             // start and refresh the connection
             start();
             refresh();
             break;
 
         case HOLDING:
-            // holding connections can't read new messages but can write pending messages
-            synchronized (this) { enabledOps_ &= ~AccessOp.Read; }
             // pause the connection
             pause();
             break;
 
         case CLOSING:
-            // during the closing, the connection can read/write/close
-            synchronized (this) { enabledOps_ = AccessOp.All; }
             // gracefully shutdown by sending off pending messages,
             // reading any messages left on the wire and then closing
             gracefulShutdown();
@@ -1278,8 +1233,6 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             break;
 
         case ERROR:
-            // we can't read or write in the error state but we can close the connection down
-            synchronized (this) { enabledOps_ = AccessOp.Close; }
             // there is an error so shutdown abortively
             abortiveShutdown();
             // mark the connection as destroyed now
@@ -1289,8 +1242,6 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             break;
 
         case CLOSED:
-            // once closed, nothing else can take place
-            synchronized (this) { enabledOps_ = AccessOp.Nil; }
             logClose(true);
             transport_.close();
             // mark the connection as destroyed
