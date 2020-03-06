@@ -140,14 +140,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /* connection states */
     enum ConnState {
         ACTIVE,
-        HOLDING { boolean cannotTransitionTo(ConnState next) { return next == HOLDING; } },
+        HOLDING,
         CLOSING,
         ERROR,
         CLOSED;
 
         boolean cannotTransitionTo(ConnState next) {
-            return this.compareTo(next) > 0;
-        }
+            if (this == next) return true;
+            if (this == HOLDING) return false;
+            return this.compareTo(next) > 0;        }
     }
 
     /* task to execute when ACM timer signal arrives */
