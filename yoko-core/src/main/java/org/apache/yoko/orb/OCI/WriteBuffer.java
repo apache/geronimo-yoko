@@ -175,7 +175,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
      * taking an alignment boundary into account. The writer will be
      * aligned on the provided boundary when this method returns.
      * @param size the number of bytes to be written
-     * @param align the size of boundary to align on (in bytes)
+     * @param boundary the size of boundary to align on
      * @return <code>true</code> iff an existing buffer had to be resized
      */
     public boolean ensureAvailable(int size, AlignmentBoundary boundary) {
