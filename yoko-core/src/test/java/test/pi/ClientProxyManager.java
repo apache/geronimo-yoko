@@ -40,7 +40,7 @@ final class ClientProxyManager {
     }
 
     void setInterceptor(int which, ClientRequestInterceptor i) {
-        org.apache.yoko.orb.OB.Assert._OB_assert(which >= 0 && which < 3);
+        org.apache.yoko.orb.OB.Assert.ensure(which >= 0 && which < 3);
         p_[which]._OB_changeInterceptor(i);
     }
 

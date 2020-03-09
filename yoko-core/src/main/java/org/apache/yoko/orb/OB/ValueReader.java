@@ -152,7 +152,7 @@ public final class ValueReader {
         }
 
         Serializable create(Header h) {
-            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
+            Assert.ensure((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             final Serializable result = helper_.read_value(is_);
 
@@ -178,7 +178,7 @@ public final class ValueReader {
         Serializable create(Header h) {
             if (logger.isLoggable(Level.FINE))
                 logger.fine(String.format("Creating a value object with tag value 0x%08x", h.tag));
-            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
+            Assert.ensure((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
                 return reader_.readRMIValue(h, h.ids[0]);
@@ -286,7 +286,7 @@ public final class ValueReader {
         }
 
         Serializable create(Header h, StringHolder id) {
-            Assert._OB_assert((h.tag >= 0x7fffff00) && (h.tag != -1));
+            Assert.ensure((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
                 final Serializable result = readRMIValue(h, h.ids[0]);
@@ -362,7 +362,7 @@ public final class ValueReader {
             logger.fine(String.format("Reading header with tag value 0x%08x at %s", h.tag, in_.dumpPosition()));
 
         // Special cases are handled elsewhere
-        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
+        Assert.ensure((h.tag != 0) && (h.tag != -1));
 
         // Check if the value is chunked
         h.state.chunked = (h.tag & 0x00000008) == 8;
@@ -538,7 +538,7 @@ public final class ValueReader {
         //
         // Null values and indirections must be handled by caller
         //
-        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
+        Assert.ensure((h.tag != 0) && (h.tag != -1));
 
         h.headerPos = buf_.getPosition() - 4; // adjust for alignment
         h.state.copyFrom(chunkState_);
@@ -829,11 +829,11 @@ public final class ValueReader {
             } else if (tc.kind() == TCKind.tk_value_box) {
                 out.write_InputStream(in_, tc.content_type());
             } else {
-                Assert._OB_assert(false);
+                throw Assert.fail();
             }
         } catch (BadKind | Bounds ex) {
             logger.log(Level.FINER, "Invalid type kind", ex);
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -843,7 +843,7 @@ public final class ValueReader {
     }
 
     private void popHeader() {
-        Assert._OB_assert(currentHeader_ != null);
+        Assert.ensure(currentHeader_ != null);
 
         currentHeader_ = currentHeader_.next;
     }
@@ -869,7 +869,7 @@ public final class ValueReader {
                     break;
                 }
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -1074,7 +1074,7 @@ public final class ValueReader {
         //
         // We should have previously pushed a Header on the stack
         //
-        Assert._OB_assert(currentHeader_ != null);
+        Assert.ensure(currentHeader_ != null);
 
         //
         // Now that we have an instance, we can put it in our history
@@ -1229,7 +1229,7 @@ public final class ValueReader {
                     mod = origTC.type_modifier();
                 }
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -1390,7 +1390,7 @@ public final class ValueReader {
             skipChunk();
         }
 
-        Assert._OB_assert(result != null);
+        Assert.ensure(result != null);
         return result;
     }
 
@@ -1470,7 +1470,7 @@ public final class ValueReader {
                 return;
             }
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //
@@ -1503,12 +1503,12 @@ public final class ValueReader {
                     out._OB_ORBInstance(orbInstance_);
                     remarshalValue(origTC, out);
                     final InputStream in = (InputStream) out.create_input_stream();
-                    Assert._OB_assert(obAny != null);
+                    Assert.ensure(obAny != null);
                     obAny.replace(tc, in);
                     return;
                 }
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         } else {
             //
@@ -1592,14 +1592,12 @@ public final class ValueReader {
                     out._OB_ORBInstance(orbInstance_);
                     t = remarshalValue(origTC, out);
                     final InputStream in = (InputStream) out.create_input_stream();
-                    Assert._OB_assert(obAny != null);
+                    Assert.ensure(obAny != null);
                     obAny.replace(t, in);
                     return;
                 }
             }
         }
-
-        Assert._OB_assert(false); // should never reach this point
     }
 
     public void beginValue() {
@@ -1607,7 +1605,7 @@ public final class ValueReader {
         h.tag = in_.read_long();
         if (logger.isLoggable(Level.FINE))
             logger.fine(String.format("Read tag value 0x%08x", h.tag));
-        Assert._OB_assert((h.tag != 0) && (h.tag != -1));
+        Assert.ensure((h.tag != 0) && (h.tag != -1));
 
         initHeader(h);
     }

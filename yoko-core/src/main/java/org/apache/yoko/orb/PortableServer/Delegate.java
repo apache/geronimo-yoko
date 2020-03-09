@@ -69,7 +69,7 @@ public final class Delegate implements org.omg.PortableServer.portable.Delegate 
                 String[] all = self._all_interfaces(thePOA, oid);
                 obj = poaImpl.create_reference_with_id(oid, all[0]);
             } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
         } else {
             try {

@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetWriter;
@@ -54,7 +55,7 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorIncompleteTypeCode;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorOther;
@@ -290,7 +291,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                                     write_char((char) 0);
                                     break;
                                 default:
-                                    _OB_assert("Invalid sub-type in tk_union");
+                                    throw Assert.fail("Invalid sub-type in tk_union");
                                 }
                             } else {
                                 tc.member_label(i).write_value(this);
@@ -377,10 +378,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 }
 
                 default:
-                    _OB_assert("Invalid typecode");
+                    throw Assert.fail("Invalid typecode");
                 }
             } catch (BadKind | Bounds ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
     }
@@ -389,7 +390,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     // Must be called prior to any writes
     //
     private void checkBeginChunk() {
-        _OB_assert(valueWriter_ != null);
+        Assert.ensure(valueWriter_ != null);
         valueWriter_.checkBeginChunk();
     }
 
@@ -427,7 +428,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
     }
 
     private void addCapacity(int size, AlignmentBoundary boundary) {
-        _OB_assert(boundary != NO_BOUNDARY);
+        Assert.ensure(boundary != NO_BOUNDARY);
 
         //
         // If we're at the end of the current buffer, then we are about
@@ -512,77 +513,51 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
             // listed in the code set registry.
             //
             switch (giopVersion_) {
-            case GIOP1_0: {
-                //
+            case GIOP1_0:
                 // we don't support special writers for GIOP 1.0 if
                 // conversion is required or if a writer is required
-                //
-                _OB_assert(false);
-            }
-                break;
+                throw Assert.fail();
 
             case GIOP1_1: {
-                //
                 // get the length of the character
-                //
                 int len = converter.write_count_wchar(value);
 
-                //
                 // For GIOP 1.1 we are limited to 2-byte wchars
                 // so make sure to check for that
-                //
-                _OB_assert(len == 2);
+                Assert.ensure(len == 2);
 
-                //
                 // allocate aligned space
-                //
                 addCapacity(2, TWO_BYTE_BOUNDARY);
 
-                //
                 // write using the writer
-                //
                 converter.write_wchar(writeBuffer, value);
-            }
                 break;
+            }
 
             default: {
-                //
                 // get the length of the character
-                //
                 int len = converter.write_count_wchar(value);
 
-                //
                 // write the octet length at the beginning
-                //
                 write_octet((byte) len);
 
-                //
                 // add unaligned capacity
-                //
                 addCapacity(len);
 
-                //
                 // write the actual character
-                //
                 converter.write_wchar(writeBuffer, value);
-            }
                 break;
+            }
             }
         } else {
             switch (giopVersion_) {
             case GIOP1_0: {
-                //
                 // Orbix2000/Orbacus/E compatible 1.0 marshal
-                //
 
-                //
                 // add aligned capacity
-                //
                 addCapacity(2, TWO_BYTE_BOUNDARY);
 
-                //
                 // write 2-byte character in big endian
-                //
                 writeBuffer.writeChar(value);
             }
                 break;
@@ -593,19 +568,13 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 break;
 
             default: {
-                //
                 // add unaligned space for character
-                //
                 addCapacity(3);
 
-                //
                 // write the octet length at the start
-                //
                 writeBuffer.writeByte(2);
 
-                //
                 // write the character in big endian format
-                //
                 writeBuffer.writeChar(value);
             }
                 break;
@@ -959,7 +928,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 String pattern = contexts.item(i);
                 ctxImpl._OB_getValues("", 0, pattern, v);
             } catch (org.omg.CORBA.Bounds ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -1141,10 +1110,10 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
                 case _tk_local_interface:
                 case _tk_native:
                 default:
-                    _OB_assert("unsupported types");
+                    throw Assert.fail("unsupported types");
             }
         } catch (BadKind | Bounds ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -1246,8 +1215,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
 
         case _tk_alias:
-            _OB_assert("tk_alias not supported in tk_array or tk_sequence");
-            break;
+            throw Assert.fail("tk_alias not supported in tk_array or tk_sequence");
 
         default:
             for (int i = 0; i < len; i++)
@@ -1449,7 +1417,7 @@ public final class OutputStream extends org.omg.CORBA_2_3.portable.OutputStream 
         }
 
         default:
-            _OB_assert("Invalid typecode in tk_union");
+            throw Assert.fail("Invalid typecode in tk_union");
         }
 
         if (memberIndex >= 0)

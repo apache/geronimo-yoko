@@ -26,7 +26,6 @@ import org.omg.DynamicAny.DynAny;
 import org.omg.DynamicAny.DynAnyFactory;
 import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
 
-import java.nio.Buffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -60,8 +59,7 @@ final public class DynValueReader {
         try {
             if (tag == -1) return readIndirection(in);
         } catch (MARSHAL ex) {
-            Assert._OB_assert(ex);
-            return null;
+            throw Assert.fail(ex);
         }
 
         // Prepare a new DynValue and reference it as a possible
@@ -115,7 +113,7 @@ final public class DynValueReader {
         try {
             copy = factory_impl.prepare_dyn_any_from_type_code(tc, this);
         } catch (InconsistentTypeCode ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         DynAny_impl impl = (DynAny_impl) copy;

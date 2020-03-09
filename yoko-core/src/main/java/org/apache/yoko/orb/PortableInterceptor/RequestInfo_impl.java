@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Downcall;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.Any;
@@ -37,7 +38,7 @@ import org.omg.PortableInterceptor.RequestInfo;
 
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
@@ -256,7 +257,7 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
         // This can only be called if the status is location forward or location forward perm
         if (replyStatus != LOCATION_FORWARD.value) throw newBadInvOrder();
 
-        _OB_assert(forwardReference != null);
+        Assert.ensure(forwardReference != null);
         return orbInstance.getObjectFactory().createObject(forwardReference);
     }
 
@@ -363,7 +364,7 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     }
 
     public void _OB_setForwardReference(IOR ior) {
-        _OB_assert(replyStatus == LOCATION_FORWARD.value);
+        Assert.ensure(replyStatus == LOCATION_FORWARD.value);
         forwardReference = ior;
     }
 

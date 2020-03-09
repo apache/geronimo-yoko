@@ -57,8 +57,6 @@ import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
 
-import java.io.WriteAbortedException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Properties;
@@ -68,7 +66,7 @@ import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.Collections.unmodifiableSet;
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.CLOSE;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
@@ -281,12 +279,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // make sure we're allowed to do server processing as well as
         // being bidir enabled. A server's OAInterface should not
         // change whereas a bidir client would need to change regularly
-        _OB_assert((properties_ & Property.CreatedByClient) != 0);
-        _OB_assert((properties_ & Property.ServerEnabled) != 0);
-        _OB_assert(orbInstance_ != null);
+        Assert.ensure((properties_ & Property.CreatedByClient) != 0);
+        Assert.ensure((properties_ & Property.ServerEnabled) != 0);
+        Assert.ensure(orbInstance_ != null);
 
         POAManagerFactory poamanFactory = orbInstance_.getPOAManagerFactory();
-        _OB_assert(poamanFactory != null);
+        Assert.ensure(poamanFactory != null);
 
         POAManager[] poaManagers = poamanFactory.list();
 
@@ -555,7 +553,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
-        _OB_assert(connState == ACTIVE);
+        Assert.ensure(connState == ACTIVE);
 
         //
         // Make sure the transport can send a reply
@@ -766,13 +764,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** process a Fragment message */
     private void processFragment(GIOPIncomingMessage msg) {
-        // At this point there should be no fragments, only complete messages.
-        _OB_assert(false);
+        throw Assert.fail("At this point there should be no fragments, only complete messages.");
     }
 
     /** process a system exception */
     protected boolean processException(ConnState state, SystemException ex, boolean completed) {
-        _OB_assert(state == ERROR || state == CLOSED);
+        Assert.ensure(state == ERROR || state == CLOSED);
 
         orbInstance_.getLogger().debug("processing an exception, state=" + state, ex);
 
@@ -824,7 +821,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             //
             // decrement the number of upcalls in progress
             //
-            _OB_assert(upcallsInProgress_ > 0);
+            Assert.ensure(upcallsInProgress_ > 0);
             upcallsInProgress_--;
 
             //
@@ -985,7 +982,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -1032,7 +1029,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         sendUpcallReply(out.getBufferReader());
@@ -1055,7 +1052,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -1082,16 +1079,17 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Cannot marshal the exception without the Helper
             //
             // ex._OB_marshal(out);
-            _OB_assert(false);
+            throw Assert.fail(); // TODO: verify this logic
         } catch (SystemException e) {
             //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
-        upcallEndReply(upcall);
+        // TODO: this is currently unreachable - investigate and reinstate
+        // upcallEndReply(upcall);
     }
 
     /** populate and end the reply with a system exception */
@@ -1115,7 +1113,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         upcallEndReply(upcall);
@@ -1146,7 +1144,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             // Nothing may go wrong here, otherwise we might have a
             // recursion
             //
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         upcallEndReply(upcall);
@@ -1160,7 +1158,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** enable this connection for processing as a server */
     synchronized public void activateServerSide() {
-        _OB_assert((properties_ & Property.CreatedByClient) != 0);
+        Assert.ensure((properties_ & Property.CreatedByClient) != 0);
 
         if ((properties_ & Property.ServerEnabled) == 0) {
             properties_ |= Property.ServerEnabled;
@@ -1170,13 +1168,13 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** @return a reference to the DowncallEmitter interface */
     public DowncallEmitter emitterInterface() {
-        _OB_assert((properties_ & Property.ClientEnabled) != 0);
+        Assert.ensure((properties_ & Property.ClientEnabled) != 0);
         return this;
     }
 
     /** @return a reference to the UpcallReturn interface */
     private UpcallReturn upcallReturnInterface() {
-        _OB_assert((properties_ & Property.ServerEnabled) != 0);
+        Assert.ensure((properties_ & Property.ServerEnabled) != 0);
         return this;
     }
 
@@ -1251,8 +1249,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             break;
 
         default:
-            _OB_assert(false);
-            break;
+            throw Assert.fail();
         }
     }
 

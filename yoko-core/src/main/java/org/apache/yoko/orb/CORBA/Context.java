@@ -17,7 +17,6 @@
 
 package org.apache.yoko.orb.CORBA;
  
-import org.apache.yoko.orb.OB.MinorCodes;
 import org.omg.CORBA.CompletionStatus;
 
 final public class Context extends org.omg.CORBA.Context {
@@ -93,7 +92,7 @@ final public class Context extends org.omg.CORBA.Context {
             try {
                 nv = values.item(i);
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
 
             String s = null;

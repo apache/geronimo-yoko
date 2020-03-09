@@ -62,7 +62,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
             else
                 index_ = 0;
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -96,7 +96,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
             else
                 index_ = 0;
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            Assert.fail(ex);
         }
     }
 
@@ -114,7 +114,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
         if (!dyn_any.type().equivalent(type_))
             throw new TypeMismatch();
 
-        Assert._OB_assert(components_.length == dyn_any
+        Assert.ensure(components_.length == dyn_any
                 .component_count());
 
         dyn_any.rewind();
@@ -291,7 +291,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
         try {
             result = origType_.member_name(index_);
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
@@ -314,7 +314,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
                     ._OB_getOrigType(memberTC);
             result = origMemberTC.kind();
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
@@ -330,7 +330,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
                 result[i].value = components_[i].to_any();
             }
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
@@ -383,7 +383,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
 
             notifyParent();
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -397,7 +397,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
                 result[i].value = components_[i];
             }
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
@@ -439,7 +439,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
 
             notifyParent();
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -457,7 +457,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
             try {
                 out.write_string(origType_.id());
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -478,8 +478,7 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
             try {
                 memberType = origType_.member_type(i);
             } catch (BadKind | Bounds ex) {
-                Assert._OB_assert(ex);
-                return;
+                throw Assert.fail(ex);
             }
 
             org.omg.CORBA.TypeCode origTC = TypeCode
@@ -491,13 +490,12 @@ final class DynStruct_impl extends DynAny_impl implements DynStruct {
                 // Create DynValue components
                 //
                 Assert
-                        ._OB_assert(components_[i] == null);
+                        .ensure(components_[i] == null);
 
                 try {
                     components_[i] = dynValueReader_.readValue(in, memberType);
                 } catch (InconsistentTypeCode ex) {
-                    Assert._OB_assert(ex);
-                    return;
+                    throw Assert.fail(ex);
                 }
 
                 adoptChild(components_[i]);

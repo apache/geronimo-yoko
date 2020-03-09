@@ -174,7 +174,7 @@ final class CallInterceptor_impl extends org.omg.CORBA.LocalObject implements
         } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
             TEST(false);
         }
-        org.apache.yoko.orb.OB.Assert._OB_assert(cdrCodec_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(cdrCodec_ != null);
     }
 
     public String name() {

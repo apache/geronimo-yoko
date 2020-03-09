@@ -38,7 +38,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.WRITE;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
@@ -74,7 +74,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 execShutdown();
             } catch (RuntimeException ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
     }
@@ -88,7 +88,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 execReceive();
             } catch (RuntimeException ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             } finally {
                 receiverLock.readLock().unlock();
             }
@@ -182,7 +182,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     synchronized (sendMutex_) {
                         final ReadBuffer readBuffer = out.getBufferReader();
                         transport_.send(readBuffer, true);
-                        _OB_assert(readBuffer.isComplete());
+                        Assert.ensure(readBuffer.isComplete());
                     }
                 }
             } catch (SystemException ex) {
@@ -375,7 +375,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 logger.fine("Reading message header");
                 transport_.receive(writer, true);
-                _OB_assert(writer.isComplete());
+                Assert.ensure(writer.isComplete());
             } catch (SystemException ex) {
                 processException(CLOSED, ex, false);
                 break;
@@ -397,7 +397,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 try {
                     logger.fine("Receiving message body of size " + inMsg.size()); 
                     transport_.receive(writer, true);
-                    _OB_assert(writer.isComplete());
+                    Assert.ensure(writer.isComplete());
                 } catch (SystemException ex) {
                     processException(CLOSED, ex, false);
                     break;
@@ -488,8 +488,8 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
     // client-side send method (from DowncallEmitter)
     //
     public boolean send(Downcall down, boolean block) {
-        _OB_assert(transport_.mode() != ReceiveOnly);
-        _OB_assert(down.unsent());
+        Assert.ensure(transport_.mode() != ReceiveOnly);
+        Assert.ensure(down.unsent());
         
         logger.fine("Sending a request with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " on transport " + transport_); 
 
@@ -554,7 +554,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         break;
                     }
 
-                    _OB_assert(messageQueue_.hasUnsent());
+                    Assert.ensure(messageQueue_.hasUnsent());
 
                     readBuffer = messageQueue_.getFirstUnsentBuffer();
                     nextDown = messageQueue_.moveFirstUnsentToPending();
@@ -568,7 +568,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                         if (t <= 0) {
                             // Send buffer, blocking
                             transport_.send(readBuffer, true);
-                            _OB_assert(readBuffer.isComplete());
+                            Assert.ensure(readBuffer.isComplete());
                         } else {
                             // Send buffer, with timeout
                             transport_.send_timeout(readBuffer, t);
@@ -603,7 +603,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                     if (!down.unsent())
                         break;
 
-                    _OB_assert(messageQueue_.hasUnsent());
+                    Assert.ensure(messageQueue_.hasUnsent());
 
                     // get the first message to send
                     ReadBuffer readBuffer = messageQueue_.getFirstUnsentBuffer();

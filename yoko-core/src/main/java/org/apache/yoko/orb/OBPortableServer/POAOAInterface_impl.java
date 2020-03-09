@@ -176,7 +176,7 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
             upcall.setLocationForward(ex.ior, ex.perm);
         }
 
-        Assert._OB_assert(upcall != null);
+        Assert.ensure(upcall != null);
         return upcall;
     }
 
@@ -230,8 +230,7 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
             seq.copyInto(result);
             return result;
         } catch (AdapterInactive ex) {
-            Assert._OB_assert(ex);
-            return null;
+            throw Assert.fail(ex);
         }
     }
 

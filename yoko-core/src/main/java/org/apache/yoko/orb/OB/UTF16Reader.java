@@ -64,10 +64,7 @@ final class UTF16Reader extends CodeSetReader {
         // check for the surrogate paired character
         //
         if ((v >= (char) 0xD800) && (v <= (char) 0xDFFF)) {
-            //
-            // it was a surrogate paired character that we don't support
-            //
-            Assert._OB_assert(false);
+            throw Assert.fail("Unsupported surrogate");
         }
 
         //

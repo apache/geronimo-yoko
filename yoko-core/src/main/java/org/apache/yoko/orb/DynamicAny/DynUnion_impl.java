@@ -108,7 +108,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
                 member_ = create(memberType, true);
             }
         } catch (BadKind | TypeMismatch | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -153,7 +153,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
             } else {
                 DynAny_impl discImpl = (DynAny_impl) disc_;
                 org.omg.CORBA.Any discAny = discImpl._OB_currentAny();
-                Assert._OB_assert(discAny != null);
+                Assert.ensure(discAny != null);
                 discValue = getDiscriminatorValue(discAny);
             }
 
@@ -191,7 +191,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
             }
             selectedMember_ = i;
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -240,10 +240,10 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
             }
 
             default:
-                Assert._OB_assert("Unsupported union type");
+                throw Assert.fail("Unsupported union type");
             }
         } catch (TypeMismatch | InvalidValue ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -294,7 +294,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
         }
 
         default:
-            Assert._OB_assert("Unsupported union type");
+            throw Assert.fail("Unsupported union type");
         }
 
         return result;
@@ -354,13 +354,13 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
                 min = 0;
                 max = (origDiscTC_.member_count() - 1);
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
             break;
         }
 
         default:
-            Assert._OB_assert("Unsupported union type");
+            throw Assert.fail("Unsupported union type");
         }
 
         for (long i = max; i >= min; i--) {
@@ -488,7 +488,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
                     return false;
             }
         } catch (InvalidValue ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return true;
@@ -510,14 +510,14 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
                 org.omg.CORBA.TypeCode origTC = TypeCode._OB_getOrigType(memberType);
 
                 if (origTC.kind().value() == TCKind._tk_value) {
-                    Assert._OB_assert(result.member_ == null);
+                    Assert.ensure(result.member_ == null);
                     result.member_ = member_.copy();
                 } else {
                     result.member().assign(member_);
                 }
             }
         } catch (BadKind | InvalidValue | TypeMismatch | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
@@ -565,12 +565,12 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
         if (index_ < 0)
             return null;
 
-        Assert._OB_assert(index_ < 2);
+        Assert.ensure(index_ < 2);
 
         if (index_ == 0)
             return disc_;
         else {
-            Assert._OB_assert(member_ != null);
+            Assert.ensure(member_ != null);
             return member_;
         }
     }
@@ -645,10 +645,8 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
         try {
             return origType_.member_name(selectedMember_);
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
-
-        return null; // The compiler needs this
     }
 
     public synchronized TCKind member_kind() throws InvalidValue {
@@ -658,10 +656,8 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
         try {
             return origType_.member_type(selectedMember_).kind();
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
-
-        return null; // The compiler needs this
     }
 
     public synchronized boolean is_set_to_default_member() {
@@ -700,8 +696,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
         try {
             memberType = origType_.member_type(selectedMember_);
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
-            return;
+            throw Assert.fail(ex);
         }
 
         org.omg.CORBA.TypeCode origTC = TypeCode
@@ -712,13 +707,12 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
             //
             // Create DynValue components
             //
-            Assert._OB_assert(member_ == null);
+            Assert.ensure(member_ == null);
 
             try {
                 member_ = dynValueReader_.readValue(in, memberType);
             } catch (InconsistentTypeCode ex) {
-                Assert._OB_assert(ex);
-                return;
+                throw Assert.fail(ex);
             }
 
             adoptChild(member_);
@@ -741,7 +735,7 @@ final class DynUnion_impl extends DynAny_impl implements DynUnion {
             p = (DynAny_impl) disc_;
         else if (index_ == 1) // member
         {
-            Assert._OB_assert(member_ != null);
+            Assert.ensure(member_ != null);
             p = (DynAny_impl) member_;
         }
 

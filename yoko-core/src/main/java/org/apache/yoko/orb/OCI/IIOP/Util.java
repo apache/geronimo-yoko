@@ -110,7 +110,7 @@ final public class Util {
                 break;
 
         // TODO: Internal error?
-        Assert._OB_assert(profile < ior.profiles.length);
+        Assert.ensure(profile < ior.profiles.length);
 
         InputStream in = new InputStream(ior.profiles[profile].profile_data);
         in._OB_readEndian();

@@ -17,8 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.Logger;
-
 final public class CoreTraceLevels {
     private int traceConnections_;
 
@@ -42,7 +40,7 @@ final public class CoreTraceLevels {
                 continue;
 
             String value = properties.getProperty(key);
-            Assert._OB_assert(value != null);
+            Assert.ensure(value != null);
 
             if (key.equals("yoko.orb.trace.connections")) {
                 try {

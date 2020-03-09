@@ -17,8 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.TimeHelper;
-
 public class OrbAsyncHandler {
     //
     // A message registered to be sent/received asynchronously
@@ -71,7 +69,7 @@ public class OrbAsyncHandler {
         // set the parent handler
         //
         public void handler(OrbAsyncHandler parent) {
-            Assert._OB_assert(parent != null);
+            Assert.ensure(parent != null);
             handler_ = parent;
         }
 
@@ -229,7 +227,7 @@ public class OrbAsyncHandler {
                     // so there was no reply handler which means there
                     // MUST be a poller
                     //
-                    Assert._OB_assert(msg.poller != null);
+                    Assert.ensure(msg.poller != null);
 
                     //
                     // check the poller for its reply handler
@@ -325,7 +323,7 @@ public class OrbAsyncHandler {
         //
         // make sure we're not in the shutdown state
         // 
-        Assert._OB_assert(state_ != State.OAH_STATE_SHUTDOWN);
+        Assert.ensure(state_ != State.OAH_STATE_SHUTDOWN);
 
         //
         // no need to activate more than once...
@@ -420,8 +418,8 @@ public class OrbAsyncHandler {
     //
     public void addMessage(Downcall down,
             org.apache.yoko.orb.OBMessaging.Poller_impl poller) {
-        Assert._OB_assert(down != null);
-        Assert._OB_assert(poller != null);
+        Assert.ensure(down != null);
+        Assert.ensure(poller != null);
 
         //
         // activate the handler if it isn't already
@@ -451,8 +449,8 @@ public class OrbAsyncHandler {
     // add a reply handled request to the queued list
     //
     public void addMessage(Downcall down, org.omg.Messaging.ReplyHandler reply) {
-        Assert._OB_assert(down != null);
-        Assert._OB_assert(reply != null);
+        Assert.ensure(down != null);
+        Assert.ensure(reply != null);
 
         //
         // activate this handler if it isn't already
@@ -483,7 +481,7 @@ public class OrbAsyncHandler {
     //
     public boolean is_ready(org.apache.yoko.orb.OBMessaging.Poller_impl poller,
             int timeout) {
-        Assert._OB_assert(poller != null);
+        Assert.ensure(poller != null);
 
         boolean waitInfinite = false;
         if (timeout == -1)
@@ -598,7 +596,7 @@ public class OrbAsyncHandler {
     //
     public Downcall poll_response(
             org.apache.yoko.orb.OBMessaging.Poller_impl poller) {
-        Assert._OB_assert(poller != null);
+        Assert.ensure(poller != null);
 
         synchronized (recvMonitor_) {
             //
@@ -627,7 +625,6 @@ public class OrbAsyncHandler {
         // is_ready should have been called first to verify that a
         // response was ready so it is an error to not have one
         //
-        Assert._OB_assert(false);
-        return null;
+        throw Assert.fail();
     }
 }

@@ -16,6 +16,7 @@
  */
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.NO_MEMORY;
@@ -24,7 +25,7 @@ import java.util.Arrays;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
@@ -79,7 +80,7 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
          * @return <code>true</code> iff an existing core was insufficient
          */
         boolean growBy(int extra) {
-            _OB_assert(extra >= 0);
+            Assert.ensure(extra >= 0);
             length += extra;
 
             // the existing core might be big enough

@@ -61,7 +61,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
                         nv.value().read_value(in_, nv.value().type());
                 }
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 delegate_._OB_unmarshalEx(servant_, up_, ex);
             }
@@ -188,7 +188,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
             try {
                 id = tc.id();
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
 
             if (org.apache.yoko.orb.OB.Util.isSystemException(id)) {
@@ -217,7 +217,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
                             }
                         }
                     } catch (org.omg.CORBA.Bounds ex) {
-                        org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                        throw org.apache.yoko.orb.OB.Assert.fail(ex);
                     }
                 }
             } catch (org.omg.CORBA.SystemException ex) {

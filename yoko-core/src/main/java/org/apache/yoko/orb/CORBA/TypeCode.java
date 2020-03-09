@@ -250,8 +250,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                     break;
 
                 default:
-                    Assert._OB_assert("unsupported type in tk_union");
-                    break;
+                    throw Assert.fail("unsupported type in tk_union");
                 }
             }
 
@@ -473,7 +472,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             break;
 
         default:
-            Assert._OB_assert("unsupported typecode");
+            throw Assert.fail("unsupported typecode");
         }
 
         return result;
@@ -640,8 +639,8 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
         boolean result = equivalentRecHelper(t, history, otherHistory);
 
-        Assert._OB_assert(history.size() == 0);
-        Assert._OB_assert(otherHistory.size() == 0);
+        Assert.ensure(history.size() == 0);
+        Assert.ensure(otherHistory.size() == 0);
 
         return result;
     }
@@ -1004,7 +1003,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         try {
             while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return tc;
@@ -1014,7 +1013,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         try {
             while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return tc;
@@ -1052,7 +1051,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                         result.recId_ = tc.id();
                         result.recType_ = (TypeCode) history.get(tc);
                         Assert
-                                ._OB_assert(result.recType_ != null);
+                                .ensure(result.recType_ != null);
                         return result;
                     }
             }
@@ -1204,17 +1203,17 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 break;
 
             default:
-                Assert._OB_assert("Unsupported typecode");
+                throw Assert.fail("Unsupported typecode");
             }
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         return result;
     }
 
     static public TypeCode _OB_convertForeignTypeCode(org.omg.CORBA.TypeCode tc) {
-        Assert._OB_assert(!(tc instanceof TypeCode));
+        Assert.ensure(!(tc instanceof TypeCode));
 
         Hashtable history = new Hashtable(7);
         Vector recHistory = new Vector();
@@ -1230,7 +1229,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         //
         // Recursive placeholder TypeCodes are illegal as "outer" argument
         //
-        Assert._OB_assert(outer.recId_ == null);
+        Assert.ensure(outer.recId_ == null);
 
         //
         // Check for illegal recursion
@@ -1253,7 +1252,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 if (inner.recType_ != null) {
                     // Recursive TC already embedded - ensure it's the right one
                     Assert
-                            ._OB_assert(inner.recType_ == outer);
+                            .ensure(inner.recType_ == outer);
                 } else {
                     //
                     // Embed the recursive placeholder TypeCode
@@ -1270,7 +1269,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                     || inner.kind_ == TCKind.tk_array
                     || inner.kind_ == TCKind.tk_alias) {
                 Assert
-                        ._OB_assert(inner.contentType_ != outer);
+                        .ensure(inner.contentType_ != outer);
                 _OB_embedRecTC(outer, inner.contentType_);
             }
 
@@ -1283,7 +1282,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                     || inner.kind_ == TCKind.tk_except) {
                 for (int i = 0; i < inner.memberTypes_.length; i++) {
                     Assert
-                            ._OB_assert(inner.memberTypes_[i] != outer);
+                            .ensure(inner.memberTypes_[i] != outer);
                     _OB_embedRecTC(outer, inner.memberTypes_[i]);
                 }
             }

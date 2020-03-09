@@ -56,7 +56,7 @@ class DefaultServantHolder {
             try {
                 return poaCurrent.get_object_id();
             } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex); // TODO:
+                throw org.apache.yoko.orb.OB.Assert.fail(ex); // TODO:
                                                                     // Internal
                                                                     // error
             }

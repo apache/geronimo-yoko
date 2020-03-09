@@ -17,10 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import org.omg.CORBA.LocalObject;
 
 public final class InitialServiceManager {
     static final Logger logger = Logger.getLogger(InitialServiceManager.class.getName());
@@ -47,7 +44,7 @@ public final class InitialServiceManager {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
+        Assert.ensure(destroy_);
 
         super.finalize();
     }
@@ -57,7 +54,7 @@ public final class InitialServiceManager {
     // ----------------------------------------------------------------------
 
     synchronized void destroy() {
-        Assert._OB_assert(!destroy_); // May only be destroyed once
+        Assert.ensure(!destroy_); // May only be destroyed once
         destroy_ = true;
 
         services_ = null;
@@ -103,12 +100,12 @@ public final class InitialServiceManager {
                 continue;
 
             value = properties.getProperty(key);
-            Assert._OB_assert(value != null);
+            Assert.ensure(value != null);
             key = key.substring(propRoot.length());
             try {
                 addInitialReference(key, value, true);
             } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -148,7 +145,7 @@ public final class InitialServiceManager {
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
-        Assert._OB_assert(identifier != null);
+        Assert.ensure(identifier != null);
         
         logger.fine("Resolving initial ORB reference for " + identifier); 
 
@@ -244,7 +241,7 @@ public final class InitialServiceManager {
                                                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
-        Assert._OB_assert(name != null && iorString != null);
+        Assert.ensure(name != null && iorString != null);
 
         if (services_.containsKey(name) && !override)
         {
@@ -277,7 +274,7 @@ public final class InitialServiceManager {
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
-        Assert._OB_assert(name != null);
+        Assert.ensure(name != null);
 
         if (services_.containsKey(name) && !override) {
             throw new org.omg.CORBA.ORBPackage.InvalidName();

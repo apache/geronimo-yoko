@@ -34,7 +34,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             try {
                 starterRun();
             } catch (RuntimeException ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             logger.fine("Shutting down ORB server listener thread"); 
@@ -169,7 +169,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
             org.apache.yoko.orb.OCI.Transport transport = null;
             try {
                 transport = acceptor_.accept(true);
-                Assert._OB_assert(transport != null);
+                Assert.ensure(transport != null);
             } catch (org.omg.CORBA.NO_PERMISSION ex) {
                 //
                 // Ignore NO_PERMISSION exceptions
@@ -217,7 +217,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             // worker, only in order to set it to
                             // StateClosing for proper connection shutdown
                             //
-                            Assert._OB_assert(serverState == CLOSED);
+                            Assert.ensure(serverState == CLOSED);
                             logger.fine("Processing an inbound connection because state is closed"); 
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);

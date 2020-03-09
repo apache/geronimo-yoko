@@ -218,13 +218,13 @@ final class GIOPClient extends Client {
                 throw new NO_RESPONSE("Connection timeout", 0, COMPLETED_NO);
         } else {
             transport = connector_.connect();
-            Assert._OB_assert(transport != null);
+            Assert.ensure(transport != null);
         }
 
         //
         // Create new worker
         //
-        Assert._OB_assert(concModel_ == Threaded);
+        Assert.ensure(concModel_ == Threaded);
         return new GIOPConnectionThreaded(orbInstance_, transport, this);
     }
 
@@ -340,7 +340,7 @@ final class GIOPClient extends Client {
             // Get the worker, creating a new one if there is none available
             connection = getWorker(true, down.policies().connectTimeout);
         } catch (SystemException ex) {
-            Assert._OB_assert(ex.completed == COMPLETED_NO);
+            Assert.ensure(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
             return null;
         }
@@ -372,10 +372,10 @@ final class GIOPClient extends Client {
                     orbInstance_.getLogger().trace("outgoing", msg);
                 }
 
-                Assert._OB_assert(codeSetSC_ != null);
+                Assert.ensure(codeSetSC_ != null);
                 down.addToRequestContexts(codeSetSC_);
 
-                Assert._OB_assert(codeBaseSC_ != null);
+                Assert.ensure(codeBaseSC_ != null);
                 down.addToRequestContexts(codeBaseSC_);
 
             }
@@ -409,7 +409,7 @@ final class GIOPClient extends Client {
 
             return connection.emitterInterface();
         } catch (SystemException ex) {
-            Assert._OB_assert(ex.completed == COMPLETED_NO);
+            Assert.ensure(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
             return null;
         }
@@ -438,7 +438,7 @@ final class GIOPClient extends Client {
         // Get the connection
         //
         GIOPConnection connection = getWorker(false, -1);
-        Assert._OB_assert(connection != null);
+        Assert.ensure(connection != null);
         Transport transport = connection.transport();
         return transport.mode() == SendReceiveMode.SendReceive;
     }

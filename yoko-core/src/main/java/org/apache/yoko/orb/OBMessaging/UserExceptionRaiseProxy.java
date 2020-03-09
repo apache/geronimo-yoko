@@ -17,7 +17,10 @@
 
 package org.apache.yoko.orb.OBMessaging;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.osgi.ProviderLocator;
+
+import java.lang.reflect.InvocationTargetException;
 
 public class UserExceptionRaiseProxy {
     public void raise(org.omg.Messaging._ExceptionHolder execptHolder)
@@ -66,14 +69,8 @@ public class UserExceptionRaiseProxy {
                 // exception. For now, we'll just throw this again.
                 //
                 // throw e;
-            } catch (NoSuchMethodException e) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-            } catch (IllegalAccessException e) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-            } catch (IllegalArgumentException e) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-            } catch (java.lang.reflect.InvocationTargetException e) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            } catch (NoSuchMethodException|IllegalAccessException|IllegalArgumentException|InvocationTargetException e) {
+                throw Assert.fail(ex);
             } catch (SecurityException e) {
                 //
                 // REVISIT:

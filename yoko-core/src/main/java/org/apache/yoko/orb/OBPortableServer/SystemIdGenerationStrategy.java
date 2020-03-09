@@ -83,7 +83,7 @@ class SystemIdGenerationStrategy implements IdGenerationStrategy {
         oid[pos++] = (byte) (currId >>> 8);
         oid[pos++] = (byte) currId;
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(pos == oid.length);
+        org.apache.yoko.orb.OB.Assert.ensure(pos == oid.length);
 
         return oid;
     }

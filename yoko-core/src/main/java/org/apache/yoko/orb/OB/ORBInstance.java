@@ -129,7 +129,7 @@ public final class ORBInstance {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
+        Assert.ensure(destroy_);
 
         super.finalize();
     }
@@ -246,7 +246,7 @@ public final class ORBInstance {
     }
 
     public void destroy() {
-        Assert._OB_assert(!destroy_); // May only be destroyed once
+        Assert.ensure(!destroy_); // May only be destroyed once
         destroy_ = true;
 
         //

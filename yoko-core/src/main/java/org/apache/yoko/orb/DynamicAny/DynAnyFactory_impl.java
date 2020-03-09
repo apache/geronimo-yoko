@@ -208,7 +208,7 @@ final public class DynAnyFactory_impl extends org.omg.CORBA.LocalObject
 
         case org.omg.CORBA.TCKind._tk_alias:
         default:
-            org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported type code");
+            throw org.apache.yoko.orb.OB.Assert.fail("Unsupported type code");
         }
 
         return result;

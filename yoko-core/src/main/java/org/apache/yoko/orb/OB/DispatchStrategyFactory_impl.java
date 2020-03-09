@@ -314,9 +314,8 @@ public final class DispatchStrategyFactory_impl extends LocalObject implements D
                         logger.fine("Using a thread pool dispatch strategy");
                         return create_thread_pool_strategy(defaultThreadPool_);
                     } catch (InvalidThreadPool ex) {
-                        Assert._OB_assert(ex);
+                        throw Assert.fail(ex);
                     }
-                    break;
                 default:
                     String err = "yoko.orb.oa.conc_model: Unknown value `";
                     err += value;

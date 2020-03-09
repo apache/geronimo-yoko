@@ -51,7 +51,7 @@ public class DirectServant extends org.omg.CORBA.portable.ServantObject {
         //
         // This object *must* have been deactivated already
         //
-        org.apache.yoko.orb.OB.Assert._OB_assert(deactivated_);
+        org.apache.yoko.orb.OB.Assert.ensure(deactivated_);
 
         super.finalize();
     }

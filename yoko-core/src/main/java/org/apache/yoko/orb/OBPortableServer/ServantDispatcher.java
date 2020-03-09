@@ -191,7 +191,7 @@ final class ServantDispatcher implements org.omg.CORBA.portable.ResponseHandler 
                 // The OutputStream returned by _invoke() should be
                 // the Upcall's OutputStream
                 //
-                org.apache.yoko.orb.OB.Assert._OB_assert(out == upcall_
+                org.apache.yoko.orb.OB.Assert.ensure(out == upcall_
                         .output());
 
                 //
@@ -231,7 +231,7 @@ final class ServantDispatcher implements org.omg.CORBA.portable.ResponseHandler 
                 throw ex;
             }
         } else
-            org.apache.yoko.orb.OB.Assert._OB_assert(false);
+            throw org.apache.yoko.orb.OB.Assert.fail();
     }
 
     // ----------------------------------------------------------------------

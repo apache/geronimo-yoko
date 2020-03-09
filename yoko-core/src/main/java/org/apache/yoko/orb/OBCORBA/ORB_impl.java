@@ -337,7 +337,7 @@ public class ORB_impl extends ORBSingleton {
                 .add_scheme(new CorbanameURLScheme_impl(
                         this, urlRegistry));
             } catch (SchemeAlreadyExists ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -378,7 +378,7 @@ public class ORB_impl extends ORBSingleton {
                 initServiceManager.addInitialReference("URLRegistry",
                         urlRegistry);
             } catch (InvalidName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -451,7 +451,7 @@ public class ORB_impl extends ORBSingleton {
                         new CodeSetIORInterceptor_impl(
                                 nativeCs, nativeWcs), false);
             } catch (DuplicateName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
             
             //
@@ -462,7 +462,7 @@ public class ORB_impl extends ORBSingleton {
                 piManager.addClientRequestInterceptor(new YasfClientInterceptor());
                 piManager.addServerRequestInterceptor(new YasfServerInterceptor(piManager.allocateSlotId()));
             } catch (DuplicateName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
             //
             // Install interceptors for Custom Marshal Stream Format negotiation
@@ -472,7 +472,7 @@ public class ORB_impl extends ORBSingleton {
                 piManager.addClientRequestInterceptor(new CmsfClientInterceptor());
                 piManager.addServerRequestInterceptor(new CmsfServerInterceptor(piManager.allocateSlotId()));
             } catch (DuplicateName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -492,7 +492,7 @@ public class ORB_impl extends ORBSingleton {
                         new MessageRoutingIORInterceptor_impl(
                                 routerListHolder.value), false);
             } catch (DuplicateName ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -904,7 +904,7 @@ public class ORB_impl extends ORBSingleton {
         try {
             initServiceManager.addInitialReference("ORBPolicyManager", pm);
         } catch (InvalidName ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
         ObjectFactory objectFactory = orbInstance_
                 .getObjectFactory();
@@ -1130,7 +1130,7 @@ public class ORB_impl extends ORBSingleton {
                 continue;
 
             String value = properties.getProperty(key);
-            Assert._OB_assert(value != null);
+            Assert.ensure(value != null);
 
             if (key.equals("yoko.orb.conc_model")) {
                 if (value.equals("threaded")) {
@@ -1397,7 +1397,7 @@ public class ORB_impl extends ORBSingleton {
                     break;
 
                 default:
-                    Assert._OB_assert(false);
+                    throw Assert.fail();
             }
 
             list.add_value(par.name, any, flags);

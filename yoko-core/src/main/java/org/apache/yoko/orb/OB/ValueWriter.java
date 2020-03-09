@@ -24,7 +24,6 @@ import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.StringValueHelper;
-import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.WStringValueHelper;
@@ -131,7 +130,7 @@ final public class ValueWriter {
     }
 
     private void beginChunk() {
-        Assert._OB_assert(chunked_);
+        Assert.ensure(chunked_);
 
         // Write a placeholder for the chunk size
         out_.write_long(0);
@@ -141,7 +140,7 @@ final public class ValueWriter {
     }
 
     private void endChunk() {
-        Assert._OB_assert(chunked_);
+        Assert.ensure(chunked_);
 
         // If chunkSizePos_ > 0, then there is a chunk whose size needs to be updated
         if (chunkSizePos_ > 0) {
@@ -192,7 +191,7 @@ final public class ValueWriter {
                 String id = origType.id();
                 helperClass = RepIds.query(id).suffix("Helper").toClass();
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -596,7 +595,7 @@ final public class ValueWriter {
                 }
             }
         } else if ((tag & 0x00000006) == 2) {
-            Assert._OB_assert(ids.length == 1);
+            Assert.ensure(ids.length == 1);
 
             //
             // Check to see if we've already marshalled this repository ID,
@@ -670,7 +669,7 @@ final public class ValueWriter {
                 needChunk_ = true;
             }
 
-            Assert._OB_assert(chunkSizePos_ == 0);
+            Assert.ensure(chunkSizePos_ == 0);
             nestingLevel_--;
         }
     }

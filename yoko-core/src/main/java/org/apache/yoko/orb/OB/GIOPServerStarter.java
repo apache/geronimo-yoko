@@ -54,7 +54,7 @@ abstract class GIOPServerStarter {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(serverState == CLOSED);
+        Assert.ensure(serverState == CLOSED);
 
         super.finalize();
     }

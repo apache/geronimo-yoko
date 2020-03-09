@@ -116,7 +116,7 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
         // If using UNIQUE_ID add the servant to the servantIdTable
         //
         if (servantIdTable_ != null) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(!servantIdTable_
+            org.apache.yoko.orb.OB.Assert.ensure(!servantIdTable_
                     .containsKey(servant));
             servantIdTable_.put(servant, oid.getObjectId());
         }
@@ -153,7 +153,7 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
         //
         if (servantIdTable_ != null) {
             org.omg.PortableServer.Servant servant = entry.getServant();
-            org.apache.yoko.orb.OB.Assert._OB_assert(servantIdTable_
+            org.apache.yoko.orb.OB.Assert.ensure(servantIdTable_
                     .containsKey(servant));
             servantIdTable_.remove(servant);
         }

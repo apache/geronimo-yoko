@@ -66,7 +66,7 @@ public abstract class Client {
     // Increment usage (not mutex protected)
     //
     public final void incUsage() {
-        Assert._OB_assert(usage_ >= 0);
+        Assert.ensure(usage_ >= 0);
         usage_++;
     }
 
@@ -77,7 +77,7 @@ public abstract class Client {
     // than 0, and false otherwise.
     //
     public final boolean decUsage() {
-        Assert._OB_assert(usage_ > 0);
+        Assert.ensure(usage_ > 0);
         usage_--;
         return usage_ > 0;
     }

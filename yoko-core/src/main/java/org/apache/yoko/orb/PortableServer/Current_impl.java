@@ -72,12 +72,10 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         try {
             return state.poa.servant_to_reference(state.servant);
         } catch (org.omg.PortableServer.POAPackage.WrongPolicy ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         } catch (org.omg.PortableServer.POAPackage.ServantNotActive ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
-
-        return null;
     }
 
     public org.omg.PortableServer.Servant get_servant()
@@ -143,7 +141,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(state != null);
+        org.apache.yoko.orb.OB.Assert.ensure(state != null);
 
         return state.servant;
     }
@@ -152,7 +150,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(state != null);
+        org.apache.yoko.orb.OB.Assert.ensure(state != null);
 
         return state.cookie;
     }
@@ -161,7 +159,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(state != null);
+        org.apache.yoko.orb.OB.Assert.ensure(state != null);
 
         return state.oid;
     }
@@ -170,7 +168,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(state != null);
+        org.apache.yoko.orb.OB.Assert.ensure(state != null);
 
         return state.op;
     }

@@ -44,7 +44,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
         try {
             boxedType_ = origType_.content_type();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //
@@ -187,7 +187,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
             try {
                 result.set_boxed_value_as_dyn_any(component_);
             } catch (TypeMismatch ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -214,7 +214,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
             return false;
         }
 
-        Assert._OB_assert(index_ == -1);
+        Assert.ensure(index_ == -1);
         index_++;
         return true;
     }
@@ -228,7 +228,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
 
         if (index_ == -1) return null;
 
-        Assert._OB_assert(index_ == 0);
+        Assert.ensure(index_ == 0);
         return component_;
     }
 
@@ -326,7 +326,7 @@ final class DynValueBox_impl extends DynValueCommon_impl implements DynValueBox 
 
                 out._OB_endValue();
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
     }

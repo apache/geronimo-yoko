@@ -198,7 +198,7 @@ public final class DowncallStub {
     public Downcall createDowncall(String op, boolean resp) throws FailureException {
         ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
-        Assert._OB_assert(client != null);
+        Assert.ensure(client != null);
 
         if (!policies_.interceptor) {
             return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
@@ -215,7 +215,7 @@ public final class DowncallStub {
     public Downcall createLocateRequestDowncall() throws FailureException {
         ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
-        Assert._OB_assert(client != null);
+        Assert.ensure(client != null);
 
         //
         // A LocateRequest is not seen by the interceptors
@@ -226,7 +226,7 @@ public final class DowncallStub {
     public Downcall createPIArgsDowncall(String op, boolean resp, ParameterDesc[] argDesc, ParameterDesc retDesc, TypeCode[] exceptionTC) throws FailureException {
         ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
-        Assert._OB_assert(client != null);
+        Assert.ensure(client != null);
 
         if (!policies_.interceptor)
             return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
@@ -242,7 +242,7 @@ public final class DowncallStub {
     public Downcall createPIDIIDowncall(String op, boolean resp, NVList args, NamedValue result, ExceptionList exceptions) throws FailureException {
         ProfileInfoHolder profile = new ProfileInfoHolder();
         Client client = getClientProfilePair(profile);
-        Assert._OB_assert(client != null);
+        Assert.ensure(client != null);
 
         if (!policies_.interceptor)
             return new Downcall(orbInstance_, client, profile.value, policies_, op, resp);
@@ -344,7 +344,7 @@ public final class DowncallStub {
         //
         // Only called if there is really a failure
         //
-        Assert._OB_assert(ex.exception != null);
+        Assert.ensure(ex.exception != null);
 
         //
         // If there was a failure, release the client and remove the
@@ -462,11 +462,10 @@ public final class DowncallStub {
         try {
             ProfileInfoHolder profileInfo = new ProfileInfoHolder();
             Client client = getClientProfilePair(profileInfo);
-            Assert._OB_assert(client != null);
+            Assert.ensure(client != null);
             return client.connectorInfo();
         } catch (FailureException ex) {
-            Assert._OB_assert(ex);
-            return null; // The compiler needs this
+            throw Assert.fail(ex);
         }
     }
 
@@ -474,11 +473,10 @@ public final class DowncallStub {
         try {
             ProfileInfoHolder profileInfo = new ProfileInfoHolder();
             Client client = getClientProfilePair(profileInfo);
-            Assert._OB_assert(client != null);
+            Assert.ensure(client != null);
             return client.transportInfo();
         } catch (FailureException ex) {
-            Assert._OB_assert(ex);
-            return null; // The compiler needs this
+            throw Assert.fail(ex);
         }
     }
 
@@ -595,7 +593,7 @@ public final class DowncallStub {
         //
         org.apache.yoko.orb.CORBA.OutputStream o = out;
         InvocationContext ctx = (InvocationContext) o._OB_invocationContext();
-        Assert._OB_assert(ctx != null);
+        Assert.ensure(ctx != null);
 
         //
         // If the DowncallStub has changed, then remarshal
@@ -684,14 +682,14 @@ public final class DowncallStub {
         //
         // setup the ORBInstance
         //
-        Assert._OB_assert(out != null);
+        Assert.ensure(out != null);
 
         //
         // We should have an InvocationContext associated with the OutputStream
         //
         org.apache.yoko.orb.CORBA.OutputStream o = (org.apache.yoko.orb.CORBA.OutputStream) out;
         InvocationContext ctx = (InvocationContext) o._OB_invocationContext();
-        Assert._OB_assert(ctx != null);
+        Assert.ensure(ctx != null);
 
         //
         // If the DowncallStub has changed, then remarshal
@@ -703,13 +701,13 @@ public final class DowncallStub {
         // Obtain the ORB
         //
         ORB orb = orbInstance_.getORB();
-        Assert._OB_assert(orb != null);
+        Assert.ensure(orb != null);
 
         //
         // Obtain the PersistentRequestRouter
         //
         PersistentRequestRouter router = MessageRoutingUtil.getPersistentRouterFromConfig(orbInstance_);
-        Assert._OB_assert(router != null);
+        Assert.ensure(router != null);
 
         //
         // Obtain information regarding our target
@@ -789,7 +787,7 @@ public final class DowncallStub {
         //
         org.apache.yoko.orb.CORBA.OutputStream o = (org.apache.yoko.orb.CORBA.OutputStream) out;
         InvocationContext ctx = (InvocationContext) o._OB_invocationContext();
-        Assert._OB_assert(ctx != null);
+        Assert.ensure(ctx != null);
 
         //
         // If the DowncallStub has changed, then remarshal

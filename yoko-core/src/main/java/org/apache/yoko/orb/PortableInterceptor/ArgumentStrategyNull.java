@@ -86,6 +86,6 @@ final class ArgumentStrategyNull extends ArgumentStrategy {
     // Set the result (server side only)
     //
     void setResult(org.omg.CORBA.Any any) {
-        org.apache.yoko.orb.OB.Assert._OB_assert(false);
+        throw org.apache.yoko.orb.OB.Assert.fail();
     }
 }

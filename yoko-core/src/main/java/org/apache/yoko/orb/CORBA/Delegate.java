@@ -247,7 +247,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                     in = invoke(self, out);
                     return InterfaceDefHelper.read(in);
                 } catch (ApplicationException ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 } catch (RemarshalException ex) {
                     // do nothing - continue loop
                 } finally {
@@ -307,7 +307,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                     in = invoke(self, out);
                     return in.read_boolean();
                 } catch (ApplicationException ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 } catch (RemarshalException ex) {
                     // do nothing - continue loop
                 } finally {
@@ -338,7 +338,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                     in = invoke(self, out);
                     return in.read_boolean();
                 } catch (ApplicationException ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 } catch (RemarshalException ex) {
                     // do nothing - continue loop
                 } finally {
@@ -699,7 +699,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             logger.log(Level.FINE, "Received RuntimeException", e);
             throw e;
         } catch (Exception shouldNeverHappen) {
-            Assert._OB_assert(shouldNeverHappen);
+            throw Assert.fail(shouldNeverHappen);
         }
     }
 

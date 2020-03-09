@@ -94,7 +94,7 @@ abstract class DynAny_impl extends LocalObject implements
         try {
             result = factory_.create_dyn_any(any);
         } catch (InconsistentTypeCode ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         if (adopt)
@@ -107,7 +107,7 @@ abstract class DynAny_impl extends LocalObject implements
         try {
             result = factory_.create_dyn_any_from_type_code(tc);
         } catch (InconsistentTypeCode ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         if (adopt)
@@ -130,7 +130,7 @@ abstract class DynAny_impl extends LocalObject implements
             result = factory_impl.prepare_dyn_any_from_type_code(tc,
                     dynValueReader);
         } catch (InconsistentTypeCode ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         if (adopt)
@@ -317,7 +317,7 @@ abstract class DynAny_impl extends LocalObject implements
             if (len > 0 && value.length() > len)
                 throw new InvalidValue();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         any.replace(tc, value);
@@ -418,7 +418,7 @@ abstract class DynAny_impl extends LocalObject implements
             if (len > 0 && value.length() > len)
                 throw new InvalidValue();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         any.replace(tc, value);
@@ -504,7 +504,7 @@ abstract class DynAny_impl extends LocalObject implements
                     throw new TypeMismatch();
             }
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //

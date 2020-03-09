@@ -31,7 +31,7 @@ final class UTF16Writer extends CodeSetWriter {
         //
         // we don't support surrogate paired characters
         //
-        Assert._OB_assert(v < 0xD800 || v > 0xDFFF);
+        Assert.ensure(v < 0xD800 || v > 0xDFFF);
 
         //
         // if this character is the same character as the BOM, then we
@@ -55,7 +55,7 @@ final class UTF16Writer extends CodeSetWriter {
 
     public int count_wchar(char v) {
         // we don't support surrogate paired characters
-        Assert._OB_assert(v < (char) 0xD800 || v > (char) 0xDFFF);
+        Assert.ensure(v < (char) 0xD800 || v > (char) 0xDFFF);
 
         // we need to escape the first character if its a BOM
         if (((Flags_ & CodeSetWriter.FIRST_CHAR) != 0) && (v == 0xFEFF || v == 0xFFFE))

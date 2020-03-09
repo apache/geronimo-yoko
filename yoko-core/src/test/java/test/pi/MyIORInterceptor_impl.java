@@ -36,7 +36,7 @@ final class MyIORInterceptor_impl extends org.omg.CORBA.LocalObject implements
         } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
             throw new RuntimeException();
         }
-        org.apache.yoko.orb.OB.Assert._OB_assert(cdrCodec_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(cdrCodec_ != null);
     }
 
     //

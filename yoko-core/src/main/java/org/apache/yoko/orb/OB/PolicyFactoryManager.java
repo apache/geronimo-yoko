@@ -38,7 +38,7 @@ public final class PolicyFactoryManager {
     // ----------------------------------------------------------------------
 
     void destroy() {
-        Assert._OB_assert(!destroy_);
+        Assert.ensure(!destroy_);
         destroy_ = true;
 
         policyFactoryTableInternal_.clear();

@@ -74,9 +74,9 @@ public final class ClientManager {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
-        Assert._OB_assert(allClients_.isEmpty());
-        Assert._OB_assert(reusableClients_.isEmpty());
+        Assert.ensure(destroy_);
+        Assert.ensure(allClients_.isEmpty());
+        Assert.ensure(reusableClients_.isEmpty());
 
         super.finalize();
     }
@@ -128,7 +128,7 @@ public final class ClientManager {
     // Get a list of ClientProfilePairs for an IOR and a list of policies
     //
     public synchronized Vector<ClientProfilePair> getClientProfilePairs(IOR ior, Policy[] policies) {
-        Assert._OB_assert(ior.type_id != null);
+        Assert.ensure(ior.type_id != null);
 
         //
         // Can't create a Client for a nil object
@@ -425,7 +425,7 @@ public final class ClientManager {
             if (allClients_.remove(client)) {
                 client.destroy();
             } else {
-                Assert._OB_assert("Release called on unknown client");
+                throw Assert.fail("Release called on unknown client");
             }
         }
     }
