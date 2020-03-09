@@ -106,8 +106,8 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         Enumeration e = callMap_.keys();
         while (e.hasMoreElements()) {
             Downcall down = (Downcall) callMap_.get(e.nextElement());
-            Assert._OB_assert(down != null);
-            Assert._OB_assert(down.pending());
+            Assert.ensure(down != null);
+            Assert.ensure(down.pending());
             down.setFailureException(new INITIALIZE(
                     "ORB has been destroyed", MinorCodes.MinorORBDestroyed,
                     CompletionStatus.COMPLETED_NO));
@@ -124,7 +124,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     // Hold any new requests that arrive for the Server
     //
     public synchronized void hold() {
-        Assert._OB_assert(!destroy_);
+        Assert.ensure(!destroy_);
         logger.fine("Collocated server placed in hold state"); 
         hold_ = true;
 
@@ -138,7 +138,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
     // Dispatch any requests that arrive for the Server
     //
     public synchronized void activate() {
-        Assert._OB_assert(!destroy_);
+        Assert.ensure(!destroy_);
         logger.fine("Collocated server activated"); 
         hold_ = false;
 
@@ -217,7 +217,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                     break;
 
                 default:
-                    Assert._OB_assert(false);
+                    throw Assert.fail();
                 }
 
                 return true;
@@ -364,11 +364,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         upcallBeginUserException(upcall, replyContexts);
         OutputStream out = upcall.output();
         try {
-            //
-            // Cannot marshal the exception in Java without the helper
-            //
-            // ex._OB_marshal(out);
-            Assert._OB_assert(false);
+            throw Assert.fail("Cannot marshal the exception in Java without the helper");
         } catch (SystemException e) {
             upcall.marshalEx(e);
         }

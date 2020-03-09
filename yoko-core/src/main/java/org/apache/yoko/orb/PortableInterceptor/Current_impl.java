@@ -26,7 +26,6 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final public class Current_impl extends org.omg.CORBA.LocalObject implements
@@ -180,7 +179,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         SlotDataHolder holder = establishTSD(false);
 
         holder.head = holder.head.next;
-        org.apache.yoko.orb.OB.Assert._OB_assert(holder.head != null);
+        org.apache.yoko.orb.OB.Assert.ensure(holder.head != null);
     }
 
     org.omg.CORBA.Any[] _OB_newSlotTable() {

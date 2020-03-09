@@ -20,13 +20,6 @@ package org.apache.yoko.orb.OB;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorOther;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
-import org.apache.yoko.orb.OB.CorbalocURLScheme;
-import org.apache.yoko.orb.OB.CorbalocURLSchemeHelper;
-import org.apache.yoko.orb.OB.URLRegistry;
-import org.apache.yoko.orb.OB.URLScheme;
 import org.omg.CORBA.BAD_PARAM;
 
 public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
@@ -42,9 +35,9 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
     public CorbanameURLScheme_impl(org.omg.CORBA.ORB orb, URLRegistry registry) {
         orb_ = orb;
         URLScheme scheme = registry.find_scheme("corbaloc");
-        Assert._OB_assert(scheme != null);
+        Assert.ensure(scheme != null);
         corbaloc_ = CorbalocURLSchemeHelper.narrow(scheme);
-        Assert._OB_assert(corbaloc_ != null);
+        Assert.ensure(corbaloc_ != null);
     }
 
     // ------------------------------------------------------------------
@@ -157,7 +150,7 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             String[] content = parser.getContents();
-            Assert._OB_assert((content.length % 2) == 0);
+            Assert.ensure((content.length % 2) == 0);
 
             org.omg.CORBA.Object factoryObj = orb_
                     .resolve_initial_references("DynAnyFactory");

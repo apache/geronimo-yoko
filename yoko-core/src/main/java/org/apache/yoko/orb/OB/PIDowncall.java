@@ -68,13 +68,13 @@ public abstract class PIDowncall extends Downcall {
                     break;
 
                 case SYSTEM_EXCEPTION:
-                    Assert._OB_assert(ex_ != null);
+                    Assert.ensure(ex_ != null);
                     piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
                     break;
 
                 case FAILURE_EXCEPTION:
                     try {
-                        Assert._OB_assert(ex_ != null);
+                        Assert.ensure(ex_ != null);
                         piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
                     } catch (SystemException ignored) {
                         // Ignore any exception translations for failure exceptions
@@ -83,7 +83,7 @@ public abstract class PIDowncall extends Downcall {
 
                 case FORWARD:
                 case FORWARD_PERM:
-                    Assert._OB_assert(forwardIOR_ != null);
+                    Assert.ensure(forwardIOR_ != null);
                     piManager_.clientReceiveLocationForward(requestInfo_, forwardIOR_);
                     break;
 
@@ -139,9 +139,9 @@ public abstract class PIDowncall extends Downcall {
                 return;
     
             if (responseExpected_)
-                Assert._OB_assert(state == State.NO_EXCEPTION);
+                Assert.ensure(state == State.NO_EXCEPTION);
             else
-                Assert._OB_assert(state == State.UNSENT || state == State.NO_EXCEPTION);
+                Assert.ensure(state == State.UNSENT || state == State.NO_EXCEPTION);
             piManager_.clientReceiveReply(requestInfo_);
         }
     }

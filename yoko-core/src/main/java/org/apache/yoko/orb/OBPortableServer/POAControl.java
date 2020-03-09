@@ -114,7 +114,7 @@ class POAControl {
     // DestroyPending then wake any waiting threads and return true.
     //
     synchronized boolean decrementRequestCount() {
-        Assert._OB_assert(requests_ > 0);
+        Assert.ensure(requests_ > 0);
         requests_--;
 
         //

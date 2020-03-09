@@ -114,7 +114,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
                 index_ = 0;
             }
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -137,12 +137,12 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             for (i = 0; i < length_; i++)
                 if (components_[i] == p)
                     break;
-            Assert._OB_assert(i < length_);
+            Assert.ensure(i < length_);
 
             try {
                 setValue(i, p);
             } catch (TypeMismatch | InvalidValue ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             notifyParent();
@@ -158,7 +158,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         if (index_ < 0)
             throw new InvalidValue();
 
-        Assert._OB_assert(length_ > 0);
+        Assert.ensure(length_ > 0);
     }
 
     private void getValue(int index, org.omg.CORBA.Any a) {
@@ -169,7 +169,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         // and insert it into the any
         //
 
-        Assert._OB_assert(index < length_ && primitive_);
+        Assert.ensure(index < length_ && primitive_);
 
         switch (contentKind_.value()) {
         case TCKind._tk_short:
@@ -237,7 +237,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         }
 
         default:
-            Assert._OB_assert("Unsupported sequence type");
+            throw Assert.fail("Unsupported sequence type");
         }
     }
 
@@ -249,7 +249,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         // the contents of the any
         //
 
-        Assert._OB_assert(index < length_);
+        Assert.ensure(index < length_);
 
         if (components_[index] != null)
             components_[index].from_any(any);
@@ -340,7 +340,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             }
 
             default:
-                Assert._OB_assert("Unsupported sequence type");
+                throw Assert.fail("Unsupported sequence type");
             }
         }
     }
@@ -438,7 +438,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             }
 
             default:
-                Assert._OB_assert("Unsupported sequence type");
+                throw Assert.fail("Unsupported sequence type");
             }
         }
 
@@ -468,7 +468,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
         try {
             components_[index].from_any(any);
         } catch (TypeMismatch | InvalidValue ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -597,7 +597,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             }
 
             default:
-                Assert._OB_assert("Unsupported sequence type");
+                throw Assert.fail("Unsupported sequence type");
             }
         }
 
@@ -860,7 +860,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             }
 
             default:
-                Assert._OB_assert("Unsupported sequence type");
+                throw Assert.fail("Unsupported sequence type");
             }
         } else {
             for (int i = 0; i < length_; i++)
@@ -1058,7 +1058,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             if (len > 0 && value.length() > len)
                 throw new InvalidValue();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         String[] buf = (String[]) buf_;
@@ -1145,7 +1145,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             if (len > 0 && value.length() > len)
                 throw new InvalidValue();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         String[] buf = (String[]) buf_;
@@ -1574,13 +1574,12 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             if (dynValueReader_ != null) {
                 for (int i = 0; i < len; i++) {
                     Assert
-                            ._OB_assert(components_[i] == null);
+                            .ensure(components_[i] == null);
 
                     try {
                         components_[i] = dynValueReader_.readValue(in, contentType_);
                     } catch (InconsistentTypeCode ex) {
-                        Assert._OB_assert(ex);
-                        return;
+                        throw Assert.fail(ex);
                     }
 
                     adoptChild(components_[i]);
@@ -1588,7 +1587,7 @@ abstract class DynSeqBase_impl extends DynAny_impl {
             } else {
                 for (int i = 0; i < len; i++) {
                     Assert
-                            ._OB_assert(components_[i] != null);
+                            .ensure(components_[i] != null);
                     DynAny_impl impl = (DynAny_impl) components_[i];
                     impl._OB_unmarshal(in);
                 }

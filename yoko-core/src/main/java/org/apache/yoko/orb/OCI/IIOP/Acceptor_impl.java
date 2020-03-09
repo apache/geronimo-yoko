@@ -423,7 +423,7 @@ final class Acceptor_impl extends LocalObject implements
     public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
             int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
         // System.out.println("Acceptor_impl");
-        Assert._OB_assert((helper == null) ^ (extendedConnectionHelper == null));
+        Assert.ensure((helper == null) ^ (extendedConnectionHelper == null));
         hosts_ = hosts;
         multiProfile_ = multiProfile;
         keepAlive_ = keepAlive;

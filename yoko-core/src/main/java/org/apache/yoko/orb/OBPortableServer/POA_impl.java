@@ -311,7 +311,7 @@ final public class POA_impl extends LocalObject implements POA {
                 && policies.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT) {
             boolean ok = findPolicyIndex(policyList,
                     SERVANT_RETENTION_POLICY_ID.value, i);
-            Assert._OB_assert(ok);
+            Assert.ensure(ok);
             return false;
         }
 
@@ -330,7 +330,7 @@ final public class POA_impl extends LocalObject implements POA {
                         policyList,
                         REQUEST_PROCESSING_POLICY_ID.value,
                         i);
-            Assert._OB_assert(ok);
+            Assert.ensure(ok);
             return false;
         }
 
@@ -345,7 +345,7 @@ final public class POA_impl extends LocalObject implements POA {
             boolean ok = findPolicyIndex(policyList,
                     REQUEST_PROCESSING_POLICY_ID.value,
                     i);
-            Assert._OB_assert(ok);
+            Assert.ensure(ok);
             return false;
         }
 
@@ -361,7 +361,7 @@ final public class POA_impl extends LocalObject implements POA {
             boolean ok = findPolicyIndex(policyList,
                     IMPLICIT_ACTIVATION_POLICY_ID.value,
                     i);
-            Assert._OB_assert(ok);
+            Assert.ensure(ok);
             return false;
         }
 
@@ -411,7 +411,7 @@ final public class POA_impl extends LocalObject implements POA {
             //
             if (parent_ != null) {
                 synchronized (parent_.children_) {
-                    Assert._OB_assert(parent_.children_
+                    Assert.ensure(parent_.children_
                             .containsKey(name_));
                     parent_.children_.remove(name_);
                 }
@@ -633,7 +633,7 @@ final public class POA_impl extends LocalObject implements POA {
         //
         // Set my POA id
         //
-        Assert._OB_assert(parent != null);
+        Assert.ensure(parent != null);
         poaId_ = new String[parent.poaId_.length + 1];
         System.arraycopy(parent.poaId_, 0, poaId_, 0, parent.poaId_.length);
         poaId_[parent.poaId_.length] = name;
@@ -706,7 +706,7 @@ final public class POA_impl extends LocalObject implements POA {
             ism.addInitialReference("POACurrent", poaCurrent_);
             ism.addInitialReference("OCICurrent", ociCurrent_);
         } catch (InvalidName ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //
@@ -721,7 +721,7 @@ final public class POA_impl extends LocalObject implements POA {
     }
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(poaControl_.getDestroyed());
+        Assert.ensure(poaControl_.getDestroyed());
 
         super.finalize();
     }
@@ -735,7 +735,7 @@ final public class POA_impl extends LocalObject implements POA {
             Policy[] rawPolicies)
             throws AdapterAlreadyExists,
             InvalidPolicy {
-        Assert._OB_assert(adapter != null);
+        Assert.ensure(adapter != null);
 
         //
         // Has the POA been destroyed?
@@ -782,22 +782,22 @@ final public class POA_impl extends LocalObject implements POA {
                     obmanager = (POAManager) factory
                             .create_POAManager(adapter, emptyPl);
                 } catch (InvalidName ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 } catch (ManagerAlreadyExists ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 }
                 // catch(org.apache.yoko.orb.OCI.InvalidParam ex)
                 // {
                 // org.apache.yoko.orb.OB.Assert._OB_assert(ex);
                 // }
                 catch (PolicyError ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 }
             } else {
                 try {
                     obmanager = POAManagerHelper.narrow(manager);
                 } catch (BAD_PARAM ex) {
-                    Assert._OB_assert(ex);
+                    throw Assert.fail(ex);
                 }
             }
 
@@ -814,7 +814,7 @@ final public class POA_impl extends LocalObject implements POA {
                 // was created the deactivate the POAManager
                 //
                 if (manager == null) {
-                    Assert._OB_assert(obmanager != null);
+                    Assert.ensure(obmanager != null);
                     try {
                         obmanager.deactivate(true, true);
                     } catch (AdapterInactive e) {
@@ -834,7 +834,7 @@ final public class POA_impl extends LocalObject implements POA {
 
     public org.omg.PortableServer.POA find_POA(String adapter, boolean activate)
             throws AdapterNonExistent {
-        Assert._OB_assert(adapter != null);
+        Assert.ensure(adapter != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1132,7 +1132,7 @@ final public class POA_impl extends LocalObject implements POA {
 
     public void set_servant(Servant servant)
             throws WrongPolicy {
-        Assert._OB_assert(servant != null);
+        Assert.ensure(servant != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1151,7 +1151,7 @@ final public class POA_impl extends LocalObject implements POA {
     public byte[] activate_object(Servant servant)
             throws ServantAlreadyActive,
             WrongPolicy {
-        Assert._OB_assert(servant != null);
+        Assert.ensure(servant != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1162,7 +1162,7 @@ final public class POA_impl extends LocalObject implements POA {
         try {
             servantLocationStrategy_.activate(oid, servant);
         } catch (ObjectAlreadyActive ex) {
-            Assert._OB_assert(ex); // Should not
+            throw Assert.fail(ex); // Should not
                                                                 // occur
         }
 
@@ -1239,7 +1239,7 @@ final public class POA_impl extends LocalObject implements POA {
             throws ServantAlreadyActive,
             ObjectAlreadyActive,
             WrongPolicy {
-        Assert._OB_assert(servant != null);
+        Assert.ensure(servant != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1282,7 +1282,7 @@ final public class POA_impl extends LocalObject implements POA {
 
     public org.omg.CORBA.Object create_reference(String intf)
             throws WrongPolicy {
-        Assert._OB_assert(intf != null);
+        Assert.ensure(intf != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1293,7 +1293,7 @@ final public class POA_impl extends LocalObject implements POA {
     }
 
     public org.omg.CORBA.Object create_reference_with_id(byte[] oid, String intf) {
-        Assert._OB_assert(intf != null);
+        Assert.ensure(intf != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1316,7 +1316,7 @@ final public class POA_impl extends LocalObject implements POA {
     public byte[] servant_to_id(Servant servant)
             throws ServantNotActive,
             WrongPolicy {
-        Assert._OB_assert(servant != null);
+        Assert.ensure(servant != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1346,7 +1346,7 @@ final public class POA_impl extends LocalObject implements POA {
             try {
                 oid = activate_object(servant);
             } catch (ServantAlreadyActive ex) {
-                Assert._OB_assert(ex); // Should
+                throw Assert.fail(ex); // Should
                                                                     // not occur
             }
         }
@@ -1358,7 +1358,7 @@ final public class POA_impl extends LocalObject implements POA {
             Servant servant)
             throws ServantNotActive,
             WrongPolicy {
-        Assert._OB_assert(servant != null);
+        Assert.ensure(servant != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1376,7 +1376,7 @@ final public class POA_impl extends LocalObject implements POA {
                 String intf = servant._all_interfaces(this, oid)[0];
                 return ort().make_object(intf, oid);
             } catch (NoContext ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -1390,7 +1390,7 @@ final public class POA_impl extends LocalObject implements POA {
             throws ObjectNotActive,
             WrongAdapter,
             WrongPolicy {
-        Assert._OB_assert(reference != null);
+        Assert.ensure(reference != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
@@ -1418,7 +1418,7 @@ final public class POA_impl extends LocalObject implements POA {
     public byte[] reference_to_id(org.omg.CORBA.Object reference)
             throws WrongAdapter,
             WrongPolicy {
-        Assert._OB_assert(reference != null);
+        Assert.ensure(reference != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");

@@ -174,7 +174,7 @@ public class Upcall {
 
     public void postinvoke() {
         if (servant_ != null) {
-            Assert._OB_assert(poa_ != null && !postinvokeCalled_);
+            Assert.ensure(poa_ != null && !postinvokeCalled_);
             servant_ = null;
             postinvokeCalled_ = true;
             poa_._OB_postinvoke(); // May raise SystemException
@@ -228,7 +228,7 @@ public class Upcall {
         if (upcallReturn_.replySent()) return;
         if (profileInfo_.major <= 1 && profileInfo_.minor < 1) return;
         initServiceContexts();
-        Assert._OB_assert(codeBaseSC_ != null);
+        Assert.ensure(codeBaseSC_ != null);
         replyContexts.mutable().add(codeBaseSC_);
     }
 
@@ -277,7 +277,7 @@ public class Upcall {
 
     public void endUserException() {
         if (upcallReturn_ != null) {
-            Assert._OB_assert(userEx_);
+            Assert.ensure(userEx_);
             upcallReturn_.upcallEndUserException(this);
         }
     }

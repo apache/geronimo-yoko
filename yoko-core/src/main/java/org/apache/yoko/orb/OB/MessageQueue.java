@@ -24,7 +24,7 @@ import org.omg.CORBA.SystemException;
 
 import java.util.Vector;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.GIOP.MsgType_1_1.LocateRequest;
@@ -66,7 +66,7 @@ public class MessageQueue {
             // Restore stream position
             out.setPosition(pos);
         } catch (SystemException ex) {
-            _OB_assert(ex.completed == COMPLETED_NO);
+            Assert.ensure(ex.completed == COMPLETED_NO);
             down.setFailureException(ex);
             return;
         }

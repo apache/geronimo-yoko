@@ -283,14 +283,8 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
                 // exception. What do we want to do with it?
                 //
                 return;
-            } catch (NoSuchMethodException e) {
-                Assert._OB_assert(ex);
-            } catch (IllegalAccessException e) {
-                Assert._OB_assert(ex);
-            } catch (IllegalArgumentException e) {
-                Assert._OB_assert(ex);
-            } catch (InvocationTargetException e) {
-                Assert._OB_assert(ex);
+            } catch (NoSuchMethodException|IllegalAccessException|IllegalArgumentException|InvocationTargetException e) {
+                throw Assert.fail(ex);
             } catch (SecurityException e) {
                 return;
             }
@@ -346,8 +340,8 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     // take ownership of that raiser object.
     //
     public void _OB_register_raise_proxy(UserExceptionRaiseProxy proxy) {
-        Assert._OB_assert(proxy != null);
-        Assert._OB_assert(raiseProxy_ == null);
+        Assert.ensure(proxy != null);
+        Assert.ensure(raiseProxy_ == null);
         raiseProxy_ = proxy;
     }
 

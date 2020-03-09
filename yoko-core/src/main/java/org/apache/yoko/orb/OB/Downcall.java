@@ -121,22 +121,22 @@ public class Downcall {
                     break;
 
                 case SYSTEM_EXCEPTION:
-                    Assert._OB_assert(ex_ != null);
+                    Assert.ensure(ex_ != null);
                     // update the stack trace to have the caller's stack rather than the 
                     // receiver thread. 
                     ex_.fillInStackTrace();    
                     throw (SystemException) ex_;
 
                 case FAILURE_EXCEPTION:
-                    Assert._OB_assert(ex_ != null);
+                    Assert.ensure(ex_ != null);
                     throw new FailureException((SystemException) ex_);
 
                 case FORWARD:
-                    Assert._OB_assert(forwardIOR_ != null);
+                    Assert.ensure(forwardIOR_ != null);
                     throw new LocationForward(forwardIOR_, false);
 
                 case FORWARD_PERM:
-                    Assert._OB_assert(forwardIOR_ != null);
+                    Assert.ensure(forwardIOR_ != null);
                     throw new LocationForward(forwardIOR_, true);
 
                 default:
@@ -247,15 +247,15 @@ public class Downcall {
     public final void marshalEx(SystemException ex) throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
-        Assert._OB_assert(false);
+        throw Assert.fail();
     }
 
     public final void postMarshal() throws LocationForward, FailureException {
     }
 
     public final void locate() throws LocationForward, FailureException {
-        Assert._OB_assert(responseExpected_);
-        Assert._OB_assert(op_.equals("_locate"));
+        Assert.ensure(responseExpected_);
+        Assert.ensure(op_.equals("_locate"));
 
         //
         // We could also use send() and receive() separately. But
@@ -271,12 +271,12 @@ public class Downcall {
          */
 
         boolean finished = emitter_.sendReceive(this);
-        Assert._OB_assert(finished);
+        Assert.ensure(finished);
         checkForException();
     }
 
     public final void request() throws LocationForward, FailureException {
-        Assert._OB_assert(responseExpected_);
+        Assert.ensure(responseExpected_);
 
         //
         // We could also use send() and receive() separately. But using
@@ -291,16 +291,16 @@ public class Downcall {
          */
 
         boolean finished = emitter_.sendReceive(this);
-        Assert._OB_assert(finished);
+        Assert.ensure(finished);
         checkForException();
     }
 
     public final void oneway() throws LocationForward, FailureException {
-        Assert._OB_assert(!responseExpected_);
+        Assert.ensure(!responseExpected_);
 
         if (policies_.syncScope == SYNC_WITH_TRANSPORT.value) {
             boolean finished = emitter_.send(this, true);
-            Assert._OB_assert(finished);
+            Assert.ensure(finished);
             checkForException();
         } else {
             boolean finished = emitter_.send(this, false);
@@ -310,7 +310,7 @@ public class Downcall {
     }
 
     public final void deferred() throws LocationForward, FailureException {
-        Assert._OB_assert(responseExpected_);
+        Assert.ensure(responseExpected_);
 
         boolean finished = emitter_.send(this, true);
         if (finished)
@@ -318,15 +318,15 @@ public class Downcall {
     }
 
     public final void response() throws LocationForward, FailureException {
-        Assert._OB_assert(responseExpected_);
+        Assert.ensure(responseExpected_);
 
         boolean finished = emitter_.receive(this, true);
-        Assert._OB_assert(finished);
+        Assert.ensure(finished);
         checkForException();
     }
 
     public final boolean poll() throws LocationForward, FailureException {
-        Assert._OB_assert(responseExpected_);
+        Assert.ensure(responseExpected_);
 
         boolean finished = emitter_.receive(this, false);
         if (finished) {
@@ -347,7 +347,7 @@ public class Downcall {
             throws LocationForward, FailureException {
         setFailureException(ex);
         checkForException();
-        Assert._OB_assert(false);
+        throw Assert.fail();
     }
 
     public void postUnmarshal() throws LocationForward, FailureException {
@@ -372,7 +372,7 @@ public class Downcall {
 
     public final String unmarshalExceptionId() {
         try (AutoLock lock = stateLock.getReadLock()) {
-            Assert._OB_assert(state == State.USER_EXCEPTION);
+            Assert.ensure(state == State.USER_EXCEPTION);
             int pos = in_.getPosition();
             String id = in_.read_string();
             in_.setPosition(pos);
@@ -418,7 +418,7 @@ public class Downcall {
 
     public final void setPending() {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
+            Assert.ensure(responseExpected_);
             state = State.PENDING;
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
@@ -428,9 +428,9 @@ public class Downcall {
         try (AutoLock lock = stateLock.getWriteLock()) {
             state = State.NO_EXCEPTION;
             if (in == null) {
-                Assert._OB_assert(!responseExpected_);
+                Assert.ensure(!responseExpected_);
             } else {
-                Assert._OB_assert(responseExpected_);
+                Assert.ensure(responseExpected_);
                 in_ = in;
                 in_._OB_ORBInstance(orbInstance_);
                 CodeConverters codeConverters = client_.codeConverters();
@@ -442,8 +442,8 @@ public class Downcall {
 
     public final void setUserException(InputStream in) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(in != null);
-            Assert._OB_assert(responseExpected_);
+            Assert.ensure(in != null);
+            Assert.ensure(responseExpected_);
             state = State.USER_EXCEPTION;
             in_ = in;
             in_._OB_ORBInstance(orbInstance_);
@@ -455,8 +455,8 @@ public class Downcall {
 
     public void setUserException(UserException ex, String exId) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
-            Assert._OB_assert(ex_ == null);
+            Assert.ensure(responseExpected_);
+            Assert.ensure(ex_ == null);
             state = State.USER_EXCEPTION;
             ex_ = ex;
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
@@ -465,8 +465,8 @@ public class Downcall {
 
     public final void setUserException(UserException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
-            Assert._OB_assert(ex_ == null);
+            Assert.ensure(responseExpected_);
+            Assert.ensure(ex_ == null);
             state = State.USER_EXCEPTION;
             ex_ = ex;
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
@@ -475,8 +475,8 @@ public class Downcall {
 
     public final void setUserException(String exId) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
-            Assert._OB_assert(ex_ == null);
+            Assert.ensure(responseExpected_);
+            Assert.ensure(ex_ == null);
             state = State.USER_EXCEPTION;
             exId_ = exId;
             logger_.debug("Received user exception " + exId);
@@ -486,8 +486,8 @@ public class Downcall {
 
     public final void setSystemException(SystemException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
-            Assert._OB_assert(ex_ == null);
+            Assert.ensure(responseExpected_);
+            Assert.ensure(ex_ == null);
             state = State.SYSTEM_EXCEPTION;
             ex_ = ex;
             logger_.debug("Received system exception", ex);
@@ -497,7 +497,7 @@ public class Downcall {
 
     public final void setFailureException(SystemException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(ex_ == null);
+            Assert.ensure(ex_ == null);
             state = State.FAILURE_EXCEPTION;
             ex_ = ex;
             logger_.debug("Received failure exception", ex);
@@ -507,13 +507,13 @@ public class Downcall {
 
     public final void setLocationForward(IOR ior, boolean perm) {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(responseExpected_);
-            Assert._OB_assert(forwardIOR_ == null);
+            Assert.ensure(responseExpected_);
+            Assert.ensure(forwardIOR_ == null);
             state = perm ? State.FORWARD_PERM : State.FORWARD;
             forwardIOR_ = ior;
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
-        Assert._OB_assert(responseExpected_);
+        Assert.ensure(responseExpected_);
     }
 
     //
@@ -523,7 +523,7 @@ public class Downcall {
     //
     public final void allowWaiting() {
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(stateWaitCondition == null);
+            Assert.ensure(stateWaitCondition == null);
             stateWaitCondition = lock.newCondition();
         }
     }
@@ -547,7 +547,7 @@ public class Downcall {
         // flag into account
         //
         try (AutoLock lock = stateLock.getWriteLock()) {
-            Assert._OB_assert(stateWaitCondition != null);
+            Assert.ensure(stateWaitCondition != null);
             while (state == State.UNSENT || state == State.PENDING) {
                 if (!block) return false;
 

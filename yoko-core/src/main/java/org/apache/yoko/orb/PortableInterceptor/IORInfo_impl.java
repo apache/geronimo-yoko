@@ -134,7 +134,7 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
 
     public void _OB_adapterTemplate(
             org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate) {
-        org.apache.yoko.orb.OB.Assert._OB_assert(adapterTemplate_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(adapterTemplate_ == null);
         adapterTemplate_ = adapterTemplate;
     }
 

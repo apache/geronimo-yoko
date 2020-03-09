@@ -17,21 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_REACTIVE;
-import org.apache.yoko.orb.OBPortableServer.COMMUNICATIONS_CONCURRENCY_POLICY_THREADED;
-import org.apache.yoko.orb.OBPortableServer.CommunicationsConcurrencyPolicy;
-import org.apache.yoko.orb.OBPortableServer.CommunicationsConcurrencyPolicyHelper;
-import org.apache.yoko.orb.OBPortableServer.GIOPVersionPolicy;
-import org.apache.yoko.orb.OBPortableServer.GIOPVersionPolicyHelper;
-import org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_1_0;
-import org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_1_1;
-import org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_1_2;
-import org.apache.yoko.orb.OBPortableServer.GIOP_VERSION_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.POAManager;
 import org.omg.PortableServer.POAManagerPackage.*;
 
 final public class POAManager_impl extends org.omg.CORBA.LocalObject implements POAManager {
@@ -665,7 +652,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
         POANameHasher idkey = new POANameHasher(id);
         
         logger.fine("Adding new poa with id " + idkey); 
-        org.apache.yoko.orb.OB.Assert._OB_assert(!poas_.containsKey(idkey));
+        org.apache.yoko.orb.OB.Assert.ensure(!poas_.containsKey(idkey));
         poas_.put(idkey, poa);
 
         poaLocator_.add(poa, id);
@@ -677,7 +664,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
     synchronized void _OB_removePOA(String[] id) {
         POANameHasher idkey = new POANameHasher(id);
         logger.fine("Removing poa with id " + idkey); 
-        org.apache.yoko.orb.OB.Assert._OB_assert(poas_.containsKey(idkey));
+        org.apache.yoko.orb.OB.Assert.ensure(poas_.containsKey(idkey));
         poas_.remove(idkey);
 
         poaLocator_.remove(id);
@@ -730,7 +717,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
         // If the GIOP engine sends a request while the POAManager is in
         // INACTIVE state, then something is wrong.
         //
-        org.apache.yoko.orb.OB.Assert._OB_assert(get_state() != State.INACTIVE);
+        org.apache.yoko.orb.OB.Assert.ensure(get_state() != State.INACTIVE);
         logger.fine("Searching for direct servant with key " + data); 
 
         org.omg.PortableServer.POA poa = null;
@@ -838,8 +825,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
             return org.omg.PortableInterceptor.DISCARDING.value;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(false);
-        return org.omg.PortableInterceptor.NON_EXISTENT.value;
+        throw org.apache.yoko.orb.OB.Assert.fail();
     }
 
     public org.apache.yoko.orb.OCI.Acceptor[] _OB_getAcceptors() {

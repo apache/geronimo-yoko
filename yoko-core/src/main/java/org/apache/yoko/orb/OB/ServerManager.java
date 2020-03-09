@@ -17,7 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class ServerManager {
@@ -35,9 +34,9 @@ public final class ServerManager {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
-        Assert._OB_assert(allServers_.isEmpty());
-        Assert._OB_assert(collocatedServer_ == null);
+        Assert.ensure(destroy_);
+        Assert.ensure(allServers_.isEmpty());
+        Assert.ensure(collocatedServer_ == null);
 
         super.finalize();
     }

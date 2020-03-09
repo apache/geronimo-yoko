@@ -59,7 +59,7 @@ public final class PluginManager {
     // Destroy the PluginManager
     //
     public void destroy() {
-        Assert._OB_assert(!destroy_); // May only be destroyed once
+        Assert.ensure(!destroy_); // May only be destroyed once
         destroy_ = true;
 
         //

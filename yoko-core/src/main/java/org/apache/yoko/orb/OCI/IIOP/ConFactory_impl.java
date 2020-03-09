@@ -87,7 +87,7 @@ final class ConFactory_impl extends LocalObject implements
     }
 
     public String describe_profile(TaggedProfile profile) {
-        Assert._OB_assert(profile.tag == TAG_INTERNET_IOP.value);
+        Assert.ensure(profile.tag == TAG_INTERNET_IOP.value);
 
         //
         // Get the IIOP profile body

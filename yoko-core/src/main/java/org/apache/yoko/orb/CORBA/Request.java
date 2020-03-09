@@ -73,8 +73,8 @@ final public class Request extends org.omg.CORBA.Request {
 
     private void marshal() throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
 
         OutputStream out = downcallStub_.preMarshal(downcall_);
 
@@ -105,7 +105,7 @@ final public class Request extends org.omg.CORBA.Request {
                     out.write_string((String) ctxVec.elementAt(i));
             }
         } catch (org.omg.CORBA.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);    
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         } catch (org.omg.CORBA.SystemException ex) {
             downcallStub_.marshalEx(downcall_, ex);
         }
@@ -115,14 +115,14 @@ final public class Request extends org.omg.CORBA.Request {
 
     private void unmarshal() throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
 
         org.omg.CORBA.BooleanHolder uex = new org.omg.CORBA.BooleanHolder();
         InputStream in = downcallStub_.preUnmarshal(downcall_, uex);
 
         if (in == null) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(!uex.value);
+            org.apache.yoko.orb.OB.Assert.ensure(!uex.value);
             downcallStub_.postUnmarshal(downcall_);
             return;
         }
@@ -150,9 +150,9 @@ final public class Request extends org.omg.CORBA.Request {
                     }
                 }
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);    
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);     
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 downcallStub_.unmarshalEx(downcall_, ex);
             }
@@ -175,7 +175,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     }
                 } catch (org.omg.CORBA.Bounds ex) {
-                    org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                    throw org.apache.yoko.orb.OB.Assert.fail(ex);
                 }
             } catch (org.omg.CORBA.SystemException ex) {
                 downcallStub_.unmarshalEx(downcall_, ex);
@@ -275,8 +275,8 @@ final public class Request extends org.omg.CORBA.Request {
             state_ = RequestStatePending;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
 
         try {
             RetryInfo info = new RetryInfo();
@@ -334,8 +334,8 @@ final public class Request extends org.omg.CORBA.Request {
             state_ = RequestStatePending;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
 
         try {
             RetryInfo info = new RetryInfo();
@@ -396,8 +396,8 @@ final public class Request extends org.omg.CORBA.Request {
             pollable_ = true;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
 
         org.apache.yoko.orb.OB.ORBInstance orbInstance = delegate_
                 ._OB_ORBInstance();
@@ -498,14 +498,14 @@ final public class Request extends org.omg.CORBA.Request {
                 return;
             } else {
                 org.apache.yoko.orb.OB.Assert
-                        ._OB_assert(state_ == RequestStateSent);
+                        .ensure(state_ == RequestStateSent);
                 multi.removeDeferredRequest(this);
                 state_ = RequestStateReceiving;
             }
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
 
         boolean send = false;
         try {
@@ -594,8 +594,8 @@ final public class Request extends org.omg.CORBA.Request {
             polling_ = true;
         }
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert._OB_assert(downcall_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
+        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
 
         boolean send = false;
         try {

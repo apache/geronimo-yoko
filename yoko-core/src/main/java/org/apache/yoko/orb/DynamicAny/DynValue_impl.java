@@ -74,7 +74,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
             // Custom valuetypes are not supported by DynValue_impl
             //
             Assert
-                    ._OB_assert(origType_.type_modifier() != VM_CUSTOM.value);
+                    .ensure(origType_.type_modifier() != VM_CUSTOM.value);
 
             Vector names = new Vector();
             Vector types = new Vector();
@@ -118,7 +118,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
             //
             set_to_null();
         } catch (BadKind ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -144,7 +144,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
                 types.addElement(origTC.member_type(i));
             }
         } catch (BadKind | Bounds ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -199,7 +199,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
         else {
             set_to_value();
 
-            Assert._OB_assert(components_.length == dv
+            Assert.ensure(components_.length == dv
                     .component_count());
 
             dv.rewind();
@@ -521,7 +521,7 @@ final class DynValue_impl extends DynValueCommon_impl implements
 
                 out._OB_endValue();
             } catch (BadKind ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
     }
@@ -562,13 +562,12 @@ final class DynValue_impl extends DynValueCommon_impl implements
             if ((origTC.kind().value() == TCKind._tk_value)
                     && (dynValueReader_ != null)) {
                 Assert
-                        ._OB_assert(components_[i] == null);
+                        .ensure(components_[i] == null);
 
                 try {
                     components_[i] = dynValueReader_.readValue(in, types_[i]);
                 } catch (InconsistentTypeCode ex) {
-                    Assert._OB_assert(ex);
-                    return;
+                    throw Assert.fail(ex);
                 }
 
                 adoptChild(components_[i]);

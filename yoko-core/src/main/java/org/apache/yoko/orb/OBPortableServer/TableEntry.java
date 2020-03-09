@@ -49,19 +49,19 @@ class TableEntry {
     }
 
     void setServant(org.omg.PortableServer.Servant s) {
-        Assert._OB_assert(servant_ == null && s != null
+        Assert.ensure(servant_ == null && s != null
                 && state_ == ACTIVATE_PENDING);
 
         servant_ = s;
     }
 
     void clearServant() {
-        Assert._OB_assert(state_ == DEACTIVATED && outstandingRequests_ == 0);
+        Assert.ensure(state_ == DEACTIVATED && outstandingRequests_ == 0);
         servant_ = null;
     }
 
     org.omg.PortableServer.Servant getServant() {
-        Assert._OB_assert(state_ == ACTIVE || state_ == DEACTIVATE_PENDING);
+        Assert.ensure(state_ == ACTIVE || state_ == DEACTIVATE_PENDING);
         return servant_;
     }
 

@@ -18,25 +18,11 @@
 package org.apache.yoko.orb.OB;
 
 final public class Assert {
-    public static void _OB_assert(boolean b) {
-        if (!b)
-            throw new AssertionFailed();
-    }
-    
-    public static void _OB_assert(boolean b, String reason) {
-        if (!b)
-            throw new AssertionFailed(reason);
-    }
+    public static AssertionFailed fail() { throw new AssertionFailed(); }
+    public static AssertionFailed fail(String reason) { throw new AssertionFailed(reason); }
+    public static AssertionFailed fail(Throwable ex) { throw new AssertionFailed(ex); }
+    public static AssertionFailed fail(String reason, Throwable ex) { throw new AssertionFailed(reason, ex); }
 
-    public static AssertionFailed _OB_assert(String reason) {
-        throw new AssertionFailed(reason);
-    }
-    
-    public static AssertionFailed _OB_assert(Throwable ex) {
-        throw new AssertionFailed(ex);
-    }
-    
-    public static AssertionFailed _OB_assert(String reason, Throwable ex) {
-        throw new AssertionFailed(reason, ex);
-    }
+    public static void ensure(boolean b) { if (!b) fail(); }
+    public static void ensure(boolean b, String reason) { if (!b) fail(reason); }
 }

@@ -29,7 +29,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.ReadWriteLock;
 
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
@@ -86,13 +85,13 @@ public final class ORBControl {
         if (shutdown.getCount() != 0 || state == State.SERVER_SHUTDOWN)
             return;
 
-        Assert._OB_assert(state != State.CLIENT_SHUTDOWN && state != State.DESTROYED);
+        Assert.ensure(state != State.CLIENT_SHUTDOWN && state != State.DESTROYED);
 
         //
         // If run was called then only the main thread may complete the
         // shutdown
         //
-        Assert._OB_assert(state == State.NOT_RUNNING || mainThread_ == Thread.currentThread());
+        Assert.ensure(state == State.NOT_RUNNING || mainThread_ == Thread.currentThread());
 
         //
         // Get the POAManagerFactory implementation
@@ -205,7 +204,7 @@ public final class ORBControl {
         // destroy() may not be called unless the client side has been
         // shutdown
         //
-        Assert._OB_assert(state == State.CLIENT_SHUTDOWN);
+        Assert.ensure(state == State.CLIENT_SHUTDOWN);
         state = State.DESTROYED;
 
         //
@@ -407,7 +406,7 @@ public final class ORBControl {
             //
             // The server shutdown must have completed
             //
-            Assert._OB_assert(state == State.SERVER_SHUTDOWN);
+            Assert.ensure(state == State.SERVER_SHUTDOWN);
 
             //
             // Shutdown the client side. Continue to dispatch events until all
@@ -469,7 +468,7 @@ public final class ORBControl {
         try {
             factory = org.apache.yoko.orb.OBPortableServer.POAManagerFactoryHelper.narrow(ism.resolveInitialReferences("POAManagerFactory"));
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //
@@ -493,7 +492,7 @@ public final class ORBControl {
                 org.omg.CORBA.Policy[] emptyPl = new org.omg.CORBA.Policy[0];
                 manager = (org.apache.yoko.orb.OBPortableServer.POAManager) (factory.create_POAManager("RootPOAManager", emptyPl));
             } catch (org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
             // catch(org.apache.yoko.orb.OCI.InvalidParam ex)
             // {
@@ -505,7 +504,7 @@ public final class ORBControl {
             // }
             catch (org.omg.CORBA.PolicyError ex) {
                 // TODO : Is this correct?
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -519,7 +518,7 @@ public final class ORBControl {
         try {
             ism.addInitialReference("RootPOA", root, true);
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
 
         //

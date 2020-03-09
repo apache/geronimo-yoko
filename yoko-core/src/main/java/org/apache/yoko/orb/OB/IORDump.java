@@ -55,7 +55,7 @@ public class IORDump {
             org.omg.CORBA.Object obj = orb.resolve_initial_references("OCIConFactoryRegistry");
             conFactoryRegistry = ConFactoryRegistryHelper.narrow(obj);
         } catch (InvalidName ex) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
         ConFactory[] factories = conFactoryRegistry.get_factories();
 

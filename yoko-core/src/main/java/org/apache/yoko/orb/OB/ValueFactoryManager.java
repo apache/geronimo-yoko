@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OB;
 
 import java.util.logging.Logger;
-import java.util.logging.Level;
 
 import org.apache.yoko.util.cmsf.RepIds;
 
@@ -41,7 +40,7 @@ public final class ValueFactoryManager {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
+        Assert.ensure(destroy_);
 
         super.finalize();
     }
@@ -51,7 +50,7 @@ public final class ValueFactoryManager {
     // ----------------------------------------------------------------------
 
     synchronized void destroy() {
-        Assert._OB_assert(!destroy_); // May only be destroyed once
+        Assert.ensure(!destroy_); // May only be destroyed once
 
         //
         // Destroy the hashtable
@@ -91,7 +90,7 @@ public final class ValueFactoryManager {
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
-        Assert._OB_assert(id != null && factory != null);
+        Assert.ensure(id != null && factory != null);
 
         org.omg.CORBA.portable.ValueFactory old = (org.omg.CORBA.portable.ValueFactory) factories_
                 .get(id);
@@ -112,7 +111,7 @@ public final class ValueFactoryManager {
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
-        Assert._OB_assert(id != null);
+        Assert.ensure(id != null);
 
         if (factories_.remove(id) == null)
             throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
@@ -133,7 +132,7 @@ public final class ValueFactoryManager {
                     org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
-        Assert._OB_assert(id != null);
+        Assert.ensure(id != null);
 
         return (org.omg.CORBA.portable.ValueFactory) factories_.get(id);
     }
@@ -152,7 +151,7 @@ public final class ValueFactoryManager {
                                                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
-        Assert._OB_assert(id != null);
+        Assert.ensure(id != null);
 
         org.omg.CORBA.portable.ValueFactory result;
 

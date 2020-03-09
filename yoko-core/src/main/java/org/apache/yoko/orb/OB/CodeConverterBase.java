@@ -54,11 +54,7 @@ abstract public class CodeConverterBase {
         else if (source.max_bytes <= 2)
             reader_ = new FixedWidth2Reader();
         else {
-            //
-            // Java doesn't support wide characters larger than 16 bit
-            //
-            Assert._OB_assert(false);
-            throw new Error("unreachable");
+            throw Assert.fail("Yoko doesn't support wide characters larger than 16 bit");
         }
 
         if (destination == UTF_8)
@@ -68,11 +64,7 @@ abstract public class CodeConverterBase {
         else if (destination.max_bytes <= 2)
             writer_ = new FixedWidth2Writer();
         else {
-            //
-            // Java doesn't support wide characters larger than 16 bit
-            //
-            Assert._OB_assert(false);
-            throw new Error("unreachable");
+            throw Assert.fail("Yoko doesn't support wide characters larger than 16 bit");
         }
     }
 

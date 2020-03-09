@@ -55,7 +55,7 @@ import org.omg.PortableServer.Servant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.util.CollectionExtras.allOf;
 import static org.apache.yoko.util.CollectionExtras.filterByType;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
@@ -120,21 +120,21 @@ final public class PIManager {
     }
 
     public void registerPolicyFactory(int type, PolicyFactory factory) {
-        _OB_assert(orbInstance != null);
+        Assert.ensure(orbInstance != null);
         orbInstance.getPolicyFactoryManager().registerPolicyFactory(type, factory, false);
     }
 
     public void setORBInstance(ORBInstance orbInstance) {
         this.orbInstance = orbInstance;
 
-        _OB_assert(current == null);
+        Assert.ensure(current == null);
         current = new Current_impl(orb);
 
         InitialServiceManager ism = this.orbInstance.getInitialServiceManager();
         try {
             ism.addInitialReference("PICurrent", current);
         } catch (InvalidName ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -152,7 +152,7 @@ final public class PIManager {
                 Policy[] pl = {new InterceptorPolicy_impl(false)};
                 pm.set_policy_overrides(pl, SetOverrideType.ADD_OVERRIDE);
             } catch (InvalidName | InvalidPolicies ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
 
@@ -195,7 +195,7 @@ final public class PIManager {
             ServiceContexts requestContexts,
             ServiceContexts replyContexts,
             TransportInfo transportInfo) {
-        _OB_assert(current != null);
+        Assert.ensure(current != null);
         return new ServerRequestInfo_impl(orb, nextID(), op, responseExpected, policies, adapterId,
                 objectId, adapterTemplate, requestContexts, replyContexts, orbInstance, current, transportInfo);
     }

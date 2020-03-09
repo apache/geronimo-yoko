@@ -17,15 +17,6 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-import org.apache.yoko.orb.OBPortableServer.AcceptorConfig;
-import org.apache.yoko.orb.OBPortableServer.CommunicationsConcurrencyPolicy;
-import org.apache.yoko.orb.OBPortableServer.ENDPOINT_CONFIGURATION_POLICY_ID;
-import org.apache.yoko.orb.OBPortableServer.EndpointConfigurationPolicy;
-import org.apache.yoko.orb.OBPortableServer.EndpointConfigurationPolicyHelper;
-import org.apache.yoko.orb.OBPortableServer.GIOPVersionPolicy;
-import org.apache.yoko.orb.OBPortableServer.POAManager;
-import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
-
 final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
         implements POAManagerFactory {
     //
@@ -74,7 +65,7 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
         String name = "POAManager-" + now;
         name += count_++;
 
-        org.apache.yoko.orb.OB.Assert._OB_assert(!managers_.containsKey(name));
+        org.apache.yoko.orb.OB.Assert.ensure(!managers_.containsKey(name));
 
         return name;
     }
@@ -514,7 +505,7 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
             try {
                 piManager.addIORInterceptor(i, true);
             } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
         } catch (org.omg.CORBA.BAD_PARAM ex) {
             String msg = serverId + ": (IMR) Server already running";

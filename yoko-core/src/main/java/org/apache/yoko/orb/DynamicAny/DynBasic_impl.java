@@ -21,7 +21,6 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
-import org.omg.DynamicAny.DynAnyPackage.InvalidValue;
 
 final class DynBasic_impl extends DynAny_impl {
     private Any any_;
@@ -107,16 +106,16 @@ final class DynBasic_impl extends DynAny_impl {
             //
             try {
                 org.apache.yoko.orb.OB.Assert
-                        ._OB_assert(origTC.type_modifier() == org.omg.CORBA.VM_CUSTOM.value);
+                        .ensure(origTC.type_modifier() == org.omg.CORBA.VM_CUSTOM.value);
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
             any_ = new Any(orbInstance_, type, null);
             break;
 
         case org.omg.CORBA.TCKind._tk_Principal:
         default:
-            org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported type code");
+            throw org.apache.yoko.orb.OB.Assert.fail("Unsupported type code");
         }
     }
 
@@ -289,7 +288,7 @@ final class DynBasic_impl extends DynAny_impl {
                 // Currently, it's not possible for a custom valuetype
                 // to be represented as an InputStream in an any
                 //
-                org.apache.yoko.orb.OB.Assert._OB_assert("Unable to compare value types");
+                throw org.apache.yoko.orb.OB.Assert.fail("Unable to compare value types");
             }
 
         case org.omg.CORBA.TCKind._tk_abstract_interface:
@@ -306,16 +305,13 @@ final class DynBasic_impl extends DynAny_impl {
                 // Currently, it's not possible for an abstract interface
                 // to be represented as an InputStream in an any
                 //
-                org.apache.yoko.orb.OB.Assert._OB_assert("Unable to compare abstract_interface types");
+                throw org.apache.yoko.orb.OB.Assert.fail("Unable to compare abstract_interface types");
             }
-            return false;
 
         case org.omg.CORBA.TCKind._tk_Principal:
         default:
-            org.apache.yoko.orb.OB.Assert._OB_assert("Unsupported type code");
+            throw org.apache.yoko.orb.OB.Assert.fail("Unsupported type code");
         }
-
-        return false; // The compiler needs this
     }
 
     public synchronized org.omg.DynamicAny.DynAny copy() {

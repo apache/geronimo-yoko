@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.CorbalocURLScheme;
 import org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists;
 import org.apache.yoko.orb.OB.URLRegistry;
@@ -78,7 +79,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
                 registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, extendedConnectionHelper_));                
             }
         } catch (InvalidName ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
             throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
         }
@@ -89,13 +90,13 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         try {
             URLRegistry registry = URLRegistryHelper.narrow(orb_.resolve_initial_references("URLRegistry"));
             URLScheme scheme = registry.find_scheme("corbaloc");
-            _OB_assert(scheme != null);
+            ensure(scheme != null);
             CorbalocURLScheme corbaloc = org.apache.yoko.orb.OB.CorbalocURLSchemeHelper.narrow(scheme);
             corbaloc.add_protocol(new CorbalocProtocol_impl());
         } catch (InvalidName ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         } catch (ProtocolAlreadyExists ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -104,7 +105,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
             AccFactoryRegistry registry = AccFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIAccFactoryRegistry"));
             registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper_, extendedConnectionHelper_));
         } catch (InvalidName ex) {
-            _OB_assert(ex);
+            throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
             throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
         }

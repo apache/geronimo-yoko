@@ -20,8 +20,6 @@ package org.apache.yoko.orb.DynamicAny;
 import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
-import org.omg.DynamicAny.DynAnyPackage.InvalidValue;
 
 final class DynFixed_impl extends DynAny_impl implements
         org.omg.DynamicAny.DynFixed {
@@ -87,7 +85,7 @@ final class DynFixed_impl extends DynAny_impl implements
                 throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
             value_ = f;
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         } catch (org.omg.CORBA.BAD_OPERATION ex) {
             throw (org.omg.DynamicAny.DynAnyPackage.InvalidValue)new 
                 org.omg.DynamicAny.DynAnyPackage.InvalidValue().initCause(ex);
@@ -181,7 +179,7 @@ final class DynFixed_impl extends DynAny_impl implements
             origDigits = origType_.fixed_digits();
             origScale = origType_.fixed_scale();
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
 
         int fDigits = 0, fScale = f.scale();
@@ -221,7 +219,7 @@ final class DynFixed_impl extends DynAny_impl implements
         try {
             out.write_fixed(value_.movePointRight(origType_.fixed_scale()));
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
     }
 
@@ -234,7 +232,7 @@ final class DynFixed_impl extends DynAny_impl implements
         try {
             value_ = in.read_fixed().movePointLeft(origType_.fixed_scale());
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
 
         notifyParent();

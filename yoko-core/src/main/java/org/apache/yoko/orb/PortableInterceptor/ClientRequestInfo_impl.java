@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
@@ -53,7 +54,7 @@ import org.omg.PortableInterceptor.USER_EXCEPTION;
 
 import java.util.List;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPolicyType;
@@ -123,7 +124,7 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
                 return result;
             }
         }
-        throw _OB_assert("There should have been a tagged profile matching the profile info.");
+        throw Assert.fail("There should have been a tagged profile matching the profile info.");
     }
 
     // If the result of the invocation is an exception this is the result.

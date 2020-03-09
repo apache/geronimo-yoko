@@ -73,7 +73,7 @@ final class ArgumentStrategyDII extends ArgumentStrategy {
             try {
                 v = args_.item(i);
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
 
             switch (v.flags()) {
@@ -101,7 +101,7 @@ final class ArgumentStrategyDII extends ArgumentStrategy {
                 break;
 
             default:
-                org.apache.yoko.orb.OB.Assert._OB_assert(false);
+                throw org.apache.yoko.orb.OB.Assert.fail();
             }
         }
 
@@ -142,7 +142,7 @@ final class ArgumentStrategyDII extends ArgumentStrategy {
             try {
                 e[i] = exceptions_.item(i);
             } catch (org.omg.CORBA.Bounds ex) {
-                org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+                throw org.apache.yoko.orb.OB.Assert.fail(ex);
             }
         }
 

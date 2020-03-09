@@ -17,8 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.DispatchRequest;
-
 final class ThreadPool {
     private boolean destroy_ = false; // True if destroy was called
 
@@ -100,7 +98,7 @@ final class ThreadPool {
             try {
                 group_.destroy();
             } catch (IllegalThreadStateException ex) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
         }
     }

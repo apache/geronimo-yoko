@@ -248,7 +248,7 @@ final class AccFactory_impl extends LocalObject implements
     // ------------------------------------------------------------------
 
     public AccFactory_impl(ORB orb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper extendedHelper) {
-        Assert._OB_assert((helper == null) ^ (extendedHelper == null));
+        Assert.ensure((helper == null) ^ (extendedHelper == null));
         orb_ = orb;
         info_ = new AccFactoryInfo_impl();
         listenMap_ = lm;

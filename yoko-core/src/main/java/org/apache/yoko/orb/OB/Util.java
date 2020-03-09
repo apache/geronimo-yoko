@@ -122,7 +122,7 @@ public final class Util {
             result.minor = ex.minor;
             result.completed = ex.completed;
         } catch (NoSuchMethodException | InvocationTargetException | IllegalArgumentException | IllegalAccessException | InstantiationException e) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
         return result;
     }
@@ -345,7 +345,7 @@ public final class Util {
                 id = (String) m.invoke(null, new Object[0]);
             } catch (ClassNotFoundException | SecurityException ignored) {
             } catch (NoSuchMethodException | InvocationTargetException | IllegalArgumentException | IllegalAccessException e) {
-                Assert._OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             //
@@ -356,8 +356,7 @@ public final class Util {
             else
                 return id;
         } else {
-            Assert._OB_assert(ex);
-            return null; // needed by compiler
+            throw Assert.fail(ex);
         }
     }
 
@@ -374,7 +373,7 @@ public final class Util {
             m.invoke(null, args);
         } catch (ClassNotFoundException | SecurityException ignored) {
         } catch (NoSuchMethodException | InvocationTargetException | IllegalArgumentException | IllegalAccessException e) {
-            Assert._OB_assert(ex);
+            throw Assert.fail(ex);
         }
         return any;
     }

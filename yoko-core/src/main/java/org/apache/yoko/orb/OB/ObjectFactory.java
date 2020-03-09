@@ -39,7 +39,7 @@ public final class ObjectFactory {
     private PolicyManager policyManager_; // The PolicyManager object
 
     void destroy() {
-        Assert._OB_assert(!destroy_);
+        Assert.ensure(!destroy_);
         destroy_ = true;
         orbInstance_ = null;
         policyManager_ = null;

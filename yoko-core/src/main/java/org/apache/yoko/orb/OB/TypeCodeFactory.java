@@ -131,10 +131,8 @@ public final class TypeCodeFactory {
                     .create_input_stream().read_ulong();
 
         default:
-            Assert._OB_assert("Unsupported typecode for compare");
+            throw Assert.fail("Unsupported typecode for compare");
         }
-
-        return false;
     }
 
     // ----------------------------------------------------------------------
@@ -143,7 +141,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createPrimitiveTC(
             org.omg.CORBA.TCKind kind) {
-        Assert._OB_assert(kind.value() < primitives_.length);
+        Assert.ensure(kind.value() < primitives_.length);
 
         if (primitives_[kind.value()] != null)
             return primitives_[kind.value()];
@@ -184,13 +182,11 @@ public final class TypeCodeFactory {
             break;
 
         case org.omg.CORBA.TCKind._tk_value:
-            tc = createValueTC("IDL:omg.org/CORBA/ValueBase:1.0", "ValueBase",
-                    VM_ABSTRACT.value, null,
-                    new ValueMember[0]);
+            tc = createValueTC("IDL:omg.org/CORBA/ValueBase:1.0", "ValueBase", VM_ABSTRACT.value, null, new ValueMember[0]);
             break;
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
 
         primitives_[kind.value()] = tc;
@@ -200,7 +196,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createStructTC(String id, String name,
             StructMember[] members) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -264,7 +260,7 @@ public final class TypeCodeFactory {
     public static org.omg.CORBA.TypeCode createUnionTC(String id, String name,
             org.omg.CORBA.TypeCode discriminator_type,
             UnionMember[] members) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -384,7 +380,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createEnumTC(String id, String name,
             String[] members) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -430,7 +426,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createAliasTC(String id, String name,
             org.omg.CORBA.TypeCode original_type) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -466,7 +462,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createExceptionTC(String id,
             String name, StructMember[] members) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -529,7 +525,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createInterfaceTC(String id,
             String name) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -552,7 +548,7 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createStringTC(int bound) {
-        Assert._OB_assert(bound >= 0);
+        Assert.ensure(bound >= 0);
 
         TypeCode tc = new TypeCode();
 
@@ -563,7 +559,7 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createWStringTC(int bound) {
-        Assert._OB_assert(bound >= 0);
+        Assert.ensure(bound >= 0);
 
         TypeCode tc = new TypeCode();
 
@@ -574,7 +570,7 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createFixedTC(short digits, short scale) {
-        Assert._OB_assert(digits >= 0);
+        Assert.ensure(digits >= 0);
 
         TypeCode tc = new TypeCode();
 
@@ -587,7 +583,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createSequenceTC(int bound,
             org.omg.CORBA.TypeCode element_type) {
-        Assert._OB_assert(bound >= 0);
+        Assert.ensure(bound >= 0);
 
         if (!checkType(element_type))
             throw new BAD_TYPECODE(MinorCodes
@@ -615,7 +611,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createArrayTC(int length,
             org.omg.CORBA.TypeCode element_type) {
-        Assert._OB_assert(length > 0);
+        Assert.ensure(length > 0);
 
         if (!checkType(element_type))
             throw new BAD_TYPECODE(MinorCodes
@@ -639,7 +635,7 @@ public final class TypeCodeFactory {
     public static org.omg.CORBA.TypeCode createValueTC(String id, String name,
             short type_modifier, org.omg.CORBA.TypeCode concrete_base,
             ValueMember[] members) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -725,7 +721,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createValueBoxTC(String id,
             String name, org.omg.CORBA.TypeCode boxed_type) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -758,7 +754,7 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createNativeTC(String id, String name) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -781,7 +777,7 @@ public final class TypeCodeFactory {
     }
 
     public static org.omg.CORBA.TypeCode createRecursiveTC(String id) {
-        Assert._OB_assert(id != null);
+        Assert.ensure(id != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -798,7 +794,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createAbstractInterfaceTC(String id,
             String name) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes
@@ -822,7 +818,7 @@ public final class TypeCodeFactory {
 
     public static org.omg.CORBA.TypeCode createLocalInterfaceTC(String id,
             String name) {
-        Assert._OB_assert(id != null && name != null);
+        Assert.ensure(id != null && name != null);
 
         if (!checkId(id))
             throw new BAD_PARAM(MinorCodes

@@ -16,6 +16,7 @@
  */
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.orb.OCI.ReadBuffer;
@@ -33,7 +34,6 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNativeNotSupported;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoAlias;
@@ -232,7 +232,7 @@ final public class Any extends org.omg.CORBA.Any {
                     org.omg.CORBA_2_3.portable.InputStream is = (org.omg.CORBA_2_3.portable.InputStream) in;
                     value = is.read_value(typeCode.id());
                 } catch (BadKind e) {
-                    _OB_assert(e);
+                    throw Assert.fail(e);
                 }
             }
             break;
@@ -246,7 +246,7 @@ final public class Any extends org.omg.CORBA.Any {
                     throw new MARSHAL(String.format("string length (%d) exceeds bound (%d)", str.length(), len), MinorReadStringOverflow, COMPLETED_NO);
                 value = str;
             } catch (BadKind ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
             break;
         }
@@ -259,7 +259,7 @@ final public class Any extends org.omg.CORBA.Any {
                     throw new MARSHAL(String.format("wstring length (%d) exceeds bound (%d)", str.length(), len), MinorReadWStringOverflow, COMPLETED_NO);
                 value = str;
             } catch (BadKind ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
             break;
         }
@@ -268,7 +268,7 @@ final public class Any extends org.omg.CORBA.Any {
             try {
                 value = in.read_fixed().movePointLeft(origTypeCode.fixed_scale());
             } catch (BadKind ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             break;
@@ -352,7 +352,7 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_alias:
         default:
-            _OB_assert("tk_alias not supported for copying");
+            throw Assert.fail("tk_alias not supported for copying");
         }
     }
 
@@ -462,10 +462,8 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_alias:
         default:
-            _OB_assert("tk_alias not supported for comparison");
+            throw Assert.fail("tk_alias not supported for comparison");
         }
-
-        return false; // The compiler needs this
     }
 
     private static boolean compareValuesAsInputStreams(Any any1, Any any2) {
@@ -618,7 +616,7 @@ final public class Any extends org.omg.CORBA.Any {
             try {
                 out.write_fixed(((BigDecimal) value).movePointRight(origTypeCode.fixed_scale()));
             } catch (BadKind ex) {
-                _OB_assert(ex);
+                throw Assert.fail(ex);
             }
 
             break;
@@ -629,7 +627,7 @@ final public class Any extends org.omg.CORBA.Any {
             if (value != null && value instanceof InputStream) {
                 InputStream in = (InputStream) value;
                 in._OB_reset();
-                _OB_assert(!in.read_boolean());
+                Assert.ensure(!in.read_boolean());
                 o.write_abstract_interface(in.read_value());
             } else
                 o.write_abstract_interface(value);
@@ -644,7 +642,7 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_alias:
         default:
-            _OB_assert("unable to write tk_alias types");
+            throw Assert.fail("unable to write tk_alias types");
         }
     }
 
@@ -933,7 +931,7 @@ final public class Any extends org.omg.CORBA.Any {
         if (value instanceof InputStream) {
             InputStream in = (InputStream) value;
             in._OB_reset();
-            if (kind == tk_abstract_interface) _OB_assert(!in.read_boolean());
+            if (kind == tk_abstract_interface) Assert.ensure(!in.read_boolean());
             return in.read_value();
         } else
             return (Serializable) value;

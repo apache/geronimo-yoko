@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetReader;
@@ -54,7 +55,7 @@ import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUnionDiscriminator;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorLoadStub;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorReadBooleanArrayOverflow;
@@ -662,7 +663,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
     public int available() {
         int available =  readBuffer.available();
-        _OB_assert(available >= 0);
+        Assert.ensure(available >= 0);
 
         return available;
     }
@@ -729,19 +730,14 @@ final public class InputStream extends InputStreamWithOffsets {
 
             switch (giopVersion_) {
                 case GIOP1_0:
-                    //
                     // we should not require a reader for GIOP 1.0
                     // wchars since this would mean we are using UTF-16.
                     // This is not available in Orbix/E compatibility,
                     // only UCS-2...
-                    //
-                    _OB_assert(false);
-                    break;
+                    throw Assert.fail();
 
                 case GIOP1_1:
-                    //
                     // align on two-byte boundary
-                    //
                     readBuffer.align(TWO_BYTE_BOUNDARY);
 
                     break;
@@ -771,7 +767,7 @@ final public class InputStream extends InputStreamWithOffsets {
             switch (giopVersion_) {
                 case GIOP1_0:
                     // UCS-2 is the native wchar codeset for both Orbacus and Orbix/E so conversion should not be necessary
-                    _OB_assert(!wCharConversionRequired_);
+                    Assert.ensure(!wCharConversionRequired_);
 
                     readBuffer.align(TWO_BYTE_BOUNDARY);
 
@@ -1305,7 +1301,7 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     private org.omg.CORBA.Object createStub(Class<?> stubClass, org.omg.CORBA.portable.Delegate delegate) {
-        _OB_assert(ObjectImpl.class.isAssignableFrom(stubClass), "stub class " + stubClass.getName() + " must extend ObjectImpl");
+        ensure(ObjectImpl.class.isAssignableFrom(stubClass), "stub class " + stubClass.getName() + " must extend ObjectImpl");
         @SuppressWarnings("unchecked")
         Class<? extends ObjectImpl> clz = (Class<? extends ObjectImpl>) stubClass;
         try {

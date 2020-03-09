@@ -20,7 +20,6 @@ package org.apache.yoko.orb.DynamicAny;
 import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.CORBA.TypeCode;
 
 final class DynEnum_impl extends DynAny_impl implements
         org.omg.DynamicAny.DynEnum {
@@ -142,9 +141,9 @@ final class DynEnum_impl extends DynAny_impl implements
         try {
             result = origType_.member_name(value_);
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
 
         return result;
@@ -164,9 +163,9 @@ final class DynEnum_impl extends DynAny_impl implements
 
             throw new org.omg.DynamicAny.DynAnyPackage.InvalidValue();
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         } catch (org.omg.CORBA.TypeCodePackage.Bounds ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
     }
 
@@ -184,7 +183,7 @@ final class DynEnum_impl extends DynAny_impl implements
 
             notifyParent();
         } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-            org.apache.yoko.orb.OB.Assert._OB_assert(ex);
+            throw org.apache.yoko.orb.OB.Assert.fail(ex);
         }
     }
 

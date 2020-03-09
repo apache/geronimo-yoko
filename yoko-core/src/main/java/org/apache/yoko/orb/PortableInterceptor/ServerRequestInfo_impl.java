@@ -19,6 +19,7 @@ package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ParameterDesc;
@@ -54,7 +55,7 @@ import org.omg.PortableServer.Servant;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicyFactory;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException;
@@ -135,7 +136,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         if (replyStatus == NO_REPLY_SC || servant == null) {
             throw new BAD_INV_ORDER(describeBadInvOrder(MinorInvalidPICall), MinorInvalidPICall, COMPLETED_NO);
         }
-        _OB_assert(poa != null);
+        Assert.ensure(poa != null);
         return servant._all_interfaces(poa, objectId)[0];
     }
 
@@ -308,7 +309,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
     }
 
     public void _OB_sendReply() {
-        _OB_assert(replyStatus == SUCCESSFUL.value);
+        Assert.ensure(replyStatus == SUCCESSFUL.value);
         // The result is available
         argStrategy.setResultAvail(true);
         // The servant is no longer available
@@ -332,7 +333,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            _OB_assert(replyStatus == SYSTEM_EXCEPTION.value || replyStatus == USER_EXCEPTION.value);
+            Assert.ensure(replyStatus == SYSTEM_EXCEPTION.value || replyStatus == USER_EXCEPTION.value);
 
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
                 i.send_exception(this);
@@ -354,7 +355,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
 
         try (CmsfOverride cmsfo = CmsfThreadLocal.override();
              YasfOverride yasfo = YasfThreadLocal.override()) {
-            _OB_assert(replyStatus == LOCATION_FORWARD.value || replyStatus == TRANSPORT_RETRY.value);
+            Assert.ensure(replyStatus == LOCATION_FORWARD.value || replyStatus == TRANSPORT_RETRY.value);
 
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
                 i.send_other(this);
@@ -397,7 +398,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
 
     public void _OB_result(Any value) {
         // Result is now available. Update the argument strategy.
-        _OB_assert(argStrategy != null);
+        Assert.ensure(argStrategy != null);
         argStrategy.setResult(value);
     }
 

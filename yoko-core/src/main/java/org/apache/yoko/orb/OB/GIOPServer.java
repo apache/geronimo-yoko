@@ -38,8 +38,8 @@ final class GIOPServer extends Server {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert._OB_assert(destroy_);
-        Assert._OB_assert(starter_ == null);
+        Assert.ensure(destroy_);
+        Assert.ensure(starter_ == null);
 
         super.finalize();
     }
@@ -84,7 +84,7 @@ final class GIOPServer extends Server {
         destroy_ = true;
 
         // Close and remove the starter
-        Assert._OB_assert(starter_ != null);
+        Assert.ensure(starter_ != null);
         starter_.setState(ServerState.CLOSED);
         starter_ = null;
     }
@@ -92,16 +92,16 @@ final class GIOPServer extends Server {
     // Hold any new requests that arrive for the Server
     public void hold() {
         logger.fine("Holding GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
-        Assert._OB_assert(!destroy_);
-        Assert._OB_assert(starter_ != null);
+        Assert.ensure(!destroy_);
+        Assert.ensure(starter_ != null);
         starter_.setState(ServerState.HOLDING);
     }
 
     // Dispatch any requests that arrive for the Server
     public void activate() {
         logger.fine("Activating GIOPServer " + System.identityHashCode(this) + " started for orb instance " + orbInstance_.getOrbId() + " and server " + orbInstance_.getServerId() + System.identityHashCode(orbInstance_)); 
-        Assert._OB_assert(!destroy_);
-        Assert._OB_assert(starter_ != null);
+        Assert.ensure(!destroy_);
+        Assert.ensure(starter_ != null);
         starter_.setState(ServerState.ACTIVE);
     }
 

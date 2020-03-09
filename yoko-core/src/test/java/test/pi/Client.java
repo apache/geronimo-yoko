@@ -620,7 +620,7 @@ public final class Client extends test.common.TestBase {
         } catch (UnknownEncoding ex) {
             assertTrue(false);
         }
-        Assert._OB_assert(cdrCodec != null);
+        Assert.ensure(cdrCodec != null);
 
         //
         // Test: Encode/decode

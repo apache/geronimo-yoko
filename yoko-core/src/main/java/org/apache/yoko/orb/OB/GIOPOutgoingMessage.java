@@ -86,7 +86,7 @@ final public class GIOPOutgoingMessage {
         }
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
     }
 
@@ -108,10 +108,10 @@ final public class GIOPOutgoingMessage {
 
     void writeMessageHeader(MsgType_1_1 type, boolean fragment,
                             int size) {
-        Assert._OB_assert(type.value() >= 0
+        Assert.ensure(type.value() >= 0
                 && type.value() <= MsgType_1_1._Fragment);
         Assert
-                ._OB_assert(!(profileInfo_.major == (byte) 1
+                .ensure(!(profileInfo_.major == (byte) 1
                         && profileInfo_.minor == (byte) 0 && (type.value() > MsgType_1_1._MessageError || fragment)));
 
         if (maxMessageSize_ > 0 && size > maxMessageSize_) {
@@ -223,7 +223,7 @@ final public class GIOPOutgoingMessage {
         }
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
     }
 
@@ -231,7 +231,7 @@ final public class GIOPOutgoingMessage {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
-            Assert._OB_assert(status.value() <= ReplyStatusType_1_2._LOCATION_FORWARD);
+            Assert.ensure(status.value() <= ReplyStatusType_1_2._LOCATION_FORWARD);
 
             writeServiceContextList(contexts); // service_context
             out_.write_ulong(id); // request_id
@@ -256,7 +256,7 @@ final public class GIOPOutgoingMessage {
         }
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
     }
 
@@ -296,7 +296,7 @@ final public class GIOPOutgoingMessage {
         }
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
     }
 
@@ -305,7 +305,7 @@ final public class GIOPOutgoingMessage {
         switch (profileInfo_.minor) {
         case 0:
         case 1: {
-            Assert._OB_assert(status.value() <= LocateStatusType_1_2._OBJECT_FORWARD);
+            Assert.ensure(status.value() <= LocateStatusType_1_2._OBJECT_FORWARD);
 
             out_.write_ulong(id); // request_id
             out_.write_ulong(status.value()); // locate_status
@@ -325,14 +325,14 @@ final public class GIOPOutgoingMessage {
         }
 
         default:
-            Assert._OB_assert(false);
+            throw Assert.fail();
         }
     }
 
     // Currently not used
     void writeFragmentHeader(int id) {
         Assert
-                ._OB_assert(!(profileInfo_.major == 1 && profileInfo_.minor <= 1));
+                .ensure(!(profileInfo_.major == 1 && profileInfo_.minor <= 1));
 
         out_.write_ulong(id); // request_id
 

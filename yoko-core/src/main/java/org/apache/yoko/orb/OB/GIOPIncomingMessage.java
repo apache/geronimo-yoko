@@ -38,11 +38,10 @@ import org.omg.GIOP.Version;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TaggedProfileHelper;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.apache.yoko.orb.OB.Assert._OB_assert;
+import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorFragment;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageSizeLimit;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoGIOP;
@@ -240,7 +239,7 @@ final public class GIOPIncomingMessage {
         }
 
         default:
-            _OB_assert(false);
+            throw Assert.fail();
         }
 
         if (maxMessageSize_ > 0 && size_ > maxMessageSize_) {
@@ -318,7 +317,7 @@ final public class GIOPIncomingMessage {
         if (lastFragment_ == null) throw new COMM_FAILURE(describeCommFailure(MinorFragment), MinorFragment, COMPLETED_MAYBE);
         // Append buffer to existing data. We need to skip the header data
         // (the input stream is already positioned past the header).
-        _OB_assert(reader.getPosition() == 12);
+        Assert.ensure(reader.getPosition() == 12);
         lastFragment_.addFragment(orbInstance_, reader);
         // TODO: not sure how this can work, since the boundary alignment can shift with each fragment
 
@@ -357,7 +356,7 @@ final public class GIOPIncomingMessage {
         // Append buffer to existing data. We need to skip the
         // header data (the input stream is already positioned
         // past the header).
-        _OB_assert(reader.getPosition() == 16);
+        Assert.ensure(reader.getPosition() == 16);
         frag.addFragment(orbInstance_, reader);
 
         // If there is another fragment to follow, don't return anything to process
@@ -448,7 +447,7 @@ final public class GIOPIncomingMessage {
             // In GIOP 1.2, the request ID is in the first 16 bytes,
             // and fragments must be at least 16 bytes long.
             // If we failed to read a request id, this is a serious error.
-            throw _OB_assert("Should have had 16 bytes in fragment", ex);
+            throw Assert.fail("Should have had 16 bytes in fragment", ex);
         }
 
         // Add new fragment to fragment list
@@ -460,7 +459,7 @@ final public class GIOPIncomingMessage {
                           TargetAddressHolder target,
                           StringHolder op,
                           ServiceContexts contexts) {
-        _OB_assert(type_ == MsgType_1_1.Request);
+        Assert.ensure(type_ == MsgType_1_1.Request);
 
         int id = 0;
 
@@ -558,14 +557,14 @@ final public class GIOPIncomingMessage {
         }
 
         default:
-            _OB_assert(false);
+            throw Assert.fail();
         }
 
         return id;
     }
 
     int readReplyHeader(ReplyStatusType_1_2Holder status, ServiceContexts contexts) {
-        _OB_assert(type_ == MsgType_1_1.Reply);
+        Assert.ensure(type_ == MsgType_1_1.Reply);
 
         int id = 0;
 
@@ -601,14 +600,14 @@ final public class GIOPIncomingMessage {
         }
 
         default:
-            _OB_assert(false);
+            throw Assert.fail();
         }
 
         return id;
     }
 
     int readCancelRequestHeader() {
-        _OB_assert(type_ == MsgType_1_1.CancelRequest);
+        Assert.ensure(type_ == MsgType_1_1.CancelRequest);
 
         int id = in_.read_ulong(); // request_id
 
@@ -616,7 +615,7 @@ final public class GIOPIncomingMessage {
     }
 
     int readLocateRequestHeader(TargetAddressHolder target) {
-        _OB_assert(type_ == MsgType_1_1.LocateRequest);
+        Assert.ensure(type_ == MsgType_1_1.LocateRequest);
 
         int id = 0;
 
@@ -645,7 +644,7 @@ final public class GIOPIncomingMessage {
         }
 
         default:
-            _OB_assert(false);
+            throw Assert.fail();
         }
 
         return id;
@@ -653,7 +652,7 @@ final public class GIOPIncomingMessage {
 
     // Not currently used
     int readLocateReplyHeader(LocateStatusType_1_2Holder status) {
-        _OB_assert(type_ == MsgType_1_1.LocateReply);
+        Assert.ensure(type_ == MsgType_1_1.LocateReply);
 
         int id = 0;
 
@@ -688,7 +687,7 @@ final public class GIOPIncomingMessage {
         }
 
         default:
-            _OB_assert(false);
+            throw Assert.fail();
         }
 
         return id;
