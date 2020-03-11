@@ -58,13 +58,16 @@ import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
 
 import java.util.Collections;
+import java.util.EnumMap;
 import java.util.EnumSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static java.util.Collections.unmodifiableMap;
 import static java.util.Collections.unmodifiableSet;
 import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
@@ -86,6 +89,7 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorWrongMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.util.CollectionExtras.readOnlyEnumSet;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD;
@@ -127,9 +131,23 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         HOLDING(WRITE),
         CLOSING(READ, WRITE, CLOSE),
         ERROR(CLOSE),
-        CLOSED();
+        CLOSED(),
+        STALE();
 
         private final Set<Access> permissions;
+
+        private static final Map<ConnState, Set<?>> ALLOWED_TRANSITIONS;
+        static {
+            // REMEMBER: in Enums, class initialisation runs AFTER all the instance constructors
+            Map<ConnState, Set<?>> map = new EnumMap<>(ConnState.class);
+            ALLOWED_TRANSITIONS = unmodifiableMap(map);
+            map.put(ACTIVE, readOnlyEnumSet(HOLDING, CLOSING, ERROR, CLOSED));
+            map.put(HOLDING, readOnlyEnumSet(ACTIVE, CLOSING, ERROR, CLOSED));
+            map.put(CLOSING, readOnlyEnumSet(ERROR, CLOSED));
+            map.put(ERROR, readOnlyEnumSet(CLOSED));
+            map.put(CLOSED, readOnlyEnumSet(STALE));
+            map.put(STALE, Collections.EMPTY_SET);
+        }
 
         ConnState() { this.permissions = Collections.EMPTY_SET; }
 
@@ -138,27 +156,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             this.permissions = unmodifiableSet(EnumSet.of(permissions[0], permissions));
         }
 
-        boolean cannotTransitionTo(ConnState next) {
-            if (this == next) return true;
-            if (this == HOLDING) return false;
-            return this.compareTo(next) > 0;
-        }
-
-        boolean forbids(Access op) { return !!!permissions.contains(op); }
-    }
-
-    /* task to execute when ACM timer signal arrives */
-    final class ACMTask extends TimerTask {
-        GIOPConnection connection_;
-
-        public ACMTask(GIOPConnection parent) {
-            connection_ = parent;
-        }
-
-        public void run() {
-            connection_.ACM_callback();
-            connection_ = null;
-        }
+        final boolean cannotTransitionTo(ConnState next) { return !!!canGoTo(next); }
+        private boolean canGoTo(ConnState next) { return ALLOWED_TRANSITIONS.get(this).contains(next); }
+        final boolean forbids(Access op) { return !!!permissions.contains(op); }
+        final boolean isClosed() {return this == CLOSED || this == STALE; }
     }
 
     /** the next request id */
@@ -204,7 +205,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     private CodeBase serverRuntime_;
 
-    protected ACMTask acmTask_ = null;
+    protected TimerTask acmTask_ = null;
 
     // check if its compliant for this connection to send a
     // CloseConnection message to its peer
@@ -792,6 +793,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             abortiveShutdown();
             break;
         case CLOSED:
+        case STALE:
             logClose(true);
             transport_.close();
             break;
@@ -812,36 +814,22 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /** transmits a reply back once the upcall completes */
     private void sendUpcallReply(ReadBuffer readBuffer) {
         synchronized (this) {
-            //
             // no need to do anything if we are closed
-            //
-            if (connState == CLOSED)
-                return;
+            if (connState.isClosed()) return;
 
-            //
             // decrement the number of upcalls in progress
-            //
             Assert.ensure(upcallsInProgress_ > 0);
             upcallsInProgress_--;
 
-            //
             // add this message to the message Queue
-            //
             messageQueue_.add(orbInstance_, readBuffer);
         }
 
-        //
-        // refresh the connection status
-        //
         refresh();
 
-        //
-        // if that was the last upcall and we are in the closing state
-        // then shutdown now
-        //
+        // if that was the last upcall and we are in the closing state then shutdown now
         synchronized (this) {
-            if (upcallsInProgress_ == 0 && connState == CLOSING)
-                gracefulShutdown();
+            if (upcallsInProgress_ == 0 && connState == CLOSING) gracefulShutdown();
         }
     }
 
@@ -855,7 +843,11 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     synchronized protected void ACM_enableIdleMonitor() {
         if (idleTimeout_ > 0) {
             acmTimer_ = new Timer(true);
-            acmTask_ = new ACMTask(this);
+            acmTask_ = new TimerTask() {
+                public void run() {
+                    ACM_callback();
+                }
+            };
 
             acmTimer_.schedule(acmTask_, idleTimeout_ * 1000);
         }
@@ -1246,6 +1238,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             synchronized (this) { properties_ |= Property.Destroyed; }
             // and refresh the connection
             refresh();
+            break;
+
+        case STALE:
+
             break;
 
         default:

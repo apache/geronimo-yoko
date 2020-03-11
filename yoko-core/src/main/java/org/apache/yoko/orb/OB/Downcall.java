@@ -404,18 +404,6 @@ public class Downcall {
         }
     }
 
-    public final boolean failureException() {
-        try (AutoLock lock = stateLock.getReadLock()) {
-            return state == State.FAILURE_EXCEPTION;
-        }
-    }
-
-    public final boolean systemException() {
-        try (AutoLock lock = stateLock.getReadLock()) {
-            return state == State.SYSTEM_EXCEPTION;
-        }
-    }
-
     public final void setPending() {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert.ensure(responseExpected_);

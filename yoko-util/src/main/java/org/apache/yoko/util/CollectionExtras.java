@@ -17,9 +17,12 @@
 package org.apache.yoko.util;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Set;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyIterator;
@@ -120,5 +123,9 @@ public enum CollectionExtras {
                 };
             }
         };
+    }
+
+    public static <E extends Enum<E>> Set<E> readOnlyEnumSet(E first, E...rest) {
+        return Collections.unmodifiableSet(EnumSet.of(first, rest));
     }
 }

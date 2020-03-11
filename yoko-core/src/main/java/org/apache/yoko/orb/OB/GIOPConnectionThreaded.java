@@ -38,9 +38,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
 import static org.apache.yoko.orb.OB.GIOPConnection.Access.WRITE;
+import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.STALE;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
 import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ERROR;
@@ -506,7 +506,18 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
         synchronized (this) {
             if (connState.forbids(WRITE)) {
                 logger.fine("writing not enabled for this connection");
-                down.setFailureException(new TRANSIENT());
+                switch (connState) {
+                case STALE:
+                    // This connection has already thrown a TRANSIENT and is now being re-used.
+                    // Throwing another TRANSIENT would mean another caller being notified of the
+                    // same failure due to internal caching structures within the orb.
+                    // TODO: do something different and then break
+                case CLOSED:
+                    setState(STALE);
+                    // fallthrough
+                default:
+                    down.setFailureException(new TRANSIENT());
+                }
                 return true;
             }
 
@@ -550,9 +561,7 @@ public final class GIOPConnectionThreaded extends GIOPConnection {
                 Downcall nextDown;
 
                 synchronized (this) {
-                    if (!down.unsent()) {
-                        break;
-                    }
+                    if (!down.unsent()) break;
 
                     Assert.ensure(messageQueue_.hasUnsent());
 
