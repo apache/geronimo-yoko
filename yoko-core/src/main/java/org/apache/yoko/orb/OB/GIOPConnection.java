@@ -1009,18 +1009,18 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     }
 
     /** return the transport we represent */
-    public Transport transport() { return transport_; }
+    Transport transport() { return transport_; }
 
     /** check if a reply has been sent yet */
     public boolean replySent() { return isReplySent(); }
 
     /** check if this connection was already destroyed */
-    synchronized public boolean destroyed() { return isDestroyed(); }
+    synchronized boolean destroyed() { return isDestroyed(); }
 
     /** destroy this connection */
-    public void destroy() { setState(CLOSING); }
+    void destroy() { setState(CLOSING); }
 
-    public void close() {
+    void close() {
         logClose(true);
         transport_.close();
     }

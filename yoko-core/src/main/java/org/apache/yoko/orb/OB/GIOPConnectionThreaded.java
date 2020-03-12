@@ -122,7 +122,6 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         getExecutor().submit(new Receiver());
     }
 
-
     // abortive shutdown method from GIOPConnection
     void abortiveShutdown() {
         // disable any ACM timeouts now
