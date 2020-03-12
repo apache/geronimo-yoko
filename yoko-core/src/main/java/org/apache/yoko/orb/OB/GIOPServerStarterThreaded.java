@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.GIOPConnection.ConnState;
+import org.apache.yoko.orb.OB.Connection.State;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Transport;
 
@@ -52,7 +52,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                         break;
                     }
                     GIOPConnection connection = new GIOPConnectionThreaded(orbInstance_, t, oaInterface_);
-                    connection.setState(ConnState.CLOSING);
+                    connection.setState(State.CLOSING);
                 } catch (org.omg.CORBA.SystemException ex) {
                 }
             } while (true);
@@ -122,7 +122,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
         case ACTIVE: {
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(ConnState.ACTIVE);
+                w.setState(State.ACTIVE);
             }
 
             break;
@@ -131,14 +131,14 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
         case HOLDING:
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(ConnState.HOLDING);
+                w.setState(State.HOLDING);
             }
             break;
 
         case CLOSED: {
             for (int i = 0; i < connections_.size(); i++) {
                 GIOPConnection w = (GIOPConnection) connections_.elementAt(i);
-                w.setState(ConnState.CLOSING);
+                w.setState(State.CLOSING);
             }
             connections_.removeAllElements();
 
@@ -209,7 +209,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                             GIOPConnection connection = new GIOPConnectionThreaded(
                                     orbInstance_, transport, oaInterface_);
                             connections_.addElement(connection);
-                            connection.setState(ConnState.ACTIVE);
+                            connection.setState(State.ACTIVE);
                         } else {
                             logger.fine("Processing an inbound connection because state is closed"); 
                             //
@@ -223,7 +223,7 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
                                     orbInstance_, transport, oaInterface_);
                             logger.fine("Created connection " + connection); 
 
-                            connection.setState(ConnState.CLOSING);
+                            connection.setState(State.CLOSING);
                             logger.fine("set connection state to closing"); 
                         }
                     } catch (org.omg.CORBA.SystemException ex) {
