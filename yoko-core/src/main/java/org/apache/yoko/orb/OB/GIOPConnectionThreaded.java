@@ -97,21 +97,14 @@ final class GIOPConnectionThreaded extends GIOPConnection {
     // ----------------------------------------------------------------
     // Member data
     // ----------------------------------------------------------------
-    //
 
-    //
     // the holding monitor to pause the receiver threads
-    //
     private final Object holdingMonitor_ = new Object();
 
-    //
     // are we holding or not
-    //
     private boolean holding_ = true;
 
-    //
     // sending mutex to prevent multiple threads from sending at once
-    //
     private final Object sendMutex_ = new Object();
     
     private boolean shuttingDown;
@@ -121,50 +114,36 @@ final class GIOPConnectionThreaded extends GIOPConnection {
     // Protected Methods
     // ----------------------------------------------------------------
 
-    //
     // add a new receiver thread
     // Assumes 'this' is synchronized on entry
-    //
     private void addReceiverThread() {
         getExecutor().submit(new Receiver());
     }
 
 
-    //
     // pause a thread on a holding monitor if turned on
-    //
     private void pauseThread() {
         synchronized (holdingMonitor_) {
             while (holding_) {
                 try {
                     holdingMonitor_.wait();
                 } catch (InterruptedException ex) {
-                    //
                     // ignore exception and continue to wait
-                    //
                 }
             }
         }
     }
 
-    //
     // abortive shutdown method from GIOPConnection
-    //
     protected void abortiveShutdown() {
-        //
         // disable any ACM timeouts now
-        //
         ACM_disableIdleMonitor();
 
-        //
         // The transport must be able to send in order to send the error
         // message...
-        //
         if (transport_.mode() != ReceiveOnly) {
             try {
-                //
                 // Send a MessageError message
-                //
                 try (OutputStream out = new OutputStream(12)) {
 
                     ProfileInfo profileInfo = new ProfileInfo();
@@ -191,38 +170,28 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             }
         }
 
-        //
         // If we are in StateError, we don't go through all the hula hoop
         // with continuing to receive messages until the peer
         // closes. Instead, we just close the connection, meaning that we
         // can't be 100% sure that the peer gets the last message.
-        //
         processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         arrive();
 
     }
 
-    //
     // graceful shutdown method
-    //
     synchronized protected void gracefulShutdown() {
-        //
         // disable any ACM idle timeouts now
-        //
         ACM_disableIdleMonitor();
 
-        //
         // don't shutdown if there are pending upcalls
-        //
         if (upcallsInProgress_ > 0 || getState() != CLOSING) {
             logger.fine("pending upcalls: " + upcallsInProgress_ + " state: " + getState());
          
             return;
         }
 
-        //
         // send a CloseConnection if we can
-        //
         if (canSendCloseConnection()) {
             try (OutputStream out = new OutputStream(12)) {
 
@@ -239,17 +208,13 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             logger.fine("could not send close connection message");
         }
 
-        //
         // now create the shutdown thread
-        //
         try {
             if (shuttingDown)
                 return;
 
             shuttingDown = true;
-            //
             // start the shutdown thread
-            //
             try {
                 getExecutor().submit(new Shutdown());
             } catch (RejectedExecutionException ree) {
@@ -273,18 +238,14 @@ final class GIOPConnectionThreaded extends GIOPConnection {
     // Public Methods
     // ----------------------------------------------------------------
 
-    //
     // client-side constructor
-    //
     public GIOPConnectionThreaded(ORBInstance orbInstance, Transport transport, GIOPClient client) {
         super(orbInstance, transport, client);
         orbInstance.getClientPhaser().register();
         start();
     }
 
-    //
     // server-side constructor
-    //
     public GIOPConnectionThreaded(ORBInstance orbInstance, Transport transport, OAInterface oa) {
         super(orbInstance, transport, oa);
         orbInstance.getServerPhaser().register();
@@ -297,18 +258,14 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             return orbInstance_.getServerExecutor();
     }
 
-    //
     // called from the shutdown thread to initiate shutdown
-    //
     private void execShutdown() {
         if (canSendCloseConnection() && transport_.mode() != ReceiveOnly) {
             try {
                 synchronized (this) {
                     while (messageQueue_.hasUnsent()) {
-                        //
                         // Its possible the CloseConnection message got sent
                         // via another means.
-                        //
                         ReadBuffer readBuffer = messageQueue_.getFirstUnsentBuffer();
                         if (readBuffer != null) {
                             synchronized (sendMutex_) {
@@ -325,31 +282,25 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             }
         }
 
-        //
         // shutdown the transport
         // synchronization on sendMutex_ is needed to avoid a deadlock in some oracle and ibm jdks between send and shutdown
         // https://bugs.openjdk.java.net/browse/JDK-8013809 deadlock in SSLSocketImpl between between write and close 
-        //
         synchronized (sendMutex_) {
             transport_.shutdown();
         }
 
-        //
         // Shutdown the receiver threads. There may not be a receiver
         // thread if the transport is SendOnly.
-        //
         try {
             receiverLock.writeLock().tryLock(shutdownTimeout_, SECONDS);
         } catch (InterruptedException ignored) {
         }
 
         try {
-            //
             // We now close the connection actively, since it may still be
             // open under certain circumstances. For example, the receiver
             // thread may not have terminated yet or the receive thread might
             // set the state to GIOPState::Error before termination.
-            //
             processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
         } finally {
             if (receiverLock.isWriteLockedByCurrentThread()) {
@@ -358,9 +309,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // called from a receiver thread to perform a reception
-    //
     private void execReceive() {
         
         logger.fine("Receiving incoming message " + this); 
@@ -454,9 +403,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // ACM callback method on ACM signal
-    //
     synchronized void ACM_callback() {
         if (acmTimer_ != null) {
             acmTimer_.cancel();
@@ -468,40 +415,30 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             acmTask_ = null;
         }
 
-        //
         // don't shutdown if there are unsent messages or if there are
         // upcalls in progress
-        //
         if (messageQueue_.hasUnsent() || (upcallsInProgress_ > 0)) {
             ACM_enableIdleMonitor();
             return;
         }
 
-        //
         // shutdown gracefully
-        //
         setState(CLOSING);
     }
 
-    //
     // client-side send method (from DowncallEmitter)
-    //
     public boolean send(Downcall down, boolean block) {
         Assert.ensure(transport_.mode() != ReceiveOnly);
         Assert.ensure(down.unsent());
         
         logger.fine("Sending a request with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " on transport " + transport_); 
 
-        //
         // if we send off a message in the loop, this var might help us
         // to prevent a further locking to check the status
-        //
         boolean msgSentMarked = false;
 
-        //
         // if we don't have writing turned on then we must throw a
         // TRANSIENT to the caller indicating this
-        //
         synchronized (this) {
             if (getState().forbids(WRITE)) {
                 logger.fine("writing not enabled for this connection");
@@ -520,40 +457,28 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 return true;
             }
 
-            //
             // make the downcall thread-safe
-            //
             if (down.responseExpected()) {
                 down.allowWaiting();
             }
 
-            //
             // buffer the request
-            //
             messageQueue_.add(orbInstance_, down);
 
-            //
             // check the sent status while we're locked
-            //
             if (isRequestSent()) {
                 msgSentMarked = true;
             }
         }
 
-        //
         // now prepare to send it either blocking or non-blocking
         // depending on the call mode param
-        //
         if (block) {
-            //
             // Get the request timeout
-            //
             int t = down.policies().requestTimeout;
             int msgcount = 0;
 
-            //
             // now we can start sending off the messages
-            //
             while (true) {
                 // Get a message to send from the unsent queue
                 ReadBuffer readBuffer;
@@ -568,9 +493,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                     nextDown = messageQueue_.moveFirstUnsentToPending();
                 }
 
-                //
                 // Send the message
-                //
                 try {
                     synchronized (sendMutex_) {
                         if (t <= 0) {
@@ -626,21 +549,15 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                         return true;
                     }
 
-                    //
                     // if the buffer isn't full, it hasn't been sent because
                     // the call would have blocked.
-                    //
                     if (!readBuffer.isComplete())
                         return false;
 
-                    //
                     // now move to the pending pile
-                    //
                     Downcall dummy = messageQueue_.moveFirstUnsentToPending();
 
-                    //
                     // update the message sent property
-                    //
                     if (!msgSentMarked && dummy != null) {
                         if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
@@ -660,14 +577,10 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         return !down.responseExpected();
     }
 
-    //
     // client-side receive method (from DowncallEmitter)
-    //
     public boolean receive(Downcall down, boolean block) {
         logger.fine("Receiving response with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " from transport " + transport_);
-        //
         // Try to receive the reply
-        //
         try {
             boolean result = down.waitUntilCompleted(block);
             logger.fine("Completed receiving response with Downcall of type " + down.getClass().getName());
@@ -678,9 +591,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // client-side sendReceive (from DowncallEmitter)
-    //
     public boolean sendReceive(Downcall down) {
         ACM_disableIdleMonitor();
 
@@ -691,13 +602,9 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // connection start (from GIOPConnection)
-    //
     public void start() {
-        //
         // unpause any paused threads
-        //
         synchronized (holdingMonitor_) {
             if (holding_) {
                 holding_ = false;
@@ -705,9 +612,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             }
         }
 
-        //
         // check if we need to add a receiver thread
-        //
         if (transport_.mode() != SendOnly) {
             try {
                 // If the write lock is obtainable there are no receivers outstanding.
@@ -749,24 +654,18 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             if (isRequestSent()) msgSentMarked = true;
         }
 
-        //
         // another check if we can write or not
-        //
         if (transport_.mode() == ReceiveOnly)
             return;
 
-        //
         // now send off any queued messages
-        //
         while (true) {
             ReadBuffer readBuffer;
             Downcall dummy;
 
             try {
                 synchronized (this) {
-                    //
                     // stop when no messages left
-                    //
                     if (!messageQueue_.hasUnsent())
                         break;
 
@@ -775,9 +674,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                     dummy = messageQueue_.moveFirstUnsentToPending();
                 }
 
-                //
                 // make sure no two threads are sending at once
-                //
                 synchronized (sendMutex_) {
                     transport_.send(readBuffer, true);
                 }
@@ -788,9 +685,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 // send fails
                 if (!readBuffer.isComplete()) throw new COMM_FAILURE(describeCommFailure(MinorSend), MinorSend, COMPLETED_NO);
 
-                //
                 // mark the message sent flag
-                //
                 if (!msgSentMarked && (dummy != null)) {
                     if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                         synchronized (this) {
@@ -806,21 +701,15 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    //
     // connection pause (from GIOPConnection)
-    //
     public void pause() {
         synchronized (holdingMonitor_) {
             holding_ = true;
         }
     }
 
-    //
     // enabled connection 'sides' (from GIOPConnection)
-    //
     public void enableConnectionModes(boolean client, boolean server) {
-        //
         // do nothing
-        //
     }
 }

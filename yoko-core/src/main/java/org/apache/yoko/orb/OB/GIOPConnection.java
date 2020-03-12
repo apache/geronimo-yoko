@@ -400,9 +400,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
         Downcall down = messageQueue_.findAndRemovePending(reqId);
         if (down == null) {
-            //
             // Request id is unknown
-            //
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId) + ": " + reqId, MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
@@ -458,9 +456,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             }
 
             case ReplyStatusType_1_2._NEEDS_ADDRESSING_MODE:
-                //
                 // TODO: implement
-                //
                 processException(ERROR, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 break;
 
@@ -490,9 +486,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         }
         Assert.ensure(getState() == ACTIVE);
 
-        //
         // Make sure the transport can send a reply
-        //
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String message = "Discarding locate request - transport "
                     + "does not support twoway invocations";
@@ -523,14 +517,10 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                 return;
             }
 
-            //
             // Get the key
-            //
             byte[] key = target.value.object_key();
 
-            //
             // Find the IOR for the key
-            //
             IORHolder ior = new IORHolder();
             int val = oaInterface_.findByKey(key, ior);
             LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
@@ -547,24 +537,18 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                 // the IOR is appended to the end of the LocateReply.
                 if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
 
-                //
                 // TODO:
                 // LOC_SYSTEM_EXCEPTION,
                 // LOC_NEEDS_ADDRESSING_MODE
-                //
                 int pos = out.getPosition();
                 out.setPosition(0);
                 outgoing.writeMessageHeader(LocateReply, false, pos - 12);
                 out.setPosition(pos);
 
-                //
                 // A locate request is treated just like an upcall
-                //
                 upcallsInProgress_++;
 
-                //
                 // Send the locate reply
-                //
                 sendUpcallReply(out.getBufferReader());
             }
         } catch (SystemException ex) {
@@ -591,16 +575,12 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
         Downcall down = messageQueue_.findAndRemovePending(reqId);
         if (down == null) {
-            //
             // Request id is unknown
-            //
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId), MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
 
-        //
         // Was this a LocateRequest?
-        //
         String op = down.operation();
         if (!op.equals("_locate")) {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
@@ -678,14 +658,12 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     private void processCloseConnection(GIOPIncomingMessage msg) {
         orbInstance_.getLogger().debug("Close connection request received from peer");
         if (isClientEnabled()) {
-            //
             // If the peer closes the connection, all outstanding
             // requests can safely be reissued. Thus we send all
             // of them a TRANSIENT exception with a completion
             // status of COMPLETED_NO. This is done by calling
             // exception() with the notCompleted parameter set to
             // true.
-            //
             processException(CLOSED, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
         } else {
             setState(CLOSED);
@@ -805,9 +783,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     /** server-side constructor */
     GIOPConnection(ORBInstance orbInstance, Transport transport, OAInterface oa) {
         super(HOLDING);
-        //
         // set members
-        //
         nextRequestId = new AtomicInteger(0xB);
         orbInstance_ = orbInstance;
         transport_ = transport;
@@ -815,22 +791,16 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         oaInterface_ = oa;
         markServerEnabled();
 
-        //
         // read ACM properties
-        //
         String value;
         Properties properties = orbInstance_.getProperties();
 
-        //
         // the shutdown timeout for the client
-        //
         value = properties.getProperty("yoko.orb.server_shutdown_timeout");
         if (value != null)
             shutdownTimeout_ = Integer.parseInt(value);
 
-        //
         // the idle timeout for the client
-        //
         value = properties.getProperty("yoko.orb.server_timeout");
         if (value != null)
             idleTimeout_ = Integer.parseInt(value);
@@ -859,19 +829,15 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                 outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.NO_EXCEPTION, contexts);
             }
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
     }
 
     /** finished reply construction; ready its return */
     public void upcallEndReply(Upcall upcall) {
-        //
         // Make sure the transport can send a reply
-        //
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String msg = "Discarding reply - transport does not "
                     + "support twoway invocations";
@@ -906,10 +872,8 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         try {
             outgoing.writeMessageHeader(Reply, false, pos - 12);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -929,10 +893,8 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         try {
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
     }
@@ -956,16 +918,12 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         try {
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
 
-            //
             // Cannot marshal the exception without the Helper
-            //
             // ex._OB_marshal(out);
             throw Assert.fail(); // TODO: verify this logic
         } catch (SystemException e) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -990,10 +948,8 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, contexts);
             Util.marshalSystemException(out, ex);
         } catch (SystemException e) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -1021,10 +977,8 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
             IORHelper.write(out, ior);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
