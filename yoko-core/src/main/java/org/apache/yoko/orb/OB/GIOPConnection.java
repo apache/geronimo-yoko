@@ -127,12 +127,43 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     enum ConnState {
-        ACTIVE(READ, WRITE),
-        HOLDING(WRITE),
-        CLOSING(READ, WRITE, CLOSE),
-        ERROR(CLOSE),
-        CLOSED(),
-        STALE();
+        ACTIVE(READ, WRITE) {
+            void applyTo(GIOPConnection conn) {
+                conn.start();
+                conn.refresh();
+            }
+        },
+        HOLDING(WRITE) {
+            void applyTo(GIOPConnection conn) {
+                conn.pause();
+            }
+        },
+        CLOSING(READ, WRITE, CLOSE) {
+            void applyTo(GIOPConnection conn) {
+                // gracefully shutdown by sending off pending messages,
+                // reading any messages left on the wire and then closing
+                conn.gracefulShutdown();
+                conn.refresh();
+            }
+        },
+        ERROR(CLOSE) {
+            void applyTo(GIOPConnection conn) {
+                conn.abortiveShutdown();
+                synchronized (conn) { conn.properties_ |= Property.Destroyed; }
+                conn.refresh();
+            }
+        },
+        CLOSED() {
+            void applyTo(GIOPConnection conn) {
+                conn.logClose(true);
+                conn.transport_.close();
+                synchronized (conn) { conn.properties_ |= Property.Destroyed; }
+                conn.refresh();
+            }
+        },
+        STALE() {
+            void applyTo(GIOPConnection conn) { }
+        };
 
         private final Set<Access> permissions;
 
@@ -160,6 +191,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         private boolean canGoTo(ConnState next) { return ALLOWED_TRANSITIONS.get(this).contains(next); }
         final boolean forbids(Access op) { return !!!permissions.contains(op); }
         final boolean isClosed() {return this == CLOSED || this == STALE; }
+
+        abstract void applyTo(GIOPConnection conn);
     }
 
     /** the next request id */
@@ -1202,51 +1235,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             connState = newState;
         }
 
-        switch (newState) {
-        case ACTIVE:
-            // start and refresh the connection
-            start();
-            refresh();
-            break;
-
-        case HOLDING:
-            // pause the connection
-            pause();
-            break;
-
-        case CLOSING:
-            // gracefully shutdown by sending off pending messages,
-            // reading any messages left on the wire and then closing
-            gracefulShutdown();
-            // refresh this status
-            refresh();
-            break;
-
-        case ERROR:
-            // there is an error so shutdown abortively
-            abortiveShutdown();
-            // mark the connection as destroyed now
-            synchronized (this) { properties_ |= Property.Destroyed; }
-            // refresh the connection status
-            refresh();
-            break;
-
-        case CLOSED:
-            logClose(true);
-            transport_.close();
-            // mark the connection as destroyed
-            synchronized (this) { properties_ |= Property.Destroyed; }
-            // and refresh the connection
-            refresh();
-            break;
-
-        case STALE:
-
-            break;
-
-        default:
-            throw Assert.fail();
-        }
+        connState.applyTo(this);
     }
 
     /** destroy this connection */
