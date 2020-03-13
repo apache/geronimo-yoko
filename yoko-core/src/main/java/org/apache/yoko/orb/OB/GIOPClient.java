@@ -350,7 +350,7 @@ final class GIOPClient extends Client {
             // version 1.1 or higher, and if no messages have been sent so far
             byte major = down.profileInfo().major;
             byte minor = down.profileInfo().minor;
-            if (!connection.requestSent() && (major > 1 || minor >= 1)) {
+            if (!connection.isRequestSent() && (major > 1 || minor >= 1)) {
                 CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
                 if (coreTraceLevels.traceConnections() >= 2) {
                     CodeConverters conv = codeConverters();

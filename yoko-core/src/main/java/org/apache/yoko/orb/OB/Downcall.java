@@ -74,7 +74,7 @@ public class Downcall {
     private InputStream in_;
 
     /** The state of this invocation */
-    protected enum State { UNSENT, PENDING, NO_EXCEPTION, USER_EXCEPTION, SYSTEM_EXCEPTION, FAILURE_EXCEPTION, FORWARD, FORWARD_PERM }
+    protected enum State { UNSENT, PENDING, NO_EXCEPTION, USER_EXCEPTION, SYSTEM_EXCEPTION, FAILURE_EXCEPTION, STALE_CONNECTION, FORWARD, FORWARD_PERM }
     
     protected final AutoReadWriteLock stateLock = new AutoReadWriteLock();
     
@@ -112,35 +112,39 @@ public class Downcall {
     void checkForException() throws LocationForward, FailureException {
         try (AutoLock readLock = stateLock.getReadLock()) {
             switch (state) {
-                case USER_EXCEPTION:
-                    //
-                    // Do not raise UserException in Java
-                    //
-                    // if(ex_ != null) // Only raise if a user exception has been set
-                    // throw ex_;
-                    break;
+            case USER_EXCEPTION:
+                //
+                // Do not raise UserException in Java
+                //
+                // if(ex_ != null) // Only raise if a user exception has been set
+                // throw ex_;
+                break;
 
-                case SYSTEM_EXCEPTION:
-                    Assert.ensure(ex_ != null);
-                    // update the stack trace to have the caller's stack rather than the 
-                    // receiver thread. 
-                    ex_.fillInStackTrace();    
-                    throw (SystemException) ex_;
+            case SYSTEM_EXCEPTION:
+                Assert.ensure(ex_ != null);
+                // update the stack trace to have the caller's stack rather than the
+                // receiver thread.
+                ex_.fillInStackTrace();
+                throw (SystemException) ex_;
 
-                case FAILURE_EXCEPTION:
-                    Assert.ensure(ex_ != null);
-                    throw new FailureException((SystemException) ex_);
+            case FAILURE_EXCEPTION:
+                Assert.ensure(ex_ != null);
+                throw new FailureException((SystemException) ex_);
 
-                case FORWARD:
-                    Assert.ensure(forwardIOR_ != null);
-                    throw new LocationForward(forwardIOR_, false);
+            case STALE_CONNECTION:
+                Assert.ensure(ex_ != null);
+                throw new FailureException((SystemException) ex_, false);
 
-                case FORWARD_PERM:
-                    Assert.ensure(forwardIOR_ != null);
-                    throw new LocationForward(forwardIOR_, true);
+            case FORWARD:
+                Assert.ensure(forwardIOR_ != null);
+                throw new LocationForward(forwardIOR_, false);
 
-                default:
-                    break;
+            case FORWARD_PERM:
+                Assert.ensure(forwardIOR_ != null);
+                throw new LocationForward(forwardIOR_, true);
+
+            default:
+                break;
             }
         }
     }
@@ -404,18 +408,6 @@ public class Downcall {
         }
     }
 
-    public final boolean failureException() {
-        try (AutoLock lock = stateLock.getReadLock()) {
-            return state == State.FAILURE_EXCEPTION;
-        }
-    }
-
-    public final boolean systemException() {
-        try (AutoLock lock = stateLock.getReadLock()) {
-            return state == State.SYSTEM_EXCEPTION;
-        }
-    }
-
     public final void setPending() {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert.ensure(responseExpected_);
@@ -495,10 +487,16 @@ public class Downcall {
         }
     }
 
+    final void notifyStaleConnection() {
+        try (AutoLock lock = stateLock.getWriteLock()) {
+            state = State.STALE_CONNECTION;
+        }
+    }
+
     public final void setFailureException(SystemException ex) {
         try (AutoLock lock = stateLock.getWriteLock()) {
             Assert.ensure(ex_ == null);
-            state = State.FAILURE_EXCEPTION;
+            if (state != State.STALE_CONNECTION) state = State.FAILURE_EXCEPTION;
             ex_ = ex;
             logger_.debug("Received failure exception", ex);
             if (null != stateWaitCondition) stateWaitCondition.signalAll();

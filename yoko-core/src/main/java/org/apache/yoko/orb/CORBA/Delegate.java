@@ -91,12 +91,16 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
 
     private static class ThreadSpecificRetryInfo extends ThreadLocal<RetryInfo> {
         protected RetryInfo initialValue() { return new RetryInfo(); }
+        /**
+         * Retrieve a new RetryInfo UNLESS one has explicitly been set for the thread.
+         * After this has been called, there should be nothing stored for this thread.
+         */
         public RetryInfo get() { try { return super.get(); } finally {  remove(); } }
     }
 
     // Thread-specific storage for tracking retries by portable stubs
-    private final ThreadSpecificRetryInfo threadSpecificRetryInfo = new ThreadSpecificRetryInfo();
 
+    private final ThreadSpecificRetryInfo threadSpecificRetryInfo = new ThreadSpecificRetryInfo();
     // ------------------------------------------------------------------
     // Private and protected member implementations
     // ------------------------------------------------------------------
@@ -717,7 +721,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     private void handleFailure(FailureException e, RetryInfo info) {
-        info.incrementRetryCount();
+        if (e.incrementRetry) info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
         checkRetry(info.getRetry(), e.exception, false);
         CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();

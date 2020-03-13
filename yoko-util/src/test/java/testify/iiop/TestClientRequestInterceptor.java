@@ -14,20 +14,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package testify.iiop;
 
-package org.apache.yoko.orb.OB;
+import org.omg.PortableInterceptor.ClientRequestInfo;
+import org.omg.PortableInterceptor.ClientRequestInterceptor;
 
-import org.omg.CORBA.SystemException;
-
-public final class FailureException extends Exception {
-    // The system exception causing the failure
-    public final SystemException exception;
-    public final boolean incrementRetry;
-
-    FailureException(SystemException ex) { this(ex, true); }
-
-    FailureException(SystemException ex, boolean incrementRetry) {
-        this.exception = ex;
-        this.incrementRetry = incrementRetry;
-    }
+public interface TestClientRequestInterceptor extends TestORBInitializer, TestInterceptor, ClientRequestInterceptor {
+    default void send_request(ClientRequestInfo ri) {}
+    default void send_poll(ClientRequestInfo ri) {}
+    default void receive_reply(ClientRequestInfo ri) {}
+    default void receive_exception(ClientRequestInfo ri) {}
+    default void receive_other(ClientRequestInfo ri) {}
 }

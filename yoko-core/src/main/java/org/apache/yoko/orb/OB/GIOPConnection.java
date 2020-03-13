@@ -57,25 +57,18 @@ import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.POAManager;
 import org.omg.SendingContext.CodeBase;
 
-import java.util.Collections;
-import java.util.EnumSet;
 import java.util.Properties;
-import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static java.util.Collections.unmodifiableSet;
-import static org.apache.yoko.orb.OB.Assert.ensure;
+import static java.util.logging.Logger.getLogger;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
-import static org.apache.yoko.orb.OB.GIOPConnection.Access.CLOSE;
-import static org.apache.yoko.orb.OB.GIOPConnection.Access.READ;
-import static org.apache.yoko.orb.OB.GIOPConnection.Access.WRITE;
-import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ACTIVE;
-import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSED;
-import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.CLOSING;
-import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.ERROR;
-import static org.apache.yoko.orb.OB.GIOPConnection.ConnState.HOLDING;
+import static org.apache.yoko.orb.OB.Connection.State.ACTIVE;
+import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
+import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
+import static org.apache.yoko.orb.OB.Connection.State.ERROR;
+import static org.apache.yoko.orb.OB.Connection.State.HOLDING;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
@@ -107,68 +100,17 @@ import static org.omg.GIOP.MsgType_1_1._MessageError;
 import static org.omg.GIOP.MsgType_1_1._Reply;
 import static org.omg.GIOP.MsgType_1_1._Request;
 
-abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(GIOPConnection.class.getName());
-
-    enum Access { READ, WRITE, CLOSE }
-
-    public static final class Property {
-        public static final int RequestSent = 1;
-        public static final int ReplySent = 2;
-        public static final int Destroyed = 4;
-        public static final int CreatedByClient = 8;
-        public static final int ClientEnabled = 16;
-        public static final int ServerEnabled = 32;
-        public static final int ClosingLogged = 64;
-    }
-
-    enum ConnState {
-        ACTIVE(READ, WRITE),
-        HOLDING(WRITE),
-        CLOSING(READ, WRITE, CLOSE),
-        ERROR(CLOSE),
-        CLOSED();
-
-        private final Set<Access> permissions;
-
-        ConnState() { this.permissions = Collections.EMPTY_SET; }
-
-        ConnState(Access...permissions) {
-            // EnumSet.of() requires an initial element, but it's ok to add the element twice
-            this.permissions = unmodifiableSet(EnumSet.of(permissions[0], permissions));
-        }
-
-        boolean cannotTransitionTo(ConnState next) {
-            if (this == next) return true;
-            if (this == HOLDING) return false;
-            return this.compareTo(next) > 0;
-        }
-
-        boolean forbids(Access op) { return !!!permissions.contains(op); }
-    }
-
-    /* task to execute when ACM timer signal arrives */
-    final class ACMTask extends TimerTask {
-        GIOPConnection connection_;
-
-        public ACMTask(GIOPConnection parent) {
-            connection_ = parent;
-        }
-
-        public void run() {
-            connection_.ACM_callback();
-            connection_ = null;
-        }
-    }
+abstract class GIOPConnection extends Connection implements DowncallEmitter, UpcallReturn {
+    private static final java.util.logging.Logger logger = getLogger(GIOPConnection.class.getName());
 
     /** the next request id */
     private final AtomicInteger nextRequestId;
 
     /** the ORB instance this connection is bound with */
-    protected ORBInstance orbInstance_ = null;
+    ORBInstance orbInstance_ = null;
 
     /** transport this connection represents */
-    protected Transport transport_ = null;
+    Transport transport_ = null;
 
     /** Client parent (null if server-side only) */
     private final ConnectorInfo outboundConnectionKey;
@@ -177,40 +119,34 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     private OAInterface oaInterface_ = null;
 
     /** storage space for unsent/pending messages */
-    protected final MessageQueue messageQueue_ = new MessageQueue();
-
-    /** enabled connection property flags */
-    protected int properties_ = 0;
-
-    /** state of this connection */
-    protected ConnState connState = HOLDING;
+    final MessageQueue messageQueue_ = new MessageQueue();
 
     /** number of upcalls in progress */
-    protected int upcallsInProgress_ = 0;
+    int upcallsInProgress_ = 0;
 
     /** code converters used by the connection */
     private CodeConverters codeConverters_ = null;
 
     /** maximum GIOP version encountered during message transactions */
-    protected final org.omg.GIOP.Version giopVersion_ = new org.omg.GIOP.Version((byte) 0, (byte) 0);
+    final org.omg.GIOP.Version giopVersion_ = new org.omg.GIOP.Version((byte) 0, (byte) 0);
 
     /** ACM timeout variables */
-    protected int shutdownTimeout_ = 2;
+    int shutdownTimeout_ = 2;
 
     private int idleTimeout_ = 0;
 
     /** timer used for ACM management */
-    protected Timer acmTimer_ = null;
+    Timer acmTimer_ = null;
 
     private CodeBase serverRuntime_;
 
-    protected ACMTask acmTask_ = null;
+    TimerTask acmTask_ = null;
 
     // check if its compliant for this connection to send a
     // CloseConnection message to its peer
-    synchronized protected boolean canSendCloseConnection() {
+    synchronized boolean canSendCloseConnection() {
         // any GIOP versioned server can send a CloseConnection
-        if ((properties_ & Property.ServerEnabled) != 0) return true;
+        if (isServerEnabled()) return true;
 
         // anything >= GIOP 1.2 can send a CloseConnection
         if (giopVersion_.major > 1 || (giopVersion_.major == 1 && giopVersion_.minor >= 2)) return true;
@@ -279,8 +215,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // make sure we're allowed to do server processing as well as
         // being bidir enabled. A server's OAInterface should not
         // change whereas a bidir client would need to change regularly
-        Assert.ensure((properties_ & Property.CreatedByClient) != 0);
-        Assert.ensure((properties_ & Property.ServerEnabled) != 0);
+        Assert.ensure(isOutbound());
+        Assert.ensure(isServerEnabled());
         Assert.ensure(orbInstance_ != null);
 
         POAManagerFactory poamanFactory = orbInstance_.getPOAManagerFactory();
@@ -307,10 +243,9 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** log the closing of this connection */
     private synchronized void logClose(boolean initiatedClosure) {
-        if ((properties_ & Property.ClosingLogged) != 0)
-            return;
+        if (isClosingLogged()) return;
 
-        properties_ |= Property.ClosingLogged;
+        markClosingLogged();
 
         CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
         if (coreTraceLevels.traceConnections() > 0) {
@@ -323,7 +258,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** main entry point into message processing - delegate to a specific methods */
-    protected Upcall processMessage(GIOPIncomingMessage msg) {
+    Upcall processMessage(GIOPIncomingMessage msg) {
         // update the version of GIOP found
         synchronized (this) {
             if (msg.version().major > giopVersion_.major) {
@@ -377,12 +312,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** process a request message */
     private synchronized Upcall processRequest(GIOPIncomingMessage msg) {
-        if ((properties_ & Property.ServerEnabled) == 0) {
+        if (isServerEnabled() == false) {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return null;
         }
 
-        if (connState != ACTIVE) return null;
+        if (getState() != ACTIVE) return null;
 
         int reqId;
         BooleanHolder response = new BooleanHolder();
@@ -419,7 +354,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         // - If this is a server then take the listen points from
         // the service contexts (if the POA has the BiDir policy enabled)
         // and store them in this' transport for connection reuse
-        if ((properties_ & Property.CreatedByClient) != 0) {
+        if (this.isOutbound()) {
             if (!!!setOAInterface(profileInfo)) {
                 // we can't find an appropriate OAInterface in order
                 // to direct the upcall so we must simply not handle
@@ -447,7 +382,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** process a reply message */
     private synchronized void processReply(GIOPIncomingMessage msg) {
-        if ((properties_ & Property.ClientEnabled) == 0) {
+        if (isClientEnabled() == false) {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
@@ -465,9 +400,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         Downcall down = messageQueue_.findAndRemovePending(reqId);
         if (down == null) {
-            //
             // Request id is unknown
-            //
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId) + ": " + reqId, MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
@@ -523,9 +456,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
             }
 
             case ReplyStatusType_1_2._NEEDS_ADDRESSING_MODE:
-                //
                 // TODO: implement
-                //
                 processException(ERROR, new NO_IMPLEMENT(describeNoImplement(MinorNotSupportedByLocalObject), MinorNotSupportedByLocalObject, COMPLETED_NO), false);
                 break;
 
@@ -549,15 +480,13 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** process a LocateRequest message */
     private synchronized void processLocateRequest(GIOPIncomingMessage msg) {
-        if ((properties_ & Property.ServerEnabled) == 0) {
+        if (isServerEnabled() == false) {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
-        Assert.ensure(connState == ACTIVE);
+        Assert.ensure(getState() == ACTIVE);
 
-        //
         // Make sure the transport can send a reply
-        //
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String message = "Discarding locate request - transport "
                     + "does not support twoway invocations";
@@ -588,14 +517,10 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 return;
             }
 
-            //
             // Get the key
-            //
             byte[] key = target.value.object_key();
 
-            //
             // Find the IOR for the key
-            //
             IORHolder ior = new IORHolder();
             int val = oaInterface_.findByKey(key, ior);
             LocateStatusType_1_2 status = LocateStatusType_1_2.from_int(val);
@@ -612,24 +537,18 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 // the IOR is appended to the end of the LocateReply.
                 if (status == OBJECT_FORWARD || status == OBJECT_FORWARD_PERM) IORHelper.write(out, ior.value);
 
-                //
                 // TODO:
                 // LOC_SYSTEM_EXCEPTION,
                 // LOC_NEEDS_ADDRESSING_MODE
-                //
                 int pos = out.getPosition();
                 out.setPosition(0);
                 outgoing.writeMessageHeader(LocateReply, false, pos - 12);
                 out.setPosition(pos);
 
-                //
                 // A locate request is treated just like an upcall
-                //
                 upcallsInProgress_++;
 
-                //
                 // Send the locate reply
-                //
                 sendUpcallReply(out.getBufferReader());
             }
         } catch (SystemException ex) {
@@ -639,7 +558,7 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** process a LocateReply message */
     private synchronized void processLocateReply(GIOPIncomingMessage msg) {
-        if ((properties_ & Property.ClientEnabled) == 0) {
+        if (isClientEnabled() == false) {
             processException(CLOSED, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
             return;
         }
@@ -656,16 +575,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         Downcall down = messageQueue_.findAndRemovePending(reqId);
         if (down == null) {
-            //
             // Request id is unknown
-            //
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorUnknownReqId), MinorUnknownReqId, COMPLETED_MAYBE), false);
             return;
         }
 
-        //
         // Was this a LocateRequest?
-        //
         String op = down.operation();
         if (!op.equals("_locate")) {
             processException(ERROR, new COMM_FAILURE(describeCommFailure(MinorWrongMessage), MinorWrongMessage, COMPLETED_MAYBE), false);
@@ -742,15 +657,13 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     /** process a CloseConnection message */
     private void processCloseConnection(GIOPIncomingMessage msg) {
         orbInstance_.getLogger().debug("Close connection request received from peer");
-        if ((properties_ & Property.ClientEnabled) != 0) {
-            //
+        if (isClientEnabled()) {
             // If the peer closes the connection, all outstanding
             // requests can safely be reissued. Thus we send all
             // of them a TRANSIENT exception with a completion
             // status of COMPLETED_NO. This is done by calling
             // exception() with the notCompleted parameter set to
             // true.
-            //
             processException(CLOSED, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
         } else {
             setState(CLOSED);
@@ -768,101 +681,59 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** process a system exception */
-    protected boolean processException(ConnState state, SystemException ex, boolean completed) {
-        Assert.ensure(state == ERROR || state == CLOSED);
+    boolean processException(State newState, SystemException ex, boolean completed) {
+        Assert.ensure(newState == ERROR || newState == CLOSED);
+        orbInstance_.getLogger().debug("processing an exception, state=" + newState, ex);
 
-        orbInstance_.getLogger().debug("processing an exception, state=" + state, ex);
+        if (setState(newState) == false) return false;
 
         synchronized (this) {
-            // Don't do anything if there is no state change and it is
-            // not possible to transition backwards.
-            if (connState.cannotTransitionTo(state)) return false;
-
-            connState = state;
-
             orbInstance_.getOutboundConnectionCache().remove(outboundConnectionKey, this);
-
             // propagate any exceptions to the message queue
             messageQueue_.setException(ex, completed);
         }
 
-        // apply the shutdown
-        switch (state) {
-        case ERROR:
-            abortiveShutdown();
-            break;
-        case CLOSED:
-            logClose(true);
-            transport_.close();
-            break;
-        }
-
-        // set 'this' properties
-        synchronized (this) {
-            properties_ |= Property.Destroyed;
-        }
-
-        //
-        // update the connection status
-        //
-        refresh();
         return true;
     }
 
     /** transmits a reply back once the upcall completes */
     private void sendUpcallReply(ReadBuffer readBuffer) {
         synchronized (this) {
-            //
             // no need to do anything if we are closed
-            //
-            if (connState == CLOSED)
-                return;
+            if (getState().isClosed()) return;
 
-            //
             // decrement the number of upcalls in progress
-            //
             Assert.ensure(upcallsInProgress_ > 0);
             upcallsInProgress_--;
 
-            //
             // add this message to the message Queue
-            //
             messageQueue_.add(orbInstance_, readBuffer);
         }
 
-        //
-        // refresh the connection status
-        //
         refresh();
 
-        //
-        // if that was the last upcall and we are in the closing state
-        // then shutdown now
-        //
+        // if that was the last upcall and we are in the closing state then shutdown now
         synchronized (this) {
-            if (upcallsInProgress_ == 0 && connState == CLOSING)
-                gracefulShutdown();
+            if (upcallsInProgress_ == 0 && getState() == CLOSING) gracefulShutdown();
         }
     }
 
-    /** shutdown the connection forcefully and immediately */
-    abstract protected void abortiveShutdown();
-
-    /** shutdown the connection gracefully */
-    abstract protected void gracefulShutdown();
-
     /** turn on ACM idle connection monitoring */
-    synchronized protected void ACM_enableIdleMonitor() {
+    synchronized void ACM_enableIdleMonitor() {
         if (idleTimeout_ > 0) {
             acmTimer_ = new Timer(true);
-            acmTask_ = new ACMTask(this);
+            acmTask_ = new TimerTask() {
+                public void run() {
+                    ACM_callback();
+                }
+            };
 
             acmTimer_.schedule(acmTask_, idleTimeout_ * 1000);
         }
     }
 
     /** turn off ACM idle connection monitoring */
-    synchronized protected void ACM_disableIdleMonitor() {
+    synchronized void ACM_disableIdleMonitor() {
         if (acmTimer_ != null) {
             acmTimer_.cancel();
             acmTimer_ = null;
@@ -874,19 +745,16 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         }
     }
 
-    // ----------------------------------------------------------------
-    // Public methods
-    // ----------------------------------------------------------------
-
     /** client-side constructor */
-    public GIOPConnection(ORBInstance orbInstance, Transport transport, GIOPClient client) {
+    GIOPConnection(ORBInstance orbInstance, Transport transport, GIOPClient client) {
+        super(ACTIVE);
         // set member properties
         nextRequestId = new AtomicInteger(0xA);
         orbInstance_ = orbInstance;
         transport_ = transport;
         outboundConnectionKey = client.connectorInfo();
-        connState = ACTIVE;
-        properties_ = Property.CreatedByClient | Property.ClientEnabled;
+        markOutbound();
+        markClientEnabled();
 
         // read ACM properties
         String value;
@@ -913,54 +781,37 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
     }
 
     /** server-side constructor */
-    public GIOPConnection(ORBInstance orbInstance, Transport transport, OAInterface oa) {
-        //
+    GIOPConnection(ORBInstance orbInstance, Transport transport, OAInterface oa) {
+        super(HOLDING);
         // set members
-        //
         nextRequestId = new AtomicInteger(0xB);
         orbInstance_ = orbInstance;
         transport_ = transport;
         outboundConnectionKey = null;
         oaInterface_ = oa;
-        properties_ = Property.ServerEnabled;
+        markServerEnabled();
 
-        //
         // read ACM properties
-        //
         String value;
         Properties properties = orbInstance_.getProperties();
 
-        //
         // the shutdown timeout for the client
-        //
         value = properties.getProperty("yoko.orb.server_shutdown_timeout");
         if (value != null)
             shutdownTimeout_ = Integer.parseInt(value);
 
-        //
         // the idle timeout for the client
-        //
         value = properties.getProperty("yoko.orb.server_timeout");
         if (value != null)
             idleTimeout_ = Integer.parseInt(value);
     }
 
-    /** @return true iff this connection was initiated by the other party */
-    private boolean isInbound() {
-        return (properties_ & Property.CreatedByClient) == 0;
-    }
-
-    /** @return true iff this connection was initiated by this party */
-    public final boolean isOutbound() {
-        return !!! isInbound();
-    }
-
     /** @return the next request id to use */
-    public int getNewRequestId() {
+    int getNewRequestId() {
         // In the case of BiDir connections, the client should use
         // even numbered requestIds and the server should use odd
         // numbered requestIds... the += 2 keeps this pattern intact
-        // assuming its correct at startup
+        // assuming it's correct at startup
         return nextRequestId.getAndAdd(2);
     }
 
@@ -978,19 +829,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
                 outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.NO_EXCEPTION, contexts);
             }
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
     }
 
     /** finished reply construction; ready its return */
     public void upcallEndReply(Upcall upcall) {
-        //
         // Make sure the transport can send a reply
-        //
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
             String msg = "Discarding reply - transport does not "
                     + "support twoway invocations";
@@ -1025,10 +872,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             outgoing.writeMessageHeader(Reply, false, pos - 12);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -1048,10 +893,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
     }
@@ -1075,16 +918,12 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
         try {
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.USER_EXCEPTION, contexts);
 
-            //
             // Cannot marshal the exception without the Helper
-            //
             // ex._OB_marshal(out);
             throw Assert.fail(); // TODO: verify this logic
         } catch (SystemException e) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -1102,17 +941,15 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
         int reqId = upcall.requestId();
         try {
-            // print this exception out here so applications have at stack trace to work 
+            // print this exception out here so applications have at stack trace to work
             // with for problem determination.
 
             orbInstance_.getLogger().debug("upcall exception", ex);
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, contexts);
             Util.marshalSystemException(out, ex);
         } catch (SystemException e) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -1140,10 +977,8 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
             IORHelper.write(out, ior);
         } catch (SystemException ex) {
-            //
             // Nothing may go wrong here, otherwise we might have a
             // recursion
-            //
             throw Assert.fail(ex);
         }
 
@@ -1152,124 +987,41 @@ abstract public class GIOPConnection implements DowncallEmitter, UpcallReturn {
 
     /** enable this connection for processing as a client */
     synchronized public void activateClientSide() {
-        properties_ |= Property.ClientEnabled;
-        enableConnectionModes(true, true);
+        markClientEnabled();
     }
 
     /** enable this connection for processing as a server */
     synchronized public void activateServerSide() {
-        Assert.ensure((properties_ & Property.CreatedByClient) != 0);
-
-        if ((properties_ & Property.ServerEnabled) == 0) {
-            properties_ |= Property.ServerEnabled;
-            enableConnectionModes(true, true);
-        }
+        Assert.ensure(this.isOutbound());
+        markServerEnabled();
     }
 
     /** @return a reference to the DowncallEmitter interface */
     public DowncallEmitter emitterInterface() {
-        Assert.ensure((properties_ & Property.ClientEnabled) != 0);
+        Assert.ensure(isClientEnabled());
         return this;
     }
 
     /** @return a reference to the UpcallReturn interface */
     private UpcallReturn upcallReturnInterface() {
-        Assert.ensure((properties_ & Property.ServerEnabled) != 0);
+        Assert.ensure(isServerEnabled());
         return this;
     }
 
     /** return the transport we represent */
-    public Transport transport() {
-        return transport_;
-    }
-
-    /** check if a request has been sent yet */
-    synchronized public boolean requestSent() {
-        return (properties_ & Property.RequestSent) != 0;
-    }
+    Transport transport() { return transport_; }
 
     /** check if a reply has been sent yet */
-    synchronized public boolean replySent() {
-        return (properties_ & Property.ReplySent) != 0;
-    }
+    public boolean replySent() { return isReplySent(); }
 
     /** check if this connection was already destroyed */
-    synchronized public boolean destroyed() {
-        return (properties_ & Property.Destroyed) != 0;
-    }
-
-    /** change the state of this connection */
-    public void setState(ConnState newState) {
-        synchronized (this) {
-            if (connState.cannotTransitionTo(newState)) {
-                logger.fine("No state change from " + connState + " to "  + newState);
-                return;
-            }
-
-            // make sure to update the state since some of the actions will key off this new state
-            connState = newState;
-        }
-
-        switch (newState) {
-        case ACTIVE:
-            // start and refresh the connection
-            start();
-            refresh();
-            break;
-
-        case HOLDING:
-            // pause the connection
-            pause();
-            break;
-
-        case CLOSING:
-            // gracefully shutdown by sending off pending messages,
-            // reading any messages left on the wire and then closing
-            gracefulShutdown();
-            // refresh this status
-            refresh();
-            break;
-
-        case ERROR:
-            // there is an error so shutdown abortively
-            abortiveShutdown();
-            // mark the connection as destroyed now
-            synchronized (this) { properties_ |= Property.Destroyed; }
-            // refresh the connection status
-            refresh();
-            break;
-
-        case CLOSED:
-            logClose(true);
-            transport_.close();
-            // mark the connection as destroyed
-            synchronized (this) { properties_ |= Property.Destroyed; }
-            // and refresh the connection
-            refresh();
-            break;
-
-        default:
-            throw Assert.fail();
-        }
-    }
+    synchronized boolean destroyed() { return isDestroyed(); }
 
     /** destroy this connection */
-    public void destroy() {
-        setState(CLOSING);
+    void destroy() { setState(CLOSING); }
+
+    void close() {
+        logClose(true);
+        transport_.close();
     }
-
-    /** callback method when the ACM signals a timeout */
-    abstract public void ACM_callback();
-
-    /** activate the connection */
-    abstract public void start();
-
-    /** refresh the connection status after a change in internal state */
-    abstract public void refresh();
-
-    /** tell the connection to stop processing; resumable with a refresh() */
-    abstract public void pause();
-
-    /** change the connection mode to [client, server, both] */
-    abstract public void enableConnectionModes(boolean enableClient, boolean enableServer);
 }

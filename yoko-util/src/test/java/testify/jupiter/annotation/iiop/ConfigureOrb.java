@@ -112,7 +112,13 @@ class OrbSteward extends Steward<ConfigureOrb> {
                 .peek(OrbSteward::validateOrbModifierType);
     }
 
-    /** Extract the orb properties from a {@link ConfigureOrb} annotation */
+    /**
+     * Extract the orb properties from a {@link ConfigureOrb} annotation.
+     *
+     * @param cfg the annotation to inspect for properties
+     * @param testClass the test class on which the annotation is specified
+     * @param nestedClassFilter a boolean predicate to test whether to process the nested annotation types
+     */
     static Properties props(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
         Properties props = new Properties();
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
