@@ -721,7 +721,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     private void handleFailure(FailureException e, RetryInfo info) {
-        info.incrementRetryCount();
+        if (e.incrementRetry) info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
         checkRetry(info.getRetry(), e.exception, false);
         CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();

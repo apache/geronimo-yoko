@@ -52,43 +52,44 @@ public abstract class PIDowncall extends Downcall {
                 exId_ = Util.getExceptionId(ex_);
 
             switch (state) {
-                case USER_EXCEPTION:
-                    // For Java portable stubs, we'll have the repository ID
-                    // but not the exception instance, so we pass UNKNOWN to
-                    // the interceptors but DO NOT modify the Downcall state.
-                    if (ex_ == null && exId_ != null) {
-                        org.omg.CORBA.Any any = new Any(orbInstance_);
-                        UNKNOWN sys = new UNKNOWN(describeUnknown(MinorUnknownUserException) + ": " + exId_, MinorUnknownUserException, COMPLETED_YES);
-                        UNKNOWNHelper.insert(any, sys);
-                        UnknownUserException unk = new UnknownUserException(any);
-                        piManager_.clientReceiveException(requestInfo_, false, unk, exId_);
-                    }
-                    // Only invoke interceptor if a user exception has been set
-                    if (ex_ != null) piManager_.clientReceiveException(requestInfo_, false, ex_, exId_);
-                    break;
+            case USER_EXCEPTION:
+                // For Java portable stubs, we'll have the repository ID
+                // but not the exception instance, so we pass UNKNOWN to
+                // the interceptors but DO NOT modify the Downcall state.
+                if (ex_ == null && exId_ != null) {
+                    org.omg.CORBA.Any any = new Any(orbInstance_);
+                    UNKNOWN sys = new UNKNOWN(describeUnknown(MinorUnknownUserException) + ": " + exId_, MinorUnknownUserException, COMPLETED_YES);
+                    UNKNOWNHelper.insert(any, sys);
+                    UnknownUserException unk = new UnknownUserException(any);
+                    piManager_.clientReceiveException(requestInfo_, false, unk, exId_);
+                }
+                // Only invoke interceptor if a user exception has been set
+                if (ex_ != null) piManager_.clientReceiveException(requestInfo_, false, ex_, exId_);
+                break;
 
-                case SYSTEM_EXCEPTION:
+            case SYSTEM_EXCEPTION:
+                Assert.ensure(ex_ != null);
+                piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
+                break;
+
+            case FAILURE_EXCEPTION:
+            case STALE_CONNECTION:
+                try {
                     Assert.ensure(ex_ != null);
                     piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
-                    break;
+                } catch (SystemException ignored) {
+                    // Ignore any exception translations for failure exceptions
+                }
+                break;
 
-                case FAILURE_EXCEPTION:
-                    try {
-                        Assert.ensure(ex_ != null);
-                        piManager_.clientReceiveException(requestInfo_, true, ex_, exId_);
-                    } catch (SystemException ignored) {
-                        // Ignore any exception translations for failure exceptions
-                    }
-                    break;
+            case FORWARD:
+            case FORWARD_PERM:
+                Assert.ensure(forwardIOR_ != null);
+                piManager_.clientReceiveLocationForward(requestInfo_, forwardIOR_);
+                break;
 
-                case FORWARD:
-                case FORWARD_PERM:
-                    Assert.ensure(forwardIOR_ != null);
-                    piManager_.clientReceiveLocationForward(requestInfo_, forwardIOR_);
-                    break;
-
-                default:
-                    break;
+            default:
+                break;
             }
 
             super.checkForException();

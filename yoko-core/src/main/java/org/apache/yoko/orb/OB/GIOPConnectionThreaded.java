@@ -422,22 +422,8 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         // if we don't have writing turned on then we must throw a
         // TRANSIENT to the caller indicating this
         synchronized (this) {
-            if (getState().forbids(WRITE)) {
-                logger.fine("writing not enabled for this connection");
-                switch (getState()) {
-                case STALE:
-                    // This connection has already thrown a TRANSIENT and is now being re-used.
-                    // Throwing another TRANSIENT would mean another caller being notified of the
-                    // same failure due to internal caching structures within the orb.
-                    // TODO: do something different and then break
-                case CLOSED:
-                    setState(STALE);
-                    // fallthrough
-                default:
-                    down.setFailureException(new TRANSIENT());
-                }
-                return true;
-            }
+
+            if (checkWriteProhibited(down)) return true;
 
             // make the downcall thread-safe
             if (down.responseExpected()) {
@@ -557,6 +543,33 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
         logger.fine(" Request send completed with Downcall of type " + down.getClass().getName());
         return !down.responseExpected();
+    }
+
+    private boolean checkWriteProhibited(Downcall down) {
+        final State state = getState();
+        final boolean writeProhibited;
+        switch (state) {
+        case ACTIVE:
+        case HOLDING:
+        case CLOSING:
+            writeProhibited = false;
+            break;
+
+        case STALE:
+            // This connection has already thrown a TRANSIENT and is now being re-used.
+            // Ensure this connection is cleaned up but the retry and hop counts are not incremented.
+            down.notifyStaleConnection();
+        case CLOSED:
+            setState(STALE);
+        case ERROR:
+            logger.fine("writing not enabled for this connection");
+            down.setFailureException(new TRANSIENT());
+            writeProhibited = true;
+            break;
+        default:
+            throw Assert.fail("Unknown connection state: " + state );
+        }
+        return writeProhibited;
     }
 
     // client-side receive method (from DowncallEmitter)
