@@ -102,6 +102,10 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                         List<String> list = new ArrayList<>();
                         int start = 0;
                         String hostArg = params[i];
+                        // TODO: use library functions instead to
+                        // - split on commas
+                        // - trim each element
+                        // - if not empty add element to list
                         while (true) {
                             while (start < hostArg.length() && hostArg.charAt(start) == ' ')
                                 start++;
