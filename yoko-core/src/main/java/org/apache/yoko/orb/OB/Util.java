@@ -112,7 +112,7 @@ public final class Util {
 
     // Copy a system exception
     public static SystemException copySystemException(SystemException ex) {
-        SystemException result = null;
+        SystemException result;
         try {
             Class c = ex.getClass();
             Class[] paramTypes = { String.class };
@@ -121,6 +121,7 @@ public final class Util {
             result = (SystemException) constr.newInstance(initArgs);
             result.minor = ex.minor;
             result.completed = ex.completed;
+            result.initCause(ex);
         } catch (NoSuchMethodException | InvocationTargetException | IllegalArgumentException | IllegalAccessException | InstantiationException e) {
             throw Assert.fail(ex);
         }

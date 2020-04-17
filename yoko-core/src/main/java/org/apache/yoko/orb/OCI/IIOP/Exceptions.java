@@ -30,6 +30,6 @@ enum Exceptions {;
 
     static TRANSIENT asTransient(Exception e, int minor) {
         String msg = String.format("%s: %s", describeTransient(minor), e.getMessage());
-        return (TRANSIENT) new TRANSIENT(msg, minor, COMPLETED_NO);
+        return (TRANSIENT) new TRANSIENT(msg, minor, COMPLETED_NO).initCause(e);
     }
 }
