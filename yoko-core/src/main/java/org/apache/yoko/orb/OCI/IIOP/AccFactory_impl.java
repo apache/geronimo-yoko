@@ -161,8 +161,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         }
 
         if (hosts == null) {
-            hosts = new String[1];
-            hosts[0] = Net.getCanonicalHostname(numeric);
+            hosts = new String[] {Net.getCanonicalHostname(numeric)};
         }
 
         logger.fine("Creating acceptor for port=" + port);
@@ -175,6 +174,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
             throw new InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
         }
 
+        // this constructor modifies the provided ListenerMap
         return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 

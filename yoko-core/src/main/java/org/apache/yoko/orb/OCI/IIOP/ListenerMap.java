@@ -17,75 +17,53 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.omg.IIOP.ListenPoint;
+
+import java.util.*;
+
 public final class ListenerMap {
-    //
     // Internal list of ListenPoints
-    // 
-    private java.util.LinkedList list_ = new java.util.LinkedList();
+    private final Set<EndPoint> endPoints = new LinkedHashSet<>();
 
-    //
     // adds a new endpoint to the internal list
-    // 
-    public void add(String host, short port) {
-        //
-        // first make sure we don't already have this host/port in our
-        // list
-        // 
-        java.util.ListIterator i = list_.listIterator(0);
-        while (i.hasNext()) {
-            org.omg.IIOP.ListenPoint lp = (org.omg.IIOP.ListenPoint) i.next();
+    public void add(String host, short port) { endPoints.add(new EndPoint(host, port)); }
 
-            if (match(lp, host, port))
-                return;
-        }
-
-        // 
-        // we are now free to add this item
-        //
-        org.omg.IIOP.ListenPoint lp = new org.omg.IIOP.ListenPoint(host, port);
-        list_.add(lp);
-    }
-
-    // 
     // removes an endpoint from the internal list
-    // 
-    public void remove(String host, short port) {
-        java.util.ListIterator i = list_.listIterator(0);
-        while (i.hasNext()) {
-            org.omg.IIOP.ListenPoint lp = (org.omg.IIOP.ListenPoint) i.next();
-            if (match(lp, host, port)) {
-                i.remove();
-                return;
-            }
-        }
-    }
+    public void remove(String host, short port) { endPoints.remove(new EndPoint(host, port)); }
 
-    // 
-    // checks if a ListenPoint is equal to the specified host/port
-    // 
-    public boolean match(org.omg.IIOP.ListenPoint lp, String host, short port) {
-        if (lp.port != port)
-            return false;
-
-        if (host.equals(lp.host))
-            return true;
-
-        return false;
-    }
-
-    // 
     // returns an array of ListenPoints from this ListenerMap
-    //
-    public org.omg.IIOP.ListenPoint[] getListenPoints() {
-        org.omg.IIOP.ListenPoint[] lpl = new org.omg.IIOP.ListenPoint[list_
-                .size()];
+    public ListenPoint[] getListenPoints() {
+        List<ListenPoint> listenPoints = new ArrayList<>();
+        for (EndPoint ep: endPoints) listenPoints.add(ep.asListenPoint());
+        return listenPoints.toArray(new ListenPoint[0]);
+    }
 
-        int i = 0;
-        java.util.ListIterator itor = list_.listIterator();
-        while (itor.hasNext()) {
-            lpl[i++] = (org.omg.IIOP.ListenPoint) itor.next();
+    /**
+     * Internal, immutable version of the ListenPoint IDL-generated class
+     */
+    static final class EndPoint {
+        static final String _ob_id = "IDL:omg.org/IIOP/ListenPoint:1.0";
+        final String host;
+        final short port;
+
+        EndPoint(String host, short port) {
+            this.host = host;
+            this.port = port;
         }
 
-        return lpl;
+        ListenPoint asListenPoint() { return new ListenPoint(host, port); }
+
+        @Override
+        public boolean equals(Object theOther) {
+            if (this == theOther) return true;
+            if (theOther == null || getClass() != theOther.getClass()) return false;
+            org.omg.IIOP.ListenPoint that = (org.omg.IIOP.ListenPoint) theOther;
+            return this.port == that.port && Objects.equals(this.host, that.host);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(host, port);
+        }
     }
 }
