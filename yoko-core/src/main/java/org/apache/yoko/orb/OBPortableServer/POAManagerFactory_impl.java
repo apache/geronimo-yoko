@@ -17,42 +17,69 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
-        implements POAManagerFactory {
-    //
-    // The ORB Instance
-    //
-    private org.apache.yoko.orb.OB.ORBInstance orbInstance_;
+import org.apache.yoko.orb.IMR.ActiveState;
+import org.apache.yoko.orb.IMR.Domain;
+import org.apache.yoko.orb.IMR.DomainHelper;
+import org.apache.yoko.orb.IMR.NoSuchOAD;
+import org.apache.yoko.orb.IMR.NoSuchServer;
+import org.apache.yoko.orb.IMR.OADNotRunning;
+import org.apache.yoko.orb.IMR.ServerStatus;
+import org.apache.yoko.orb.OAD.AlreadyLinked;
+import org.apache.yoko.orb.OAD.ProcessEndpoint;
+import org.apache.yoko.orb.OAD.ProcessEndpointManagerHolder;
+import org.apache.yoko.orb.OAD.ProcessEndpoint_impl;
+import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.orb.OB.InitialServiceManager;
+import org.apache.yoko.orb.OB.LocationForward;
+import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.orb.OB.ORBControl;
+import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.orb.OB.PIManager;
+import org.apache.yoko.orb.OB.ParseParams;
+import org.apache.yoko.orb.OB.RefCountPolicyList;
+import org.apache.yoko.orb.OCI.AccFactory;
+import org.apache.yoko.orb.OCI.AccFactoryRegistry;
+import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.InvalidParam;
+import org.apache.yoko.orb.OCI.NoSuchFactory;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.PortableInterceptor.IMRIORInterceptor_impl;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyError;
+import org.omg.CORBA.SystemException;
+import org.omg.IOP.IOR;
+import org.omg.PortableInterceptor.IORInterceptor;
+import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
+import org.omg.PortableInterceptor.ObjectReferenceTemplate;
+import org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 
-    //
-    // Hashtable mapping name -> POAManager
-    //
-    private java.util.Hashtable managers_ = new java.util.Hashtable();
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicInteger;
 
-    //
+import static org.apache.yoko.orb.OB.Assert.ensure;
+import static org.omg.PortableServer.POAManagerPackage.State.INACTIVE;
+
+final public class POAManagerFactory_impl extends LocalObject implements POAManagerFactory {
+    private ORBInstance orbInstance_;
+    private Map<String, POAManager_impl> managers_;
     // Running count for generating unique names
-    //
-    private int count_ = 0;
-
-    //
-    // The IMRActiveStateHolder
-    //
-    private org.apache.yoko.orb.IMR.ActiveState activeState_;
-
-    //
-    // The POALocator
-    //
+    private AtomicInteger count_ = new AtomicInteger();
+    private ActiveState activeState_;
     private POALocator poaLocator_;
+    private ProcessEndpoint_impl processEndpoint_;
 
-    //
-    // The OAD::ProcessEndpoint
-    //
-    private org.apache.yoko.orb.OAD.ProcessEndpoint_impl processEndpoint_;
-
-    //
     // This has to be a member of the ORB since we need to keep the
     // connection open for the lifespan of the process.
-    //
     // TODO: When we have connection reaping then we'll have to have
     // to set a policy on this object to prevent the connection from
     // being reaped.
@@ -60,87 +87,54 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
     private org.omg.CORBA.Object endpointManager_;
 
     private String getUniqueName() {
-        long now = System.currentTimeMillis();
-
-        String name = "POAManager-" + now;
-        name += count_++;
-
-        org.apache.yoko.orb.OB.Assert.ensure(!managers_.containsKey(name));
-
+        // TODO: elsewhere, the POA Manager that uses this generated id uses the *next* value of count as its adapterManagerId.
+        // This should almost certainly marry up just to avoid confusion, so change getAndIncrement() to incrementAndGet();
+        String name = String.format("POAManager-%d-%d", System.currentTimeMillis(), count_.getAndIncrement());
+        ensure(!managers_.containsKey(name));
         return name;
     }
 
-    private void validateName(String name)
-            throws org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists {
-        //
+    private void validateName(String name) throws ManagerAlreadyExists {
         // Does the POAManager exist?
-        //
-        POAManager manager = (POAManager) managers_.get(name);
+        POAManager manager = managers_.get(name);
         if (manager != null) {
-            //
-            // If the POAManager is INACTIVE then remove it from
-            // the list, and allow the user to re-add the
-            // POAManager
-            //
-            if (manager.get_state() == org.omg.PortableServer.POAManagerPackage.State.INACTIVE)
-                managers_.remove(name);
-            else
-                throw new org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists();
+            if (manager.get_state() == INACTIVE) managers_.remove(name);
+            else throw new ManagerAlreadyExists();
         }
     }
 
     private AcceptorConfig[] parseEndpointString(String endpoint) {
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
+        Logger logger = orbInstance_.getLogger();
 
-        java.util.Vector configVec = new java.util.Vector();
+        java.util.List<AcceptorConfig> acceptorConfigs = new ArrayList<>();
 
-        org.apache.yoko.orb.OCI.AccFactoryRegistry registry = orbInstance_
-                .getAccFactoryRegistry();
-        org.apache.yoko.orb.OCI.AccFactory[] factories = registry
-                .get_factories();
+        AccFactoryRegistry registry = orbInstance_.getAccFactoryRegistry();
+        AccFactory[] factories = registry.get_factories();
 
         int pos = 0;
+        PROTOCOL_LOOP:
         while (pos != -1) {
-            java.util.Vector params = new java.util.Vector();
-            pos = org.apache.yoko.orb.OB.ParseParams.parse(endpoint, pos,
-                    params);
-            if (!params.isEmpty()) {
-                String prot = (String) params.firstElement();
-                params.removeElementAt(0);
-                boolean found = false;
-                int i;
-                for (i = 0; i < factories.length; i++) {
-                    if (prot.equals(factories[i].id())) {
-                        String[] paramSeq = new String[params.size()];
-                        params.copyInto(paramSeq);
+            List<String> params = new ArrayList<>();
+            pos = ParseParams.parse(endpoint, pos, params);
+            if (params.isEmpty()) continue;
+            String protocol = params.remove(0);
 
-                        AcceptorConfig config = new AcceptorConfig(prot,
-                                paramSeq);
-                        configVec.addElement(config);
-
-                        found = true;
-                        break;
-                    }
-                }
-                if (!found) {
-                    String err = "unknown endpoint protocol `" + prot + "'";
-                    logger.error(err);
-                    throw new org.omg.CORBA.INITIALIZE(err);
-                }
+            for (AccFactory factory : factories) {
+                if (! protocol.equals(factory.id())) continue;
+                AcceptorConfig config = new AcceptorConfig(protocol, params.toArray(new String[0]));
+                acceptorConfigs.add(config);
+                continue PROTOCOL_LOOP;
             }
+            logger.error("unknown endpoint protocol `" + protocol + "'");
+            throw new INITIALIZE("unknown endpoint protocol `" + protocol + "'");
         }
 
-        if (configVec.size() == 0) {
-            String err = "no endpoints defined";
-            logger.error(err);
-            throw new org.omg.CORBA.INITIALIZE(err);
+        if (acceptorConfigs.isEmpty()) {
+            logger.error("no endpoints defined");
+            throw new INITIALIZE("no endpoints defined");
         }
 
-        AcceptorConfig[] configArr = new org.apache.yoko.orb.OBPortableServer.AcceptorConfig[configVec
-                .size()];
-        configVec.copyInto(configArr);
-
-        return configArr;
+        return acceptorConfigs.toArray(new AcceptorConfig[0]);
     }
 
     // ----------------------------------------------------------------------
@@ -148,7 +142,7 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
     // ----------------------------------------------------------------------
 
     public POAManagerFactory_impl() {
-        managers_ = new java.util.Hashtable(7);
+        managers_ = new Hashtable<>(7);
         poaLocator_ = new POALocator();
     }
 
@@ -156,377 +150,232 @@ final public class POAManagerFactory_impl extends org.omg.CORBA.LocalObject
     // Standard IDL to Java mapping
     // ----------------------------------------------------------------------
 
-    public org.omg.PortableServer.POAManager create_POAManager(String id,
-            org.omg.CORBA.Policy[] policies)
-            throws org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists,
-            org.omg.CORBA.PolicyError {
+    @Override
+    public POAManager_impl create_POAManager(String id, Policy[] policies) throws ManagerAlreadyExists, PolicyError {
         synchronized (managers_) {
-            if (id.length() == 0) {
+            if (id.isEmpty()) {
                 id = getUniqueName();
             } else {
                 validateName(id);
-                ++count_;
+                count_.incrementAndGet();
             }
 
-            java.util.Properties props = orbInstance_.getProperties();
-            org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
+            Properties props = orbInstance_.getProperties();
+            Logger logger = orbInstance_.getLogger();
 
-            //
             // If no endpoint config policy is defined, this info will
             // have to be retrieved from the orb properties.
-            //
             EndpointConfigurationPolicy endpointPolicy = null;
 
-            //
             // We are only concerned with the endpoint config policy
             // here; other policies will be passed on to the POAManager_impl
             // constructor.
-            //
-            java.util.Vector tmpPolicyVector = new java.util.Vector();
+            List<Policy> policyList = new ArrayList<>();
 
             int nTmpPolicies = 0;
 
             int nPolicies = policies.length;
             if (nPolicies != 0) {
-                for (int i = 0; i < nPolicies; ++i) {
-                    int policyType = policies[i].policy_type();
+                for (Policy policy : policies) {
+                    int policyType = policy.policy_type();
                     if (policyType == ENDPOINT_CONFIGURATION_POLICY_ID.value) {
-                        endpointPolicy = EndpointConfigurationPolicyHelper
-                                .narrow(policies[i]);
+                        endpointPolicy = EndpointConfigurationPolicyHelper.narrow(policy);
                     } else {
                         ++nTmpPolicies;
-                        tmpPolicyVector.addElement(policies[i]);
+                        policyList.add(policy);
                     }
                 }
             }
-            org.omg.CORBA.Policy[] tmpPolicies = new org.omg.CORBA.Policy[tmpPolicyVector
-                    .size()];
-            tmpPolicyVector.copyInto(tmpPolicies);
+            Policy[] tmpPolicies = policyList.toArray(new Policy[0]);
 
             AcceptorConfig[] config;
 
             if (endpointPolicy == null) {
-                //
                 // Get the endpoint configuration
-                //
-                String rootStr = null;
-                String paramStr = null;
-                if (id.equals("RootPOAManager"))
-                    rootStr = props.getProperty("yoko.orb.oa.endpoint");
-                String propName = "yoko.orb.poamanager." + id + ".endpoint";
-                paramStr = props.getProperty(propName);
-                
-                if (paramStr == null && rootStr == null)
-                    paramStr = "iiop";
-                else if (paramStr == null)
-                    paramStr = rootStr;
-
+                String defaultProtocol = "iiop";
+                if (id.equals("RootPOAManager")) defaultProtocol = props.getProperty("yoko.orb.oa.endpoint", defaultProtocol);
+                String paramStr = props.getProperty("yoko.orb.poamanager." + id + ".endpoint", defaultProtocol);
                 config = parseEndpointString(paramStr);
-            }
-
-            else {
-                //
+            } else {
                 // Create acceptors based on the endpoint config policy
-                //
                 config = endpointPolicy.value();
             }
 
-            org.apache.yoko.orb.OCI.AccFactoryRegistry registry = orbInstance_
-                    .getAccFactoryRegistry();
+            AccFactoryRegistry registry = orbInstance_.getAccFactoryRegistry();
 
-            java.util.Vector acceptors = new java.util.Vector();
-            int nConfig = config.length;
-            for (int i = 0; i < nConfig; i++) {
+            List<Acceptor> acceptors = new ArrayList<>();
+            for (AcceptorConfig acceptorConfig : config) {
                 try {
-                    org.apache.yoko.orb.OCI.AccFactory factory = registry
-                            .get_factory(config[i].id);
-                    acceptors.addElement(factory
-                            .create_acceptor(config[i].params));
-                } catch (org.apache.yoko.orb.OCI.NoSuchFactory ex) {
+                    AccFactory factory = registry.get_factory(acceptorConfig.id);
+                    acceptors.add(factory.create_acceptor(acceptorConfig.params));
+                } catch (NoSuchFactory ex) {
                     String err = "cannot find factory: " + ex;
                     logger.error(err, ex);
-                    throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(err).initCause(ex);
-                } catch (org.apache.yoko.orb.OCI.InvalidParam ex) {
+                    throw (INITIALIZE) new INITIALIZE(err).initCause(ex);
+                } catch (InvalidParam ex) {
                     String err = "unable to create acceptor: " + ex.reason;
                     logger.error(err, ex);
-                    throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(err).initCause(ex);
+                    throw (INITIALIZE) new INITIALIZE(err).initCause(ex);
                 }
             }
 
-            //
             // Create the new POAManager_impl and add to the table
-            //
-            org.apache.yoko.orb.OCI.Acceptor[] arr = new org.apache.yoko.orb.OCI.Acceptor[acceptors
-                    .size()];
-            acceptors.copyInto(arr);
-            POAManager manager = new POAManager_impl(orbInstance_, poaLocator_,
-                    id, Integer.toString(count_), arr, tmpPolicies);
+            Acceptor[] arr = acceptors.toArray(new Acceptor[0]);
+            POAManager_impl manager = new POAManager_impl(orbInstance_, poaLocator_, id, count_.toString(), arr, tmpPolicies);
             managers_.put(id, manager);
-
             return manager;
         }
     }
 
+    @Override
     public org.omg.PortableServer.POAManager[] list() {
-        java.util.Enumeration e = managers_.keys();
-        java.util.Vector result = new java.util.Vector();
-
-        while (e.hasMoreElements()) {
-            String name = (String) e.nextElement();
-            POAManager manager = (org.apache.yoko.orb.OBPortableServer.POAManager) managers_
-                    .get(name);
-            if (manager != null)
-                result.addElement(manager);
-        }
-
-        POAManager[] r = new POAManager[result.size()];
-        result.copyInto(r);
-
-        return r;
+        List<POAManager_impl> list = new ArrayList<>(managers_.values());
+        while(list.remove(null));
+        return list.toArray(new org.omg.PortableServer.POAManager[0]);
     }
 
-    public org.omg.PortableServer.POAManager find(String id) {
-        return (org.omg.PortableServer.POAManager) (managers_.get(id));
+    @Override
+    public POAManager_impl find(String id) {
+        return managers_.get(id);
     }
 
     public void destroy() {
-        //
-        // Remove the references to the orbInstance_
-        //
         orbInstance_ = null;
-
-        //
         // Shutdown, if necessary
-        //
-        if (!managers_.isEmpty())
-            _OB_deactivate();
+        if (!managers_.isEmpty()) _OB_deactivate();
     }
 
-    public EndpointConfigurationPolicy create_endpoint_configuration_policy(
-            String value) throws org.omg.CORBA.PolicyError {
+    public EndpointConfigurationPolicy create_endpoint_configuration_policy(String value) throws PolicyError {
         AcceptorConfig[] configArray = parseEndpointString(value);
         return new EndpointConfigurationPolicy_impl(configArray);
     }
 
-    public CommunicationsConcurrencyPolicy create_communications_concurrency_policy(
-            short value) throws org.omg.CORBA.PolicyError {
+    public CommunicationsConcurrencyPolicy create_communications_concurrency_policy(short value) throws PolicyError {
         return new CommunicationsConcurrencyPolicy_impl(value);
     }
 
-    public GIOPVersionPolicy create_giop_version_policy(short value)
-            throws org.omg.CORBA.PolicyError {
+    public GIOPVersionPolicy create_giop_version_policy(short value) throws PolicyError {
         return new GIOPVersionPolicy_impl(value);
     }
 
-    //
-    // Deactivate all POAManagers
-    //
     public void _OB_deactivate() {
-        //
-        // Deactivate each of the POAManagers
-        //
-        java.util.Enumeration e = managers_.keys();
-        while (e.hasMoreElements()) {
-            String name = (String) e.nextElement();
-            POAManager manager = (POAManager) managers_.get(name);
-            if (manager != null) {
-                try {
-                    manager.deactivate(true, true);
-                } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                    // Ignore
-                }
-            }
+        for (POAManager manager: managers_.values()) {
+            if (manager == null) continue;
+            try {
+                manager.deactivate(true, true);
+            } catch (AdapterInactive ignored) {}
         }
         managers_.clear();
 
-        //
         // Tell the IMR that the ORB is STOPPING
-        //
-        if (activeState_ != null) {
-            org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
-            String serverInstance = orbInstance_.getServerInstance();
-            try {
-                activeState_.set_status(serverInstance,
-                        org.apache.yoko.orb.IMR.ServerStatus.STOPPING);
-            } catch (org.omg.CORBA.SystemException ex) {
-                String msg = orbInstance_.getServerId()
-                        + ": Cannot contact IMR on shutdown";
-                logger.warning(msg, ex);
-            }
+        if (activeState_ == null) return;
 
-            //
-            // Clear the IMR::Server record
-            //
-            activeState_ = null;
+        Logger logger = orbInstance_.getLogger();
+        String serverInstance = orbInstance_.getServerInstance();
+        try {
+            activeState_.set_status(serverInstance, ServerStatus.STOPPING);
+        } catch (SystemException ex) {
+            logger.warning(orbInstance_.getServerId() + ": Cannot contact IMR on shutdown", ex);
         }
+        activeState_ = null;
     }
 
-    public DirectServant _OB_getDirectServant(org.omg.IOP.IOR ior,
-            org.apache.yoko.orb.OB.RefCountPolicyList policies)
-            throws org.apache.yoko.orb.OB.LocationForward {
-        //
-        // Optimization
-        //
-        if (managers_.isEmpty())
-            return null;
-
-        java.util.Enumeration e = managers_.keys();
-        while (e.hasMoreElements()) {
+    public DirectServant _OB_getDirectServant(IOR ior, RefCountPolicyList policies) throws LocationForward {
+        for (POAManager_impl manager: managers_.values()) {
+            if (manager == null) continue;
             try {
-                String name = (String) e.nextElement();
-                POAManager_impl manager = (POAManager_impl) managers_.get(name);
-                if (manager != null) {
-                    org.apache.yoko.orb.OCI.Acceptor[] acceptors = manager
-                            .get_acceptors();
-                    for (int i = 0; i < acceptors.length; i++) {
-                        org.apache.yoko.orb.OCI.ProfileInfo[] profileInfos = acceptors[i]
-                                .get_local_profiles(ior);
-
-                        //
-                        // If the IOR is local then at least one ProfileInfo
-                        // will be returned
-                        //
-                        if (profileInfos.length > 0) {
-                            //
-                            // In the case that the servant cannot support a
-                            // direct invocation, null will be returned
-                            //
-                            return manager._OB_getDirectServant(
-                                    profileInfos[0].key, policies);
-                        }
-                    }
+                for (Acceptor acceptor : manager.get_acceptors()) {
+                    ProfileInfo[] profileInfos = acceptor.get_local_profiles(ior);
+                    // If the IOR is local then at least one ProfileInfo will be returned
+                    if (profileInfos.length == 0) continue;
+                    return manager._OB_getDirectServant(profileInfos[0].key, policies);
                 }
-            } catch (org.omg.PortableServer.POAManagerPackage.AdapterInactive ex) {
-                //
-                // Ignore -- the POAManager isn't valid anymore
-                //
-            
-            } catch (org.omg.CORBA.OBJECT_NOT_EXIST ex) {
-                // also ignored.  At this point, we just want to determine if there is a local version. 
+            } catch (AdapterInactive|OBJECT_NOT_EXIST ignored) {
+                // At this point, we just want to determine if there is a local version.
             }
         }
-
+        // In the case that the servant cannot support a direct invocation, null will be returned
         return null;
     }
 
-    public void _OB_setORBInstance(org.apache.yoko.orb.OB.ORBInstance instance) {
+    public void _OB_setORBInstance(ORBInstance instance) {
         orbInstance_ = instance;
     }
 
-    public void _OB_initializeIMR(POA_impl root,
-            org.apache.yoko.orb.OB.ORBControl orbControl) {
+    public void _OB_initializeIMR(POA_impl root, ORBControl orbControl) {
         String serverId = orbInstance_.getServerId();
         String serverInstance = orbInstance_.getServerInstance();
 
-        java.util.Properties properties = orbInstance_.getProperties();
+        Properties properties = orbInstance_.getProperties();
         String noIMR = properties.getProperty("yoko.orb.noIMR");
-        if (serverId.length() == 0 || noIMR != null)
-            return;
+        if (serverId.isEmpty() || noIMR != null) return;
 
-        //
         // Create the OAD::ProcessMonitor servant
-        //
-        processEndpoint_ = new org.apache.yoko.orb.OAD.ProcessEndpoint_impl(
-                serverId, serverInstance, root, orbControl);
+        processEndpoint_ = new ProcessEndpoint_impl(serverId, serverInstance, root, orbControl);
 
-        org.apache.yoko.orb.IMR.Domain imrDomain = null;
+        Domain imrDomain = null;
         try {
-            org.apache.yoko.orb.OB.InitialServiceManager initServiceManager = orbInstance_
-                    .getInitialServiceManager();
-            org.omg.CORBA.Object imrObj = initServiceManager
-                    .resolveInitialReferences("IMR");
-            imrDomain = org.apache.yoko.orb.IMR.DomainHelper.narrow(imrObj);
-        } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
-            // Ignore -- this will be handled later
-        } catch (org.omg.CORBA.BAD_PARAM ex) {
-            // narrow() failed
+            InitialServiceManager initServiceManager = orbInstance_.getInitialServiceManager();
+            org.omg.CORBA.Object imrObj = initServiceManager.resolveInitialReferences("IMR");
+            imrDomain = DomainHelper.narrow(imrObj);
+        } catch (InvalidName | BAD_PARAM ignored) {
         }
 
-        org.apache.yoko.orb.OB.Logger logger = orbInstance_.getLogger();
 
-        //
+        Logger logger = orbInstance_.getLogger();
+
         // IMR::IMRDomain not reachable?
-        //
         if (imrDomain == null) {
-            String msg = serverId + ": IMRDomain not reachable";
-            logger.error(msg);
-            throw new org.omg.CORBA.INITIALIZE(msg);
+            logger.error(serverId + ": IMRDomain not reachable");
+            throw new INITIALIZE(serverId + ": IMRDomain not reachable");
         }
 
-        //
         // Check if need to register with the IMR
-        //
         String exec = properties.getProperty("yoko.orb.imr.register");
         if (exec != null) {
-            //
             // TODO: What do we do for Java?
-            //
-            String msg = serverId + ": Self registration not implemented"
-                    + " for java servers";
-            logger.error(msg);
-            throw new org.omg.CORBA.INITIALIZE(msg);
+            logger.error(serverId + ": Self registration not implemented for java servers");
+            throw new INITIALIZE(serverId + ": Self registration not implemented for java servers");
         }
 
-        //
         // Tell the IMR that we're starting up
-        //
         try {
-            //
-            // This is the ProcessEndpointManager
-            //
-            org.apache.yoko.orb.OAD.ProcessEndpointManagerHolder endpoint = new org.apache.yoko.orb.OAD.ProcessEndpointManagerHolder();
+            ProcessEndpointManagerHolder endpoint = new ProcessEndpointManagerHolder();
 
-            org.omg.PortableInterceptor.ObjectReferenceTemplate primary = root
-                    .adapter_template();
+            ObjectReferenceTemplate primary = root.adapter_template();
 
-            //
             // Tell the IMR that we are STARTING.
-            //
-            activeState_ = imrDomain.startup(serverId, serverInstance, primary,
-                    endpoint);
+            activeState_ = imrDomain.startup(serverId, serverInstance, primary, endpoint);
 
-            //
             // Link with the OAD ProcessEndpoint
-            //
-            org.apache.yoko.orb.OAD.ProcessEndpoint ref = processEndpoint_
-                    ._this(orbInstance_.getORB());
-            endpoint.value.establish_link(serverId, serverInstance, 0xFFFFFFFF,
-                    ref);
+            ProcessEndpoint ref = processEndpoint_._this(orbInstance_.getORB());
+            endpoint.value.establish_link(serverId, serverInstance, 0xFFFFFFFF, ref);
             endpointManager_ = endpoint.value;
 
-            //
             // Create an register the IORInterceptor for the IMR
-            //
-            org.omg.PortableInterceptor.IORInterceptor i = new org.apache.yoko.orb.PortableInterceptor.IMRIORInterceptor_impl(
-                    logger, activeState_, serverInstance);
-            org.apache.yoko.orb.OB.PIManager piManager = orbInstance_
-                    .getPIManager();
+            IORInterceptor i = new IMRIORInterceptor_impl(logger, activeState_, serverInstance);
+            PIManager piManager = orbInstance_.getPIManager();
 
             try {
                 piManager.addIORInterceptor(i, true);
-            } catch (org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+            } catch (DuplicateName ex) {
+                throw Assert.fail(ex);
             }
-        } catch (org.omg.CORBA.BAD_PARAM ex) {
-            String msg = serverId + ": (IMR) Server already running";
-            logger.error(msg, ex);
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(msg).initCause(ex);
-        } catch (org.apache.yoko.orb.IMR.NoSuchServer ex) {
-            String msg = serverId + ": (IMR) Not registered with IMR";
-            logger.error(msg, ex);
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(msg).initCause(ex);
-        } catch (org.apache.yoko.orb.IMR.NoSuchOAD ex) {
-            String msg = serverId + ": (IMR) No OAD for host";
-            logger.error(msg, ex);
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(msg).initCause(ex);
-        } catch (org.apache.yoko.orb.IMR.OADNotRunning ex) {
-            String msg = serverId + ": (IMR) OAD not running";
-            logger.error(msg, ex);
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(msg).initCause(ex);
-        } catch (org.apache.yoko.orb.OAD.AlreadyLinked ex) {
-            String msg = serverId + ": (IMR) Process registered with OAD";
-            logger.error(msg, ex);
-            throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(msg).initCause(ex);
+        } catch (BAD_PARAM ex) {
+            logger.error(serverId + ": (IMR) Server already running", ex);
+            throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Server already running").initCause(ex);
+        } catch (NoSuchServer ex) {
+            logger.error(serverId + ": (IMR) Not registered with IMR", ex);
+            throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Not registered with IMR").initCause(ex);
+        } catch (NoSuchOAD ex) {
+            logger.error(serverId + ": (IMR) No OAD for host", ex);
+            throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) No OAD for host").initCause(ex);
+        } catch (OADNotRunning ex) {
+            logger.error(serverId + ": (IMR) OAD not running", ex);
+            throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) OAD not running").initCause(ex);
+        } catch (AlreadyLinked ex) {
+            logger.error(serverId + ": (IMR) Process registered with OAD", ex);
+            throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Process registered with OAD").initCause(ex);
         }
     }
 }
