@@ -26,6 +26,8 @@ import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.jupiter.annotation.impl.Steward;
+import testify.util.ArrayUtils;
+import testify.util.Predicates;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -48,8 +50,8 @@ import static testify.streams.Collectors.requireNoMoreThanOne;
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)
 public @interface ConfigureOrb {
-    String args() default "";
-    String props() default "";
+    String[] args() default "";
+    String[] props() default "";
 
     @Target({ANNOTATION_TYPE, TYPE})
     @Retention(RUNTIME)
@@ -58,12 +60,14 @@ public @interface ConfigureOrb {
 
 class OrbSteward extends Steward<ConfigureOrb> {
     private static final Class<?> CONNECTION_HELPER_CLASS;
+    private static final Class<?> EXTENDED_CONNECTION_HELPER_CLASS;
 
     static {
         try {
-            CONNECTION_HELPER_CLASS = Class.forName("org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper");
+            CONNECTION_HELPER_CLASS = Class.forName("org.apache.yoko.orb.OCI.IIOP.ConnectionHelper");
+            EXTENDED_CONNECTION_HELPER_CLASS = Class.forName("org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper");
         } catch (ClassNotFoundException e) {
-            throw new Error();
+            throw new Error(e);
         }
     }
 
@@ -92,18 +96,21 @@ class OrbSteward extends Steward<ConfigureOrb> {
         if (ORBInitializer.class.isAssignableFrom(type)) return;
         // we also know about ConnectionHelpers
         if (CONNECTION_HELPER_CLASS.isAssignableFrom(type)) return;
+        if (EXTENDED_CONNECTION_HELPER_CLASS.isAssignableFrom(type)) return;
         // we don't know about anything else!
         fail("Type " + type + " cannot be used with an ORB");
     }
 
     /** Extract the orb arguments from a {@link ConfigureOrb} annotation */
     static String[] args(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
+
         return getNestedModifierTypes(testClass, nestedClassFilter)
-                .filter(CONNECTION_HELPER_CLASS::isAssignableFrom)
+                .filter(Predicates.or(
+                        CONNECTION_HELPER_CLASS::isAssignableFrom,
+                        EXTENDED_CONNECTION_HELPER_CLASS::isAssignableFrom))
                 .collect(requireNoMoreThanOne("Only one connection helper can be configured but two were supplied: %s, %s"))
-                .map(helper -> cfg.args() + " -IIOPconnectionHelper " + helper.getName())
-                .orElse(cfg.args())
-                .split(" ");
+                .map(c -> ArrayUtils.concat(cfg.args(), "-IIOPconnectionHelper", c.getName()))
+                .orElse(cfg.args());
     }
 
     private static Stream<Class<?>> getNestedModifierTypes(Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
@@ -123,7 +130,7 @@ class OrbSteward extends Steward<ConfigureOrb> {
         Properties props = new Properties();
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
-        for (String prop : cfg.props().split(" ")) {
+        for (String prop : cfg.props()) {
             if (prop.isEmpty()) continue;
             String[] arr = prop.split("=", 2);
             props.put(arr[0], arr.length < 2 ? "" : arr[1]);
