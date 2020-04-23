@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -76,84 +76,84 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         int port = 0;
         int backlog = 0;
         boolean numeric = false;
-        
+
         for (int i = 0; i < params.length; i++) {
             String option = params[i];
             try {
                 switch (option) {
-                    case "--backlog":
-                        i++;
-                        String backlogArg = params[i];
-                        try {
-                            backlog = Integer.valueOf(backlogArg);
-                        } catch (NumberFormatException ex) {
-                            throw new InvalidParam("invalid argument for --backlog: " + backlogArg);
+                case "--backlog":
+                    i++;
+                    String backlogArg = params[i];
+                    try {
+                        backlog = Integer.valueOf(backlogArg);
+                    } catch (NumberFormatException ex) {
+                        throw new InvalidParam("invalid argument for --backlog: " + backlogArg);
+                    }
+                    if (backlog < 1 || backlog > 65535) throw new InvalidParam("invalid backlog value: " + backlogArg);
+                    break;
+
+                case "--bind":
+                    i++;
+                    bind = params[i];
+                    break;
+
+                case "--host":
+                    i++;
+                    List<String> list = new ArrayList<>();
+                    int start = 0;
+                    String hostArg = params[i];
+                    // TODO: use library functions instead to
+                    // - split on commas
+                    // - trim each element
+                    // - if not empty add element to list
+                    while (true) {
+                        while (start < hostArg.length() && hostArg.charAt(start) == ' ')
+                            start++;
+                        if (start >= hostArg.length())
+                            break;
+                        int comma = hostArg.indexOf(',', start);
+                        if (comma == start)
+                            start++;
+                        else {
+                            if (comma == -1)
+                                comma = hostArg.length();
+                            int end = comma - 1;
+                            while (hostArg.charAt(end) == ' ')
+                                end--;
+                            list.add(hostArg.substring(start, end + 1));
+                            start = comma + 1;
                         }
-                        if (backlog < 1 || backlog > 65535) throw new InvalidParam("invalid backlog value: " + backlogArg);
-                        break;
+                    }
+                    if (list.isEmpty()) throw new InvalidParam("invalid argument for --host: " + hostArg);
+                    hosts = list.toArray(new String[0]);
+                    break;
 
-                    case "--bind":
-                        i++;
-                        bind = params[i];
-                        break;
+                case "--multi-profile":
+                    multiProfile = true;
+                    break;
 
-                    case "--host":
-                        i++;
-                        List<String> list = new ArrayList<>();
-                        int start = 0;
-                        String hostArg = params[i];
-                        // TODO: use library functions instead to
-                        // - split on commas
-                        // - trim each element
-                        // - if not empty add element to list
-                        while (true) {
-                            while (start < hostArg.length() && hostArg.charAt(start) == ' ')
-                                start++;
-                            if (start >= hostArg.length())
-                                break;
-                            int comma = hostArg.indexOf(',', start);
-                            if (comma == start)
-                                start++;
-                            else {
-                                if (comma == -1)
-                                    comma = hostArg.length();
-                                int end = comma - 1;
-                                while (hostArg.charAt(end) == ' ')
-                                    end--;
-                                list.add(hostArg.substring(start, end + 1));
-                                start = comma + 1;
-                            }
-                        }
-                        if (list.isEmpty()) throw new InvalidParam("invalid argument for --host: " + hostArg);
-                        hosts = list.toArray(new String[0]);
-                        break;
+                case "--no-keepalive":
+                    keepAlive = false;
+                    break;
 
-                    case "--multi-profile":
-                        multiProfile = true;
-                        break;
+                case "--numeric":
+                    numeric = true;
+                    break;
 
-                    case "--no-keepalive":
-                        keepAlive = false;
-                        break;
+                case "--port":
+                    i++;
+                    String portArg = params[i];
+                    try {
+                        port = Integer.parseInt(portArg);
+                    } catch (NumberFormatException ex) {
+                        throw new InvalidParam("invalid argument for --port: " + portArg);
+                    }
+                    if (port < 1 || port > 65535)
+                        throw new InvalidParam("invalid port");
+                    break;
 
-                    case "--numeric":
-                        numeric = true;
-                        break;
-
-                    case "--port":
-                        i++;
-                        String portArg = params[i];
-                        try {
-                            port = Integer.parseInt(portArg);
-                        } catch (NumberFormatException ex) {
-                            throw new InvalidParam("invalid argument for --port: " + portArg);
-                        }
-                        if (port < 1 || port > 65535)
-                            throw new InvalidParam("invalid port");
-                        break;
-
-                    default:
-                        if (connectionHelper_ != null) throw new InvalidParam("unknown parameter: " + option);
+                default:
+                    if (connectionHelper_ != null) throw new InvalidParam("unknown parameter: " + option);
                 }
             } catch (IndexOutOfBoundsException e) {
                 throw (InvalidParam)new InvalidParam("argument expected for " + option).initCause(e);
@@ -167,7 +167,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         logger.fine("Creating acceptor for port=" + port);
         Codec codec;
         try {
-                codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+            codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
         } catch (InvalidName e) {
             throw new InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
         } catch (UnknownEncoding e) {
@@ -232,5 +232,5 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         connectionHelper_ = helper;
         extendedConnectionHelper_ = extendedHelper;
     }
-    
+
 }
