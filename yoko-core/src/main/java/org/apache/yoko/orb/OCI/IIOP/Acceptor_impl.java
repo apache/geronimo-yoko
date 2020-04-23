@@ -60,20 +60,23 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorBind;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asTransient;
 
 final class Acceptor_impl extends LocalObject implements Acceptor {
     static final Logger logger = Logger.getLogger(Acceptor_impl.class.getName());
 
+    enum ProfileCardinality { ZERO, ONE, MANY }
+
     // Some data members must not be private because the info object must be able to access them
     // TODO: introduce encapsulation
-    public String[] hosts_;
-    public ServerSocket socket_;
-    private boolean multiProfile_;
-    private int port_;
-    private boolean keepAlive_;
-    private InetAddress localAddress_;
+    public final String[] hosts_;
+    public final ServerSocket socket_;
+    private final ProfileCardinality profileCardinality;
+    private final int port_;
+    private final boolean keepAlive_;
+    private final InetAddress localAddress_;
     private final AcceptorInfo_impl info_;
     private final ListenerMap listenMap_;
     private final ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
@@ -102,7 +105,6 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
 
         try {
             socket_.close();
-            socket_ = null;
             logger.log(Level.FINE, "Closed server socket with host=" + localAddress_ + ", port=" + port_);
         } catch (IOException ex) {
             logger.log(Level.FINE, "Exception closing server socket with host=" + localAddress_ + ", port=" + port_, ex);
@@ -200,6 +202,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
 
     public void add_profiles(ProfileInfo profileInfo, POAPolicies policies, IORHolder iorHolder) {
         if (port_ == 0) throw new RuntimeException();
+        if (profileCardinality == ZERO) return;
 
         final IOR ior = iorHolder.value;
         final Version version = new Version(profileInfo.major, profileInfo.minor);
@@ -214,15 +217,13 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         } else {
             // Filter components according to IIOP version
             final List<TaggedComponent> piComponents = Arrays.asList(profileInfo.components);
-            if (multiProfile_) {
-                // Add one profile for each host
-                for (final String host : hosts_) addNewProfile_1_1(ior, version, host, port, key, piComponents);
-            } else {
+            switch (profileCardinality) {
+            case ONE:
                 // Add a single tagged profile. If there are additional hosts, add a tagged component for each host.
                 final String mainHost = hosts_[0];
                 final String[] alternateHosts = Arrays.copyOfRange(hosts_, 1, hosts_.length);
                 final List<TaggedComponent> components = new ArrayList<>(piComponents);
-                for (String host: alternateHosts) {
+                for (String host : alternateHosts) {
                     try (OutputStream out = new OutputStream()) {
                         out._OB_writeEndian();
                         out.write_string(host);
@@ -231,6 +232,11 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
                     }
                 }
                 addNewProfile_1_1(ior, version, mainHost, port, key, components);
+                break;
+            case MANY:
+                // Add one profile for each host
+                for (final String host : hosts_) addNewProfile_1_1(ior, version, host, port, key, piComponents);
+                break;
             }
         }
     }
@@ -276,55 +282,49 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
+    public Acceptor_impl(String address, String[] hosts, ProfileCardinality profileCardinality,
             int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
         Assert.ensure((helper == null) ^ (extendedConnectionHelper == null));
-        hosts_ = hosts;
-        multiProfile_ = multiProfile;
-        keepAlive_ = keepAlive;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = extendedConnectionHelper;
-        codec_ = codec;
-        info_ = new AcceptorInfo_impl(this);
-        listenMap_ = lm;
+        this.hosts_ = hosts;
+        this.profileCardinality = profileCardinality;
+        this.keepAlive_ = keepAlive;
+        this.connectionHelper_ = helper;
+        this.extendedConnectionHelper_ = extendedConnectionHelper;
+        this.codec_ = codec;
+        this.info_ = new AcceptorInfo_impl(this);
+        this.listenMap_ = lm;
 
         if (backlog == 0) backlog = 50; // 50 is the JDK's default value
 
         // Get the local address for use by connect_self
         try {
-            if (address == null) {
-                //Since we are
-                // binding to all network interfaces, we'll use the loopback
-                // address.
-                localAddress_ = InetAddress.getLocalHost();
-            } else {
-                localAddress_ = Util.getInetAddress(address);
-            }
+            // If binding to all network interfaces, use the loopback address.
+            this.localAddress_ = (address == null) ? InetAddress.getLocalHost() : Util.getInetAddress(address);
         } catch (UnknownHostException ex) {
             logger.log(Level.FINE, "Host resolution failure", ex);
             throw asCommFailure(ex);
         }
 
-        // Create socket and bind to requested network interface
         try {
+            // Create socket and bind to requested network interface
             if (address == null) {
                 if (connectionHelper_ != null) {
-                    socket_ = connectionHelper_.createServerSocket(port, backlog);
+                    this.socket_ = connectionHelper_.createServerSocket(port, backlog);
                 } else {
-                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
+                    this.socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
                 }
             } else {
                 if (connectionHelper_ != null) {
-                    socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+                    this.socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
                 } else {
-                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
+                    this.socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
                 }
             }
 
             // Read back the port. This is needed if the port was selected by
             // the operating system.
             port_ = socket_.getLocalPort();
-            logger.fine("Acceptor created using socket " + socket_); 
+            logger.fine("Acceptor created using socket " + socket_);
         } catch (BindException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
             throw asCommFailure(ex, MinorBind);

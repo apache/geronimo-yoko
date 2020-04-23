@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality;
 import org.apache.yoko.orb.OCI.InvalidParam;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
@@ -42,6 +43,10 @@ import org.omg.IOP.TaggedComponentHelper;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.MANY;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ONE;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 
 final class AccFactory_impl extends LocalObject implements AccFactory {
     static final Logger logger = Logger.getLogger(AccFactory_impl.class.getName());
@@ -72,7 +77,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         String bind = null;
         String[] hosts = null;
         boolean keepAlive = true;
-        boolean multiProfile = false;
+        ProfileCardinality numProfiles = ONE;
         int port = 0;
         int backlog = 0;
         boolean numeric = false;
@@ -129,7 +134,11 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                     break;
 
                 case "--multi-profile":
-                    multiProfile = true;
+                    numProfiles = MANY;
+                    break;
+
+                case "--no-profile":
+                    numProfiles = ZERO;
                     break;
 
                 case "--no-keepalive":
@@ -175,7 +184,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         }
 
         // this constructor modifies the provided ListenerMap
-        return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
+        return new Acceptor_impl(bind, hosts, numProfiles, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 
     public void change_key(IORHolder ior, byte[] key) {
