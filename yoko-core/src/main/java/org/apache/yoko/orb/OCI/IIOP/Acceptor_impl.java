@@ -19,14 +19,11 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OBPortableServer.POAPolicies;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
 import org.apache.yoko.orb.OCI.Transport;
-import org.omg.CORBA.COMM_FAILURE;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.SystemException;
@@ -52,44 +49,38 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAccept;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorBind;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asTransient;
 
-final class Acceptor_impl extends LocalObject implements
-        Acceptor {
-    // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(Acceptor.class.getName());
+final class Acceptor_impl extends LocalObject implements Acceptor {
+    static final Logger logger = Logger.getLogger(Acceptor_impl.class.getName());
 
-    // Some data members must not be private because the info object
-    // must be able to access them
-    public String[] hosts_; // The hosts
+    enum ProfileCardinality { ZERO, ONE, MANY }
 
-    public ServerSocket socket_; // The socket
-
-    private boolean multiProfile_; // Use multiple profiles?
-
-    private int port_; // The port
-
-    private boolean keepAlive_; // The keepalive flag
-
-    private InetAddress localAddress_; // The local address
-
-    private final AcceptorInfo_impl info_; // Acceptor information
-
-    private ListenerMap listenMap_;
-
+    // Some data members must not be private because the info object must be able to access them
+    // TODO: introduce encapsulation
+    public final String[] hosts_;
+    public final ServerSocket socket_;
+    private final ProfileCardinality profileCardinality;
+    private final int port_;
+    private final boolean keepAlive_;
+    private final InetAddress localAddress_;
+    private final AcceptorInfo_impl info_;
+    private final ListenerMap listenMap_;
     private final ConnectionHelper connectionHelper_;    // plugin for managing connection config/creation
-
     private final ExtendedConnectionHelper extendedConnectionHelper_;
-    
     private final Codec codec_;
 
     // ------------------------------------------------------------------
@@ -110,55 +101,31 @@ final class Acceptor_impl extends LocalObject implements
 
     public void close() {
         logger.log(Level.FINE, "Closing server socket with host=" + localAddress_ + ", port=" + port_, new Exception("Stack trace"));
-        //
-        // Destroy the info object
-        //
         info_._OB_destroy();
 
-        //
-        // Close the socket
-        //
         try {
             socket_.close();
-            socket_ = null;
             logger.log(Level.FINE, "Closed server socket with host=" + localAddress_ + ", port=" + port_);
         } catch (IOException ex) {
             logger.log(Level.FINE, "Exception closing server socket with host=" + localAddress_ + ", port=" + port_, ex);
         }
     }
 
-    public void shutdown() {
-        //
-        // This operation does nothing in the java implementation
-        //
-    }
+    public void shutdown() {}
 
-    public void listen() {
-        //
-        // This operation does nothing in the java implementation
-        //
-    }
+    public void listen() {}
 
     public Transport accept(boolean block) {
-        //
-        // Accept
-        //
         Socket socket;
         try {
-            //
-            // If non-blocking, use a timeout of 1ms
-            //
-            if (!block)
-                socket_.setSoTimeout(1);
-            else
-                socket_.setSoTimeout(0);
+            if (!block) socket_.setSoTimeout(1);
+            else socket_.setSoTimeout(0);
 
             logger.fine("Accepting connection for host=" + localAddress_ + ", port=" + port_);
             socket = socket_.accept();
             logger.fine("Received inbound connection on socket " + socket);
         } catch (InterruptedIOException ex) {
-            if (!block)
-                return null; // Timeout
+            if (!block) return null; // Timeout
             else {
                 logger.log(Level.FINE, "Failure accepting connection for host=" + localAddress_ + ", port=" + port_, ex);
                 throw asCommFailure(ex, MinorAccept);
@@ -168,44 +135,32 @@ final class Acceptor_impl extends LocalObject implements
             throw asCommFailure(ex, MinorAccept);
         }
 
-        //
         // Set TCP_NODELAY and SO_KEEPALIVE options
-        //
         try {
             socket.setTcpNoDelay(true);
-            if (keepAlive_)
-                socket.setKeepAlive(true);
+            if (keepAlive_) socket.setKeepAlive(true);
         } catch (SocketException ex) {
             logger.log(Level.FINE, "Failure configuring server connection for host=" + localAddress_ + ", port=" + port_, ex);
             throw asCommFailure(ex, MinorSetsockopt);
         }
 
-        //
-        // Create new transport
-        //
-        Transport tr = null;
         try {
-            tr = new Transport_impl(this, socket, listenMap_);
+            Transport tr = new Transport_impl(this, socket, listenMap_);
             logger.fine("Inbound connection received from " + socket.getInetAddress()); 
+            return tr;
         } catch (SystemException ex) {
             try {
                 socket.close();
             } catch (IOException e) {
             }
-            logger.log(Level.FINE, "error creating inbound connection", ex); 
+            logger.log(Level.FINE, "error creating inbound connection", ex);
             throw ex;
         }
 
-        //
-        // Return new transport
-        //
-        return tr;
     }
 
     public Transport connect_self() {
-        //
         // Create socket and connect to local address
-        //
         Socket socket = null;
         try {
             if (connectionHelper_ != null) {
@@ -221,9 +176,7 @@ final class Acceptor_impl extends LocalObject implements
             throw asCommFailure(ex, MinorSocket);
         }
 
-        //
         // Set TCP_NODELAY option
-        //
         try {
             socket.setTcpNoDelay(true);
         } catch (SocketException ex) {
@@ -235,9 +188,7 @@ final class Acceptor_impl extends LocalObject implements
             throw asCommFailure(ex);
         }
 
-        //
         // Create and return new transport
-        //
         try {
             return new Transport_impl(this, socket, listenMap_);
         } catch (SystemException ex) {
@@ -249,163 +200,74 @@ final class Acceptor_impl extends LocalObject implements
         }
     }
 
-    public void add_profiles(ProfileInfo profileInfo,
-                             POAPolicies policies,
-                             IORHolder ior) {
-        if (port_ == 0)
-            throw new RuntimeException();
+    public void add_profiles(ProfileInfo profileInfo, POAPolicies policies, IORHolder iorHolder) {
+        if (port_ == 0) throw new RuntimeException();
+        if (profileCardinality == ZERO) return;
 
-        //
-        // Filter components according to IIOP version
-        //
-        Vector components = new Vector();
-        if (profileInfo.major == 1 && profileInfo.minor == 0) {
-            //
-            // No components for IIOP 1.0
-            //
-        } else {
-            for (int i = 0; i < profileInfo.components.length; i++)
-                components.addElement(profileInfo.components[i]);
-        }
+        final IOR ior = iorHolder.value;
+        final Version version = new Version(profileInfo.major, profileInfo.minor);
+        // the CSIv2 policy may require zeroing the port in the IOR
+        final short port = policies.zeroPortPolicy() ? 0 : (short) port_;
+        final byte[] key = profileInfo.key;
 
         if (profileInfo.major == 1 && profileInfo.minor == 0) {
-            //
-            // For IIOP 1.0, we always add one profile for each host,
-            // since IIOP 1.0 doesn't support tagged components in a
-            // profile
-            //
-            for (int i = 0; i < hosts_.length; i++) {
-                ProfileBody_1_0 body = new ProfileBody_1_0();
-                body.iiop_version = new Version(profileInfo.major,
-                        profileInfo.minor);
-                body.host = hosts_[i];
-                // the CSIv2 policy may require zeroing the port in the IOR. 
-                if (policies.zeroPortPolicy()) {
-                    body.port = 0; 
-                }
-                else {
-                    if (port_ >= 0x8000)
-                        body.port = (short) (port_ - 0xffff - 1);
-                    else
-                        body.port = (short) port_;
-                }
-                body.object_key = profileInfo.key;
+            // IIOP 1.0 doesn't support tagged components so use one profile per host
+            for (final String host : hosts_) addNewProfile_1_0(ior, version, host, port, key);
 
-                int len = ior.value.profiles.length + 1;
-                TaggedProfile[] profiles = new TaggedProfile[len];
-                System.arraycopy(ior.value.profiles, 0, profiles, 0,
-                        ior.value.profiles.length);
-                ior.value.profiles = profiles;
-                ior.value.profiles[len - 1] = new TaggedProfile();
-                ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream()) {
-                    out._OB_writeEndian();
-                    ProfileBody_1_0Helper.write(out, body);
-                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                }
-            }
         } else {
-            if (multiProfile_) {
-                //
+            // Filter components according to IIOP version
+            final List<TaggedComponent> piComponents = Arrays.asList(profileInfo.components);
+            switch (profileCardinality) {
+            case ONE:
+                // Add a single tagged profile. If there are additional hosts, add a tagged component for each host.
+                final String mainHost = hosts_[0];
+                final String[] alternateHosts = Arrays.copyOfRange(hosts_, 1, hosts_.length);
+                final List<TaggedComponent> components = new ArrayList<>(piComponents);
+                for (String host : alternateHosts) {
+                    try (OutputStream out = new OutputStream()) {
+                        out._OB_writeEndian();
+                        out.write_string(host);
+                        out.write_ushort(port);
+                        components.add(new TaggedComponent(TAG_ALTERNATE_IIOP_ADDRESS.value, out.copyWrittenBytes()));
+                    }
+                }
+                addNewProfile_1_1(ior, version, mainHost, port, key, components);
+                break;
+            case MANY:
                 // Add one profile for each host
-                //
-
-                for (int i = 0; i < hosts_.length; i++) {
-                    ProfileBody_1_1 body = new ProfileBody_1_1();
-                    body.iiop_version = new Version(
-                            profileInfo.major, profileInfo.minor);
-                    body.host = hosts_[i];
-                    // the CSIv2 policy may require zeroing the port in the IOR. 
-                    if (policies.zeroPortPolicy()) {
-                        body.port = 0; 
-                    }
-                    else {
-                        if (port_ >= 0x8000)
-                            body.port = (short) (port_ - 0xffff - 1);
-                        else
-                            body.port = (short) port_;
-                    }
-                    body.object_key = profileInfo.key;
-                    body.components = new TaggedComponent[components
-                            .size()];
-                    components.copyInto(body.components);
-
-                    int len = ior.value.profiles.length + 1;
-                    TaggedProfile[] profiles = new TaggedProfile[len];
-                    System.arraycopy(ior.value.profiles, 0, profiles, 0,
-                            ior.value.profiles.length);
-                    ior.value.profiles = profiles;
-                    ior.value.profiles[len - 1] = new TaggedProfile();
-                    ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                    try (OutputStream out = new OutputStream()) {
-                        out._OB_writeEndian();
-                        ProfileBody_1_1Helper.write(out, body);
-                        ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                    }
-                }
-            } else {
-                //
-                // Add a single tagged profile. If there are additional
-                // hosts, add a tagged component for each host.
-                //
-
-                ProfileBody_1_1 body = new ProfileBody_1_1();
-                body.iiop_version = new Version(profileInfo.major,
-                        profileInfo.minor);
-                body.host = hosts_[0];
-                if (policies.zeroPortPolicy()) {
-                    body.port = 0; 
-                }
-                else {
-                    if (port_ >= 0x8000)
-                        body.port = (short) (port_ - 0xffff - 1);
-                    else
-                        body.port = (short) port_;
-                }
-                body.object_key = profileInfo.key;
-
-                for (int i = 1; i < hosts_.length; i++) {
-                    TaggedComponent c = new TaggedComponent();
-                    c.tag = TAG_ALTERNATE_IIOP_ADDRESS.value;
-                    try (OutputStream out = new OutputStream()) {
-                        out._OB_writeEndian();
-                        out.write_string(hosts_[i]);
-                        out.write_ushort(body.port);
-                        c.component_data = out.copyWrittenBytes();
-                    }
-                    components.addElement(c);
-                }
-                body.components = new TaggedComponent[components
-                        .size()];
-                components.copyInto(body.components);
-
-                int len = ior.value.profiles.length + 1;
-                TaggedProfile[] profiles = new TaggedProfile[len];
-                System.arraycopy(ior.value.profiles, 0, profiles, 0,
-                        ior.value.profiles.length);
-                ior.value.profiles = profiles;
-                ior.value.profiles[len - 1] = new TaggedProfile();
-                ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream()) {
-                    out._OB_writeEndian();
-                    ProfileBody_1_1Helper.write(out, body);
-                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                }
+                for (final String host : hosts_) addNewProfile_1_1(ior, version, host, port, key, piComponents);
+                break;
             }
         }
     }
 
-    public ProfileInfo[] get_local_profiles(
-            IOR ior) {
-        //
+    private static void addNewProfile_1_0(IOR ior, Version version, String host, short port, byte[] key) {
+        ProfileBody_1_0 body = new ProfileBody_1_0(version, host, port, key);
+        try (OutputStream out = new OutputStream()) {
+            out._OB_writeEndian();
+            ProfileBody_1_0Helper.write(out, body);
+            ior.profiles = Arrays.copyOf(ior.profiles, ior.profiles.length + 1);
+            ior.profiles[ior.profiles.length - 1] = new TaggedProfile(TAG_INTERNET_IOP.value, out.copyWrittenBytes());
+        }
+    }
+
+    private static void addNewProfile_1_1(IOR ior, Version version, String host, short port, byte[] key, List<TaggedComponent> components) {
+        ProfileBody_1_1 body = new ProfileBody_1_1(version, host, port, key, components.toArray(new TaggedComponent[0]));
+        try (OutputStream out = new OutputStream()) {
+            out._OB_writeEndian();
+            ProfileBody_1_1Helper.write(out, body);
+            ior.profiles = Arrays.copyOf(ior.profiles, ior.profiles.length + 1);
+            ior.profiles[ior.profiles.length - 1] = new TaggedProfile(TAG_INTERNET_IOP.value, out.copyWrittenBytes());
+        }
+    }
+
+    public ProfileInfo[] get_local_profiles(IOR ior) {
         // Get local profiles for all hosts
-        //
         ProfileInfoSeqHolder profileInfoSeq = new ProfileInfoSeqHolder();
         profileInfoSeq.value = new ProfileInfo[0];
 
-        for (int i = 0; i < hosts_.length; i++) {
-            Util.extractAllProfileInfos(ior, profileInfoSeq, true, hosts_[i],
-                    port_, true, codec_);
+        for (String s : hosts_) {
+            Util.extractAllProfileInfos(ior, profileInfoSeq, true, s, port_, true, codec_);
         }
 
         return profileInfoSeq.value;
@@ -420,100 +282,73 @@ final class Acceptor_impl extends LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
+    public Acceptor_impl(String address, String[] hosts, ProfileCardinality profileCardinality,
             int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
-        // System.out.println("Acceptor_impl");
         Assert.ensure((helper == null) ^ (extendedConnectionHelper == null));
-        hosts_ = hosts;
-        multiProfile_ = multiProfile;
-        keepAlive_ = keepAlive;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = extendedConnectionHelper;
-        codec_ = codec;
-        info_ = new AcceptorInfo_impl(this);
-        listenMap_ = lm;
+        this.hosts_ = hosts;
+        this.profileCardinality = profileCardinality;
+        this.keepAlive_ = keepAlive;
+        this.connectionHelper_ = helper;
+        this.extendedConnectionHelper_ = extendedConnectionHelper;
+        this.codec_ = codec;
+        this.info_ = new AcceptorInfo_impl(this);
+        this.listenMap_ = lm;
 
-        if (backlog == 0)
-            backlog = 50; // 50 is the JDK's default value
+        if (backlog == 0) backlog = 50; // 50 is the JDK's default value
 
-        //
         // Get the local address for use by connect_self
-        //
         try {
-            if (address == null) {
-                //Since we are
-                // binding to all network interfaces, we'll use the loopback
-                // address.
-                localAddress_ = InetAddress.getLocalHost();
-            } else {
-                localAddress_ = Util.getInetAddress(address);
-            }
+            // If binding to all network interfaces, use the loopback address.
+            this.localAddress_ = (address == null) ? InetAddress.getLocalHost() : Util.getInetAddress(address);
         } catch (UnknownHostException ex) {
-            logger.log(Level.FINE, "Host resolution failure", ex); 
+            logger.log(Level.FINE, "Host resolution failure", ex);
             throw asCommFailure(ex);
         }
 
-        //
-        // Create socket and bind to requested network interface
-        //
         try {
+            // Create socket and bind to requested network interface
             if (address == null) {
                 if (connectionHelper_ != null) {
-                    socket_ = connectionHelper_.createServerSocket(port, backlog);
+                    this.socket_ = connectionHelper_.createServerSocket(port, backlog);
                 } else {
-                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
+                    this.socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, params);
                 }
             } else {
                 if (connectionHelper_ != null) {
-                    socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
+                    this.socket_ = connectionHelper_.createServerSocket(port, backlog, localAddress_);
                 } else {
-                    socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
+                    this.socket_ = extendedConnectionHelper_.createServerSocket(port, backlog, localAddress_, params);
                 }
             }
 
-            //
             // Read back the port. This is needed if the port was selected by
             // the operating system.
-            //
             port_ = socket_.getLocalPort();
-            logger.fine("Acceptor created using socket " + socket_); 
+            logger.fine("Acceptor created using socket " + socket_);
         } catch (BindException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
-            throw (COMM_FAILURE)new COMM_FAILURE(
-                    MinorCodes
-                            .describeCommFailure(MinorCodes.MinorBind)
-                            + ": " + ex.getMessage(),
-                    MinorCodes.MinorBind,
-                    CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorBind);
         } catch (IOException ex) {
             logger.log(Level.FINE, "Failure creating server socket for host=" + localAddress_ + ", port=" + port, ex);
             throw asCommFailure(ex, MinorSocket);
         }
 
-        //
         // Add this entry to the listenMap_ as an endpoint to remap
-        //
         synchronized (listenMap_) {
-            for (int i = 0; i < hosts_.length; i++)
-                listenMap_.add(hosts_[i], (short) port_);
+            for (String s : hosts_) listenMap_.add(s, (short) port_);
         }
     }
 
+    // TODO: get rid of this finalizer, and use weak refs in AccFactory_impl instead to track Acceptors going away.
     public void finalize() throws Throwable {
-        // System.out.println("~Acceptor_impl");
         if (socket_ != null) {
             close();
         }
 
-        //
         // remove this acceptor from the listenMap_
-        //
         synchronized (listenMap_) {
-            for (int i = 0; i < hosts_.length; i++)
-                listenMap_.remove(hosts_[i], (short) port_);
+            for (String s : hosts_) listenMap_.remove(s, (short) port_);
         }
-
-        super.finalize();
     }
     
     public String toString() {

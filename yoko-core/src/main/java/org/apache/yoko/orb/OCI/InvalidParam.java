@@ -32,23 +32,16 @@ final public class InvalidParam extends org.omg.CORBA.UserException
 {
     private static final String _ob_id = "IDL:orb.yoko.apache.org/OCI/InvalidParam:1.0";
 
-    public
-    InvalidParam()
-    {
+    public InvalidParam() {
         super(_ob_id);
     }
 
-    public
-    InvalidParam(String reason)
-    {
+    public InvalidParam(String reason) {
         super(_ob_id);
         this.reason = reason;
     }
 
-    public
-    InvalidParam(String _reason,
-                 String reason)
-    {
+    public InvalidParam(String _reason, String reason) {
         super(_ob_id + " " + _reason);
         this.reason = reason;
     }

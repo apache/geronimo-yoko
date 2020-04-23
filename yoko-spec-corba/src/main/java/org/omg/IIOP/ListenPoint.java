@@ -17,20 +17,18 @@
 
 package org.omg.IIOP;
 
-//
-// IDL:omg.org/IIOP/ListenPoint:1.0
-//
-/***/
+import org.omg.CORBA.portable.IDLEntity;
 
-final public class ListenPoint implements org.omg.CORBA.portable.IDLEntity
-{
+// Generated from IDL
+final public class ListenPoint implements IDLEntity {
     private static final String _ob_id = "IDL:omg.org/IIOP/ListenPoint:1.0";
+    public String host = "";
+    public short port;
+
+    public ListenPoint() {}
 
     public ListenPoint(String host, short port) {
         this.host = host;
         this.port = port;
     }
-
-    public final String host;
-    public final short port;
 }

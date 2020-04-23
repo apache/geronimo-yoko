@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OB.Assert;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality;
 import org.apache.yoko.orb.OCI.InvalidParam;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
@@ -39,26 +40,22 @@ import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedComponent;
 import org.omg.IOP.TaggedComponentHelper;
 
-import java.util.Vector;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
-final class AccFactory_impl extends LocalObject implements
-        AccFactory {
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.MANY;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ONE;
+import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 
-    // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(AccFactory.class.getName());
+final class AccFactory_impl extends LocalObject implements AccFactory {
+    static final Logger logger = Logger.getLogger(AccFactory_impl.class.getName());
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
-    //
-    // AccFactory information
-    //
-    private AccFactoryInfo_impl info_;
-    
-    private ORB orb_; // The ORB
-
-    private ConnectionHelper connectionHelper_;   // client connection helper
-
-    private ListenerMap listenMap_;
-    private ExtendedConnectionHelper extendedConnectionHelper_;
+    private final AccFactoryInfo_impl info_;
+    private final ORB orb_;
+    private final ConnectionHelper connectionHelper_;   // client connection helper
+    private final ListenerMap listenMap_;
+    private final ExtendedConnectionHelper extendedConnectionHelper_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -72,7 +69,7 @@ final class AccFactory_impl extends LocalObject implements
         return TAG_INTERNET_IOP.value;
     }
 
-    public org.apache.yoko.orb.OCI.AccFactoryInfo get_info() {
+    public AccFactoryInfo get_info() {
         return info_;
     }
 
@@ -80,131 +77,126 @@ final class AccFactory_impl extends LocalObject implements
         String bind = null;
         String[] hosts = null;
         boolean keepAlive = true;
-        boolean multiProfile = false;
+        ProfileCardinality numProfiles = ONE;
         int port = 0;
         int backlog = 0;
         boolean numeric = false;
-        
-        int i = 0;
-        while (i < params.length) {
-            if (params[i].equals("--backlog")) {
-                if (i + 1 >= params.length)
-                    throw new InvalidParam(
-                            "argument expected " + "for --backlog");
-                String arg = params[i + 1];
-                try {
-                    backlog = Integer.valueOf(arg).intValue();
-                } catch (NumberFormatException ex) {
-                    throw new InvalidParam(
-                            "invalid argument " + "for backlog");
-                }
-                if (backlog < 1 || backlog > 65535)
-                    throw new InvalidParam(
-                            "invalid backlog");
-                i += 2;
-            } else if (params[i].equals("--bind")) {
-                if (i + 1 >= params.length)
-                    throw new InvalidParam(
-                            "argument expected " + "for --bind");
-                bind = params[i + 1];
-                i += 2;
-            } else if (params[i].equals("--host")) {
-                if (i + 1 >= params.length)
-                    throw new InvalidParam(
-                            "argument expected " + "for --host");
-                Vector vec = new Vector();
-                int start = 0;
-                String str = params[i + 1];
-                while (true) {
-                    while (start < str.length() && str.charAt(start) == ' ')
-                        start++;
-                    if (start >= str.length())
-                        break;
-                    int comma = str.indexOf(',', start);
-                    if (comma == start)
-                        start++;
-                    else {
-                        if (comma == -1)
-                            comma = str.length();
-                        int end = comma - 1;
-                        while (str.charAt(end) == ' ')
-                            end--;
-                        vec.addElement(str.substring(start, end + 1));
-                        start = comma + 1;
+
+        for (int i = 0; i < params.length; i++) {
+            String option = params[i];
+            try {
+                switch (option) {
+                case "--backlog":
+                    i++;
+                    String backlogArg = params[i];
+                    try {
+                        backlog = Integer.valueOf(backlogArg);
+                    } catch (NumberFormatException ex) {
+                        throw new InvalidParam("invalid argument for --backlog: " + backlogArg);
                     }
+                    if (backlog < 1 || backlog > 65535) throw new InvalidParam("invalid backlog value: " + backlogArg);
+                    break;
+
+                case "--bind":
+                    i++;
+                    bind = params[i];
+                    break;
+
+                case "--host":
+                    i++;
+                    List<String> list = new ArrayList<>();
+                    int start = 0;
+                    String hostArg = params[i];
+                    // TODO: use library functions instead to
+                    // - split on commas
+                    // - trim each element
+                    // - if not empty add element to list
+                    while (true) {
+                        while (start < hostArg.length() && hostArg.charAt(start) == ' ')
+                            start++;
+                        if (start >= hostArg.length())
+                            break;
+                        int comma = hostArg.indexOf(',', start);
+                        if (comma == start)
+                            start++;
+                        else {
+                            if (comma == -1)
+                                comma = hostArg.length();
+                            int end = comma - 1;
+                            while (hostArg.charAt(end) == ' ')
+                                end--;
+                            list.add(hostArg.substring(start, end + 1));
+                            start = comma + 1;
+                        }
+                    }
+                    if (list.isEmpty()) throw new InvalidParam("invalid argument for --host: " + hostArg);
+                    hosts = list.toArray(new String[0]);
+                    break;
+
+                case "--multi-profile":
+                    numProfiles = MANY;
+                    break;
+
+                case "--no-profile":
+                    numProfiles = ZERO;
+                    break;
+
+                case "--no-keepalive":
+                    keepAlive = false;
+                    break;
+
+                case "--numeric":
+                    numeric = true;
+                    break;
+
+                case "--port":
+                    i++;
+                    String portArg = params[i];
+                    try {
+                        port = Integer.parseInt(portArg);
+                    } catch (NumberFormatException ex) {
+                        throw new InvalidParam("invalid argument for --port: " + portArg);
+                    }
+                    if (port < 1 || port > 65535)
+                        throw new InvalidParam("invalid port");
+                    break;
+
+                default:
+                    if (connectionHelper_ != null) throw new InvalidParam("unknown parameter: " + option);
                 }
-                if (vec.size() == 0)
-                    throw new InvalidParam(
-                            "invalid argument " + "for --host");
-                hosts = new String[vec.size()];
-                vec.copyInto(hosts);
-                i += 2;
-            } else if (params[i].equals("--multi-profile")) {
-                multiProfile = true;
-                i++;
-            } else if (params[i].equals("--no-keepalive")) {
-                keepAlive = false;
-                i++;
-            } else if (params[i].equals("--numeric")) {
-                numeric = true;
-                i++;
-            } else if (params[i].equals("--port")) {
-                if (i + 1 >= params.length)
-                    throw new InvalidParam(
-                            "argument expected " + "for --port");
-                String arg = params[i + 1];
-                try {
-                    port = Integer.valueOf(arg).intValue();
-                } catch (NumberFormatException ex) {
-                    throw new InvalidParam(
-                            "invalid argument " + "for port");
-                }
-                if (port < 1 || port > 65535)
-                    throw new InvalidParam(
-                            "invalid port");
-                i += 2;
-            } else  if (connectionHelper_ != null){
-                throw new InvalidParam(
-                        "unknown parameter: " + params[i]);
-            } else {
-                i++;
+            } catch (IndexOutOfBoundsException e) {
+                throw (InvalidParam)new InvalidParam("argument expected for " + option).initCause(e);
             }
         }
 
         if (hosts == null) {
-            hosts = new String[1];
-            hosts[0] = Net.getCanonicalHostname(numeric);
+            hosts = new String[] {Net.getCanonicalHostname(numeric)};
         }
 
         logger.fine("Creating acceptor for port=" + port);
         Codec codec;
         try {
-                codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
+            codec = ((CodecFactory) orb_.resolve_initial_references("CodecFactory")).create_codec(CDR_1_2_ENCODING);
         } catch (InvalidName e) {
             throw new InvalidParam("Could not obtain codec factory using name 'CodecFactory'");
         } catch (UnknownEncoding e) {
             throw new InvalidParam("Could not obtain codec using encoding " + CDR_1_2_ENCODING);
         }
 
-        return new Acceptor_impl(bind, hosts, multiProfile, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
+        // this constructor modifies the provided ListenerMap
+        return new Acceptor_impl(bind, hosts, numProfiles, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
     }
 
     public void change_key(IORHolder ior, byte[] key) {
-        //
         // Extract the IIOP profile information from the provided IOR
-        //
         for (int profile = 0; profile < ior.value.profiles.length; profile++) {
             if (ior.value.profiles[profile].tag == TAG_INTERNET_IOP.value) {
-                //
                 // Extract the 1_0 profile body
-                //
                 InputStream in = new InputStream(ior.value.profiles[profile].profile_data);
                 in._OB_readEndian();
                 ProfileBody_1_0 body = ProfileBody_1_0Helper.read(in);
 
-                //
                 // Read components if the IIOP version is > 1.0
-                //
                 TaggedComponent[] components;
                 if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                     int len = in.read_ulong();
@@ -215,25 +207,19 @@ final class AccFactory_impl extends LocalObject implements
                 } else
                     components = new TaggedComponent[0];
 
-                //
                 // Fill in the new object-key
-                //
                 body.object_key = key;
 
-                //
                 // Remarshal the new body
-                //
                 try (OutputStream out = new OutputStream()) {
                     out._OB_writeEndian();
                     ProfileBody_1_0Helper.write(out, body);
 
-                    //
                     // Remarshal the components if the IIOP version is > 1.0
-                    //
                     if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                         out.write_ulong(components.length);
-                        for (int i = 0; i < components.length; i++) {
-                            TaggedComponentHelper.write(out, components[i]);
+                        for (TaggedComponent component : components) {
+                            TaggedComponentHelper.write(out, component);
                         }
                     }
                     ior.value.profiles[profile].profile_data = out.copyWrittenBytes();
@@ -255,5 +241,5 @@ final class AccFactory_impl extends LocalObject implements
         connectionHelper_ = helper;
         extendedConnectionHelper_ = extendedHelper;
     }
-    
+
 }

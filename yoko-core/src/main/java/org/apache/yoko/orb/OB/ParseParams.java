@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import java.util.List;
+
 public final class ParseParams {
     //
     // Parse a parameter list. Parameters are separated by whitespace.
@@ -38,7 +40,7 @@ public final class ParseParams {
     // A BAD_PARAM exception will be raised if a formatting error
     // occurs.
     //
-    public static int parse(String str, int start, java.util.Vector params) {
+    public static int parse(String str, int start, List<String> params) {
         int pos = start;
         final int strLen = str.length();
         boolean error = false;
@@ -135,7 +137,7 @@ public final class ParseParams {
                         buf.append(ch);
                     s++;
                 }
-                params.addElement(buf.toString());
+                params.add(buf.toString());
             }
         }
 

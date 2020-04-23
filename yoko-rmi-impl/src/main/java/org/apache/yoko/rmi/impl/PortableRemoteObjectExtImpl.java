@@ -22,6 +22,7 @@ import org.apache.yoko.rmi.api.PortableRemoteObjectState;
 import org.apache.yoko.rmi.util.ClassLoaderLocal;
 import org.omg.CORBA.ORB;
 
+import java.rmi.Remote;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Properties;
@@ -58,3 +59,4 @@ public final class PortableRemoteObjectExtImpl implements PortableRemoteObjectEx
         return state;
     }
 }
+
