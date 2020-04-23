@@ -27,19 +27,39 @@ import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.SystemException;
-import org.omg.IIOP.*;
-import org.omg.IOP.*;
+import org.omg.IIOP.ProfileBody_1_0;
+import org.omg.IIOP.ProfileBody_1_0Helper;
+import org.omg.IIOP.ProfileBody_1_1;
+import org.omg.IIOP.ProfileBody_1_1Helper;
+import org.omg.IIOP.Version;
+import org.omg.IOP.Codec;
+import org.omg.IOP.IOR;
+import org.omg.IOP.IORHolder;
+import org.omg.IOP.TAG_ALTERNATE_IIOP_ADDRESS;
+import org.omg.IOP.TAG_INTERNET_IOP;
+import org.omg.IOP.TaggedComponent;
+import org.omg.IOP.TaggedProfile;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.*;
+import java.net.BindException;
+import java.net.ConnectException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorAccept;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorBind;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asTransient;
 
@@ -178,104 +198,60 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         }
     }
 
-    public void add_profiles(ProfileInfo profileInfo,
-                             POAPolicies policies,
-                             IORHolder ior) {
+    public void add_profiles(ProfileInfo profileInfo, POAPolicies policies, IORHolder iorHolder) {
         if (port_ == 0) throw new RuntimeException();
 
-        // Filter components according to IIOP version
-        final List<TaggedComponent> components = new ArrayList<>();
-        if (profileInfo.major == 1 && profileInfo.minor == 0) {
-            // No components for IIOP 1.0
-        } else {
-            components.addAll(Arrays.asList(profileInfo.components));
-        }
+        final IOR ior = iorHolder.value;
+        final Version version = new Version(profileInfo.major, profileInfo.minor);
+        // the CSIv2 policy may require zeroing the port in the IOR
+        final short port = policies.zeroPortPolicy() ? 0 : (short) port_;
+        final byte[] key = profileInfo.key;
 
         if (profileInfo.major == 1 && profileInfo.minor == 0) {
-            // For IIOP 1.0, we always add one profile for each host,
-            // since IIOP 1.0 doesn't support tagged components in a
-            // profile
-            for (final String host : hosts_) {
-                ProfileBody_1_0 body = new ProfileBody_1_0();
-                body.iiop_version = new Version(profileInfo.major, profileInfo.minor);
-                body.host = host;
-                // the CSIv2 policy may require zeroing the port in the IOR.
-                body.port = policies.zeroPortPolicy() ? 0 : (short) port_;
+            // IIOP 1.0 doesn't support tagged components so use one profile per host
+            for (final String host : hosts_) addNewProfile_1_0(ior, version, host, port, key);
 
-                body.object_key = profileInfo.key;
-
-                int len = ior.value.profiles.length + 1;
-                TaggedProfile[] profiles = new TaggedProfile[len];
-                System.arraycopy(ior.value.profiles, 0, profiles, 0, ior.value.profiles.length);
-                ior.value.profiles = profiles;
-                ior.value.profiles[len - 1] = new TaggedProfile();
-                ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream()) {
-                    out._OB_writeEndian();
-                    ProfileBody_1_0Helper.write(out, body);
-                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                }
-            }
         } else {
+            // Filter components according to IIOP version
+            final List<TaggedComponent> piComponents = Arrays.asList(profileInfo.components);
             if (multiProfile_) {
                 // Add one profile for each host
-
-                for (int i = 0; i < hosts_.length; i++) {
-                    ProfileBody_1_1 body = new ProfileBody_1_1();
-                    body.iiop_version = new Version(profileInfo.major, profileInfo.minor);
-                    body.host = hosts_[i];
-                    // the CSIv2 policy may require zeroing the port in the IOR.
-                    body.port = policies.zeroPortPolicy() ? 0 : (short) port_;
-                    body.object_key = profileInfo.key;
-                    body.components = components.toArray(new TaggedComponent[0]);
-
-                    int len = ior.value.profiles.length + 1;
-                    TaggedProfile[] profiles = new TaggedProfile[len];
-                    System.arraycopy(ior.value.profiles, 0, profiles, 0, ior.value.profiles.length);
-                    ior.value.profiles = profiles;
-                    ior.value.profiles[len - 1] = new TaggedProfile();
-                    ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                    try (OutputStream out = new OutputStream()) {
-                        out._OB_writeEndian();
-                        ProfileBody_1_1Helper.write(out, body);
-                        ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                    }
-                }
+                for (final String host : hosts_) addNewProfile_1_1(ior, version, host, port, key, piComponents);
             } else {
-                // Add a single tagged profile. If there are additional
-                // hosts, add a tagged component for each host.
-                ProfileBody_1_1 body = new ProfileBody_1_1();
-                body.iiop_version = new Version(profileInfo.major, profileInfo.minor);
-                body.host = hosts_[0];
-                // the CSIv2 policy may require zeroing the port in the IOR.
-                body.port = policies.zeroPortPolicy() ? 0 : (short) port_;
-                body.object_key = profileInfo.key;
-
-                for (int i = 1; i < hosts_.length; i++) {
-                    TaggedComponent c = new TaggedComponent();
-                    c.tag = TAG_ALTERNATE_IIOP_ADDRESS.value;
+                // Add a single tagged profile. If there are additional hosts, add a tagged component for each host.
+                final String mainHost = hosts_[0];
+                final String[] alternateHosts = Arrays.copyOfRange(hosts_, 1, hosts_.length);
+                final List<TaggedComponent> components = new ArrayList<>(piComponents);
+                for (String host: alternateHosts) {
                     try (OutputStream out = new OutputStream()) {
                         out._OB_writeEndian();
-                        out.write_string(hosts_[i]);
-                        out.write_ushort(body.port);
-                        c.component_data = out.copyWrittenBytes();
+                        out.write_string(host);
+                        out.write_ushort(port);
+                        components.add(new TaggedComponent(TAG_ALTERNATE_IIOP_ADDRESS.value, out.copyWrittenBytes()));
                     }
-                    components.add(c);
                 }
-                body.components = components.toArray(new TaggedComponent[0]);
-
-                int len = ior.value.profiles.length + 1;
-                TaggedProfile[] profiles = new TaggedProfile[len];
-                System.arraycopy(ior.value.profiles, 0, profiles, 0, ior.value.profiles.length);
-                ior.value.profiles = profiles;
-                ior.value.profiles[len - 1] = new TaggedProfile();
-                ior.value.profiles[len - 1].tag = TAG_INTERNET_IOP.value;
-                try (OutputStream out = new OutputStream()) {
-                    out._OB_writeEndian();
-                    ProfileBody_1_1Helper.write(out, body);
-                    ior.value.profiles[len - 1].profile_data = out.copyWrittenBytes();
-                }
+                addNewProfile_1_1(ior, version, mainHost, port, key, components);
             }
+        }
+    }
+
+    private static void addNewProfile_1_0(IOR ior, Version version, String host, short port, byte[] key) {
+        ProfileBody_1_0 body = new ProfileBody_1_0(version, host, port, key);
+        try (OutputStream out = new OutputStream()) {
+            out._OB_writeEndian();
+            ProfileBody_1_0Helper.write(out, body);
+            ior.profiles = Arrays.copyOf(ior.profiles, ior.profiles.length + 1);
+            ior.profiles[ior.profiles.length - 1] = new TaggedProfile(TAG_INTERNET_IOP.value, out.copyWrittenBytes());
+        }
+    }
+
+    private static void addNewProfile_1_1(IOR ior, Version version, String host, short port, byte[] key, List<TaggedComponent> components) {
+        ProfileBody_1_1 body = new ProfileBody_1_1(version, host, port, key, components.toArray(new TaggedComponent[0]));
+        try (OutputStream out = new OutputStream()) {
+            out._OB_writeEndian();
+            ProfileBody_1_1Helper.write(out, body);
+            ior.profiles = Arrays.copyOf(ior.profiles, ior.profiles.length + 1);
+            ior.profiles[ior.profiles.length - 1] = new TaggedProfile(TAG_INTERNET_IOP.value, out.copyWrittenBytes());
         }
     }
 
@@ -302,7 +278,6 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
 
     public Acceptor_impl(String address, String[] hosts, boolean multiProfile,
             int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
-        // System.out.println("Acceptor_impl");
         Assert.ensure((helper == null) ^ (extendedConnectionHelper == null));
         hosts_ = hosts;
         multiProfile_ = multiProfile;
