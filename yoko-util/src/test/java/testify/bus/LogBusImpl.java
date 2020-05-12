@@ -59,7 +59,8 @@ class LogBusImpl implements LogBus {
     @Override
     public Bus enableLogging(LogLevel level, String... patterns) {
         String newSpec = Stream.of(patterns.length == 0 ? DEFAULT_PATTERNS : patterns)
-                .map(s -> level + "=" + s)
+                .filter(this::validateLoggingPattern)
+                .map(s -> s + "=" + level)
                 .collect(Collectors.joining(":"));
         // add this new pattern to the existing spec if any
         String spec = Optional.ofNullable(eventBus.peek(LogSpec.SPEC))
@@ -71,6 +72,13 @@ class LogBusImpl implements LogBus {
         System.out.flush();
         return null;
     }
+
+    private boolean validateLoggingPattern(String s) {
+        if (!!! s.contains("=")) return true;
+        System.err.println("### ignoring logging pattern " + s + " because it contains the '=' character");
+        return false;
+    }
+
     @Override
     public Bus log(Supplier<String> message) { log(DEFAULT, message); return null; }
     @Override
