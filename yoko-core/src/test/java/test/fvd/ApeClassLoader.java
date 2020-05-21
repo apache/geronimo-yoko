@@ -1,5 +1,7 @@
 package test.fvd;
 
+import testify.util.Throw;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.URLClassLoader;
@@ -59,20 +61,10 @@ public final class ApeClassLoader extends URLClassLoader {
         } catch (IllegalAccessException | IllegalArgumentException e) {
             throw new Error("Failed to invoke method main(String[]) for mirrored class" + className, e);
         } catch (InvocationTargetException e) {
-            rethrow(e.getTargetException());
-            throw new AssertionError("This code should be unreachable");
+            throw Throw.andThrowAgain(e.getTargetException());
         } finally {
             Thread.currentThread().setContextClassLoader(oldTCCL);
         }
-    }
-
-    private static void rethrow(Throwable t) throws RuntimeException {
-        ApeClassLoader.<RuntimeException>useTypeErasureMadnessToThrowAnyCheckedException(t);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static <T extends Throwable> void useTypeErasureMadnessToThrowAnyCheckedException(Throwable t) throws T {
-        throw (T)t;
     }
 
     private static String getCallerClassName() {
