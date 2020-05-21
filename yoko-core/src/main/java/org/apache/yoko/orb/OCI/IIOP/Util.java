@@ -435,7 +435,7 @@ final public class Util {
             } catch (RuntimeException | UnknownHostException e2) {
                 throw e2;
             } catch (Exception e2) {
-                throw new RuntimeException("Unexpected excecption", e2);
+                throw new RuntimeException("Unexpected exception", e2);
             }
         }
     }

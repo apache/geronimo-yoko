@@ -26,9 +26,9 @@ package org.apache.yoko.orb.OCI.IIOP;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.ServerSocket;
-import java.net.SocketException;
 
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
@@ -40,28 +40,26 @@ public class DefaultConnectionHelper implements ConnectionHelper {
         // no initializer parameters required by this version.
     }
 
-    public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException {
-        return setOptions(new Socket(address, port));
+    public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException {
+        return createSocket(address, port);
     }
 
-    public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException {
-        return setOptions(new Socket(address, port));
+    public Socket createSelfConnection(InetAddress address, int port) throws IOException {
+        return createSocket(address, port);
     }
 
-    private Socket setOptions(Socket socket) throws SocketException {
+    private static Socket createSocket(InetAddress address, int port) throws IOException {
+        final Socket socket = new Socket(address, port);
         socket.setTcpNoDelay(true);
         return socket;
     }
 
-    public ServerSocket createServerSocket(int port, int backlog)  throws IOException, ConnectException {
-        return setOptions(new ServerSocket(port, backlog));
+    public ServerSocket createServerSocket(int port, int backlog)  throws IOException {
+        return createServerSocket(port, backlog, null);
     }
 
-    public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException, ConnectException {
-        return setOptions(new ServerSocket(port, backlog, address));
-    }
-
-    private ServerSocket setOptions(ServerSocket serverSocket) throws SocketException {
+    public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException {
+        ServerSocket serverSocket = new ServerSocket(port, backlog, address);
         serverSocket.setReuseAddress(true);
         serverSocket.setPerformancePreferences(0, 2, 1);
         return serverSocket;

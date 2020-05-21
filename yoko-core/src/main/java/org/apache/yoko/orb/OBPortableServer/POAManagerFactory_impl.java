@@ -40,6 +40,7 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.AccFactoryRegistry;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.IIOP.InetAddrHelper;
 import org.apache.yoko.orb.OCI.InvalidParam;
 import org.apache.yoko.orb.OCI.NoSuchFactory;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -59,6 +60,7 @@ import org.omg.PortableInterceptor.ObjectReferenceTemplate;
 import org.omg.PortableServer.POAManagerFactoryPackage.ManagerAlreadyExists;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -70,6 +72,7 @@ import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.omg.PortableServer.POAManagerPackage.State.INACTIVE;
 
 final public class POAManagerFactory_impl extends LocalObject implements POAManagerFactory {
+    public static final String DEFAULT_ENDPOINT_SPEC = String.format("iiop --bind %1$s --host %1$s", InetAddress.getLoopbackAddress().getHostAddress());
     private ORBInstance orbInstance_;
     private Map<String, POAManager_impl> managers_;
     // Running count for generating unique names
@@ -188,23 +191,23 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
             }
             Policy[] tmpPolicies = policyList.toArray(new Policy[0]);
 
-            AcceptorConfig[] config;
+            AcceptorConfig[] configs;
 
             if (endpointPolicy == null) {
                 // Get the endpoint configuration
-                String defaultProtocol = "iiop";
-                if (id.equals("RootPOAManager")) defaultProtocol = props.getProperty("yoko.orb.oa.endpoint", defaultProtocol);
-                String paramStr = props.getProperty("yoko.orb.poamanager." + id + ".endpoint", defaultProtocol);
-                config = parseEndpointString(paramStr);
+                String defaultEndpointSpec = DEFAULT_ENDPOINT_SPEC;
+                if (id.equals("RootPOAManager")) defaultEndpointSpec = props.getProperty("yoko.orb.oa.endpoint", defaultEndpointSpec);
+                String paramStr = props.getProperty("yoko.orb.poamanager." + id + ".endpoint", defaultEndpointSpec);
+                configs = parseEndpointString(paramStr);
             } else {
                 // Create acceptors based on the endpoint config policy
-                config = endpointPolicy.value();
+                configs = endpointPolicy.value();
             }
 
             AccFactoryRegistry registry = orbInstance_.getAccFactoryRegistry();
 
             List<Acceptor> acceptors = new ArrayList<>();
-            for (AcceptorConfig acceptorConfig : config) {
+            for (AcceptorConfig acceptorConfig : configs) {
                 try {
                     AccFactory factory = registry.get_factory(acceptorConfig.id);
                     acceptors.add(factory.create_acceptor(acceptorConfig.params));

@@ -16,10 +16,15 @@
  */
 package testify.bus;
 
+import testify.util.ObjectUtil;
+
 import java.util.function.Consumer;
+
+import static testify.util.ObjectUtil.getNextObjectLabel;
 
 // Provide event functionality. This interface should remain package-private.
 class EventBusImpl implements EventBus {
+    final String label = getNextObjectLabel(EventBus.class);
     final UserBusImpl userBus;
     final EventBusImpl global;
 
@@ -50,4 +55,7 @@ class EventBusImpl implements EventBus {
     public <K extends Enum<K> & TypeRef<T>, T> Bus onMsg(K key, Consumer<T> action) { userBus.onMsg(key.fullName(), s -> action.accept(key.unstringify(s))); return null; }
     @Override
     public <K extends Enum<K> & TypeRef<K>> Bus onMsg(K key, Runnable action) { onMsg(key, s -> action.run()); return null; }
+
+    @Override
+    public String toString() { return String.format("%s[%s]", label, userBus.user); }
 }

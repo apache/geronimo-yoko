@@ -16,8 +16,18 @@
  */
 package testify.bus;
 
+import testify.util.ObjectUtil;
 import testify.util.Stack;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.Temporal;
+import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -25,14 +35,21 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static testify.bus.LogBusImpl.LogDestination.SYS_ERR;
-import static testify.bus.LogBusImpl.LogDestination.SYS_OUT;
 import static testify.bus.LogLevel.DEFAULT;
+import static testify.util.ObjectUtil.getNextObjectLabel;
 
 // Provide logging functionality. This interface should remain package-private.
 class LogBusImpl implements LogBus {
+    private final static DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
+    private final static DateTimeFormatter TIMER_FORMAT = DateTimeFormatter.ofPattern("mm:ss.SSS");
+    private final static LocalDateTime EPOCH = LocalDateTime.ofInstant(Instant.EPOCH, ZoneId.ofOffset("", ZoneOffset.UTC));
+
+    final String label = getNextObjectLabel(LogBus.class);
     final EventBusImpl eventBus;
     private final Set<String> shortcuts;
+    private final ZonedDateTime startTime = ZonedDateTime.now();
+    private final Consumer<String> SYS_OUT = s -> System.out.println(convertLog(s));
+    private final Consumer<String> SYS_ERR = s -> System.err.println(convertLog(s));
 
     LogBusImpl(EventBusImpl eventBus, Set<String> shortcuts) {
         this.eventBus = eventBus;
@@ -43,15 +60,6 @@ class LogBusImpl implements LogBus {
 
     enum LogSpec implements StringRef {SPEC}
 
-    enum LogDestination implements Consumer<String> {
-        SYS_OUT(System.out::println),
-        SYS_ERR(System.err::println)
-        ;
-        private final Consumer<String> consumer;
-        LogDestination(Consumer<String> consumer) {this.consumer = consumer;}
-        public void accept(String s) { consumer.accept(s); }
-    }
-
     private static final Package MY_PKG = LogBusImpl.class.getPackage();
 
     @Override
@@ -59,7 +67,8 @@ class LogBusImpl implements LogBus {
     @Override
     public Bus enableLogging(LogLevel level, String... patterns) {
         String newSpec = Stream.of(patterns.length == 0 ? DEFAULT_PATTERNS : patterns)
-                .map(s -> level + "=" + s)
+                .filter(this::validateLoggingPattern)
+                .map(s -> s + "=" + level)
                 .collect(Collectors.joining(":"));
         // add this new pattern to the existing spec if any
         String spec = Optional.ofNullable(eventBus.peek(LogSpec.SPEC))
@@ -71,6 +80,20 @@ class LogBusImpl implements LogBus {
         System.out.flush();
         return null;
     }
+
+    private boolean validateLoggingPattern(String s) {
+        if (!!! s.contains("=")) return true;
+        System.err.println("### ignoring logging pattern " + s + " because it contains the '=' character");
+        return false;
+    }
+
+    public static void main(String[] args) {
+        LogBusImpl bus = new LogBusImpl(new EventBusImpl(new UserBusImpl(new SimpleBusImpl())), new HashSet<>());
+        System.out.println(timestamp());
+        System.out.println(toDate(timestamp()));
+        System.out.println(bus.elapsedTime(bus.startTime, toDate(timestamp())));
+    }
+
     @Override
     public Bus log(Supplier<String> message) { log(DEFAULT, message); return null; }
     @Override
@@ -81,8 +104,24 @@ class LogBusImpl implements LogBus {
     @Override
     public Bus log(LogLevel level, Supplier<String> message) {
         final String context = isLoggingEnabled(level);
-        if (context != null) eventBus.put(level, "[" + context + "] " + message.get());
+        if (context != null) eventBus.put(level, String.format("[%s][%s]%s", timestamp(), context, message.get()));
         return null;
+    }
+
+    private static String timestamp() { return ZonedDateTime.now().format(TIMESTAMP_FORMAT); }
+
+    private static ZonedDateTime toDate(String timestamp) { return TIMESTAMP_FORMAT.parse(timestamp, ZonedDateTime::from); }
+
+    private static String elapsedTime(Temporal start, Temporal end) { return EPOCH.plus(Duration.between(start, end)).format(TIMER_FORMAT); }
+
+    private String elapsedTime(String timestamp) { return elapsedTime(startTime, toDate(timestamp)); }
+
+    private String convertLog(String log) {
+        int i = 1;
+        int j = log.indexOf(']');
+        String timestamp = log.substring(i, j);
+        String remainder = log.substring(j + 1);
+        return '[' + elapsedTime(timestamp) + ']' + remainder;
     }
 
     @Override
@@ -143,4 +182,7 @@ class LogBusImpl implements LogBus {
         }
         return null;
     }
+
+    @Override
+    public String toString() { return String.format("%s[%s]", label, eventBus.userBus.user); }
 }
