@@ -26,25 +26,15 @@ import static testify.util.ObjectUtil.getNextObjectLabel;
 
 class UserBusImpl implements UserBus {
     private static final String DELIMITER = "::";
-    private static final String GLOBAL_USER = "global";
 
     final String label = getNextObjectLabel(UserBus.class);
     final String user;
     final SimpleBus simpleBus;
-    final UserBus global;
 
     /** Create a local UserBus */
-    UserBusImpl(String user, SimpleBus simpleBus, UserBus global){
+    UserBusImpl(String user, SimpleBus simpleBus){
         this.user = user;
         this.simpleBus = simpleBus;
-        this.global = global;
-    }
-
-    /** Create a global UserBus */
-    UserBusImpl(SimpleBus simpleBus) {
-        this.user = GLOBAL_USER;
-        this.simpleBus = simpleBus;
-        this.global = this;
     }
 
     private static String validate(String name) {
@@ -66,7 +56,6 @@ class UserBusImpl implements UserBus {
     @Override
     public Bus put(String key, String value) {
         simpleBus.put(transform(key), value);
-        if (global != this) global.put(key, value);
         return null;
     }
 

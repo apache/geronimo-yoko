@@ -18,51 +18,61 @@ package testify.parts;
 
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
-import testify.bus.LogLevel;
 import testify.bus.InterProcessBus;
+import testify.bus.LogLevel;
 import testify.io.EasyCloseable;
+import testify.util.ObjectUtil;
 
 import java.util.Deque;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static java.util.Arrays.asList;
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static testify.bus.LogLevel.DEBUG;
 import static testify.bus.LogLevel.ERROR;
-import static testify.bus.LogLevel.INFO;
 import static testify.bus.LogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
     private static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
+    private final String label = ObjectUtil.getNextObjectLabel(PartRunnerImpl.class);
     private final InterProcessBus centralBus = InterProcessBus.createMaster();
-    private final Bus bus = centralBus.global()
-            .logToSysErr(URGENT_LEVELS)
-            .logToSysOut(complementOf(URGENT_LEVELS))
-//            .enableLogging(LogLevel.ERROR, ".*")
-//            .enableLogging(WARN, ".*")
-            ;
+    private final Map<String, Bus> knownBuses = new ConcurrentHashMap<>();
 
     private enum HookType { PRE_JOIN, JOIN, POST_JOIN }
     private final EnumMap<HookType, Deque<EasyCloseable>> hooks = new EnumMap<>(HookType.class);
     { for (HookType ht: HookType.values()) hooks.put(ht, new ConcurrentLinkedDeque<>()); }
     private final Map<EasyCloseable, String> hookNames = new HashMap<>();
+    private Function<String, Bus> busFactory = ((Function<String, Bus>)centralBus::forUser)
+            .andThen(b -> b.logToSysErr(URGENT_LEVELS))
+            .andThen(b -> b.logToSysOut(complementOf(URGENT_LEVELS)));
     private boolean useProcesses = false;
     private String[] jvmArgs;
 
     @Override
-    public Bus bus() {
-        return centralBus.global();
+    public PartRunner enableLogging(LogLevel level, String pattern) {
+        // decorate the bus factory to enable the requested logging on any new buses
+        busFactory = busFactory.andThen(b -> b.enableLogging(level, pattern));
+        // Add the new log setting to existing buses.
+        // There is a race condition if new buses are created concurrently
+        // but we do this step second because duplicated log settings won't matter.
+        knownBuses.values().forEach(bus -> bus.enableLogging(level, pattern));
+        return this;
     }
 
     @Override
-    public Bus bus(String partName) { return centralBus.forUser(partName); }
+    public Bus bus(String partName) {
+        return knownBuses.computeIfAbsent(partName, busFactory);
+    }
+
+    private Bus privateBus() { return bus(label); }
 
     @Override
     public PartRunner useNewJVMWhenForking(String... jvmArgs) {
@@ -88,7 +98,7 @@ class PartRunnerImpl implements PartRunner {
         try {
             final NamedPart namedPart = new NamedPart(partName, part);
             J job = runner.fork(centralBus, namedPart);
-            namedPart.waitForStart(bus);
+            namedPart.waitForStart(bus(partName));
             registerForJoin(runner, job, partName);
             return this;
         } catch (Throwable throwable) {
@@ -108,24 +118,7 @@ class PartRunnerImpl implements PartRunner {
 
     @Override
     public PartRunner endWith(String partName, Consumer<Bus> endAction) {
-        return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus.forUser(partName)));
-    }
-
-    @Override
-    public PartRunner here(TestPart part) {
-        try {
-            part.run(bus);
-            return this;
-        } catch (Throwable throwable) {
-            throw fatalError(throwable);
-        }
-    }
-
-    @Override
-    public PartRunner here(String partName, TestPart part) {
-        NamedPart namedPart = new NamedPart(partName, part);
-        namedPart.run(bus.forUser(partName));
-        return this;
+        return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus(partName)));
     }
 
     private Error fatalError(Throwable t) {
@@ -150,10 +143,10 @@ class PartRunnerImpl implements PartRunner {
         String name = "unknown";
         try (EasyCloseable hook = closeables.poll()) {
             final String partName = name = hookNames.get(hook);
-            bus.log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
+            privateBus().log(DEBUG, () -> "Running " + partName + " " + type + " hook.");
         } finally {
             final String partName = name;
-            bus.log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
+            privateBus().log(DEBUG, () -> "Stopped running " + partName + " " + type + " hook.");
             close(type);
         }
     }
@@ -163,10 +156,10 @@ class PartRunnerImpl implements PartRunner {
         // close down the main bus
         try (EasyCloseable close = centralBus) {
             for (HookType type : HookType.values()) {
-                bus.log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
+                privateBus().log(() -> "Running " + type + " hooks: " + hooks.get(type).stream().map(hookNames::get).collect(Collectors.joining()));
                 close(type);
             }
-            bus.log("Completed all join actions.");
+            privateBus().log("Completed all join actions.");
         }
     }
 
@@ -174,7 +167,7 @@ class PartRunnerImpl implements PartRunner {
         addHook(HookType.JOIN, name, () -> {
             try {
                 if (runner.join(job, 5, SECONDS)) return;
-                bus.log(ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
+                privateBus().log(ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
@@ -182,67 +175,15 @@ class PartRunnerImpl implements PartRunner {
         addHook(HookType.POST_JOIN, name, () -> {
             try {
                 if (runner.stop(job, 5, SECONDS)) return;
-                bus.log(ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
+                privateBus().log(ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
         });
     }
 
-    private enum Test {
-        ;
-        @SuppressWarnings("CodeBlock2Expr")
-        public static void main(String[] args) {
-            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
-                runner.fork("part1", bus -> {
-                    bus.put("a", "Hello");
-                    bus.global().get("b");
-                }).here(bus -> {
-                    bus.global().get("a");
-                    bus.put("b", "Hello");
-                }).join();
-            }
-            for (PartRunner runner: asList(new PartRunnerImpl(), new PartRunnerImpl().useNewJVMWhenForking())) {
-                runner.enableLogging(INFO, ".*NamedPart", "part4").here(bus -> {
-                    System.out.printf("======Testing with %s======%n", runner);
-                }).fork("part1", bus -> {
-                    bus.put("a", "foo");
-                }).fork("part2", bus -> {
-                    bus.put("b", "bar");
-                    System.out.printf("a == %s%nb == %s%nc == %s%n",
-                            bus.global().get("a"),
-                            bus.global().get("b"),
-                            bus.global().get("c"));
-                }).fork("part3", bus -> {
-                    bus.put("c", "baz");
-                    System.out.printf("part1.a == %s%npart1.b == %s%npart1.c == %s%n",
-                            bus.forUser("part1").get("a"),
-                            bus.forUser("part2").get("b"),
-                            bus.forUser("part3").get("c"));
-                }).here("part4", bus -> {
-                    bus.global().get("a");
-                    bus.global().get("b");
-                    bus.global().get("c");
-                    Thread.sleep(200);
-                    System.out.println();
-                    System.out.println();
-                    System.out.println(bus.forUser("part1"));
-                    System.out.println();
-                    System.out.println();
-                    System.out.println(bus.forUser("part2"));
-                    System.out.println();
-                    System.out.println();
-                    System.out.println(bus.forUser("part3"));
-                    System.out.println();
-                    System.out.println();
-                    System.out.println(bus.forUser("part4"));
-                    System.out.println();
-                    System.out.println();
-                }).here(System.out::println).join();
-            }
-            System.out.println("#########################");
-        }
-    }
+    @Override
+    public String toString() { return label; }
 }
 
 

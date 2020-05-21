@@ -16,7 +16,6 @@
  */
 package testify.bus;
 
-import testify.util.ObjectUtil;
 import testify.util.Stack;
 
 import java.time.Duration;
@@ -27,7 +26,6 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
-import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -87,13 +85,6 @@ class LogBusImpl implements LogBus {
         return false;
     }
 
-    public static void main(String[] args) {
-        LogBusImpl bus = new LogBusImpl(new EventBusImpl(new UserBusImpl(new SimpleBusImpl())), new HashSet<>());
-        System.out.println(timestamp());
-        System.out.println(toDate(timestamp()));
-        System.out.println(bus.elapsedTime(bus.startTime, toDate(timestamp())));
-    }
-
     @Override
     public Bus log(Supplier<String> message) { log(DEFAULT, message); return null; }
     @Override
@@ -143,7 +134,6 @@ class LogBusImpl implements LogBus {
     @Override
     public String isLoggingEnabled(LogLevel level) {
         String spec = eventBus.peek(LogSpec.SPEC);
-        if (spec == null) spec = eventBus.global.peek(LogSpec.SPEC);
         if (spec == null) return null;
 
         Class<?> caller = Stack.getCallingClassOutsidePackage(MY_PKG);

@@ -21,7 +21,6 @@ import testify.bus.LogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
-import java.util.stream.Stream;
 
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
@@ -31,22 +30,9 @@ public interface PartRunner {
      * Enable a range of log levels for the specified pattern and partnames.
      * @param level the most detailed log level to include
      * @param pattern a regular expression to match the classes to trace
-     * @param partNames if empty, all parts will be logged, otherwise only the parts with the specified names will have logging enabled
      * @return this object for call chaining
      */
-    default PartRunner enableLogging(LogLevel level, String pattern, String...partNames) {
-        // define how to enable logging for a bus
-        // if no part names were supplied, enable logging globally
-        if (partNames.length == 0) bus().enableLogging(level, pattern);
-        // otherwise, enable logging for each supplied part name
-        else Stream.of(partNames).map(this::bus).forEach(bus -> bus.enableLogging(level, pattern));
-        return this;
-    }
-
-    /**
-     * Get the global bus.
-     */
-    Bus bus();
+    PartRunner enableLogging(LogLevel level, String pattern);
 
     /**
      * Get the bus specific to the named part.
@@ -67,7 +53,6 @@ public interface PartRunner {
     static TestPart wrapMain(Class<?> mainClass, String[] args) {
         return bus -> {
             try {
-                // invoke static void main(String[]) on the provided class
                 mainClass.getMethod("main", String[].class).invoke(null, new Object[]{args});
             } catch (InvocationTargetException e) {
                 throw e.getTargetException();
@@ -76,8 +61,6 @@ public interface PartRunner {
     }
 
     PartRunner endWith(String partName, Consumer<Bus> endAction);
-    PartRunner here(TestPart part);
-    PartRunner here(String partName, TestPart part);
-    default PartRunner runMain(Class<?> mainClass, String...args) { return here(mainClass.getName(), wrapMain(mainClass, args)); }
+
     void join();
 }

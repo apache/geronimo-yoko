@@ -17,7 +17,6 @@
 package testify.bus;
 
 import testify.streams.BiStream;
-import testify.util.ObjectUtil;
 
 import java.util.Set;
 import java.util.function.Consumer;
@@ -31,24 +30,13 @@ class BusImpl implements Bus {
     private final UserBus userbus;
     private final EventBus eventBus;
     private final LogBus logBus;
-    private final Bus global;
 
-    /** Create a global bus */
-    BusImpl(LogBusImpl globalLogBus) {
-        this(globalLogBus, null);
-    }
-
-    /** Create a local bus */
-    BusImpl(LogBusImpl logBus, Bus global) {
+    BusImpl(LogBusImpl logBus) {
         this.logBus = logBus;
         this.eventBus = logBus.eventBus;
         this.userbus = logBus.eventBus.userBus;
         this.simpleBus = logBus.eventBus.userBus.simpleBus;
-        this.global = global == null ? this : global;
     }
-
-    @Override
-    public Bus global() {return global;}
 
     @Override
     public String user() { return userbus.user(); }

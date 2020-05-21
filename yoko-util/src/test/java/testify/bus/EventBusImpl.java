@@ -16,8 +16,6 @@
  */
 package testify.bus;
 
-import testify.util.ObjectUtil;
-
 import java.util.function.Consumer;
 
 import static testify.util.ObjectUtil.getNextObjectLabel;
@@ -26,19 +24,9 @@ import static testify.util.ObjectUtil.getNextObjectLabel;
 class EventBusImpl implements EventBus {
     final String label = getNextObjectLabel(EventBus.class);
     final UserBusImpl userBus;
-    final EventBusImpl global;
 
-    /** Create a global EventBusImpl from a global UserBusImpl */
-    EventBusImpl(UserBusImpl globalUserBus) {
-        assert globalUserBus.global == globalUserBus;
-        this.userBus = globalUserBus;
-        this.global = this;
-    }
-
-    /** Create a local EventBusImpl */
-    EventBusImpl(UserBusImpl userBus, EventBusImpl global) {
+    EventBusImpl(UserBusImpl userBus) {
         this.userBus = userBus;
-        this.global = global;
     }
 
     @Override
