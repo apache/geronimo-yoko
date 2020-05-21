@@ -64,6 +64,7 @@ import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
 public @interface ConfigureServer {
     String DEFAULT_SERVER_NAME = "server";
     String value() default DEFAULT_SERVER_NAME;
+    boolean autoStart() default true;
     boolean newProcess() default false;
     String[] jvmArgs() default {};
     /**
@@ -100,7 +101,7 @@ public @interface ConfigureServer {
 
 
     /**
-     * Annotate a field in a test to use it as a remote object
+     * Annotate a field in a test to inject a remote stub
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
@@ -108,10 +109,21 @@ public @interface ConfigureServer {
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
         String value() default DEFAULT_SERVER_NAME;
     }
+
+    /**
+     * Annotate a field in a test to inject a server control object
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    public @interface Control {
+        /** A literal string to match the server name. Not a regular expression since the controller controls exactly one server. */
+        String value() default DEFAULT_SERVER_NAME;
+    }
 }
 
 class ServerSteward extends Steward<ConfigureServer> {
     private final String name;
+    private final List<Field> controlFields;
     private final List<Field> remoteFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
@@ -120,6 +132,13 @@ class ServerSteward extends Steward<ConfigureServer> {
     private ServerSteward(Class<?> testClass) {
         super(ConfigureServer.class, testClass);
         this.name = annotation.value();
+        this.controlFields = AnnotationButler.forClass(ConfigureServer.Control.class)
+                .assertPublic()
+                .assertStatic()
+                .assertFieldTypes(ServerControl.class)
+                .filter(anno -> anno.value().equals(this.name))
+                .recruit()
+                .findFields(testClass);
         this.remoteFields = AnnotationButler.forClass(ConfigureServer.RemoteObject.class)
                 .assertPublic()
                 .assertStatic()
@@ -142,9 +161,10 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .filter(anno -> Pattern.matches(anno.value(), this.name))
                 .recruit()
                 .findMethods(testClass);
-        assertFalse(remoteFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
+        assertFalse(controlFields.isEmpty() && remoteFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
                 + "\n - EITHER the test must annotate a public static method with@" + ConfigureServer.BeforeServer.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with@" + ConfigureServer.Control.class.getSimpleName()
                 + "\n - OR the test must annotate a public static field with@" + ConfigureServer.RemoteObject.class.getSimpleName());
 
         // blow up if the config is bogus
@@ -167,6 +187,9 @@ class ServerSteward extends Steward<ConfigureServer> {
         final String[] args = args(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
         serverComms = new ServerComms(name, props, args);
         serverComms.launch(runner);
+        final ServerControl serverControl = serverComms.getServerControl();
+        this.controlFields.forEach(f -> Reflect.setStaticField(f, serverControl));
+        if (annotation.autoStart()) serverControl.start();
     }
 
     void instantiateRemoteObjects(ExtensionContext ctx) {

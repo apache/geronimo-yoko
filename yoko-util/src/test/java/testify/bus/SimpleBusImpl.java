@@ -54,7 +54,6 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     private final ExecutorService threadPool = Executors.newCachedThreadPool(this::createThread);
 
     private Thread createThread(Runnable r) {
-        System.err.println("### Creating new thread");
         return new Thread(r, label + ".thread#" + threadCount.incrementAndGet());
     }
 
