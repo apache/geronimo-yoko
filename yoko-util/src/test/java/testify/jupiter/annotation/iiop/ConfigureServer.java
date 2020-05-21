@@ -174,10 +174,9 @@ class ServerSteward extends Steward<ConfigureServer> {
         remoteFields.stream().forEach(serverComms::instantiate);
         // instantiate the stubs on the client
         ORB clientOrb = OrbSteward.getOrb(ctx);
-        Bus bus = getPartRunner(ctx).bus();
+        Bus bus = getPartRunner(ctx).bus(this.name);
         remoteFields.stream().forEach(f -> {
-            String name = f.getName();
-            String ior = bus.get(name);
+            String ior = bus.get(f.getName());
             Object object = clientOrb.string_to_object(ior);
             object = PortableRemoteObject.narrow(object, f.getType());
             Reflect.setStaticField(f, object);

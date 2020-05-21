@@ -28,8 +28,8 @@ public enum TracingSteward {
     public static void addTraceSettings(PartRunner runner, AnnotatedElement elem) {
         findAnnotation(elem, Tracing.class).ifPresent(trc -> TracingSteward.addTraceSettings(runner, trc));
     }
-    private static void addTraceSettings(PartRunner runner, Tracing config, String... parts) {
+    private static void addTraceSettings(PartRunner runner, Tracing config) {
         if (config.value().isEmpty()) return;
-        runner.enableLogging(config.level(), config.value(), parts);
+        runner.enableLogging(config.level(), config.value());
     }
 }

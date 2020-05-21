@@ -30,14 +30,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -46,7 +44,6 @@ import java.util.stream.Stream;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.util.stream.Collectors.joining;
 
 /**
  * Enable multiple threads to communicate asynchronously.
@@ -65,22 +62,13 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
     private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
-    private final UserBusImpl globalUserBus = new UserBusImpl(this);
-    private final EventBusImpl globalEventBus = new EventBusImpl(globalUserBus);
     private final Set<String> loggingShortcuts = new ConcurrentSkipListSet<>();
-    private final LogBusImpl globalLogBus = new LogBusImpl(globalEventBus, loggingShortcuts);
-    private final Bus globalBus = new BusImpl(globalLogBus);
-
-    @Override
-    public Bus global() {
-        return globalBus;
-    }
 
     @Override
     public Bus forUser(String user) { return userBusMap.computeIfAbsent(user, this::newBus); }
 
     private Bus newBus(String user) {
-        return new BusImpl(newLogBus(user), globalBus);
+        return new BusImpl(newLogBus(user));
     }
 
     private LogBusImpl newLogBus(String user) {
@@ -88,11 +76,11 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     }
 
     private EventBusImpl newEventBus(String user) {
-        return new EventBusImpl(newUserBus(user), globalEventBus);
+        return new EventBusImpl(newUserBus(user));
     }
 
     private UserBusImpl newUserBus(String user) {
-        return new UserBusImpl(user, this, globalUserBus);
+        return new UserBusImpl(user, this);
     }
 
     @Override

@@ -28,6 +28,5 @@ public interface SimpleBus {
     String get(String key);
     SimpleBus onMsg(String key, Consumer<String> action);
     BiStream<String, String> biStream();
-    Bus global();
     Bus forUser(String user);
 }
