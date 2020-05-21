@@ -19,6 +19,7 @@ package testify.bus;
 import org.junit.jupiter.api.Assertions;
 import testify.io.EasyCloseable;
 import testify.streams.BiStream;
+import testify.util.ObjectUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -36,7 +37,9 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
@@ -49,8 +52,16 @@ import static java.util.stream.Collectors.joining;
  * Enable multiple threads to communicate asynchronously.
  */
 class SimpleBusImpl implements SimpleBus, EasyCloseable {
-    private final ExecutorService threadPool = Executors.newCachedThreadPool();
-    private final ConcurrentMap<String, Object> properties = new ConcurrentSkipListMap<>();
+    private final String label = ObjectUtil.getNextObjectLabel(SimpleBusImpl.class);
+    private final AtomicInteger threadCount = new AtomicInteger();
+    private final ExecutorService threadPool = Executors.newCachedThreadPool(this::createThread);
+
+    private Thread createThread(Runnable r) {
+        System.err.println("### Creating new thread");
+        return new Thread(r, label + ".thread#" + threadCount.incrementAndGet());
+    }
+
+    private final ConcurrentMap<String, Object> properties = new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
     private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
@@ -149,7 +160,7 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         if (originalError != null) return;
         // log the error
         System.err.println("Bus error: " + t);
-        System.err.println("Bus state: " + this);
+        System.err.println("Bus state: " + Buses.dump(this));
         // must set the error before waking any threads
         originalError = t;
         // wake any waiting threads — they will receive an error
@@ -171,17 +182,7 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     }
 
     @Override
-    public String toString() {
-        return format(this.biStream());
-    }
-
-    private static String format(BiStream<String, String> bis) {
-        StringBuilder sb = new StringBuilder("{");
-        bis.forEach((k, v) -> sb.append("\n\t").append(k).append(" -> ").append(v));
-        if (sb.length() == 1) return "{}";
-        sb.append("\n}");
-        return sb.toString();
-    }
+    public String toString() { return label; }
 
     private enum Test {
         ;

@@ -22,11 +22,13 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import static java.util.Objects.requireNonNull;
+import static testify.util.ObjectUtil.getNextObjectLabel;
 
 class UserBusImpl implements UserBus {
     private static final String DELIMITER = "::";
     private static final String GLOBAL_USER = "global";
 
+    final String label = getNextObjectLabel(UserBus.class);
     final String user;
     final SimpleBus simpleBus;
     final UserBus global;
@@ -85,5 +87,6 @@ class UserBusImpl implements UserBus {
         return simpleBus.biStream().mapKeys(this::untransform).filterKeys(Objects::nonNull);
     }
 
-    public String toString() { return String.format("UserBusImpl[%s]", user); }
+    @Override
+    public String toString() { return String.format("%s[%s]", label, user); }
 }

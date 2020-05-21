@@ -16,6 +16,7 @@
  */
 package testify.bus;
 
+import testify.util.ObjectUtil;
 import testify.util.Stack;
 
 import java.time.Duration;
@@ -35,6 +36,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static testify.bus.LogLevel.DEFAULT;
+import static testify.util.ObjectUtil.getNextObjectLabel;
 
 // Provide logging functionality. This interface should remain package-private.
 class LogBusImpl implements LogBus {
@@ -42,6 +44,7 @@ class LogBusImpl implements LogBus {
     private final static DateTimeFormatter TIMER_FORMAT = DateTimeFormatter.ofPattern("mm:ss.SSS");
     private final static LocalDateTime EPOCH = LocalDateTime.ofInstant(Instant.EPOCH, ZoneId.ofOffset("", ZoneOffset.UTC));
 
+    final String label = getNextObjectLabel(LogBus.class);
     final EventBusImpl eventBus;
     private final Set<String> shortcuts;
     private final ZonedDateTime startTime = ZonedDateTime.now();
@@ -179,4 +182,7 @@ class LogBusImpl implements LogBus {
         }
         return null;
     }
+
+    @Override
+    public String toString() { return String.format("%s[%s]", label, eventBus.userBus.user); }
 }

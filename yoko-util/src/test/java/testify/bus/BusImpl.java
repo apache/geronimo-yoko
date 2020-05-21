@@ -17,12 +17,16 @@
 package testify.bus;
 
 import testify.streams.BiStream;
+import testify.util.ObjectUtil;
 
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static testify.util.ObjectUtil.getNextObjectLabel;
+
 class BusImpl implements Bus {
+    private final String label = getNextObjectLabel(Bus.class);
     private final SimpleBus simpleBus;
     private final UserBus userbus;
     private final EventBus eventBus;
@@ -106,4 +110,7 @@ class BusImpl implements Bus {
     public Bus onLog(LogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
     @Override
     public Bus onLog(Set<LogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
+
+    @Override
+    public String toString() { return String.format("%s[%s]", label, user()); }
 }
