@@ -16,16 +16,27 @@
  */
 package testify.jupiter.annotation.iiop;
 
+import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
+import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.junit.jupiter.api.Assertions;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.PortableServer.IdAssignmentPolicyValue;
+import org.omg.PortableServer.LifespanPolicyValue;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
 import org.omg.PortableServer.Servant;
+import org.omg.PortableServer.ServantRetentionPolicyValue;
 import testify.bus.Bus;
 import testify.bus.EnumRef;
 import testify.bus.FieldRef;
+import testify.bus.LogLevel;
 import testify.bus.MethodRef;
 import testify.bus.TypeRef;
 import testify.parts.PartRunner;
@@ -55,7 +66,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
-    private enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
+    enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
     private enum ServerRequest implements EnumRef<ServerOp> {SEND}
     private enum MethodRequest implements MethodRef {SEND}
     private enum FieldRequest implements FieldRef {INIT}
@@ -66,19 +77,44 @@ final class ServerComms implements Serializable {
     private final Properties props;
     private final String[] args;
     private transient Bus bus;
-    /** The constructor initializes this to true but will be false when de-serialized. */
+    /** The constructor initializes this to true but it will be false when de-serialized. */
     private transient final boolean inClient;
     private transient int methodCount;
 
-    private transient ServerInstance server;
+    private transient volatile ServerInstance server;
     private transient CountDownLatch serverShutdown;
 
     class ServerInstance {
         final ORB orb;
         final Map<Class<?>, Object> paramMap;
+        final POA rootPoa;
+        final POA childPoa;
         private ServerInstance() {
             this.orb = ORB.init(args, props);
             this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus);
+            try {
+                rootPoa = (POA) orb.resolve_initial_references("RootPOA");
+                POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
+                pm.activate();
+                final AcceptorInfo info = (AcceptorInfo) pm.get_acceptors()[0].get_info();
+                // We might have been started up without a specific port.
+                // In any case, dig out the host and port number and save them away.
+                Integer port = info.port() & 0xFFFF;
+                String host = info.hosts()[0];
+                bus.log(() -> String.format("Server listening on host %s and port %d%n", host, port));
+                props.setProperty("yoko.iiop.port", "" + port);
+                props.setProperty("yoko.iiop.host", host);
+                // create the POA policies for the server
+                Policy[] policies = {
+                        rootPoa.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
+                        rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID),
+                        rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)
+                };
+                childPoa = rootPoa.create_POA(serverName, pm, policies);
+
+            } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
+                throw Throw.andThrowAgain(e);
+            }
         }
 
         void stop() {
@@ -104,14 +140,7 @@ final class ServerComms implements Serializable {
         this.args = args;
     }
 
-    public ServerControl getServerControl() {
-        return new ServerControl(){
-            public void start() { control(ServerOp.START_SERVER); }
-            public void stop() { control(ServerOp.STOP_SERVER); }
-        };
-    }
-
-    private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client");}
+    private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client"); }
     private void assertServerSide() { assertFalse(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the server"); }
 
     private static final boolean IS_STARTED = true;
@@ -152,7 +181,7 @@ final class ServerComms implements Serializable {
         this.bus.onMsg(MethodRequest.SEND, method -> completeRequest("invocation of ", this::invoke0, method));
     }
 
-    private void control(ServerOp op) throws ControlOperationFailed {
+    void control(ServerOp op) throws ControlOperationFailed {
         assertClientSide();
         bus.put(ServerRequest.SEND, op);
         waitForCompletion(t -> new ControlOperationFailed(op, t));
@@ -195,10 +224,13 @@ final class ServerComms implements Serializable {
         return ReflectionSupport.invokeMethod(m, null, params);
     }
 
-    void instantiate(Field f) throws FieldInstantiationFailed {
+    String instantiate(Field f) throws FieldInstantiationFailed {
         assertClientSide();
         bus.put(FieldRequest.INIT, f);
         waitForCompletion(t -> new FieldInstantiationFailed(f, t));
+        final String ior = bus.get(f.getName());
+        bus.log( ior);
+        return ior;
     }
 
     private <IMPL extends Remote & org.omg.CORBA.Object, TIE extends Servant & Tie>
@@ -219,9 +251,8 @@ final class ServerComms implements Serializable {
             }
             tie.setTarget(o);
             // do the POA things
-            POA rootPoa = POAHelper.narrow(server.orb.resolve_initial_references("RootPOA"));
-            rootPoa.the_POAManager().activate();
-            rootPoa.activate_object(tie);
+            byte[] id = f.getName().getBytes();
+            server.childPoa.activate_object_with_id(id, tie);
             // put the IOR on the bus
             String ior = server.orb.object_to_string(tie.thisObject());
             bus.put(f.getName(), ior);

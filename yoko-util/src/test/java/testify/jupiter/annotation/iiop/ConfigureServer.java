@@ -28,13 +28,12 @@ import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.iiop.ConfigureServer.AfterServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
+import testify.jupiter.annotation.iiop.ServerComms.ServerOp;
 import testify.jupiter.annotation.impl.AnnotationButler;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.jupiter.annotation.impl.Steward;
 import testify.parts.PartRunner;
-import testify.util.Reflect;
 
-import javax.rmi.PortableRemoteObject;
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -50,10 +49,12 @@ import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static javax.rmi.PortableRemoteObject.narrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static testify.jupiter.annotation.iiop.OrbSteward.args;
 import static testify.jupiter.annotation.iiop.OrbSteward.props;
 import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.util.Reflect.setStaticField;
 
 @Repeatable(ConfigureMultiServer.class)
 @ExtendWith(ServerExtension.class)
@@ -64,7 +65,6 @@ import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
 public @interface ConfigureServer {
     String DEFAULT_SERVER_NAME = "server";
     String value() default DEFAULT_SERVER_NAME;
-    boolean autoStart() default true;
     boolean newProcess() default false;
     String[] jvmArgs() default {};
     /**
@@ -177,7 +177,18 @@ class ServerSteward extends Steward<ConfigureServer> {
         return getPartRunner(ctx).bus(name);
     }
 
-    void startServer(ExtensionContext ctx) {
+    void beforeAll(ExtensionContext ctx) throws Exception{
+        startServer(ctx);
+        populateControlFields();
+        instantiateRemoteObjects(ctx);
+        beforeServer(ctx);
+    }
+
+    void afterAll(ExtensionContext ctx) {
+        afterServer(ctx);
+    }
+
+    private void startServer(ExtensionContext ctx) {
         PartRunner runner = getPartRunner(ctx);
         // does this part run in a thread or a new process?
         if (annotation.newProcess()) runner.useNewJVMWhenForking(annotation.jvmArgs());
@@ -187,31 +198,36 @@ class ServerSteward extends Steward<ConfigureServer> {
         final String[] args = args(annotation.orb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
         serverComms = new ServerComms(name, props, args);
         serverComms.launch(runner);
-        final ServerControl serverControl = serverComms.getServerControl();
-        this.controlFields.forEach(f -> Reflect.setStaticField(f, serverControl));
-        if (annotation.autoStart()) serverControl.start();
+        serverComms.control(ServerOp.START_SERVER);
     }
 
-    void instantiateRemoteObjects(ExtensionContext ctx) {
-        // instantiate the remote fields on the server
-        remoteFields.stream().forEach(serverComms::instantiate);
-        // instantiate the stubs on the client
+    private void populateControlFields() {
+        ServerControl serverControl =  new ServerControl(){
+            public void start() {
+                serverComms.control(ServerOp.START_SERVER);
+                remoteFields.stream().forEach(serverComms::instantiate);
+            }
+            public void stop() { serverComms.control(ServerOp.STOP_SERVER); }
+        };
+        this.controlFields.forEach(f -> setStaticField(f, serverControl));
+    }
+
+    private void instantiateRemoteObjects(ExtensionContext ctx) {
         ORB clientOrb = OrbSteward.getOrb(ctx);
-        Bus bus = getPartRunner(ctx).bus(this.name);
         remoteFields.stream().forEach(f -> {
-            String ior = bus.get(f.getName());
-            Object object = clientOrb.string_to_object(ior);
-            object = PortableRemoteObject.narrow(object, f.getType());
-            Reflect.setStaticField(f, object);
+            // instantiate the remote field on the server
+            String ior = serverComms.instantiate(f);
+            // instantiate the stub on the client
+            setStaticField(f, narrow(clientOrb.string_to_object(ior), f.getType()));
         });
     }
 
-    void beforeServer(ExtensionContext ctx) throws Exception {
+    private void beforeServer(ExtensionContext ctx) throws Exception {
         // drive the before methods
         beforeMethods.stream().forEach(serverComms::invoke);
     }
 
-    void afterServer(ExtensionContext ctx) {
+    private void afterServer(ExtensionContext ctx) {
         // drive the after methods
         afterMethods.stream().forEach(serverComms::invoke);
     }
@@ -231,9 +247,7 @@ class ServerSteward extends Steward<ConfigureServer> {
 class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus>, AfterAllCallback {
     @Override
     public void beforeAll(ExtensionContext ctx) throws Exception {
-        ServerSteward.getInstance(ctx).startServer(ctx);
-        ServerSteward.getInstance(ctx).instantiateRemoteObjects(ctx);
-        ServerSteward.getInstance(ctx).beforeServer(ctx);
+        ServerSteward.getInstance(ctx).beforeAll(ctx);
     }
 
     @Override
@@ -245,7 +259,7 @@ class ServerExtension implements BeforeAllCallback, SimpleParameterResolver<Bus>
 
     @Override
     public void afterAll(ExtensionContext ctx) throws Exception {
-        ServerSteward.getInstance(ctx).afterServer(ctx);
+        ServerSteward.getInstance(ctx).afterAll(ctx);
     }
 }
 
