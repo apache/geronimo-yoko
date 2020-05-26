@@ -115,7 +115,7 @@ import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.util.GetSystemPropertyAction;
+import org.apache.yoko.util.PrivilegedActions;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
@@ -192,9 +192,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessController;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -202,9 +200,11 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
+import static org.apache.yoko.util.PrivilegedActions.GET_SYSPROPS_OR_EMPTY_MAP;
 
 // This class must be public and not final
 public class ORB_impl extends ORBSingleton {
@@ -896,23 +896,15 @@ public class ORB_impl extends ORBSingleton {
         return args;
     }
 
-    private void setParameters(StringSeqHolder args, Properties properties, Logger logger) {
+    private void setParameters(StringSeqHolder args, final Properties initialProps, Logger logger) {
         if (args.value == null) args.value = new String[0];
 
         // Initialize the Logger
         if (logger == null) logger = new Logger_impl();
 
-        // Initialize the properties
-        if (properties == null) {
-            properties = new Properties();
-            try {
-                properties.putAll(System.getProperties());
-            } catch (SecurityException ex) {
-                // May be raised in an applet
-                // logger.warning("ORB.init: Unable to access System " +
-                // "properties");
-            }
-        }
+        // Initialize the properties - make a local copy to avoid modifying the original
+        final Properties properties = new Properties();
+        properties.putAll(initialProps == null ? doPrivileged(GET_SYSPROPS_OR_EMPTY_MAP) : initialProps);
 
         args.value = ParseArgs(args.value, properties, logger);
 
@@ -1481,7 +1473,7 @@ public class ORB_impl extends ORBSingleton {
                 if (props != null) orbClassName = props.getProperty(propName);
 
                 try {
-                    if (orbClassName == null) orbClassName = getSystemProperty(propName);
+                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
                 } catch (SecurityException ignored) {}
 
                 if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
@@ -1508,7 +1500,7 @@ public class ORB_impl extends ORBSingleton {
                 if (props != null) orbClassName = props.getProperty(propName);
 
                 try {
-                    if (orbClassName == null) orbClassName = getSystemProperty(propName);
+                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
                 } catch (SecurityException ignored) {}
 
                 if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
@@ -1822,18 +1814,5 @@ public class ORB_impl extends ORBSingleton {
 
     public ORBInstance _OB_ORBInstance() {
         return orbInstance_;
-    }
-
-
-    /**
-     * Simple utility for retrieving a system property
-     * using the AccessController.
-     *
-     * @param name   The property name
-     *
-     * @return The property value.
-     */
-    private static String getSystemProperty(String name) {
-        return (String)AccessController.doPrivileged(new GetSystemPropertyAction(name));
     }
 }
