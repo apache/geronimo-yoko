@@ -62,8 +62,8 @@ public class NameServiceInitializer extends LocalObject implements ORBInitialize
      * The ORB argument that specifies remote accessibility of this name service.
      * The next argument must be one of these literal string values:
      * <ul>
-     *   <li><code>"</code>{@link #readOnly}<code>"</code></li>
-     *   <li><code>"</code>{@link #readWrite}<code>"</code></li>
+     *   <li><code>"readOnly"</code></li>
+     *   <li><code>"readWrite"</code></li>
      * </ul>
      */
     public static final String NS_REMOTE_ACCESS_ARG = "-YokoNameServiceRemoteAccess";
