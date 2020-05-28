@@ -16,20 +16,11 @@
  */
 package testify.util;
 
-import java.util.function.Predicate;
-
-public enum Predicates {
+public enum FormatUtil {
     ;
-
-    public static <T> Predicate<T> allOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> true;
-        for (Predicate<T> p: predicates) result = result.and(p);
-        return result;
-    }
-
-    public static <T> Predicate<T> anyOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> false;
-        for (Predicate<T> p: predicates) result = result.or(p);
-        return result;
+    public static String escapeHostForUseInUrl(String host) {
+        if (host.startsWith("[")) return host; // already escaped
+        if (host.contains(":")) return String.format("[%s]", host); // escape this IPv6 address
+        return host;
     }
 }

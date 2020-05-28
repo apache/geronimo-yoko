@@ -17,6 +17,7 @@
 package org.apache.yoko.orb.CORBA;
 
 import acme.Echo;
+import acme.EchoImpl;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
@@ -90,7 +91,7 @@ public class CodecObjectReferenceTest {
     private static ORB serverOrb;
     private static String nameServiceUrl;
 
-    @RemoteObject
+    @RemoteObject(EchoImpl.class)
     public static Echo echo;
 
     @BeforeAll

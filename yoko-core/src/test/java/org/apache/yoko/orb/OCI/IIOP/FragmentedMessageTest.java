@@ -37,6 +37,7 @@ import testify.bus.Bus;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -58,7 +59,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @ConfigureOrb
 @Tracing
 public class FragmentedMessageTest {
-    @ConfigureServer.RemoteObject
+    @RemoteObject(EchoImpl.class)
     public static Echo stub;
 
     private static Field getField(Class<?> cls, String name) {

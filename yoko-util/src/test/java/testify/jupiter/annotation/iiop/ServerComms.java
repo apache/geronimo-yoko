@@ -27,7 +27,6 @@ import org.omg.CORBA.Policy;
 import org.omg.PortableServer.IdAssignmentPolicyValue;
 import org.omg.PortableServer.LifespanPolicyValue;
 import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
 import org.omg.PortableServer.POAPackage.InvalidPolicy;
@@ -36,10 +35,11 @@ import org.omg.PortableServer.ServantRetentionPolicyValue;
 import testify.bus.Bus;
 import testify.bus.EnumRef;
 import testify.bus.FieldRef;
-import testify.bus.LogLevel;
 import testify.bus.MethodRef;
+import testify.bus.StringRef;
 import testify.bus.TypeRef;
 import testify.parts.PartRunner;
+import testify.util.FormatUtil;
 import testify.util.Maps;
 import testify.util.Stack;
 import testify.util.Throw;
@@ -52,6 +52,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
@@ -63,10 +64,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
+import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
+
     enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
+    enum ServerInfo implements StringRef {NAME_SERVICE_URL}
     private enum ServerRequest implements EnumRef<ServerOp> {SEND}
     private enum MethodRequest implements MethodRef {SEND}
     private enum FieldRequest implements FieldRef {INIT}
@@ -77,6 +82,7 @@ final class ServerComms implements Serializable {
     private final Properties props;
     private final String[] args;
     private transient Bus bus;
+    private String nsUrl;
     /** The constructor initializes this to true but it will be false when de-serialized. */
     private transient final boolean inClient;
     private transient int methodCount;
@@ -87,23 +93,22 @@ final class ServerComms implements Serializable {
     class ServerInstance {
         final ORB orb;
         final Map<Class<?>, Object> paramMap;
-        final POA rootPoa;
         final POA childPoa;
+        final int port;
+        final String host;
         private ServerInstance() {
             this.orb = ORB.init(args, props);
             this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus);
             try {
-                rootPoa = (POA) orb.resolve_initial_references("RootPOA");
+                POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
                 POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
                 pm.activate();
                 final AcceptorInfo info = (AcceptorInfo) pm.get_acceptors()[0].get_info();
                 // We might have been started up without a specific port.
                 // In any case, dig out the host and port number and save them away.
-                Integer port = info.port() & 0xFFFF;
-                String host = info.hosts()[0];
+                this.port = info.port() & 0xFFFF;
+                this.host = info.hosts()[0];
                 bus.log(() -> String.format("Server listening on host %s and port %d%n", host, port));
-                props.setProperty("yoko.iiop.port", "" + port);
-                props.setProperty("yoko.iiop.host", host);
                 // create the POA policies for the server
                 Policy[] policies = {
                         rootPoa.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
@@ -138,6 +143,10 @@ final class ServerComms implements Serializable {
         this.serverName = serverName;
         this.props = props;
         this.args = args;
+    }
+
+    String getNameServiceUrl() {
+        return Objects.requireNonNull(nsUrl, () -> { throw new IllegalStateException("Name service not available"); });
     }
 
     private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client"); }
@@ -185,6 +194,7 @@ final class ServerComms implements Serializable {
         assertClientSide();
         bus.put(ServerRequest.SEND, op);
         waitForCompletion(t -> new ControlOperationFailed(op, t));
+        this.nsUrl = bus.get(NAME_SERVICE_URL);
     }
 
     private void control0(ServerOp op) {
@@ -192,16 +202,24 @@ final class ServerComms implements Serializable {
         case START_SERVER:
             assertServer(IS_STOPPED);
             assertNull(server, "Server already started");
-            server = new ServerInstance();
+            this.server = new ServerInstance();
+            this.props.setProperty("yoko.iiop.port", "" + server.port);
+            this.props.setProperty("yoko.iiop.host", server.host);
+            this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(server.host), server.port);
+            bus.put(NAME_SERVICE_URL, nsUrl);
             break;
         case STOP_SERVER:
             assertServer(IS_STARTED);
             server.stop();
             server = null;
+            this.nsUrl = null;
+            bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
             break;
         case KILL_SERVER:
             bus.log("killing server");
             if (server != null) server.stop();
+            this.nsUrl = null;
+            bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
             serverShutdown.countDown();
             break;
         default:

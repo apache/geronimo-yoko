@@ -17,24 +17,36 @@
 package org.apache.yoko;
 
 import acme.Echo;
+import acme.EchoImpl;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NamingContextHelper;
 import testify.bus.Bus;
-import testify.bus.Buses;
+import testify.jupiter.annotation.Tracing;
+import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
+import testify.jupiter.annotation.iiop.ConfigureServer.Control;
+import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
 import testify.jupiter.annotation.iiop.ServerControl;
 
 import java.rmi.RemoteException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 
-@ConfigureServer
+@ConfigureServer(orb = @ConfigureOrb(nameService = READ_ONLY))
+@Tracing
 public class ServerRestartTest {
-    @ConfigureServer.RemoteObject
+    @RemoteObject(value = EchoImpl.class)
     public static Echo stub;
 
-    @ConfigureServer.Control
+    @NameServiceUrl
+    public static String nameServiceUrl;
+
+    @Control
     public static ServerControl serverControl;
 
     @Test
@@ -53,8 +65,13 @@ public class ServerRestartTest {
         serverControl.stop();
         Thread.sleep(2000);
         serverControl.start();
-        System.out.println(Buses.dump(bus));
         assertEquals("hello", stub.echo("hello"));
-        serverControl.stop();
     }
+
+    @Test
+    public void testNameServiceStarted(ORB clientOrb) throws Exception {
+        assertNotNull(nameServiceUrl);
+        NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
+    }
+
 }

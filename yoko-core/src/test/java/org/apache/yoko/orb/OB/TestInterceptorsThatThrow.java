@@ -134,7 +134,7 @@ public class TestInterceptorsThatThrow {
         public TargetImpl() throws RemoteException{}
     }
 
-    @RemoteObject
+    @RemoteObject(TargetImpl.class)
     public static Target stub;
 
     @ParameterizedTest

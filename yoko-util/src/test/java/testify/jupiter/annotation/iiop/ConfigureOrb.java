@@ -16,6 +16,7 @@
  */
 package testify.jupiter.annotation.iiop;
 
+import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +32,7 @@ import testify.util.Predicates;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
@@ -43,6 +45,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.isAnnotated;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
+import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.NONE;
 import static testify.jupiter.annotation.iiop.OrbSteward.getOrb;
 import static testify.streams.Collectors.requireNoMoreThanOne;
 
@@ -50,8 +53,29 @@ import static testify.streams.Collectors.requireNoMoreThanOne;
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)
 public @interface ConfigureOrb {
+    enum NameService {
+        NONE,
+        READ_ONLY(NameServiceInitializer.class, NameServiceInitializer.NS_REMOTE_ACCESS_ARG, "readOnly"),
+        READ_WRITE(NameServiceInitializer.class, NameServiceInitializer.NS_REMOTE_ACCESS_ARG, "readWrite");
+        final String[] args;
+        final Optional<Class<? extends ORBInitializer>> initializerClass;
+
+        NameService() {
+            this.args = new String[0];
+            this.initializerClass = Optional.empty();
+        }
+
+        NameService(Class<? extends ORBInitializer> initializerClass, String...args) {
+            this.args = args;
+            this.initializerClass = Optional.of(initializerClass);
+        }
+
+    }
+
     String[] args() default "";
     String[] props() default "";
+    NameService nameService() default NONE;
+
 
     @Target({ANNOTATION_TYPE, TYPE})
     @Retention(RUNTIME)
@@ -103,14 +127,15 @@ class OrbSteward extends Steward<ConfigureOrb> {
 
     /** Extract the orb arguments from a {@link ConfigureOrb} annotation */
     static String[] args(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
-
-        return getNestedModifierTypes(testClass, nestedClassFilter)
-                .filter(Predicates.or(
-                        CONNECTION_HELPER_CLASS::isAssignableFrom,
-                        EXTENDED_CONNECTION_HELPER_CLASS::isAssignableFrom))
-                .collect(requireNoMoreThanOne("Only one connection helper can be configured but two were supplied: %s, %s"))
-                .map(c -> ArrayUtils.concat(cfg.args(), "-IIOPconnectionHelper", c.getName()))
-                .orElse(cfg.args());
+        return ArrayUtils.concat(
+                getNestedModifierTypes(testClass, nestedClassFilter)
+                        .filter(Predicates.anyOf(
+                                CONNECTION_HELPER_CLASS::isAssignableFrom,
+                                EXTENDED_CONNECTION_HELPER_CLASS::isAssignableFrom))
+                        .collect(requireNoMoreThanOne("Only one connection helper can be configured but two were supplied: %s, %s"))
+                        .map(c -> ArrayUtils.concat(cfg.args(), "-IIOPconnectionHelper", c.getName()))
+                        .orElse(cfg.args()),
+                cfg.nameService().args);
     }
 
     private static Stream<Class<?>> getNestedModifierTypes(Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
@@ -139,6 +164,8 @@ class OrbSteward extends Steward<ConfigureOrb> {
         getNestedModifierTypes(testClass, nestedClassFilter)
                 .filter(ORBInitializer.class::isAssignableFrom)
                 .forEachOrdered(initializer -> addORBInitializerProp(props,  (Class<? extends ORBInitializer>) initializer));
+        // add initializer property for name service if configured
+        cfg.nameService().initializerClass.ifPresent(c -> addORBInitializerProp(props, c));
         return props;
     }
 
