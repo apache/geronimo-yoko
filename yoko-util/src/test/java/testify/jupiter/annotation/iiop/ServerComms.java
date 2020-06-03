@@ -16,6 +16,7 @@
  */
 package testify.jupiter.annotation.iiop;
 
+import org.apache.yoko.orb.OB.Client;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.junit.jupiter.api.Assertions;
@@ -24,35 +25,48 @@ import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContext;
+import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.IdAssignmentPolicyValue;
+import org.omg.PortableServer.IdUniquenessPolicyValue;
+import org.omg.PortableServer.ImplicitActivationPolicyValue;
 import org.omg.PortableServer.LifespanPolicyValue;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
 import org.omg.PortableServer.POAPackage.InvalidPolicy;
+import org.omg.PortableServer.RequestProcessingPolicyValue;
 import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantRetentionPolicyValue;
+import org.omg.PortableServer.ThreadPolicyValue;
 import testify.bus.Bus;
 import testify.bus.EnumRef;
 import testify.bus.FieldRef;
+import testify.bus.LogLevel;
 import testify.bus.MethodRef;
 import testify.bus.StringRef;
 import testify.bus.TypeRef;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.parts.PartRunner;
-import testify.util.FormatUtil;
 import testify.util.Maps;
+import testify.util.Optionals;
 import testify.util.Stack;
 import testify.util.Throw;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
@@ -64,8 +78,10 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
+import static testify.util.Reflect.newInstance;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
@@ -111,9 +127,13 @@ final class ServerComms implements Serializable {
                 bus.log(() -> String.format("Server listening on host %s and port %d%n", host, port));
                 // create the POA policies for the server
                 Policy[] policies = {
-                        rootPoa.create_lifespan_policy(LifespanPolicyValue.TRANSIENT),
-                        rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID),
-                        rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)
+                        rootPoa.create_thread_policy(ThreadPolicyValue.ORB_CTRL_MODEL),
+                        rootPoa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT),
+                        rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
+                        rootPoa.create_id_uniqueness_policy(IdUniquenessPolicyValue.MULTIPLE_ID),
+                        rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN),
+                        rootPoa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY),
+                        rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
                 };
                 childPoa = rootPoa.create_POA(serverName, pm, policies);
 
@@ -251,13 +271,16 @@ final class ServerComms implements Serializable {
         return ior;
     }
 
-    private <IMPL extends Remote & org.omg.CORBA.Object, TIE extends Servant & Tie>
+    private <IMPL extends Remote, TIE extends Servant & Tie>
     void instantiate0(Field f) {
         assertServer(IS_STARTED);
         try {
-            IMPL o = newMatchingInstance(f.getType(), "*Impl", server.paramMap);
-            // set the static field to hold the new object
-            f.set(null, o);
+            bus.log(LogLevel.ERROR, "field = " + f);
+            final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
+                    findAnnotation(f, ClientStub.class).map(ClientStub::value),
+                    findAnnotation(f, CorbanameUrl.class).map(CorbanameUrl::value));
+
+            IMPL o = newInstance(implClass, server.paramMap);
             // create the tie
             if (!!!(o instanceof PortableRemoteObject)) {
                 PortableRemoteObject.exportObject(o);
@@ -265,15 +288,22 @@ final class ServerComms implements Serializable {
             TIE tie = (TIE) Util.getTie(o);
             if (tie == null) {
                 // try creating the tie directly
-                tie = newMatchingInstance(f.getType(), "_*Impl_Tie");
+                tie = newMatchingInstance(implClass, "_*_Tie");
             }
             tie.setTarget(o);
             // do the POA things
-            byte[] id = f.getName().getBytes();
-            server.childPoa.activate_object_with_id(id, tie);
-            // put the IOR on the bus
-            String ior = server.orb.object_to_string(tie.thisObject());
-            bus.put(f.getName(), ior);
+            server.childPoa.activate_object(tie);
+            // put the result on the bus
+            String result;
+            if (f.getType() == String.class) {
+                NamingContext root = NamingContextHelper.narrow(server.orb.resolve_initial_references("NameService"));
+                NameComponent[] cosName = {new NameComponent(f.getName(), "")};
+                root.bind(cosName, tie.thisObject());
+                result = this.nsUrl + "#" + f.getName();
+            } else {
+                result = server.orb.object_to_string(tie.thisObject());
+            }
+            bus.put(f.getName(), result);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
         }
@@ -300,7 +330,8 @@ final class ServerComms implements Serializable {
             bus.put(requestId, prefix + parameter + " completed normally");
         } catch (Throwable e) {
             // if there was an error, send that back instead
-            bus.put(Result.RESULT, e);
+
+            bus.put(Result.RESULT, new ServerSideException(e));
             bus.put(requestId, prefix + parameter + " completed abnormally with exception " + e);
         }
     }
@@ -308,6 +339,19 @@ final class ServerComms implements Serializable {
     private String getNextRequestId() {
         return REQUEST_COUNT_PREFIX + methodCount++;
     }
+
+    static class ServerSideException extends RuntimeException {
+        ServerSideException(Throwable cause) {
+            super("Server side threw " + cause + "\n" + fullText(cause));
+        }
+
+        private static String fullText(Throwable cause) {
+            final StringWriter sw = new StringWriter();
+            cause.printStackTrace(new PrintWriter(sw));
+            return sw.toString();
+        }
+    }
+
 
     static class ServerCommsException extends RuntimeException {
         ServerCommsException(String message, Throwable cause) { super(message, cause); }

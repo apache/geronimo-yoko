@@ -21,14 +21,15 @@ import acme.EchoImpl;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NamingContextHelper;
-import testify.bus.Bus;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.Control;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ServerControl;
+import testify.util.Stubs;
 
 import java.rmi.RemoteException;
 
@@ -37,23 +38,26 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 
+/**
+ * Test the framework is functioning correctly
+ */
 @ConfigureServer(orb = @ConfigureOrb(nameService = READ_ONLY))
 @Tracing
 public class ServerRestartTest {
-    @RemoteObject(value = EchoImpl.class)
-    public static Echo stub;
+    @Control
+    public static ServerControl serverControl;
 
     @NameServiceUrl
     public static String nameServiceUrl;
 
-    @Control
-    public static ServerControl serverControl;
+    @CorbanameUrl(EchoImpl.class)
+    public static String stubUrl;
+
+    @ClientStub(EchoImpl.class)
+    public static Echo stub;
 
     @Test
-    public void testServerControl(Bus bus, ORB clientOrb) throws Exception {
-        // TODO: The IORs are not identical across restarts
-        // TODO: and this test fails if the server has newProcess=true
-        // TODO: fix both these things!
+    public void testServerControl(ORB clientOrb) throws Exception {
         assertEquals("hello", stub.echo("hello"));
         assertThrows(Exception.class, serverControl::start);
         serverControl.stop();
@@ -74,4 +78,15 @@ public class ServerRestartTest {
         NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
     }
 
+    @Test
+    public void testCorbanameUrl(ORB clientOrb) throws Exception {
+        assertNotNull(stubUrl);
+        Echo echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
+        echo.echo("wibble");
+        String oldStubUrl = ServerRestartTest.stubUrl;
+        serverControl.restart();
+        assertEquals(oldStubUrl, ServerRestartTest.stubUrl);
+        echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
+        echo.echo("splong");
+    }
 }

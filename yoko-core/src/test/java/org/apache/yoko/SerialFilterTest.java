@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import test.rmi.Sample;
 import test.rmi.SampleImpl;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 
 import java.io.InvalidClassException;
 import java.io.Serializable;
@@ -42,7 +42,7 @@ public class SerialFilterTest {
     public static final int MAX_ARR_LEN = 200;
     public static final int MAX_DEPTH = 100;
 
-    @RemoteObject(SampleImpl.class)
+    @ClientStub(SampleImpl.class)
     public static Sample sample;
 
     public static class AllowedMessage implements Serializable {

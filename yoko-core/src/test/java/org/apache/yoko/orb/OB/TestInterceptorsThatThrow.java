@@ -28,7 +28,7 @@ import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
 import testify.util.Stack;
 
@@ -134,7 +134,7 @@ public class TestInterceptorsThatThrow {
         public TargetImpl() throws RemoteException{}
     }
 
-    @RemoteObject(TargetImpl.class)
+    @ClientStub(TargetImpl.class)
     public static Target stub;
 
     @ParameterizedTest

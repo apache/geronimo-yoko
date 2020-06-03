@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 @Retention(RetentionPolicy.RUNTIME)
 @ExtendWith(MultiServerExtension.class)
 @ConfigurePartRunner
-@interface ConfigureMultiServer {
+public @interface ConfigureMultiServer {
     ConfigureServer[] value();
 }
 

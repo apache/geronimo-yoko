@@ -83,7 +83,10 @@ public enum Reflect {
     }
 
     public static <T> T newMatchingInstance(Class<?> type, String pattern, Map<Class<?>, Object> paramMap) {
-        Class<T> implClass = (Class<T>) getMatchingType(type, pattern);
+        return newInstance((Class<T>) getMatchingType(type, pattern), paramMap);
+    }
+
+    public static <T> T newInstance(Class<T> implClass, Map<Class<?>, Object> paramMap) {
         Constructor<T> ctor = getConstructor(implClass, paramMap.keySet());
         try {
             return ctor.newInstance(Stream.of(ctor.getParameterTypes())

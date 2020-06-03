@@ -28,8 +28,9 @@ import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.iiop.ConfigureServer.AfterServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.Control;
-import testify.jupiter.annotation.iiop.ConfigureOrb.NameService;
+import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
 import testify.jupiter.annotation.iiop.ServerComms.ServerOp;
 import testify.jupiter.annotation.impl.AnnotationButler;
@@ -57,7 +58,6 @@ import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.NONE;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.iiop.OrbSteward.args;
@@ -108,14 +108,26 @@ public @interface ConfigureServer {
         String serverPattern() default ".*";
     }
 
-
     /**
      * Annotate a static field in a test to inject a remote stub
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
-    public @interface RemoteObject {
-        Class<?> value();
+    public @interface ClientStub {
+        /** The implementation class of the remote object */
+        Class<? extends Remote> value();
+        /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
+        String serverName() default DEFAULT_SERVER_NAME;
+    }
+
+    /**
+     * Annotate a static field in a test to inject a corbaname URL for a remote object implementation
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    public @interface CorbanameUrl {
+        /** The implementation class of the remote object */
+        Class<? extends Remote> value();
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
         String serverName() default DEFAULT_SERVER_NAME;
     }
@@ -146,7 +158,8 @@ class ServerSteward extends Steward<ConfigureServer> {
     private final String name;
     private final List<Field> controlFields;
     private final List<Field> nameServiceUrlFields;
-    private final List<Field> remoteFields;
+    private final List<Field> corbanameUrlFields;
+    private final List<Field> clientStubFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
     private ServerComms serverComms;
@@ -173,12 +186,22 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .filter(anno -> anno.serverName().equals(this.name))
                 .recruit()
                 .findFields(testClass);
-        this.remoteFields = AnnotationButler.forClass(ConfigureServer.RemoteObject.class)
+        this.corbanameUrlFields = AnnotationButler.forClass(CorbanameUrl.class)
+                .requireTestAnnotation(ConfigureServer.class,
+                        "the test server must have its name service configured",
+                        cfg -> cfg.orb().nameService(),
+                        anyOf(is(READ_ONLY), is(READ_WRITE)))
+                .assertPublic()
+                .assertStatic()
+                .assertFieldTypes(String.class)
+                .filter(anno -> anno.serverName().equals(this.name))
+                .recruit()
+                .findFields(testClass);
+        this.clientStubFields = AnnotationButler.forClass(ClientStub.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(Remote.class)
-                .assertFieldHasMatchingConcreteType("*Impl", ORB.class, Bus.class)
                 .filter(anno -> anno.serverName().equals(this.name))
                 .recruit()
                 .findFields(testClass);
@@ -198,11 +221,11 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .filter(anno -> Pattern.matches(anno.serverPattern(), this.name))
                 .recruit()
                 .findMethods(testClass);
-        assertFalse(controlFields.isEmpty() && remoteFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
+        assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
                 + "\n - EITHER the test must annotate a public static method with@" + ConfigureServer.BeforeServer.class.getSimpleName()
                 + "\n - OR the test must annotate a public static field with@" + Control.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with@" + ConfigureServer.RemoteObject.class.getSimpleName());
+                + "\n - OR the test must annotate a public static field with@" + ClientStub.class.getSimpleName());
 
         // blow up if the config is bogus
         if (annotation.newProcess()) return;
@@ -216,9 +239,9 @@ class ServerSteward extends Steward<ConfigureServer> {
 
     void beforeAll(ExtensionContext ctx) throws Exception{
         startServer(ctx);
-        populateControlFields();
+        populateControlFields(ctx);
         injectNameServiceURL();
-        instantiateRemoteObjects(ctx);
+        instantiateServerObjects(ctx);
         beforeServer(ctx);
     }
 
@@ -239,13 +262,12 @@ class ServerSteward extends Steward<ConfigureServer> {
         serverComms.control(ServerOp.START_SERVER);
     }
 
-    private void populateControlFields() {
+    private void populateControlFields(ExtensionContext ctx) {
         ServerControl serverControl =  new ServerControl(){
             public void start() {
                 serverComms.control(ServerOp.START_SERVER);
-                // restart server-side objects but do not re-inject the local stubs
-                remoteFields.stream().forEach(serverComms::instantiate);
                 injectNameServiceURL();
+                instantiateServerObjects(ctx);
             }
             public void stop() {
                 serverComms.control(ServerOp.STOP_SERVER);
@@ -259,9 +281,13 @@ class ServerSteward extends Steward<ConfigureServer> {
         nameServiceUrlFields.stream().forEach(f -> setStaticField(f, serverComms.getNameServiceUrl()));
     }
 
-    private void instantiateRemoteObjects(ExtensionContext ctx) {
+    private void instantiateServerObjects(ExtensionContext ctx) {
         ORB clientOrb = OrbSteward.getOrb(ctx);
-        remoteFields.stream().forEach(f -> {
+        corbanameUrlFields.stream().forEach(f -> {
+            String url = serverComms.instantiate(f);
+            setStaticField(f, url);
+        });
+        clientStubFields.stream().forEach(f -> {
             // instantiate the remote field on the server
             String ior = serverComms.instantiate(f);
             // instantiate the stub on the client

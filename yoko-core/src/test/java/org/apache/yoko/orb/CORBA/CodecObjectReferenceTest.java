@@ -41,7 +41,7 @@ import org.omg.PortableServer.POAHelper;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteObject;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
 
 import javax.rmi.CORBA.Stub;
@@ -91,7 +91,7 @@ public class CodecObjectReferenceTest {
     private static ORB serverOrb;
     private static String nameServiceUrl;
 
-    @RemoteObject(EchoImpl.class)
+    @ClientStub(EchoImpl.class)
     public static Echo echo;
 
     @BeforeAll
