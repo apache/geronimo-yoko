@@ -48,11 +48,10 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
+import static org.apache.yoko.util.HexConverter.octetsToAscii;
 
 final class Connector_impl extends org.omg.CORBA.LocalObject implements Connector {
-
-    // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(Connector.class.getName());
+    static final Logger logger = Logger.getLogger(Connector_impl.class.getName());
 
     private final IOR ior_;    // the target IOR we're connecting with
 
@@ -378,13 +377,13 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
                 if (component.tag == TAG_CSI_SEC_MECH_LIST.value) {
                     otherTransportInfo = component.component_data;
                     if (logger.isLoggable(FINE))
-                        logger.fine("Found CSI_SEC_MECH_LIST: " + otherTransportInfo == null ? null : HexConverter.octetsToAscii(otherTransportInfo, otherTransportInfo.length));
+                        logger.fine("Found CSI_SEC_MECH_LIST: " + octetsToAscii(otherTransportInfo));
                     break;
                 }
             }
             if (!Arrays.equals(transportInfo, otherTransportInfo)) {
                 if (logger.isLoggable(FINE))
-                    logger.fine("Transport info does not match CSI_SEC_MECH_LIST: " + otherTransportInfo == null ? null : HexConverter.octetsToAscii(otherTransportInfo, otherTransportInfo.length));
+                    logger.fine("Transport info does not match CSI_SEC_MECH_LIST: " + octetsToAscii(otherTransportInfo));
                 return new ProfileInfo[0];
             }
         }

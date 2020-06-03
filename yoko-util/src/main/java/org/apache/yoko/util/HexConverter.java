@@ -44,7 +44,13 @@ public final class HexConverter {
         return result;
     }
 
+    public static String octetsToAscii(byte[] oct) {
+        if (oct == null) return null;
+        return new String(octetsToAsciiChars(oct, oct.length));
+    }
+
     public static String octetsToAscii(byte[] oct, int count) {
+        if (oct == null) return null;
         return new String(octetsToAsciiChars(oct, count));
     }
 
