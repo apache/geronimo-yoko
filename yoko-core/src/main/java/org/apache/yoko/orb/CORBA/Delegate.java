@@ -469,10 +469,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             logger.log(Level.FINE, "Received unexpected exception for request", ex);
             _OB_handleException(ex, info, false);
             threadSpecificRetryInfo.set(info);
+            // If we reach this point, then we need to reinvoke
+            throw (RemarshalException)new RemarshalException().initCause(ex);
         }
-
-        // If we reach this point, then we need to reinvoke
-        throw new RemarshalException();
     }
 
     public void releaseReply(org.omg.CORBA.Object self, org.omg.CORBA.portable.InputStream in) { }
@@ -710,7 +709,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     private void handleTRANSIENT(TRANSIENT e, RetryInfo info) {
         info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
-        checkRetry(info.getRetry(), e, true);
+        checkRetry(info.getRetry(), e, false);
         CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
         if (coreTraceLevels.traceRetry() > 0) {
             String msg = "trying again (" + info.getRetry() + ") because server sent a TRANSIENT exception";

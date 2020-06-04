@@ -16,8 +16,11 @@
  */
 package testify.jupiter.annotation.impl;
 
+import org.hamcrest.Matcher;
+import org.hamcrest.MatcherAssert;
 import org.junit.platform.commons.support.HierarchyTraversalMode;
 import org.opentest4j.AssertionFailedError;
+import testify.util.Predicates;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -27,12 +30,15 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedFields;
@@ -40,6 +46,7 @@ import static org.junit.platform.commons.support.AnnotationSupport.findAnnotated
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
+import static testify.util.Predicates.allOf;
 import static testify.util.Reflect.getMatchingConstructor;
 import static testify.util.Reflect.getMatchingTypeName;
 
@@ -69,15 +76,30 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                     + " It has been used on the non-static member: " + member));
             return this;
         }
-        private void assertStatic(Member member) {
-            assertTrue(isStatic(member), () -> ""
-                    + "The " + annoName + " annotation must be used on only static members."
-                    + " It has been used on the non-static member: " + member);
+        public <TA extends Annotation> Spec<A> requireTestAnnotation(Class<TA> testAnnoType) {
+            assertions = assertions.andThen(
+                    member -> assertTrue(findAnnotation(member.getDeclaringClass(), testAnnoType)
+                                    .isPresent(),
+                            () -> "The " + annoName
+                                    + " annotation may only be used within tests that have the @"
+                                    + testAnnoType.getSimpleName() + " annotation."
+                                    + " It has been used on the invalid member: " + member));
+            return this;
         }
-        public void assertPublic(Member member) {
-            assertTrue(isPublic(member), () -> ""
-                    + "The " + annoName + " annotation must be used on only public members."
-                    + " It has been used on the non-public member: " + member);
+        public <TA extends Annotation, X> Spec<A> requireTestAnnotation(Class<TA> testAnnoType, String description, Function<TA, X> mapper, Matcher<X> matcher) {
+            // TODO: consider using the actual known test class instead of member.getDeclaringClass()
+            requireTestAnnotation(testAnnoType);
+            assertions = assertions.andThen(
+                    member -> assertThat(
+                            "The " + annoName
+                                    + " annotation on member " + member + " has a matching @"
+                                    + testAnnoType.getSimpleName() + " annotation on its declaring class but "
+                                    + description,
+                            findAnnotation(member.getDeclaringClass(), testAnnoType)
+                                    .map(mapper)
+                                    .orElse(null),
+                            matcher));
+            return this;
         }
         public Spec<A> assertParameterTypes(Class<?>... paramTypes) {
             Set<Class<?>> allowedParamTypes = new HashSet<>(asList(paramTypes));

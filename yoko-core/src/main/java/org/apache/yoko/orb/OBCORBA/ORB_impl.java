@@ -115,7 +115,7 @@ import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.util.GetSystemPropertyAction;
+import org.apache.yoko.util.PrivilegedActions;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
@@ -192,76 +192,59 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessController;
-import java.util.Enumeration;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.Vector;
 
+import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
+import static org.apache.yoko.util.PrivilegedActions.GET_SYSPROPS_OR_EMPTY_MAP;
 
 // This class must be public and not final
 public class ORB_impl extends ORBSingleton {
-    //
     // All registered ORBInitializers
-    //
-    private Hashtable orbInitializers_ = new Hashtable();
+    private final Map<String, ORBInitializer> initializers = new Hashtable<>();
 
-    //
     // The ORB Control
-    //
     private ORBControl orbControl_;
 
-    //
     // Has the ORB been destroyed?
-    //
     private final AutoReadWriteLock destroyLock_ = new AutoReadWriteLock();
     private boolean destroy_;
-    //
     // The OCI Plugin Manager
-    //
     private PluginManager pluginManager_;
 
-    //
     // The ORBInstance object
-    //
     private ORBInstance orbInstance_;
 
-    //
     // Default set of policies
-    //
-    private Vector policies_ = new Vector();
+    private final List<Policy> policies = new Vector<>();
 
-    //
     // The ORB option filter
-    //
     private static OptionFilter orbOptionFilter_;
 
-    //
     // The OA option filter
-    //
     private static OptionFilter oaOptionFilter_;
 
-    //
     // Whether DII operations should raise system exceptions
-    //
     private boolean raiseDIIExceptions_ = true;
 
     // ------------------------------------------------------------------
     // Private and protected member implementations
     // ------------------------------------------------------------------
 
-    //
     // This method does most of the ORB initialization that would
     // normally be done in the constructor. However, the constructor
     // cannot perform these steps because some of the initialization
     // requires that the command-line options and properties have
     // already been processed, which doesn't occur until set_parameters
     // is called.
-    //
     private void initialize(StringSeqHolder args, String orbId,
                             String serverId, String serverInstance, int concModel,
                             CoreTraceLevels coreTraceLevels,
@@ -271,20 +254,13 @@ public class ORB_impl extends ORBSingleton {
         try (AutoLock writeLock = destroyLock_.getWriteLock()) {
             destroy_ = false;
 
-            //
             // Create the ORBControl
-            //
             orbControl_ = new ORBControl();
 
-            //
             // Create the OCI Plugin Manager
-            //
             pluginManager_ = new PluginManager(this);
 
-            //
             // Create the ORBInstance object
-            //
-            //
             InitialServiceManager initServiceManager = new InitialServiceManager();
             ClientManager clientManager = new ClientManager(
                     concModel);
@@ -340,25 +316,17 @@ public class ORB_impl extends ORBSingleton {
                 throw Assert.fail(ex);
             }
 
-            //
             // Set the ORBInstance on the ORBControl
-            //
             orbControl_.setORBInstance(orbInstance_);
 
-            //
             // Initialize default policies
-            //
             initializeDefaultPolicies();
 
-            //
             // Create the DynamicAny::DynAnyFactory object
-            //
             DynAnyFactory dynAnyFactory = new DynAnyFactory_impl(
                     orbInstance_);
 
-            //
             // Add initial references
-            //
             try {
                 initServiceManager.addInitialReference("POAManagerFactory",
                         pmFactory);
@@ -381,82 +349,52 @@ public class ORB_impl extends ORBSingleton {
                 throw Assert.fail(ex);
             }
 
-            //
-            // Initialize the OCI client plug-ins
-            //
-            {
-                String prop = properties.getProperty("yoko.oci.client");
-                if (prop == null)
-                    prop = "iiop";
+
+            { // Initialize the OCI client plug-ins
+                String prop = properties.getProperty("yoko.oci.client", "iiop");
                 int pos = 0;
                 while (pos != -1) {
-                    Vector paramList = new Vector();
-                    pos = ParseParams.parse(prop, pos,
-                            paramList);
-                    String name = (String) paramList.firstElement();
-                    paramList.removeElementAt(0);
-                    String[] params = new String[paramList.size()];
-                    paramList.copyInto(params);
+                    List<String> paramList = new ArrayList<>();
+                    pos = ParseParams.parse(prop, pos, paramList);
+                    String name = paramList.remove(0);
+                    String[] params = paramList.toArray(new String[0]);
 
-                    Plugin plugin = pluginManager_
-                            .initPlugin(name, args);
-                    if (plugin == null) {
-                        String err = "OCI client initialization failed "
-                                + "for `" + name + "'";
-                        throw new INITIALIZE(err);
-                    } else
-                        plugin.init_client(params);
+                    Plugin plugin = pluginManager_.initPlugin(name, args);
+                    if (plugin == null) throw new INITIALIZE("OCI client initialization failed for '" + name + "'");
+                    plugin.init_client(params);
                 }
             }
 
-            //
-            // Initialize the OCI server plug-ins
-            //
-            {
-                String prop = properties.getProperty("yoko.oci.server");
-                if (prop == null)
-                    prop = "iiop";
+            { // Initialize the OCI server plug-ins
+                String prop = properties.getProperty("yoko.oci.server", "iiop");
                 int pos = 0;
                 while (pos != -1) {
-                    Vector paramList = new Vector();
-                    pos = ParseParams.parse(prop, pos,
-                            paramList);
-                    String name = (String) paramList.firstElement();
-                    paramList.removeElementAt(0);
-                    String[] params = new String[paramList.size()];
-                    paramList.copyInto(params);
+                    List<String> paramList = new ArrayList<>();
+                    pos = ParseParams.parse(prop, pos, paramList);
+                    String name = paramList.remove(0);
+                    String[] params = paramList.toArray(new String[0]);
 
-                    Plugin plugin = pluginManager_
-                            .initPlugin(name, args);
+                    Plugin plugin = pluginManager_.initPlugin(name, args);
                     if (plugin == null) {
-                        String err = "OCI server initialization failed "
-                                + "for `" + name + "'";
+                        String err = "OCI server initialization failed for '" + name + "'";
                         throw new INITIALIZE(err);
                     } else
                         plugin.init_server(params);
                 }
             }
 
-            //
             // Initialize Portable Interceptors - this must be done after
             // installing the OCI plug-ins to allow an ORBInitializer
             // or interceptor to make a remote invocation
-            //
 
-            //
             // Install IOR interceptor for code sets
-            //
             try {
-                piManager.addIORInterceptor(
-                        new CodeSetIORInterceptor_impl(
-                                nativeCs, nativeWcs), false);
+                piManager.addIORInterceptor(new CodeSetIORInterceptor_impl(nativeCs, nativeWcs), false);
             } catch (DuplicateName ex) {
                 throw Assert.fail(ex);
             }
             
-            //
             // Install interceptors for Yoko Auxilliary Stream Format
-            //
             try {
                 piManager.addIORInterceptor(new YasfIORInterceptor(), true);
                 piManager.addClientRequestInterceptor(new YasfClientInterceptor());
@@ -464,9 +402,8 @@ public class ORB_impl extends ORBSingleton {
             } catch (DuplicateName ex) {
                 throw Assert.fail(ex);
             }
-            //
+
             // Install interceptors for Custom Marshal Stream Format negotiation
-            //
             try {
                 piManager.addIORInterceptor(new CmsfIORInterceptor(), false);
                 piManager.addClientRequestInterceptor(new CmsfClientInterceptor());
@@ -475,134 +412,80 @@ public class ORB_impl extends ORBSingleton {
                 throw Assert.fail(ex);
             }
 
-            //
             // Install IOR interceptor for Message Routing
-            //
             try {
-                //
                 // Get the router list from configuration data
-                //
                 RouterListHolder routerListHolder = new RouterListHolder();
                 routerListHolder.value = new Router[0];
 
-                MessageRoutingUtil
-                .getRouterListFromConfig(orbInstance_, routerListHolder);
-                piManager
-                .addIORInterceptor(
-                        new MessageRoutingIORInterceptor_impl(
-                                routerListHolder.value), false);
+                MessageRoutingUtil.getRouterListFromConfig(orbInstance_, routerListHolder);
+                piManager.addIORInterceptor(new MessageRoutingIORInterceptor_impl(routerListHolder.value), false);
             } catch (DuplicateName ex) {
                 throw Assert.fail(ex);
             }
 
-            //
             // Register the valuetype factory for ExceptionHolders
-            //
             ValueFactory exhFactory = new ExceptionHolderFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/Messaging/ExceptionHolder:1.0", exhFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/Messaging/ExceptionHolder:1.0", exhFactory);
 
-            //
-            // Register the appropriate router admin factory for each
-            // router admin policy.
-            //
+            // Register the appropriate router admin factory for each router admin policy.
             ValueFactory routerAdminPolicyFactory = new ImmediateSuspendPolicyFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/MessageRouting/ImmediateSuspendPolicy:1.0",
-                    routerAdminPolicyFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/MessageRouting/ImmediateSuspendPolicy:1.0", routerAdminPolicyFactory);
 
             routerAdminPolicyFactory = new UnlimitedPingPolicyFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/MessageRouting/UnlimitedPingPolicy:1.0",
-                    routerAdminPolicyFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/MessageRouting/UnlimitedPingPolicy:1.0", routerAdminPolicyFactory);
 
             routerAdminPolicyFactory = new LimitedPingPolicyFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/MessageRouting/LimitedPingPolicy:1.0",
-                    routerAdminPolicyFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/MessageRouting/LimitedPingPolicy:1.0", routerAdminPolicyFactory);
 
             routerAdminPolicyFactory = new DecayPolicyFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/MessageRouting/DecayPolicy:1.0",
-                    routerAdminPolicyFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/MessageRouting/DecayPolicy:1.0", routerAdminPolicyFactory);
 
             routerAdminPolicyFactory = new ResumePolicyFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:omg.org/MessageRouting/ResumePolicy:1.0",
-                    routerAdminPolicyFactory);
+            valueFactoryManager.registerValueFactory("IDL:omg.org/MessageRouting/ResumePolicy:1.0", routerAdminPolicyFactory);
 
-            //
             // Register the valuetype factory for the persistent POA Object
             // Reference Template and the IMR Object Reference Template.
-            //
-            ValueFactory ortFactory = new TransientORTFactory_impl(
-                    orbInstance_);
-            valueFactoryManager
-            .registerValueFactory(
-                    "IDL:orb.yoko.apache.org/OBPortableInterceptor/TransientORT:1.0",
-                    ortFactory);
+            ValueFactory ortFactory = new TransientORTFactory_impl(orbInstance_);
+            valueFactoryManager.registerValueFactory("IDL:orb.yoko.apache.org/OBPortableInterceptor/TransientORT:1.0", ortFactory);
 
-            ortFactory = new PersistentORTFactory_impl(
-                    orbInstance_);
-            valueFactoryManager
-            .registerValueFactory(
-                    "IDL:orb.yoko.apache.org/OBPortableInterceptor/PersistentORT:1.0",
-                    ortFactory);
+            ortFactory = new PersistentORTFactory_impl(orbInstance_);
+            valueFactoryManager.registerValueFactory("IDL:orb.yoko.apache.org/OBPortableInterceptor/PersistentORT:1.0", ortFactory);
 
             ortFactory = new IMRORTFactory_impl();
-            valueFactoryManager.registerValueFactory(
-                    "IDL:orb.yoko.apache.org/OBPortableInterceptor/IMRORT:1.0",
-                    ortFactory);
+            valueFactoryManager.registerValueFactory("IDL:orb.yoko.apache.org/OBPortableInterceptor/IMRORT:1.0", ortFactory);
 
-            //
             // Instantiate ORB initializers using the properties given
             // to ORB.init()
-            //
             instantiateORBInitializers(properties, logger);
 
-            //
             // Instantiate ORB initializers using the System properties.
             // Note that a SecurityException may be raised for applets.
-            //
             try {
                 Properties sysProperties = System.getProperties();
                 instantiateORBInitializers(sysProperties, logger);
-            } catch (SecurityException ex) {
-                // Ignore
-            }
+            } catch (SecurityException ignored) { }
 
-            //
             // Call each of the ORB initializers. If there are no ORB
             // initializers it's not necessary to setup the PIManager
             // since no interceptors will be called.
-            //
-            if (!orbInitializers_.isEmpty()) {
-                ORBInitInfo_impl info = new ORBInitInfo_impl(
-                        this, args.value, orbId, piManager, initServiceManager,
-                        codecFactory);
+            if (!initializers.isEmpty()) {
+                ORBInitInfo_impl info = new ORBInitInfo_impl(this, args.value, orbId, piManager, initServiceManager, codecFactory);
 
-                Enumeration e = orbInitializers_.elements();
-                while (e.hasMoreElements()) {
-                    ((ORBInitializer) e
-                            .nextElement()).pre_init(info);
-                }
+                for (ORBInitializer initializer: initializers.values())
+                    initializer.pre_init(info);
 
                 // TODO: change state
-                e = orbInitializers_.elements();
-                while (e.hasMoreElements()) {
-                    ((ORBInitializer) e
-                            .nextElement()).post_init(info);
-                }
+                for (ORBInitializer initializer: initializers.values())
+                    initializer.post_init(info);
 
                 info._OB_destroy();
             }
             piManager.setupComplete();
         } catch (RuntimeException ex) {
-            //
             // Here the same thing as ORB::destroy must be done since
             // although the ORB itself isn't fully initialized all of the
             // ORB components may be.
-            //
             if (orbControl_ != null) {
                 orbControl_.shutdownServerClient();
                 orbControl_.destroy();
@@ -632,192 +515,170 @@ public class ORB_impl extends ORBSingleton {
         Logger logger = orbInstance_.getLogger();
         Properties properties = orbInstance_.getProperties();
 
-        Enumeration keys = properties.keys();
-        while (keys.hasMoreElements()) {
-            String key = (String) keys.nextElement();
+        for (String key: properties.stringPropertyNames()) {
             if (!key.startsWith("yoko.orb.policy."))
                 continue;
             String value = properties.getProperty(key);
 
-            if (key.equals("yoko.orb.policy.protocol")) {
-                StringTokenizer tokenizer = new StringTokenizer(
-                        value, ", ");
+            switch (key) {
+            case "yoko.orb.policy.protocol": {
+                StringTokenizer tokenizer = new StringTokenizer(value, ", ");
                 String[] seq = new String[tokenizer.countTokens()];
                 int n = 0;
-                while (tokenizer.hasMoreTokens())
-                    seq[n++] = tokenizer.nextToken();
+                while (tokenizer.hasMoreTokens()) seq[n++] = tokenizer.nextToken();
 
                 if (seq.length == 0) {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.protocol: `" + value + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.protocol: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                ProtocolPolicy_impl p = new ProtocolPolicy_impl(
-                        seq);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.connection_reuse")) {
+                policies.add(new ProtocolPolicy_impl(seq));
+                break;
+            }
+            case "yoko.orb.policy.connection_reuse": {
                 boolean b;
-                if (value.equals("true"))
-                    b = true;
-                else if (value.equals("false"))
-                    b = false;
+                if (value.equals("true")) b = true;
+                else if (value.equals("false")) b = false;
                 else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.connection_reuse: `" + value
-                            + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.connection_reuse: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                ConnectionReusePolicy_impl p = new ConnectionReusePolicy_impl(
-                        b);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.zero_port")) {
+                policies.add(new ConnectionReusePolicy_impl(b));
+                break;
+            }
+            case "yoko.orb.policy.zero_port": {
                 boolean b;
-                if (value.equals("true"))
-                    b = true;
-                else if (value.equals("false"))
-                    b = false;
+                if (value.equals("true")) b = true;
+                else if (value.equals("false")) b = false;
                 else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.zero_port: `" + value
-                            + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.zero_port: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                ZeroPortPolicy_impl p = new ZeroPortPolicy_impl(
-                        b);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.retry")
-                    || key.equals("yoko.orb.policy.retry.max")
-                    || key.equals("yoko.orb.policy.retry.interval")
-                    || key.equals("yoko.orb.policy.retry.remote")) {
+                policies.add(new ZeroPortPolicy_impl(b));
+                break;
+            }
+            case "yoko.orb.policy.retry":
+            case "yoko.orb.policy.retry.max":
+            case "yoko.orb.policy.retry.interval":
+            case "yoko.orb.policy.retry.remote":
                 // Ignore here
-            } else if (key.equals("yoko.orb.policy.timeout")) {
+                break;
+            case "yoko.orb.policy.timeout": {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    TimeoutPolicy_impl p = new TimeoutPolicy_impl(
-                            val);
-                    policies_.addElement(p);
+                    policies.add(new TimeoutPolicy_impl(val));
                 }
-            } else if (key.equals("yoko.orb.policy.location_transparency")) {
+                break;
+            }
+            case "yoko.orb.policy.location_transparency": {
                 short val;
-                if (value.equals("strict"))
-                    val = LOCATION_TRANSPARENCY_STRICT.value;
-                else if (value.equals("relaxed"))
-                    val = LOCATION_TRANSPARENCY_RELAXED.value;
+                if (value.equals("strict")) val = LOCATION_TRANSPARENCY_STRICT.value;
+                else if (value.equals("relaxed")) val = LOCATION_TRANSPARENCY_RELAXED.value;
                 else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.location_transparency: `"
-                            + value + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.location_transparency: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                LocationTransparencyPolicy_impl p = new LocationTransparencyPolicy_impl(
-                        val);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.interceptor")) {
+                policies.add(new LocationTransparencyPolicy_impl(val));
+                break;
+            }
+            case "yoko.orb.policy.interceptor": {
                 boolean b;
-                if (value.equals("true"))
-                    b = true;
-                else if (value.equals("false"))
-                    b = false;
+                if (value.equals("true")) b = true;
+                else if (value.equals("false")) b = false;
                 else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.interceptor: `" + value + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.interceptor: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                InterceptorPolicy_impl p = new InterceptorPolicy_impl(
-                        b);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.connect_timeout")) {
+                policies.add(new InterceptorPolicy_impl(b));
+                break;
+            }
+            case "yoko.orb.policy.connect_timeout": {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    ConnectTimeoutPolicy_impl p = new ConnectTimeoutPolicy_impl(
-                            val);
-                    policies_.addElement(p);
+                    policies.add(new ConnectTimeoutPolicy_impl(val));
                 }
-            } else if (key.equals("yoko.orb.policy.request_timeout")) {
+                break;
+            }
+            case "yoko.orb.policy.request_timeout": {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    RequestTimeoutPolicy_impl p = new RequestTimeoutPolicy_impl(
-                            val);
-                    policies_.addElement(p);
+                    policies.add(new RequestTimeoutPolicy_impl(val));
                 }
-            } else if (key.equals("yoko.orb.policy.request_timeout")) {
+                break;
+            }
+            case "yoko.orb.policy.reply_timeout": {
                 int val = Integer.parseInt(value);
                 if (val != -1) {
-                    RequestTimeoutPolicy_impl p = new RequestTimeoutPolicy_impl(
-                            val);
-                    policies_.addElement(p);
+                    policies.add(new ReplyTimeoutPolicy_impl(val));
                 }
-            } else if (key.equals("yoko.orb.policy.reply_timeout")) {
-                int val = Integer.parseInt(value);
-                if (val != -1) {
-                    ReplyTimeoutPolicy_impl p = new ReplyTimeoutPolicy_impl(
-                            val);
-                    policies_.addElement(p);
-                }
-            } else if (key.equals("yoko.orb.policy.locate_request")) {
+                break;
+            }
+            case "yoko.orb.policy.locate_request": {
                 boolean b;
-                if (value.equals("true"))
-                    b = true;
-                else if (value.equals("false"))
-                    b = false;
+                if (value.equals("true")) b = true;
+                else if (value.equals("false")) b = false;
                 else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.locate_request: `" + value + "'";
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.locate_request: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                LocateRequestPolicy_impl p = new LocateRequestPolicy_impl(
-                        b);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.rebind")) {
+                policies.add(new LocateRequestPolicy_impl(b));
+                break;
+            }
+            case "yoko.orb.policy.rebind": {
                 short val;
-                if (value.equals("transparent"))
+                switch (value) {
+                case "transparent":
                     val = TRANSPARENT.value;
-                else if (value.equals("no_rebind"))
+                    break;
+                case "no_rebind":
                     val = NO_REBIND.value;
-                else if (value.equals("no_reconnect"))
+                    break;
+                case "no_reconnect":
                     val = NO_RECONNECT.value;
-                else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.rebind: `" + value + "'";
+                    break;
+                default:
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.rebind: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                RebindPolicy_impl p = new RebindPolicy_impl(
-                        val);
-                policies_.addElement(p);
-            } else if (key.equals("yoko.orb.policy.sync_scope")) {
+                policies.add(new RebindPolicy_impl(val));
+                break;
+            }
+            case "yoko.orb.policy.sync_scope": {
                 short val;
-                if (value.equals("none"))
+                switch (value) {
+                case "none":
                     val = SYNC_NONE.value;
-                else if (value.equals("transport"))
+                    break;
+                case "transport":
                     val = SYNC_WITH_TRANSPORT.value;
-                else if (value.equals("server"))
+                    break;
+                case "server":
                     val = SYNC_WITH_SERVER.value;
-                else if (value.equals("target"))
+                    break;
+                case "target":
                     val = SYNC_WITH_TARGET.value;
-                else {
-                    String err = "ORB.init: invalid value for "
-                            + "yoko.orb.policy.sync_scope: `" + value + "'";
+                    break;
+                default:
+                    String err = "ORB.init: invalid value for " + "yoko.orb.policy.sync_scope: `" + value + "'";
                     logger.error(err);
                     throw new INITIALIZE(err);
                 }
 
-                SyncScopePolicy_impl p = new SyncScopePolicy_impl(
-                        val);
-                policies_.addElement(p);
+                policies.add(new SyncScopePolicy_impl(val));
+                break;
             }
             /*
              * TODO - Add the config keys for the new Message routing policies
@@ -827,26 +688,19 @@ public class ORB_impl extends ORBSingleton {
              *  } else if(key.equals("yoko.orb.policy.queue_order")) {
              *  }
              */
-
-            else {
+            default:
                 String err = "ORB.init: unknown property `" + key + "'";
                 logger.error(err);
                 throw new INITIALIZE(err);
             }
         }
 
-        //
         // Set the default policies, if not already set
-        //
         if (properties.getProperty("yoko.orb.policy.connection_reuse") == null) {
-            ConnectionReusePolicy_impl p = new ConnectionReusePolicy_impl(
-                    true);
-            policies_.addElement(p);
+            policies.add(new ConnectionReusePolicy_impl(true));
         }
 
-        //
         // Set the retry policy
-        //
         short retry_mode = RETRY_STRICT.value;
         int retry_interval = 0;
         int max_retries = 1;
@@ -854,15 +708,18 @@ public class ORB_impl extends ORBSingleton {
 
         String value;
         if ((value = properties.getProperty("yoko.orb.policy.retry")) != null) {
-            if (value.equals("never"))
+            switch (value) {
+            case "never":
                 retry_mode = RETRY_NEVER.value;
-            else if (value.equals("strict"))
+                break;
+            case "strict":
                 retry_mode = RETRY_STRICT.value;
-            else if (value.equals("always"))
+                break;
+            case "always":
                 retry_mode = RETRY_ALWAYS.value;
-            else {
-                String err = "ORB.init: invalid value for "
-                        + "yoko.orb.policy.retry: `" + value + "'";
+                break;
+            default:
+                String err = "ORB.init: invalid value for " + "yoko.orb.policy.retry: `" + value + "'";
                 logger.error(err);
                 throw new INITIALIZE(err);
             }
@@ -871,8 +728,7 @@ public class ORB_impl extends ORBSingleton {
             try {
                 retry_interval = Integer.parseInt(value);
             } catch (NumberFormatException ex) {
-                String err = "ORB.init: invalid value for "
-                        + "yoko.orb.policy.retry.interval: `" + value + "'";
+                String err = "ORB.init: invalid value for yoko.orb.policy.retry.interval: `" + value + "'";
                 logger.error(err, ex);
                 throw new INITIALIZE(err);
             }
@@ -890,15 +746,10 @@ public class ORB_impl extends ORBSingleton {
         if ((value = properties.getProperty("yoko.orb.policy.retry.remote")) != null)
             retry_remote = value.equals("true");
 
-        RetryPolicy_impl p = new RetryPolicy_impl(
-                retry_mode, retry_interval, max_retries, retry_remote);
-        policies_.addElement(p);
+        policies.add(new RetryPolicy_impl(retry_mode, retry_interval, max_retries, retry_remote));
 
-        //
         // Create the ORBPolicyManager
-        //
-        PolicyManager pm = new ORBPolicyManager_impl(
-                policies_);
+        PolicyManager pm = new ORBPolicyManager_impl(policies);
         InitialServiceManager initServiceManager = orbInstance_
                 .getInitialServiceManager();
         try {
@@ -910,9 +761,7 @@ public class ORB_impl extends ORBSingleton {
                 .getObjectFactory();
         objectFactory.setPolicyManager(pm);
 
-        //
         // Register the default PolicyFactory policies for the ORB
-        //
         PolicyFactoryManager pfm = orbInstance_
                 .getPolicyFactoryManager();
 
@@ -980,97 +829,62 @@ public class ORB_impl extends ORBSingleton {
                 QUEUE_ORDER_POLICY_TYPE.value, factory, true);
     }
 
-    private void instantiateORBInitializers(Properties properties,
-                                            Logger logger) {
+    private void instantiateORBInitializers(Properties properties, Logger logger) {
         final String magic = "org.omg.PortableInterceptor.ORBInitializerClass.";
 
-        Enumeration e = properties.keys();
-        while (e.hasMoreElements()) {
-            String key = (String) e.nextElement();
+        for (String key: properties.stringPropertyNames()) {
             if (key.startsWith(magic)) {
-                //
                 // The remaining portion of the key is the initializer
                 // class name. The value of the property is ignored.
-                //
-                String initClass = key.substring(magic.length());
-                if (!orbInitializers_.containsKey(initClass)) {
+                String className = key.substring(magic.length());
+                if (!initializers.containsKey(className)) {
                     try {
                         // get the appropriate class for the loading.
                         ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                        ORBInitializer init = (ORBInitializer)
-                                ProviderLocator.loadClass(initClass, getClass(), loader).newInstance();
-                        orbInitializers_.put(initClass, init);
+                        final Class<?> initClass = ProviderLocator.loadClass(className, getClass(), loader);
+                        initializers.put(className, (ORBInitializer) initClass.newInstance());
                     }
                     // Exceptions have to be ignored here
                     catch (ClassNotFoundException ex) {
-                        logger.warning("ORB.init: initializer class "
-                                + initClass + " not found", ex);
+                        logger.warning("ORB.init: initializer class " + className + " not found", ex);
                     } catch (InstantiationException ex) {
-                        logger.warning("ORB.init: error occurred while "
-                                + "instantiating initializer class "
-                                + initClass, ex);
+                        logger.warning("ORB.init: error occurred while instantiating initializer class " + className, ex);
                     } catch (IllegalAccessException ex) {
-                        logger.warning("ORB.init: cannot access "
-                                + "initializer class " + initClass, ex);
+                        logger.warning("ORB.init: cannot access initializer class " + className, ex);
                     }
                 }
             }
         }
     }
 
-    private static boolean loadConfigFile(String configFile,
-            Properties properties,
-            Logger logger) {
-        //
-        // Load the contents of the configuration file
-        //
-        InputStream in = null;
-
-        //
-        // Try to open URL connection first
-        //
+    private static boolean loadConfigFile(String configFile, Properties properties, Logger logger) {
         try {
+            InputStream in;
             try {
+                // Try to open URL connection first
                 URL url = new URL(configFile);
                 in = url.openStream();
             } catch (MalformedURLException e) {
-                //
-                // Try to open plain file, if `configFile' is not a
-                // URL specification
-                //
+                // Try to open plain file, if `configFile' is not a URL specification
                 in = new FileInputStream(configFile);
             }
-        } catch (IOException ex) {
-            logger.warning("ORB.init: could not load configuration " + "file "
-                    + configFile, ex);
-        }
-
-        if (in != null) {
-            try {
-                BufferedInputStream bin = new BufferedInputStream(
-                        in);
+            try (BufferedInputStream bin = new BufferedInputStream(in)) {
                 properties.load(bin);
-                in.close();
                 return true;
-            } catch (IOException ex) {
-                logger.warning("ORB.init: could not load configuration "
-                        + "file " + configFile, ex);
             }
+        } catch (IOException ex) {
+            logger.warning("ORB.init: could not load configuration file " + configFile, ex);
+            return false;
         }
-
-        return false;
     }
 
     private static String[] parseAppletParams(Applet app) {
         String[] args = new String[0];
 
-        //
         // Check for parameter list
-        //
         String paramList = app.getParameter("ORBparams");
         if (paramList != null) {
-            StringTokenizer p = new StringTokenizer(
-                    paramList);
+            StringTokenizer p = new StringTokenizer(paramList);
 
             args = new String[p.countTokens()];
 
@@ -1082,39 +896,19 @@ public class ORB_impl extends ORBSingleton {
         return args;
     }
 
-    private void setParameters(StringSeqHolder args,
-                               Properties properties,
-                               Logger logger) {
-        if (args.value == null)
-            args.value = new String[0];
+    private void setParameters(StringSeqHolder args, final Properties initialProps, Logger logger) {
+        if (args.value == null) args.value = new String[0];
 
-        //
         // Initialize the Logger
-        //
-        if (logger == null)
-            logger = new Logger_impl();
+        if (logger == null) logger = new Logger_impl();
 
-        //
-        // Initialize the properties
-        //
-        if (properties == null) {
-            properties = new Properties();
-            try {
-                properties.putAll(System.getProperties());
-            } catch (SecurityException ex) {
-                //
-                // May be raised in an applet
-                //
-                // logger.warning("ORB.init: Unable to access System " +
-                // "properties");
-            }
-        }
+        // Initialize the properties - make a local copy to avoid modifying the original
+        final Properties properties = new Properties();
+        properties.putAll(initialProps == null ? doPrivileged(GET_SYSPROPS_OR_EMPTY_MAP) : initialProps);
 
         args.value = ParseArgs(args.value, properties, logger);
 
-        //
         // Process each property
-        //
         String orbId = "";
         String serverId = "";
         String serverInstance = "";
@@ -1123,9 +917,7 @@ public class ORB_impl extends ORBSingleton {
         int nativeWcs = UTF_16.id;
         int defaultWcs = 0;
 
-        Enumeration keys = properties.keys();
-        while (keys.hasMoreElements()) {
-            String key = (String) keys.nextElement();
+        for (String key: properties.stringPropertyNames()) {
             if (!key.startsWith("yoko.orb."))
                 continue;
 
@@ -1147,10 +939,7 @@ public class ORB_impl extends ORBSingleton {
             } else if (key.equals("yoko.orb.id")) {
                 orbId = value;
             } else if (key.equals("yoko.orb.server_name")) {
-                //
-                // The server name must begin with an alpha-numeric
-                // character
-                //
+                // The server name must begin with an alpha-numeric character
                 if (value.length() == 0 || !Character.isLetterOrDigit(value.charAt(0))) {
                     logger.error("ORB.init: illegal value for yoko.orb.server_name: " + value);
                     throw new INITIALIZE("ORB.init: illegal value for yoko.orb.server_name: " + value);
@@ -1216,7 +1005,7 @@ public class ORB_impl extends ORBSingleton {
                 }
             } else if (key.equals("yoko.orb.giop.max_message_size")) {
                 try {
-                    int max = Integer.valueOf(value).intValue();
+                    int max = Integer.parseInt(value);
                     GIOPIncomingMessage.setMaxMessageSize(max);
                     GIOPOutgoingMessage.setMaxMessageSize(max);
                 } catch (NumberFormatException ex) {
@@ -1230,16 +1019,12 @@ public class ORB_impl extends ORBSingleton {
             }
         }
 
-        //
         // Parse the tracing levels from the properties
-        //
         CoreTraceLevels coreTraceLevels = new CoreTraceLevels(
                 logger, properties);
 
-        //
         // Initialize the ORB state - this must be done after processing
         // command-line options and properties
-        //
         initialize(args, orbId, serverId, serverInstance, concModel,
                 coreTraceLevels, properties, logger, nativeCs, nativeWcs,
                 defaultWcs);
@@ -1273,11 +1058,9 @@ public class ORB_impl extends ORBSingleton {
             try {
                 obj = initServiceManager.resolveInitialReferences(identifier);
             } catch (InvalidName ex) {
-                //
                 // If the service is the RootPOA and it hasn't yet been
                 // initialized, create it. We could put in some automatic method
                 // here for late binding of objects at some later point.
-                //
                 if (identifier.equals("RootPOA")) {
                     orbControl_.initializeRootPOA(this);
                     return resolve_initial_references(identifier);
@@ -1364,16 +1147,12 @@ public class ORB_impl extends ORBSingleton {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        //
         // Get operation description
-        //
         Description d = oper.describe();
         OperationDescription desc = OperationDescriptionHelper
                 .extract(d.value);
 
-        //
         // Create list
-        //
         org.apache.yoko.orb.CORBA.NVList list = new org.apache.yoko.orb.CORBA.NVList(
                 this);
         for (int i = 0; i < desc.parameters.length; i++) {
@@ -1527,18 +1306,14 @@ public class ORB_impl extends ORBSingleton {
     }
 
     public boolean work_pending() {
-        //
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
-        //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        //
         // Ensure that other threads get a chance to execute if
         // work_pending() is being called in a tight loop.
-        //
         Thread.yield();
 
         return orbControl_.workPending();
@@ -1546,10 +1321,8 @@ public class ORB_impl extends ORBSingleton {
     }
 
     public void perform_work() {
-        //
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
-        //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
@@ -1558,10 +1331,8 @@ public class ORB_impl extends ORBSingleton {
     }
 
     public void run() {
-        //
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
-        //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
@@ -1570,10 +1341,8 @@ public class ORB_impl extends ORBSingleton {
     }
 
     public void shutdown(boolean wait_for_completion) {
-        //
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
-        //
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
@@ -1581,63 +1350,48 @@ public class ORB_impl extends ORBSingleton {
         }
     }
 
+    /**
+     * Destroys the ORB.
+     * <p>
+     * From the specification:
+     * <p>
+     * This operation destroys the ORB so that its resources can be
+     * reclaimed by the application. Any operation invoked on a
+     * destroyed ORB reference will raise the OBJECT_NOT_EXIST
+     * exception. Once an ORB has been destroyed, another call to
+     * ORB_init with the same ORBid will return a reference to a newly
+     * constructed ORB.
+     * <p>
+     * If destroy is called on an ORB that has not been shut down, it
+     * will start the shut down process and block until the ORB has
+     * shut down before it destroys the ORB. If an application calls
+     * destroy in a thread that is currently servicing an invocation,
+     * the BAD_INV_ORDER system exception will be raised with the OMG
+     * minor code 3, since blocking would result in a deadlock.
+     * <p>
+     * For maximum portability and to avoid resource leaks, an
+     * application should always call shutdown and destroy on all ORB
+     * instances before exiting.
+     */
     public void destroy() {
         try (AutoLock writelock = destroyLock_.getWriteLock()) {
-            //
-            // From the specification:
-            //
-            // This operation destroys the ORB so that its resources can be
-            // reclaimed by the application. Any operation invoked on a
-            // destroyed ORB reference will raise the OBJECT_NOT_EXIST
-            // exception. Once an ORB has been destroyed, another call to
-            // ORB_init with the same ORBid will return a reference to a newly
-            // constructed ORB.
-            //
-            // If destroy is called on an ORB that has not been shut down, it
-            // will start the shut down process and block until the ORB has
-            // shut down before it destroys the ORB. If an application calls
-            // destroy in a thread that is currently servicing an invocation,
-            // the BAD_INV_ORDER system exception will be raised with the OMG
-            // minor code 3, since blocking would result in a deadlock.
-            //
-            // For maximum portability and to avoid resource leaks, an
-            // application should always call shutdown and destroy on all ORB
-            // instances before exiting.
-            //
 
-            //
             // Has the ORB been destroyed yet?
-            //
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-            //
-            // Shutdown both the server & client side of the ORB
-            //
             orbControl_.shutdownServerClient();
-
-            //
-            // Destroy the ORBControl. Don't set to _nil.
-            //
             orbControl_.destroy();
-            // orbControl_ = null;
 
-            //
             // Destroy the ORBInstance object
-            //
             orbInstance_.destroy();
             orbInstance_ = null;
 
-            //
             // Destroy the OCI Plugin Manager. This must be done after all
             // the OCI objects have been destroyed.
-            //
             pluginManager_.destroy();
             pluginManager_ = null;
 
-            //
             // Mark the ORB as destroyed
-            //
             destroy_ = true;
         }
     }
@@ -1652,8 +1406,7 @@ public class ORB_impl extends ORBSingleton {
         }
     }
 
-    public org.omg.CORBA.Object get_value_def(String repid)
-            throws BAD_PARAM {
+    public org.omg.CORBA.Object get_value_def(String repid) throws BAD_PARAM {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
         if (destroy_)
             throw new OBJECT_NOT_EXIST("ORB is destroyed");
@@ -1695,8 +1448,7 @@ public class ORB_impl extends ORBSingleton {
         setParameters(new StringSeqHolder(args), properties, null);
     }
 
-    protected void set_parameters(Applet app,
-                                  Properties properties) {
+    protected void set_parameters(Applet app, Properties properties) {
         String[] args = parseAppletParams(app);
         setParameters(new StringSeqHolder(args), properties, null);
     }
@@ -1705,13 +1457,11 @@ public class ORB_impl extends ORBSingleton {
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public static ORB init(String[] args,
-            Properties props, Logger logger) {
+    public static ORB init(String[] args, Properties props, Logger logger) {
         return init(new StringSeqHolder(args), props, logger);
     }
 
-    public static ORB init(StringSeqHolder args,
-                                         Properties props, Logger logger) {
+    public static ORB init(StringSeqHolder args, Properties props, Logger logger) {
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
 
@@ -1720,24 +1470,17 @@ public class ORB_impl extends ORBSingleton {
         try {
             orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
             if (orb == null) {
-
-                if (props != null)
-                    orbClassName = props.getProperty(propName);
+                if (props != null) orbClassName = props.getProperty(propName);
 
                 try {
-                    if (orbClassName == null)
-                        orbClassName = getSystemProperty(propName);
-                } catch (SecurityException ex) {
-                    // ignore
-                }
+                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
+                } catch (SecurityException ignored) {}
 
-                if (orbClassName == null)
-                    orbClassName = "org.apache.yoko.orb.CORBA.ORB";
+                if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
                 orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
             }
         } catch (Throwable ex) {
-            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: "
-                    + orbClassName + '\n' + ex.getMessage()).initCause(ex);
+            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: " + orbClassName + '\n' + ex.getMessage()).initCause(ex);
         }
 
         orb.setParameters(args, props, logger);
@@ -1745,8 +1488,7 @@ public class ORB_impl extends ORBSingleton {
         return orb;
     }
 
-    public static ORB init(Applet app,
-                                         Properties props, Logger logger) {
+    public static ORB init(Applet app, Properties props, Logger logger) {
         final String propName = "org.omg.CORBA.ORBClass";
         String orbClassName = null;
         ORB_impl orb;
@@ -1755,57 +1497,41 @@ public class ORB_impl extends ORBSingleton {
             orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
             if (orb == null) {
 
-                if (props != null)
-                    orbClassName = props.getProperty(propName);
+                if (props != null) orbClassName = props.getProperty(propName);
 
                 try {
-                    if (orbClassName == null)
-                        orbClassName = getSystemProperty(propName);
-                } catch (SecurityException ex) {
-                    // ignore
-                }
+                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
+                } catch (SecurityException ignored) {}
 
-                if (orbClassName == null)
-                    orbClassName = "org.apache.yoko.orb.CORBA.ORB";
+                if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
                 orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
             }
         } catch (Throwable ex) {
-            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: "
-                    + orbClassName + '\n' + ex.getMessage()).initCause(ex);
+            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: " + orbClassName + '\n' + ex.getMessage()).initCause(ex);
         }
 
         String[] args = parseAppletParams(app);
-        orb.setParameters(new StringSeqHolder(args), props,
-                logger);
+        orb.setParameters(new StringSeqHolder(args), props, logger);
 
         return orb;
     }
 
-    static public String[] ParseArgs(String[] args,
-            Properties properties,
-            Logger logger) {
-        if (logger == null)
-            logger = new Logger_impl();
+    static public String[] ParseArgs(String[] args, Properties properties, Logger logger) {
+        if (logger == null) logger = new Logger_impl();
 
-        //
         // If the yoko.config property is defined, and the yoko.config_loaded
         // property is NOT defined, then load the configuration file into
         // the given property set and define yoko.config_loaded so we
         // don't load it again
-        //
         String yokoConfig = properties.getProperty("yoko.config");
         String yokoConfigLoaded = properties.getProperty("yoko.config_loaded");
         if (yokoConfig != null && yokoConfigLoaded == null) {
-            if (loadConfigFile(yokoConfig, properties, logger))
-                properties.put("yoko.config_loaded", "true");
+            if (loadConfigFile(yokoConfig, properties, logger)) properties.put("yoko.config_loaded", "true");
         }
 
-        //
         // Create list with options supported by the ORB
-        //
         if (orbOptionFilter_ == null) {
-            orbOptionFilter_ = new OptionFilter(
-                    "ORB.init", "-ORB");
+            orbOptionFilter_ = new OptionFilter("ORB.init", "-ORB");
             orbOptionFilter_.add("id", 1);
             orbOptionFilter_.add("service", 2);
             orbOptionFilter_.add("InitRef", 1);
@@ -1832,9 +1558,7 @@ public class ORB_impl extends ORBSingleton {
             orbOptionFilter_.add("_AmiWorkers", 1);
         }
 
-        //
         // Create list with options supported by the Object Adaptor
-        //
         if (oaOptionFilter_ == null) {
             oaOptionFilter_ = new OptionFilter(
                     "ORB.init", "-OA");
@@ -1850,11 +1574,9 @@ public class ORB_impl extends ORBSingleton {
 
         String configFile = null;
 
-        //
         // First scan through the argument list looking for the config
         // file option. We need to do this since command line arguments
         // have precedence over the properties.
-        //
         if (args != null) {
             int i = 0;
             while (i < args.length) {
@@ -1873,17 +1595,13 @@ public class ORB_impl extends ORBSingleton {
             }
         }
 
-        //
         // Load the contents of the configuration file if present
-        //
         if (configFile != null && configFile.length() > 0) {
             loadConfigFile(configFile, properties, logger);
         }
 
-        //
         // Set the default value of the ORB and OA concurrency models if
         // they are not already set
-        //
         if (properties.getProperty("yoko.orb.conc_model") == null) {
             properties.put("yoko.orb.conc_model", "threaded");
         }
@@ -1892,42 +1610,40 @@ public class ORB_impl extends ORBSingleton {
             properties.put("yoko.orb.oa.conc_model", "thread_per_request");
         }
 
-        //
         // set the default number of AMI workers if not already set
-        //
         if (properties.getProperty("yoko.orb.ami_workers") == null) {
             properties.put("yoko.orb.ami_workers", "1");
         }
 
-        //
         // Process each argument. Turn each argument into an appropriate
         // property.
-        //
-        Option[] options = orbOptionFilter_
-                .parse(logger, args);
-        for (int i = 0; i < options.length; i++) {
-            String name = options[i].name;
-            String[] value = options[i].value;
+        Option[] options = orbOptionFilter_.parse(logger, args);
+        for (Option item : options) {
+            String name = item.name;
+            String[] value = item.value;
 
-            if (name.equals("id")) {
+            switch (name) {
+            case "id":
                 properties.put("yoko.orb.id", value[0]);
-            } else if (name.equals("server_name")) {
+                break;
+            case "register": // fall through TODO: should this do something different from "server"?
+            case "ServerId": // fall through
+            case "server_name":
                 properties.put("yoko.orb.server_name", value[0]);
-            } else if (name.equals("register")) {
-                properties.put("yoko.orb.server_name", value[0]);
-                //
-                // TODO: What do we do for Java?
-                //
-                // properties.put("yoko.orb.imr.register", value[0]);
-            } else if (name.equals("server_instance")) {
+                break;
+            case "server_instance":
                 properties.put("yoko.orb.server_instance", value[0]);
-            } else if (name.equals("ListenEndpoints")) {
+                break;
+            case "ListenEndpoints":
                 properties.put("yoko.orb.oa.endpoint", value[0]);
-            } else if (name.equals("NoProprietaryAction")) {
+                break;
+            case "NoProprietaryAction":
                 properties.put("yoko.orb.noIMR", "true");
-            } else if (name.equals("service")) {
+                break;
+            case "service":
                 properties.put("yoko.orb.service." + value[0], value[1]);
-            } else if (name.equals("InitRef")) {
+                break;
+            case "InitRef": {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
                     logger.error("ORB.init: invalid value for -ORBInitRef");
@@ -1936,9 +1652,12 @@ public class ORB_impl extends ORBSingleton {
                 String svc = value[0].substring(0, n);
                 String url = value[0].substring(n + 1);
                 properties.put("yoko.orb.service." + svc, url);
-            } else if (name.equals("DefaultInitRef")) {
+                break;
+            }
+            case "DefaultInitRef":
                 properties.put("yoko.orb.default_init_ref", value[0]);
-            } else if (name.equals("property")) {
+                break;
+            case "property": {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
                     logger.error("ORB.init: invalid value for -ORBproperty");
@@ -1947,65 +1666,79 @@ public class ORB_impl extends ORBSingleton {
                 String propName = value[0].substring(0, n);
                 String propValue = value[0].substring(n + 1);
                 properties.put(propName, propValue);
-            } else if (name.equals("repository")) {
-                properties
-                .put("yoko.orb.service.InterfaceRepository", value[0]);
-            } else if (name.equals("naming")) {
+                break;
+            }
+            case "repository":
+                properties.put("yoko.orb.service.InterfaceRepository", value[0]);
+                break;
+            case "naming":
                 properties.put("yoko.orb.service.NameService", value[0]);
-            } else if (name.equals("trace_connections")
-                    || name.equals("trace_retry")
-                    || name.equals("trace_requests")
-                    || name.equals("trace_requests_in")
-                    || name.equals("trace_requests_out")) {
+                break;
+            case "trace_connections":
+            case "trace_retry":
+            case "trace_requests":
+            case "trace_requests_in":
+            case "trace_requests_out":
                 String prop = "yoko.orb.trace.";
                 prop += name.substring(6);
                 properties.put(prop, value[0]);
-            } else if (name.equals("threaded")) {
+                break;
+            case "threaded":
                 properties.put("yoko.orb.conc_model", "threaded");
-            } else if (name.equals("version")) {
+                break;
+            case "version":
                 logger.info(Version.getVersion());
-            } else if (name.equals("native_cs")) {
+                break;
+            case "native_cs":
                 properties.put("yoko.orb.native_cs", value[0]);
-            } else if (name.equals("native_wcs")) {
+                break;
+            case "native_wcs":
                 properties.put("yoko.orb.native_wcs", value[0]);
-            } else if (name.equals("default_wcs")) {
+                break;
+            case "default_wcs":
                 properties.put("yoko.orb.default_wcs", value[0]);
-            } else if (name.equals("ServerId")) {
-                properties.put("yoko.orb.server_name", value[0]);
-            } else if (name.equals("_AmiWorkers")) {
+                break;
+            case "_AmiWorkers":
                 properties.put("yoko.orb.ami_workers", value[0]);
+                break;
             }
         }
 
-        //
-        // Process each argument. Turn each argument into an appropriate
-        // property.
-        //
+        // Process each argument. Turn each argument into an appropriate property.
         options = oaOptionFilter_.parse(logger, args);
-        for (int i = 0; i < options.length; i++) {
-            String name = options[i].name;
-            String[] value = options[i].value;
+        for (Option option : options) {
+            String name = option.name;
+            String[] value = option.value;
 
-            if (name.equals("host")) // Deprecated - see IIOP plug-in
-            {
+            switch (name) {
+            case "host":
+                // Deprecated - see IIOP plug-in
                 properties.put("yoko.iiop.host", value[0]);
-            } else if (name.equals("port")) // Deprecated - see IIOP plug-in
-            {
+                break;
+            case "port":
+                // Deprecated - see IIOP plug-in
                 properties.put("yoko.iiop.port", value[0]);
-            } else if (name.equals("numeric")) // Deprecated - see IIOP plug-in
-            {
+                break;
+            case "numeric":
+                // Deprecated - see IIOP plug-in
                 properties.put("yoko.iiop.numeric", "true");
-            } else if (name.equals("version")) {
+                break;
+            case "version":
                 properties.put("yoko.orb.oa.version", value[0]);
-            } else if (name.equals("threaded")) {
+                break;
+            case "threaded":
                 properties.put("yoko.orb.oa.conc_model", "threaded");
-            } else if (name.equals("thread_per_client")) {
+                break;
+            case "thread_per_client":
                 properties.put("yoko.orb.oa.conc_model", "thread_per_client");
-            } else if (name.equals("thread_per_request")) {
+                break;
+            case "thread_per_request":
                 properties.put("yoko.orb.oa.conc_model", "thread_per_request");
-            } else if (name.equals("thread_pool")) {
+                break;
+            case "thread_pool":
                 properties.put("yoko.orb.oa.conc_model", "thread_pool");
                 properties.put("yoko.orb.oa.thread_pool", value[0]);
+                break;
             }
         }
 
@@ -2014,48 +1747,34 @@ public class ORB_impl extends ORBSingleton {
         return args;
     }
 
-    public Policy create_policy(int type,
-            Any any) throws PolicyError {
+    public Policy create_policy(int type, Any any) throws PolicyError {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return orbInstance_.getPolicyFactoryManager().createPolicy(type, any);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return orbInstance_.getPolicyFactoryManager().createPolicy(type, any);
         }
     }
 
-    public ValueFactory register_value_factory(
-            String id, ValueFactory factory) {
+    public ValueFactory register_value_factory(String id, ValueFactory factory) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        ValueFactoryManager valueFactoryManager = orbInstance_
-                .getValueFactoryManager();
-        return valueFactoryManager.registerValueFactory(id, factory);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            ValueFactoryManager valueFactoryManager = orbInstance_.getValueFactoryManager();
+            return valueFactoryManager.registerValueFactory(id, factory);
         }
     }
 
     public void unregister_value_factory(String id) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        ValueFactoryManager valueFactoryManager = orbInstance_
-                .getValueFactoryManager();
-        valueFactoryManager.unregisterValueFactory(id);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            ValueFactoryManager valueFactoryManager = orbInstance_.getValueFactoryManager();
+            valueFactoryManager.unregisterValueFactory(id);
         }
     }
 
-    public ValueFactory lookup_value_factory(
-            String id) {
+    public ValueFactory lookup_value_factory(String id) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        ValueFactoryManager valueFactoryManager = orbInstance_
-                .getValueFactoryManager();
-        return valueFactoryManager.lookupValueFactory(id);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            ValueFactoryManager valueFactoryManager = orbInstance_.getValueFactoryManager();
+            return valueFactoryManager.lookupValueFactory(id);
         }
     }
 
@@ -2065,29 +1784,22 @@ public class ORB_impl extends ORBSingleton {
 
     public Properties properties() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return orbInstance_.getProperties();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return orbInstance_.getProperties();
         }
     }
 
     public Logger logger() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return orbInstance_.getLogger();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return orbInstance_.getLogger();
         }
     }
 
-    public UnknownExceptionStrategy set_unknown_exception_strategy(
-            UnknownExceptionStrategy strategy) {
+    public UnknownExceptionStrategy set_unknown_exception_strategy(UnknownExceptionStrategy strategy) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return orbInstance_.setUnknownExceptionStrategy(strategy);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return orbInstance_.setUnknownExceptionStrategy(strategy);
         }
     }
 
@@ -2096,30 +1808,11 @@ public class ORB_impl extends ORBSingleton {
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public ORB_impl() {
-        //
-        // Most of the initialization is done in initialize()
-        //
-    }
-
     public boolean _OB_raiseDIIExceptions() {
         return raiseDIIExceptions_;
     }
 
     public ORBInstance _OB_ORBInstance() {
         return orbInstance_;
-    }
-
-
-    /**
-     * Simple utility for retrieving a system property
-     * using the AccessController.
-     *
-     * @param name   The property name
-     *
-     * @return The property value.
-     */
-    private static String getSystemProperty(String name) {
-        return (String)AccessController.doPrivileged(new GetSystemPropertyAction(name));
     }
 }

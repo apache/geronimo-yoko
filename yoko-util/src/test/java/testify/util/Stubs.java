@@ -14,12 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.iiop;
+package testify.util;
 
-import org.omg.PortableInterceptor.IORInfo;
-import org.omg.PortableInterceptor.IORInterceptor;
+import org.omg.CORBA.ORB;
 
-public interface TestIORInterceptor extends TestORBInitializer, TestInterceptor, IORInterceptor {
-    default void establish_components(IORInfo info) {}
+import javax.rmi.PortableRemoteObject;
+
+public enum Stubs {
+    ;
+
+    public static <T> T toStub(String stringifiedForm, ORB orb, Class<T> intf) {
+        Object o = orb.string_to_object(stringifiedForm);
+        return intf.cast(PortableRemoteObject.narrow(o, intf));
+    }
 }
-

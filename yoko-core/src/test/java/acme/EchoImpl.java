@@ -27,6 +27,7 @@ public class EchoImpl implements Echo {
 
     @Override
     public String echo(String s) {
+        bus.log("EchoImpl " + this + " echoing '" + s + "'");
         bus.put(BusKey.MESSAGE, s);
         return s;
     }

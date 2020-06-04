@@ -17,13 +17,13 @@
  */
 package org.apache.yoko.orb.csi;
 
+import org.apache.yoko.osgi.ProviderLocator;
+
 import javax.security.auth.Subject;
 import javax.security.auth.login.LoginException;
 
-import java.security.AccessController;
-
-import org.apache.yoko.util.GetSystemPropertyAction;
-import org.apache.yoko.osgi.ProviderLocator;
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public abstract class SecurityContext {
 
@@ -44,9 +44,7 @@ public abstract class SecurityContext {
 
     private static SecurityContextDelegate allocateDelegate() {
 
-        String className = (String)AccessController.doPrivileged(new GetSystemPropertyAction(
-                "org.freeorb.csi.SecurityContextClass",
-                "org.freeorb.csi.DefaultSecurityContextDelegate"));
+        String className = doPrivileged(getSysProp("org.freeorb.csi.SecurityContextClass", "org.freeorb.csi.DefaultSecurityContextDelegate"));
 
         try {
             // get the appropriate class for the loading.

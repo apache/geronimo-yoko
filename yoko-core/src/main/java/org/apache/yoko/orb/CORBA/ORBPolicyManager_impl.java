@@ -17,79 +17,61 @@
 
 package org.apache.yoko.orb.CORBA;
 
-final public class ORBPolicyManager_impl extends org.omg.CORBA.LocalObject
-        implements org.omg.CORBA.PolicyManager {
-    //
-    // Vector is owned by OBORB_impl - do not use Policy[]
-    //
-    private java.util.Vector policies_;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyManager;
+import org.omg.CORBA.SetOverrideType;
+
+import java.util.ArrayList;
+import java.util.BitSet;
+import java.util.Collections;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Vector;
+
+import static java.util.Collections.synchronizedList;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
+final public class ORBPolicyManager_impl extends LocalObject implements PolicyManager {
+    // owned by OBORB_impl - do not use Policy[]
+    private List<Policy> policies_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
     // ------------------------------------------------------------------
 
-    public synchronized org.omg.CORBA.Policy[] get_policy_overrides(int[] ts) {
-        if (ts.length == 0) {
-            org.omg.CORBA.Policy[] result = new org.omg.CORBA.Policy[policies_
-                    .size()];
-            policies_.copyInto(result);
-            return result;
-        }
+    public synchronized Policy[] get_policy_overrides(int[] ts) {
+        // if an empty array was passed in, return EVERYTHING
+        if (ts.length == 0) return policies_.toArray(new Policy[0]);
 
-        java.util.Vector v = new java.util.Vector();
-        for (int i = 0; i < ts.length; ++i) {
-            java.util.Enumeration e = policies_.elements();
-            while (e.hasMoreElements()) {
-                org.omg.CORBA.Policy p = (org.omg.CORBA.Policy) e.nextElement();
-                if (p.policy_type() == ts[i])
-                    v.add(p);
-            }
-        }
-        org.omg.CORBA.Policy[] result = new org.omg.CORBA.Policy[v.size()];
-        v.copyInto(result);
-        return result;
+        // otherwise, return only the policies matching the requested types
+        List<Policy> list = new ArrayList<>();
+        for (int t : ts) for (Policy p : policies_) if (p.policy_type() == t) list.add(p);
+        return list.toArray(new Policy[0]);
     }
 
-    public synchronized void set_policy_overrides(
-            org.omg.CORBA.Policy[] policies,
-            org.omg.CORBA.SetOverrideType set_add)
-            throws org.omg.CORBA.InvalidPolicies {
-        for (int i = 0; i < policies.length; ++i) {
-            for (int j = i + 1; j < policies.length; ++j) {
-                if (policies[i].policy_type() == policies[j].policy_type())
-                    throw new org.omg.CORBA.BAD_PARAM(
-                            org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType,
-                            org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-            }
+    public synchronized void set_policy_overrides(Policy[] newPolicies, SetOverrideType set_add) {
+        // check for duplicates
+        BitSet checklist = new BitSet();
+        for (Policy p: newPolicies) {
+            if (checklist.get(p.policy_type())) throw new BAD_PARAM(MinorDuplicatePolicyType, COMPLETED_NO);
+            checklist.set(p.policy_type());
         }
 
-        if ((set_add == org.omg.CORBA.SetOverrideType.SET_OVERRIDE)
-                || policies.length == 0) {
-            java.util.Vector v = new java.util.Vector();
-            for (int i = 0; i < policies.length; ++i) {
-                v.add(policies[i]);
-            }
+        if ((set_add == SetOverrideType.SET_OVERRIDE) || newPolicies.length == 0) {
+            List<Policy> v = synchronizedList(new ArrayList<Policy>());
+            Collections.addAll(v, newPolicies);
+            // TODO: check whether we need to update anything in OBORB_impl
             policies_ = v;
             return;
         }
 
-        java.util.Vector appendList = new java.util.Vector();
-        for (int i = 0; i < policies.length; ++i) {
-            boolean override = false;
-            java.util.Enumeration e = policies_.elements();
-            int j = 0;
-            while (e.hasMoreElements() && !override) {
-                org.omg.CORBA.Policy p = (org.omg.CORBA.Policy) e.nextElement();
-                if (p.policy_type() == policies[i].policy_type()) {
-                    override = true;
-                    policies_.setElementAt(policies[i], j);
-                    break;
-                }
-                ++j;
-            }
-            if (!override) {
-                appendList.add(policies[i]);
-            }
+        List<Policy> appendList = new ArrayList<>();
+        for (final Policy newPolicy : newPolicies) {
+            if (override(newPolicy)) continue;
+            appendList.add(newPolicy);
         }
         policies_.addAll(appendList);
     }
@@ -99,7 +81,18 @@ final public class ORBPolicyManager_impl extends org.omg.CORBA.LocalObject
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public ORBPolicyManager_impl(java.util.Vector policies) {
+    public ORBPolicyManager_impl(List<Policy> policies) {
         policies_ = policies;
+    }
+
+    private boolean override(Policy newPolicy) {
+        // override an existing policy if the type matches
+        final ListIterator<Policy> iterator = policies_.listIterator();
+        while (iterator.hasNext()) {
+            if (iterator.next().policy_type() != newPolicy.policy_type()) continue;
+            iterator.set(newPolicy);
+            return true;
+        }
+        return false;
     }
 }

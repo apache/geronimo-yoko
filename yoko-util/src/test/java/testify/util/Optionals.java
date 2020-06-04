@@ -14,12 +14,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.iiop;
+package testify.util;
 
-import org.omg.PortableInterceptor.IORInfo;
-import org.omg.PortableInterceptor.IORInterceptor;
+import org.apache.yoko.orb.OB.OptionFilter.Option;
+import org.opentest4j.AssertionFailedError;
 
-public interface TestIORInterceptor extends TestORBInitializer, TestInterceptor, IORInterceptor {
-    default void establish_components(IORInfo info) {}
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.fail;
+
+public enum Optionals {
+    ;
+
+    public static <T> T requireOneOf(Optional<T>...options) {
+        for (Optional<T> o: options)
+            if (o.isPresent()) return o.get();
+        return fail("No options were valid");
+    }
 }
-

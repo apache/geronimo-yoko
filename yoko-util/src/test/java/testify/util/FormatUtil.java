@@ -14,12 +14,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.iiop;
+package testify.util;
 
-import org.omg.PortableInterceptor.IORInfo;
-import org.omg.PortableInterceptor.IORInterceptor;
-
-public interface TestIORInterceptor extends TestORBInitializer, TestInterceptor, IORInterceptor {
-    default void establish_components(IORInfo info) {}
+public enum FormatUtil {
+    ;
+    public static String escapeHostForUseInUrl(String host) {
+        if (host.startsWith("[")) return host; // already escaped
+        if (host.contains(":")) return String.format("[%s]", host); // escape this IPv6 address
+        return host;
+    }
 }
-

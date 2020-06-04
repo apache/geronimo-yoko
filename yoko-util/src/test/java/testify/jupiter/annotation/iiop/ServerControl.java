@@ -14,12 +14,10 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.iiop;
+package testify.jupiter.annotation.iiop;
 
-import org.omg.PortableInterceptor.IORInfo;
-import org.omg.PortableInterceptor.IORInterceptor;
-
-public interface TestIORInterceptor extends TestORBInitializer, TestInterceptor, IORInterceptor {
-    default void establish_components(IORInfo info) {}
+public interface ServerControl {
+    void stop();
+    void start();
+    default void restart() { stop(); start(); }
 }
-

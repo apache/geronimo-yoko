@@ -20,11 +20,10 @@ package org.apache.yoko.rmi.impl;
 import org.apache.yoko.rmi.api.PortableRemoteObjectExtDelegate;
 import org.apache.yoko.rmi.api.PortableRemoteObjectState;
 import org.apache.yoko.rmi.util.ClassLoaderLocal;
+import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.ORB;
 
-import java.rmi.Remote;
 import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Properties;
 
 
@@ -36,12 +35,7 @@ public final class PortableRemoteObjectExtImpl implements PortableRemoteObjectEx
 
     private static ORB getDefaultOrb() {
         if (defaultOrb == null) {
-            Properties props = AccessController.doPrivileged(new PrivilegedAction<Properties>() {
-                @Override
-                public Properties run() {
-                    return new Properties(System.getProperties());
-                }
-            });
+            Properties props = AccessController.doPrivileged(PrivilegedActions.GET_SYSPROPS);
             defaultOrb = ORB.init(new String[0], props);
         }
         return defaultOrb;

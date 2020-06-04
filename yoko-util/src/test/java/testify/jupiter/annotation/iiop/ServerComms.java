@@ -16,189 +16,353 @@
  */
 package testify.jupiter.annotation.iiop;
 
+import org.apache.yoko.orb.OB.Client;
+import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
+import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
+import org.junit.jupiter.api.Assertions;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContext;
+import org.omg.CosNaming.NamingContextHelper;
+import org.omg.PortableServer.IdAssignmentPolicyValue;
+import org.omg.PortableServer.IdUniquenessPolicyValue;
+import org.omg.PortableServer.ImplicitActivationPolicyValue;
+import org.omg.PortableServer.LifespanPolicyValue;
 import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
+import org.omg.PortableServer.RequestProcessingPolicyValue;
 import org.omg.PortableServer.Servant;
+import org.omg.PortableServer.ServantRetentionPolicyValue;
+import org.omg.PortableServer.ThreadPolicyValue;
 import testify.bus.Bus;
+import testify.bus.EnumRef;
 import testify.bus.FieldRef;
+import testify.bus.LogLevel;
 import testify.bus.MethodRef;
+import testify.bus.StringRef;
 import testify.bus.TypeRef;
-import testify.bus.VoidRef;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.parts.PartRunner;
 import testify.util.Maps;
+import testify.util.Optionals;
 import testify.util.Stack;
+import testify.util.Throw;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static testify.bus.LogLevel.ERROR;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
+import static testify.util.FormatUtil.escapeHostForUseInUrl;
+import static testify.util.Reflect.newInstance;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
-    private enum LifeCycle implements VoidRef {STARTED, STOP}
-    private enum Invocation implements MethodRef {INVOKE}
-    private enum Instantiation implements FieldRef {INSTANTIATE}
-    private enum Result implements TypeRef<Throwable> { RESULT;}
-    private static String METHOD_COUNT_PREFIX = "Method#";
 
+    enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
+    enum ServerInfo implements StringRef {NAME_SERVICE_URL}
+    private enum ServerRequest implements EnumRef<ServerOp> {SEND}
+    private enum MethodRequest implements MethodRef {SEND}
+    private enum FieldRequest implements FieldRef {INIT}
+    private enum Result implements TypeRef<Throwable> {RESULT}
+
+    private static String REQUEST_COUNT_PREFIX = "Request#";
     private final String serverName;
     private final Properties props;
     private final String[] args;
     private transient Bus bus;
-    /** This is initialized to true in the constructor but will be false when de-serialized. */
+    private String nsUrl;
+    /** The constructor initializes this to true but it will be false when de-serialized. */
     private transient final boolean inClient;
     private transient int methodCount;
 
+    private transient volatile ServerInstance server;
+    private transient CountDownLatch serverShutdown;
+
+    class ServerInstance {
+        final ORB orb;
+        final Map<Class<?>, Object> paramMap;
+        final POA childPoa;
+        final int port;
+        final String host;
+        private ServerInstance() {
+            this.orb = ORB.init(args, props);
+            this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus);
+            try {
+                POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
+                POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
+                pm.activate();
+                final AcceptorInfo info = (AcceptorInfo) pm.get_acceptors()[0].get_info();
+                // We might have been started up without a specific port.
+                // In any case, dig out the host and port number and save them away.
+                this.port = info.port() & 0xFFFF;
+                this.host = info.hosts()[0];
+                bus.log(() -> String.format("Server listening on host %s and port %d%n", host, port));
+                // create the POA policies for the server
+                Policy[] policies = {
+                        rootPoa.create_thread_policy(ThreadPolicyValue.ORB_CTRL_MODEL),
+                        rootPoa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT),
+                        rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
+                        rootPoa.create_id_uniqueness_policy(IdUniquenessPolicyValue.MULTIPLE_ID),
+                        rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN),
+                        rootPoa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY),
+                        rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
+                };
+                childPoa = rootPoa.create_POA(serverName, pm, policies);
+
+            } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
+                throw Throw.andThrowAgain(e);
+            }
+        }
+
+        void stop() {
+            try {
+                bus.log("Calling orb.shutdown(true)");
+                orb.shutdown(true);
+                bus.log("ORB shutdown complete, calling orb.destroy()");
+                orb.destroy();
+                bus.log("orb.destroy() returned");
+            } catch (BAD_INV_ORDER e) {
+                // The ORB is sometimes already shut down.
+                // This should not cause an error in the test.
+                // TODO: find out how this happens
+                if (e.minor != 4) throw e;
+            }
+        }
+    }
+
     ServerComms(String serverName, Properties props, String[] args) {
+        this.inClient = true;
         this.serverName = serverName;
         this.props = props;
         this.args = args;
-        this.inClient = true;
     }
 
-    private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client");}
-    private void assertServerSide() { assertFalse(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the server");}
+    String getNameServiceUrl() {
+        return Objects.requireNonNull(nsUrl, () -> { throw new IllegalStateException("Name service not available"); });
+    }
+
+    private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client"); }
+    private void assertServerSide() { assertFalse(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the server"); }
+
+    private static final boolean IS_STARTED = true;
+    private static final boolean IS_STOPPED = false;
+    private void assertServer(boolean serverShouldBeStarted) {
+        assertServerSide();
+        if (serverShouldBeStarted)
+            assertNotNull(server, "Server not started");
+        else
+            assertNull(server, "Server already started");
+    }
 
     public void launch(PartRunner runner) {
         assertClientSide();
         this.bus = runner.bus(serverName);
-        runner.fork(serverName, this::run, bus -> bus.put(LifeCycle.STOP));
-        // wait for the server to be ready
-        bus.get(LifeCycle.STARTED);
-
-    }
-
-    private void stop(Bus bus, ORB orb) {
-        assertServerSide();
-        try {
-            bus.log(ERROR, "Calling orb.shutdown(true)");
-            orb.shutdown(true);
-            bus.log("ORB shutdown complete, calling orb.destroy()");
-            orb.destroy();
-            bus.log("orb.destroy() returned");
-        } catch (BAD_INV_ORDER e) {
-            // The ORB is sometimes already shut down.
-            // This should not cause an error in the test.
-            // TODO: find out how this happens
-            if (e.minor == 4) return;
-            throw e;
-        }
+        runner.fork(serverName, this::run, bus -> control(ServerOp.KILL_SERVER));
+        // wait for the server to be ready:
+        // server side will respond as request 0
+        waitForCompletion(ServerLaunchFailed::new);
     }
 
     private void run(Bus bus) throws Exception {
         assertServerSide();
-        ORB orb = ORB.init(args, props);
-        // register the stop method
-        bus.onMsg(LifeCycle.STOP, nul -> stop(bus, orb));
-        // register the invocation handler
-        final Map<Class<?>, Object> params = Maps.of(Bus.class, bus, ORB.class, orb);
-        bus.onMsg(Invocation.INVOKE, m -> invoke(m, params, bus));
-        bus.onMsg(Instantiation.INSTANTIATE, f -> instantiate(f, params, orb, bus));
-        // tell the client we are ready
-        bus.put(LifeCycle.STARTED);
-
-        // Give up control to the ORB
-        orb.run();
-        bus.log("orb.run() completed.");
+        this.bus = bus;
+        // treat the server launch as request 0
+        completeRequest("launch of server ", this::launch0, serverName);
+        bus.log("Awaiting server shutdown");
+        this.serverShutdown.await();
+        bus.log("Received server shutdown");
     }
 
-    private void invoke(Method m, Map<Class<?>, Object> paramMap, Bus bus) {
-        assertServerSide();
-        final String requestId = getNextRequestId();
-        try {
-            ReflectionSupport.invokeMethod(m, null, Stream.of(m.getParameterTypes())
-                    .map(paramMap::get)
-                    .collect(toList())
-                    .toArray(new Object[0]));
-            // on successful completion, send back a null
-            bus.put(Result.RESULT, null);
-            bus.put(requestId, m + " completed normally");
-        } catch (Throwable t) {
-            // if there was an error, send that back instead
-            bus.put(Result.RESULT, t);
-            bus.put(requestId, m + " completed abnormally with exception " + t);
+    private void launch0(String name) {
+        this.bus.log("Server started");
+        this.serverShutdown = new CountDownLatch(1);
+        // register the control, method invocation, and field instantiation handlers
+        this.bus.onMsg(ServerRequest.SEND, op -> completeRequest("control operation ", this::control0, op));
+        this.bus.onMsg(FieldRequest.INIT, field -> completeRequest("instantiation of field " , this::instantiate0, field));
+        this.bus.onMsg(MethodRequest.SEND, method -> completeRequest("invocation of ", this::invoke0, method));
+    }
+
+    void control(ServerOp op) throws ControlOperationFailed {
+        assertClientSide();
+        bus.put(ServerRequest.SEND, op);
+        waitForCompletion(t -> new ControlOperationFailed(op, t));
+        this.nsUrl = bus.get(NAME_SERVICE_URL);
+    }
+
+    private void control0(ServerOp op) {
+        switch (op) {
+        case START_SERVER:
+            assertServer(IS_STOPPED);
+            assertNull(server, "Server already started");
+            this.server = new ServerInstance();
+            this.props.setProperty("yoko.iiop.port", "" + server.port);
+            this.props.setProperty("yoko.iiop.host", server.host);
+            this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(server.host), server.port);
+            bus.put(NAME_SERVICE_URL, nsUrl);
+            break;
+        case STOP_SERVER:
+            assertServer(IS_STARTED);
+            server.stop();
+            server = null;
+            this.nsUrl = null;
+            bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
+            break;
+        case KILL_SERVER:
+            bus.log("killing server");
+            if (server != null) server.stop();
+            this.nsUrl = null;
+            bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
+            serverShutdown.countDown();
+            break;
+        default:
+            throw (Error)Assertions.fail("Unknown op type: " + op);
         }
     }
 
-    private <IMPL extends Remote & org.omg.CORBA.Object, TIE extends Servant & Tie> void instantiate(Field f, Map<Class<?>, Object> paramMap, ORB orb, Bus bus) {
-        assertServerSide();
-        final String requestId = getNextRequestId();
+    void invoke(Method m) throws MethodInvocationFailed {
+        assertClientSide();
+        bus.put(MethodRequest.SEND, m);
+        waitForCompletion(t -> new MethodInvocationFailed(m, t));
+    }
+
+    private Object invoke0(Method m) {
+        assertServer(IS_STARTED);
+        final Object[] params = Stream.of(m.getParameterTypes())
+                .map(server.paramMap::get)
+                .collect(toList())
+                .toArray(new Object[0]);
+        return ReflectionSupport.invokeMethod(m, null, params);
+    }
+
+    String instantiate(Field f) throws FieldInstantiationFailed {
+        assertClientSide();
+        bus.put(FieldRequest.INIT, f);
+        waitForCompletion(t -> new FieldInstantiationFailed(f, t));
+        final String ior = bus.get(f.getName());
+        bus.log( ior);
+        return ior;
+    }
+
+    private <IMPL extends Remote, TIE extends Servant & Tie>
+    void instantiate0(Field f) {
+        assertServer(IS_STARTED);
         try {
-            IMPL o = newMatchingInstance(f.getType(), "*Impl", paramMap);
-            // set the static field to hold the new object
-            f.set(null, o);
+            bus.log(LogLevel.ERROR, "field = " + f);
+            final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
+                    findAnnotation(f, ClientStub.class).map(ClientStub::value),
+                    findAnnotation(f, CorbanameUrl.class).map(CorbanameUrl::value));
+
+            IMPL o = newInstance(implClass, server.paramMap);
             // create the tie
-            if (!!! (o instanceof PortableRemoteObject)) {
+            if (!!!(o instanceof PortableRemoteObject)) {
                 PortableRemoteObject.exportObject(o);
             }
-            TIE tie = (TIE)Util.getTie(o);
+            TIE tie = (TIE) Util.getTie(o);
             if (tie == null) {
                 // try creating the tie directly
-                tie = newMatchingInstance(f.getType(), "_*Impl_Tie");
+                tie = newMatchingInstance(implClass, "_*_Tie");
             }
             tie.setTarget(o);
             // do the POA things
-            POA rootPoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-            rootPoa.the_POAManager().activate();
-            rootPoa.activate_object(tie);
-            // put the IOR on the bus
-            String ior = orb.object_to_string(tie.thisObject());
-            bus.put(f.getName(), ior);
+            server.childPoa.activate_object(tie);
+            // put the result on the bus
+            String result;
+            if (f.getType() == String.class) {
+                NamingContext root = NamingContextHelper.narrow(server.orb.resolve_initial_references("NameService"));
+                NameComponent[] cosName = {new NameComponent(f.getName(), "")};
+                root.bind(cosName, tie.thisObject());
+                result = this.nsUrl + "#" + f.getName();
+            } else {
+                result = server.orb.object_to_string(tie.thisObject());
+            }
+            bus.put(f.getName(), result);
+        } catch (Throwable throwable) {
+            throw Throw.andThrowAgain(throwable);
+        }
+    }
+
+    private <T extends Throwable> void waitForCompletion(Function<Throwable, T> wrapper) throws T {
+        assertClientSide();
+        final String requestId = getNextRequestId();
+        bus.log("Waiting for completion of " + requestId);
+        String info = bus.get(requestId);
+        bus.log(requestId + ": " + info);
+        final Throwable result = bus.get(Result.RESULT);
+        if (result != null) throw wrapper.apply(result);
+    }
+
+    private <T> void completeRequest(String prefix, Consumer<T> consumer, T parameter) {
+        assertServerSide();
+        final String requestId = getNextRequestId();
+        try {
+            bus.log("Invoking " + requestId);
+            consumer.accept(parameter);
             // on successful completion, send back a null
             bus.put(Result.RESULT, null);
-            bus.put(requestId, f + " instantiated normally");
-        } catch (Throwable t) {
+            bus.put(requestId, prefix + parameter + " completed normally");
+        } catch (Throwable e) {
             // if there was an error, send that back instead
-            bus.put(Result.RESULT, t);
-            bus.put(requestId, f + " failed instantiation with exception " + t);
+
+            bus.put(Result.RESULT, new ServerSideException(e));
+            bus.put(requestId, prefix + parameter + " completed abnormally with exception " + e);
+        }
+    }
+
+    private String getNextRequestId() {
+        return REQUEST_COUNT_PREFIX + methodCount++;
+    }
+
+    static class ServerSideException extends RuntimeException {
+        ServerSideException(Throwable cause) {
+            super("Server side threw " + cause + "\n" + fullText(cause));
+        }
+
+        private static String fullText(Throwable cause) {
+            final StringWriter sw = new StringWriter();
+            cause.printStackTrace(new PrintWriter(sw));
+            return sw.toString();
         }
     }
 
 
-    private String getNextRequestId() {
-        methodCount++;
-        return METHOD_COUNT_PREFIX + methodCount;
-    }
-
-    void invoke(Method m) throws ServerCommsException {
-        assertClientSide();
-        final String requestId = getNextRequestId();
-        // request invocation of the method
-        bus.put(Invocation.INVOKE, m);
-        // wait for the method to complete
-        String info = bus.get(requestId);
-        final Throwable result = bus.get(Result.RESULT);
-        if (result == null) return;
-        throw new MethodInvocationFailed(m, result);
-    }
-
-    void instantiate(Field f) throws ServerCommsException {
-        assertClientSide();
-        final String requestId = getNextRequestId();
-        bus.put(Instantiation.INSTANTIATE, f);
-        String info = bus.get(requestId);
-        final Throwable result = bus.get(Result.RESULT);
-        if (result == null) return;
-        throw new FieldInstantiationFailed(f, result);
-    }
-
     static class ServerCommsException extends RuntimeException {
-        ServerCommsException(Throwable cause) { super(cause); }
         ServerCommsException(String message, Throwable cause) { super(message, cause); }
+    }
+
+    static class ServerLaunchFailed extends ServerCommsException {
+        ServerLaunchFailed(Throwable cause) { super("Server launch failed", cause); }
+    }
+
+    static class ControlOperationFailed extends ServerCommsException {
+        ControlOperationFailed(ServerOp op, Throwable cause) { super("Received exception from server while trying to issue " + op + " request", cause); }
     }
 
     static class MethodInvocationFailed extends ServerCommsException {
