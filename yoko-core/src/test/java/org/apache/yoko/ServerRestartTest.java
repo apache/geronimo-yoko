@@ -48,7 +48,6 @@ import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
-@Tracing
 public class ServerRestartTest {
     @Control
     public static ServerControl serverControl;
