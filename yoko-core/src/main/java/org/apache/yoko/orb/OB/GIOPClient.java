@@ -36,10 +36,10 @@ import org.apache.yoko.util.Reference;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHelper;
-import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.SystemException;
+import org.omg.CORBA.TRANSIENT;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
 import org.omg.IOP.SendingContextRunTime;
@@ -54,8 +54,8 @@ import java.util.List;
 
 import static javax.rmi.CORBA.Util.createValueHandler;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.apache.yoko.orb.OB.MinorCodes.MinorActiveConnectionManagement;
+import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 /**
@@ -113,7 +113,7 @@ final class GIOPClient extends Client {
     //
     protected synchronized GIOPConnection getWorker(boolean create, final int timeout) {
         if (destroy_)
-            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
+            throw new TRANSIENT(describeTransient(MinorActiveConnectionManagement), MinorActiveConnectionManagement, COMPLETED_NO);
 
         if (connection_ == null)
             reuseInboundConnection();
