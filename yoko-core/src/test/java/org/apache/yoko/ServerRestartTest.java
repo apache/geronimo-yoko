@@ -18,9 +18,15 @@ package org.apache.yoko;
 
 import acme.Echo;
 import acme.EchoImpl;
+import org.apache.yoko.orb.OCI.Buffer;
+import org.apache.yoko.util.HexConverter;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NameComponent;
+import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
+import testify.hex.HexBuilder;
+import testify.hex.HexParser;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
@@ -32,16 +38,16 @@ import testify.jupiter.annotation.iiop.ServerControl;
 import testify.util.Stubs;
 
 import java.rmi.RemoteException;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
+import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 
-/**
- * Test the framework is functioning correctly
- */
-@ConfigureServer(orb = @ConfigureOrb(nameService = READ_ONLY))
+@ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
 @Tracing
 public class ServerRestartTest {
     @Control
@@ -56,6 +62,7 @@ public class ServerRestartTest {
     @ClientStub(EchoImpl.class)
     public static Echo stub;
 
+    /** Test the framework is functioning correctly */
     @Test
     public void testServerControl(ORB clientOrb) throws Exception {
         assertEquals("hello", stub.echo("hello"));
@@ -72,12 +79,14 @@ public class ServerRestartTest {
         assertEquals("hello", stub.echo("hello"));
     }
 
+    /** Test the framework is functioning correctly */
     @Test
     public void testNameServiceStarted(ORB clientOrb) throws Exception {
         assertNotNull(nameServiceUrl);
         NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
     }
 
+    /** Test the framework is functioning correctly */
     @Test
     public void testCorbanameUrl(ORB clientOrb) throws Exception {
         assertNotNull(stubUrl);
@@ -88,5 +97,19 @@ public class ServerRestartTest {
         assertEquals(oldStubUrl, ServerRestartTest.stubUrl);
         echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
         echo.echo("splong");
+    }
+
+    /** Test client behaviour across server restart */
+    @Test
+    public void testTwoStubsAcrossRestart(ORB clientOrb) throws Exception {
+        // get two stubs — note that the is_a() call will ensure these stubs connect to the server
+        NamingContext ctx1 = NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
+        NamingContext ctx2 = NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
+        // restart the server
+        serverControl.restart();
+        // force one of the stubs to reconnect
+        ctx1.bind_new_context(new NameComponent[]{new NameComponent("wibble", "")});
+        // force the other stub to reconnect
+        ctx2.bind_new_context(new NameComponent[]{new NameComponent("splong", "")});
     }
 }
