@@ -17,8 +17,14 @@
 
 package test.retry;
 
+import org.omg.CORBA.TRANSIENT;
+import org.omg.PortableServer.POA;
+
+import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+
 public class Retry_impl extends RetryPOA {
-    private org.omg.PortableServer.POA poa_;
+    private POA poa_;
 
     private int count_;
 
@@ -26,27 +32,18 @@ public class Retry_impl extends RetryPOA {
 
     private boolean maybe_;
 
-    public Retry_impl(org.omg.PortableServer.POA poa) {
+    public Retry_impl(POA poa) {
         poa_ = poa;
     }
 
-    public org.omg.PortableServer.POA _default_POA() {
-        if (poa_ != null)
-            return poa_;
-        else
-            return super._default_POA();
+    public POA _default_POA() {
+        return poa_ == null ? super._default_POA() : poa_;
     }
 
     public void aMethod() {
         count_++;
-
         if (max_ > 0 && count_ <= max_) {
-            if (maybe_)
-                throw new org.omg.CORBA.TRANSIENT(0,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE);
-            else
-                throw new org.omg.CORBA.TRANSIENT(0,
-                        org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new TRANSIENT(0, maybe_ ? COMPLETED_MAYBE : COMPLETED_NO);
         }
     }
 
