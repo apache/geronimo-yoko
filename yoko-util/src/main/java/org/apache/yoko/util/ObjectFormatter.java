@@ -31,6 +31,6 @@ public enum ObjectFormatter {
     }
 
     private static String hex(ServiceContext sc) {
-        return sc.context_data == null ? null : octetsToAscii(sc.context_data, sc.context_data.length);
+        return octetsToAscii(sc.context_data);
     }
 }
