@@ -45,7 +45,7 @@ final class UTF8Writer extends CodeSetWriter {
     public int count_wchar(char value) {
         if (value < 0x80)
             return 1;
-        else if (value < 0x800 - 1)
+        else if (value < 0x800)
             return 2;
         else
             return 3;
