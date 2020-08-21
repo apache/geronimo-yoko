@@ -56,7 +56,6 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * fragments before sending them on.
  */
 @ConfigureServer
-@ConfigureOrb
 @Tracing
 public class FragmentedMessageTest {
     @ClientStub(EchoImpl.class)
