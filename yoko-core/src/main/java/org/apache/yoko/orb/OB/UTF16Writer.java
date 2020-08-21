@@ -23,11 +23,11 @@ import org.omg.CORBA.DATA_CONVERSION;
 final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;
 
-    public void write_char(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+    public void write_char(WriteBuffer writeBuffer, char v) {
         writeBuffer.writeByte(v & 0xff);
     }
 
-    public void write_wchar(WriteBuffer writeBuffer, char v) throws DATA_CONVERSION {
+    public void write_wchar(WriteBuffer writeBuffer, char v) {
         //
         // we don't support surrogate paired characters
         //
