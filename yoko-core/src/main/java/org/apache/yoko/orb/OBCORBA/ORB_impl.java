@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OBCORBA;
 
 import org.apache.yoko.orb.CORBA.Context;
 import org.apache.yoko.orb.CORBA.ContextList;
+import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.CORBA.Environment;
 import org.apache.yoko.orb.CORBA.ExceptionList;
 import org.apache.yoko.orb.CORBA.NamedValue;
@@ -26,6 +27,7 @@ import org.apache.yoko.orb.CORBA.ORBPolicyFactory_impl;
 import org.apache.yoko.orb.CORBA.ORBPolicyManager_impl;
 import org.apache.yoko.orb.CORBA.ORBSingleton;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.CORBA.PolicyMap;
 import org.apache.yoko.orb.DynamicAny.DynAnyFactory_impl;
 import org.apache.yoko.orb.IOP.CodecFactory_impl;
 import org.apache.yoko.orb.Messaging.RebindPolicy_impl;
@@ -107,7 +109,6 @@ import org.apache.yoko.orb.OCI.AccFactoryRegistry_impl;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry_impl;
 import org.apache.yoko.orb.OCI.Plugin;
-import org.apache.yoko.orb.PortableServer.Delegate;
 import org.apache.yoko.orb.cmsf.CmsfClientInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfIORInterceptor;
 import org.apache.yoko.orb.cmsf.CmsfServerInterceptor;
@@ -198,7 +199,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import java.util.Vector;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
@@ -224,7 +224,7 @@ public class ORB_impl extends ORBSingleton {
     private ORBInstance orbInstance_;
 
     // Default set of policies
-    private final List<Policy> policies = new Vector<>();
+    private final PolicyMap policies = new PolicyMap();
 
     // The ORB option filter
     private static OptionFilter orbOptionFilter_;
@@ -262,12 +262,10 @@ public class ORB_impl extends ORBSingleton {
 
             // Create the ORBInstance object
             InitialServiceManager initServiceManager = new InitialServiceManager();
-            ClientManager clientManager = new ClientManager(
-                    concModel);
+            ClientManager clientManager = new ClientManager(concModel);
             ObjectFactory objectFactory = new ObjectFactory();
             PolicyFactoryManager pfManager = new PolicyFactoryManager();
-            PIManager piManager = new PIManager(
-                    this);
+            PIManager piManager = new PIManager(this);
             ValueFactoryManager valueFactoryManager = new ValueFactoryManager();
             CodecFactory_impl codecFactory = new CodecFactory_impl();
             POAManagerFactory_impl pmFactory = new POAManagerFactory_impl();
@@ -297,21 +295,11 @@ public class ORB_impl extends ORBSingleton {
             clientManager.setORBInstance(orbInstance_);
             dsf._OB_setORBInstance(orbInstance_);
             try {
-                urlRegistry
-                .add_scheme(new IORURLScheme_impl(
-                        orbInstance_));
-                urlRegistry
-                .add_scheme(new FileURLScheme_impl(
-                        false, urlRegistry));
-                urlRegistry
-                .add_scheme(new FileURLScheme_impl(
-                        true, urlRegistry));
-                urlRegistry
-                .add_scheme(new CorbalocURLScheme_impl(
-                        orbInstance_));
-                urlRegistry
-                .add_scheme(new CorbanameURLScheme_impl(
-                        this, urlRegistry));
+                urlRegistry.add_scheme(new IORURLScheme_impl(orbInstance_));
+                urlRegistry.add_scheme(new FileURLScheme_impl(false, urlRegistry));
+                urlRegistry.add_scheme(new FileURLScheme_impl(true, urlRegistry));
+                urlRegistry.add_scheme(new CorbalocURLScheme_impl(orbInstance_));
+                urlRegistry.add_scheme(new CorbanameURLScheme_impl(this, urlRegistry));
             } catch (SchemeAlreadyExists ex) {
                 throw Assert.fail(ex);
             }
@@ -328,23 +316,15 @@ public class ORB_impl extends ORBSingleton {
 
             // Add initial references
             try {
-                initServiceManager.addInitialReference("POAManagerFactory",
-                        pmFactory);
-                initServiceManager.addInitialReference("DynAnyFactory",
-                        dynAnyFactory);
-                initServiceManager.addInitialReference("CodecFactory",
-                        codecFactory);
-                initServiceManager.addInitialReference(
-                        "DispatchStrategyFactory", dsf);
-                initServiceManager.addInitialReference("BootManager",
-                        bootManager);
+                initServiceManager.addInitialReference("POAManagerFactory", pmFactory);
+                initServiceManager.addInitialReference("DynAnyFactory", dynAnyFactory);
+                initServiceManager.addInitialReference("CodecFactory", codecFactory);
+                initServiceManager.addInitialReference("DispatchStrategyFactory", dsf);
+                initServiceManager.addInitialReference("BootManager", bootManager);
                 initServiceManager.addInitialReference("RootPOA", null); // Dummy
-                initServiceManager.addInitialReference("OCIConFactoryRegistry",
-                        conFactoryRegistry);
-                initServiceManager.addInitialReference("OCIAccFactoryRegistry",
-                        accFactoryRegistry);
-                initServiceManager.addInitialReference("URLRegistry",
-                        urlRegistry);
+                initServiceManager.addInitialReference("OCIConFactoryRegistry", conFactoryRegistry);
+                initServiceManager.addInitialReference("OCIAccFactoryRegistry", accFactoryRegistry);
+                initServiceManager.addInitialReference("URLRegistry", urlRegistry);
             } catch (InvalidName ex) {
                 throw Assert.fail(ex);
             }
@@ -504,10 +484,8 @@ public class ORB_impl extends ORBSingleton {
     protected void finalize() throws Throwable {
         if (orbInstance_ != null) {
             Logger logger = orbInstance_.getLogger();
-            logger.debug("ORB.destroy() was not called. "
-                    + "This may result in resource leaks.");
+            logger.debug("ORB.destroy() was not called. This may result in resource leaks.");
         }
-
         super.finalize();
     }
 
@@ -516,8 +494,7 @@ public class ORB_impl extends ORBSingleton {
         Properties properties = orbInstance_.getProperties();
 
         for (String key: properties.stringPropertyNames()) {
-            if (!key.startsWith("yoko.orb.policy."))
-                continue;
+            if (!key.startsWith("yoko.orb.policy.")) continue;
             String value = properties.getProperty(key);
 
             switch (key) {
@@ -750,83 +727,42 @@ public class ORB_impl extends ORBSingleton {
 
         // Create the ORBPolicyManager
         PolicyManager pm = new ORBPolicyManager_impl(policies);
-        InitialServiceManager initServiceManager = orbInstance_
-                .getInitialServiceManager();
+        InitialServiceManager initServiceManager = orbInstance_.getInitialServiceManager();
         try {
             initServiceManager.addInitialReference("ORBPolicyManager", pm);
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         }
-        ObjectFactory objectFactory = orbInstance_
-                .getObjectFactory();
+        ObjectFactory objectFactory = orbInstance_.getObjectFactory();
         objectFactory.setPolicyManager(pm);
 
         // Register the default PolicyFactory policies for the ORB
-        PolicyFactoryManager pfm = orbInstance_
-                .getPolicyFactoryManager();
+        PolicyFactoryManager pfm = orbInstance_.getPolicyFactoryManager();
 
         PolicyFactory factory = new ORBPolicyFactory_impl();
-        pfm.registerPolicyFactory(
-                CONNECTION_REUSE_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                ZERO_PORT_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                PROTOCOL_POLICY_ID.value, factory, true);
-        pfm.registerPolicyFactory(RETRY_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                TIMEOUT_POLICY_ID.value, factory, true);
-        pfm.registerPolicyFactory(
-                LOCATION_TRANSPARENCY_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(REBIND_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                SYNC_SCOPE_POLICY_TYPE.value, factory, true);
-        pfm.registerPolicyFactory(
-                INTERCEPTOR_POLICY_ID.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                CONNECT_TIMEOUT_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                REQUEST_TIMEOUT_POLICY_ID.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                REQUEST_START_TIME_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                REQUEST_END_TIME_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                REPLY_START_TIME_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                REPLY_END_TIME_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                RELATIVE_REQ_TIMEOUT_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                RELATIVE_RT_TIMEOUT_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                BIDIRECTIONAL_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                REQUEST_PRIORITY_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(
-                REPLY_PRIORITY_POLICY_TYPE.value, factory,
-                true);
-        pfm.registerPolicyFactory(ROUTING_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(MAX_HOPS_POLICY_TYPE.value,
-                factory, true);
-        pfm.registerPolicyFactory(
-                QUEUE_ORDER_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(CONNECTION_REUSE_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(ZERO_PORT_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(PROTOCOL_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(RETRY_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(TIMEOUT_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(LOCATION_TRANSPARENCY_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(REBIND_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(SYNC_SCOPE_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(INTERCEPTOR_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(CONNECT_TIMEOUT_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(REQUEST_TIMEOUT_POLICY_ID.value, factory, true);
+        pfm.registerPolicyFactory(REQUEST_START_TIME_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(REQUEST_END_TIME_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(REPLY_START_TIME_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(REPLY_END_TIME_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(RELATIVE_REQ_TIMEOUT_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(RELATIVE_RT_TIMEOUT_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(BIDIRECTIONAL_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(REQUEST_PRIORITY_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(REPLY_PRIORITY_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(ROUTING_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(MAX_HOPS_POLICY_TYPE.value, factory, true);
+        pfm.registerPolicyFactory(QUEUE_ORDER_POLICY_TYPE.value, factory, true);
     }
 
     private void instantiateORBInitializers(Properties properties, Logger logger) {
@@ -885,12 +821,9 @@ public class ORB_impl extends ORBSingleton {
         String paramList = app.getParameter("ORBparams");
         if (paramList != null) {
             StringTokenizer p = new StringTokenizer(paramList);
-
             args = new String[p.countTokens()];
-
             int i = 0;
-            while (p.hasMoreTokens())
-                args[i++] = p.nextToken();
+            while (p.hasMoreTokens()) args[i++] = p.nextToken();
         }
 
         return args;
@@ -918,8 +851,7 @@ public class ORB_impl extends ORBSingleton {
         int defaultWcs = 0;
 
         for (String key: properties.stringPropertyNames()) {
-            if (!key.startsWith("yoko.orb."))
-                continue;
+            if (!key.startsWith("yoko.orb.")) continue;
 
             String value = properties.getProperty(key);
             Assert.ensure(value != null);
@@ -929,8 +861,7 @@ public class ORB_impl extends ORBSingleton {
                     concModel = Client.Threaded;
                 }
                 else {
-                    logger.warning("ORB.init: unknown value for "
-                            + "yoko.orb.conc_model: " + value);
+                    logger.warning("ORB.init: unknown value for yoko.orb.conc_model: " + value);
                 }
             } else if (key.startsWith("yoko.orb.trace.")) {
                 // Ignore -- handled in CoreTraceLevels
@@ -1020,8 +951,7 @@ public class ORB_impl extends ORBSingleton {
         }
 
         // Parse the tracing levels from the properties
-        CoreTraceLevels coreTraceLevels = new CoreTraceLevels(
-                logger, properties);
+        CoreTraceLevels coreTraceLevels = new CoreTraceLevels(logger, properties);
 
         // Initialize the ORB state - this must be done after processing
         // command-line options and properties
@@ -1036,27 +966,18 @@ public class ORB_impl extends ORBSingleton {
 
     public String[] list_initial_services() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
             return orbInstance_.getInitialServiceManager().listInitialServices();
         }
     }
 
-    public org.omg.CORBA.Object resolve_initial_references(
-            String identifier) throws InvalidName {
+    public org.omg.CORBA.Object resolve_initial_references(String identifier) throws InvalidName {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-            if (destroy_) {
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
-            }
-
-            InitialServiceManager initServiceManager = orbInstance_
-                    .getInitialServiceManager();
-
-            org.omg.CORBA.Object obj = null;
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            InitialServiceManager initServiceManager = orbInstance_.getInitialServiceManager();
 
             try {
-                obj = initServiceManager.resolveInitialReferences(identifier);
+                return initServiceManager.resolveInitialReferences(identifier);
             } catch (InvalidName ex) {
                 // If the service is the RootPOA and it hasn't yet been
                 // initialized, create it. We could put in some automatic method
@@ -1068,26 +989,19 @@ public class ORB_impl extends ORBSingleton {
                     throw ex;
                 }
             }
-            return obj;
         }
     }
 
-    public void register_initial_reference(String name,
-            org.omg.CORBA.Object obj)
-                    throws InvalidName {
+    public void register_initial_reference(String name, org.omg.CORBA.Object obj) throws InvalidName {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
             orbInstance_.getInitialServiceManager().addInitialReference(name, obj);
         }
     }
 
     public String object_to_string(org.omg.CORBA.Object p) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             IOR ior;
 
@@ -1101,8 +1015,7 @@ public class ORB_impl extends ORBSingleton {
                             MinorCodes.MinorLocalObject,
                             CompletionStatus.COMPLETED_NO);
 
-                org.apache.yoko.orb.CORBA.Delegate delegate = (org.apache.yoko.orb.CORBA.Delegate) (((ObjectImpl) p)
-                        ._get_delegate());
+                Delegate delegate = (Delegate) ((ObjectImpl) p)._get_delegate();
                 ior = delegate._OB_origIOR();
             }
 
@@ -1117,8 +1030,7 @@ public class ORB_impl extends ORBSingleton {
 
     public org.omg.CORBA.Object string_to_object(String ior) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
             return orbInstance_.getObjectFactory().stringToObject(ior);
         }
@@ -1127,11 +1039,9 @@ public class ORB_impl extends ORBSingleton {
     public NVList create_list(int count) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
 
-            if (destroy_)
-                throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-            if (count < 0)
-                count = 0;
+            if (count < 0) count = 0;
 
             return new org.apache.yoko.orb.CORBA.NVList(this, count);
         }
@@ -1140,168 +1050,129 @@ public class ORB_impl extends ORBSingleton {
     /**
      * @deprecated Deprecated by CORBA 2.3.
      */
-    public NVList create_operation_list(
-            OperationDef oper) {
+    public NVList create_operation_list(OperationDef oper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
 
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            // Get operation description
+            Description d = oper.describe();
+            OperationDescription desc = OperationDescriptionHelper.extract(d.value);
 
-        // Get operation description
-        Description d = oper.describe();
-        OperationDescription desc = OperationDescriptionHelper
-                .extract(d.value);
+            // Create list
+            org.apache.yoko.orb.CORBA.NVList list = new org.apache.yoko.orb.CORBA.NVList(this);
+            for (int i = 0; i < desc.parameters.length; i++) {
+                ParameterDescription par = desc.parameters[i];
 
-        // Create list
-        org.apache.yoko.orb.CORBA.NVList list = new org.apache.yoko.orb.CORBA.NVList(
-                this);
-        for (int i = 0; i < desc.parameters.length; i++) {
-            ParameterDescription par = desc.parameters[i];
+                Any any = create_any();
+                any.type(par.type);
 
-            Any any = create_any();
-            any.type(par.type);
+                int flags = 0;
+                switch (par.mode.value()) {
+                    case ParameterMode._PARAM_IN:
+                        flags = ARG_IN.value;
+                        break;
 
-            int flags = 0;
-            switch (par.mode.value()) {
-                case ParameterMode._PARAM_IN:
-                    flags = ARG_IN.value;
-                    break;
+                    case ParameterMode._PARAM_OUT:
+                        flags = ARG_OUT.value;
+                        break;
 
-                case ParameterMode._PARAM_OUT:
-                    flags = ARG_OUT.value;
-                    break;
+                    case ParameterMode._PARAM_INOUT:
+                        flags = ARG_INOUT.value;
+                        break;
 
-                case ParameterMode._PARAM_INOUT:
-                    flags = ARG_INOUT.value;
-                    break;
+                    default:
+                        throw Assert.fail();
+                }
 
-                default:
-                    throw Assert.fail();
+                list.add_value(par.name, any, flags);
             }
 
-            list.add_value(par.name, any, flags);
-        }
-
-        return list;
+            return list;
         }
     }
 
-    public  NVList create_operation_list(
-            org.omg.CORBA.Object oper) {
+    public  NVList create_operation_list(org.omg.CORBA.Object oper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        OperationDef def = OperationDefHelper
-                .narrow(oper);
-        return create_operation_list(def);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            OperationDef def = OperationDefHelper.narrow(oper);
+            return create_operation_list(def);
         }
     }
 
-    public org.omg.CORBA.NamedValue create_named_value(
-            String name, Any value, int flags) {
+    public org.omg.CORBA.NamedValue create_named_value(String name, Any value, int flags) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return new NamedValue(name, value, flags);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return new NamedValue(name, value, flags);
         }
     }
 
     public org.omg.CORBA.ExceptionList create_exception_list() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return new ExceptionList();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return new ExceptionList();
         }
     }
 
     public org.omg.CORBA.ContextList create_context_list() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return new ContextList();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return new ContextList();
         }
     }
 
     public org.omg.CORBA.Context get_default_context() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return new Context(this, "");
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return new Context(this, "");
         }
     }
 
     public org.omg.CORBA.Environment create_environment() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        return new Environment();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            return new Environment();
         }
     }
 
-    public void send_multiple_requests_oneway(
-            Request[] requests) {
+    public void send_multiple_requests_oneway(Request[] requests) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        MultiRequestSender multi = orbInstance_
-                .getMultiRequestSender();
-        multi.sendMultipleRequestsOneway(requests);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            MultiRequestSender multi = orbInstance_.getMultiRequestSender();
+            multi.sendMultipleRequestsOneway(requests);
         }
     }
 
-    public void send_multiple_requests_deferred(
-            Request[] requests) {
+    public void send_multiple_requests_deferred(Request[] requests) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        MultiRequestSender multi = orbInstance_
-                .getMultiRequestSender();
-        multi.sendMultipleRequestsDeferred(requests);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            MultiRequestSender multi = orbInstance_.getMultiRequestSender();
+            multi.sendMultipleRequestsDeferred(requests);
         }
     }
 
     public boolean poll_next_response() {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        MultiRequestSender multi = orbInstance_
-                .getMultiRequestSender();
-        return multi.pollNextResponse();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            MultiRequestSender multi = orbInstance_.getMultiRequestSender();
+            return multi.pollNextResponse();
         }
     }
 
-    public Request get_next_response()
-            throws WrongTransaction {
+    public Request get_next_response() throws WrongTransaction {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        MultiRequestSender multi = orbInstance_
-                .getMultiRequestSender();
-        return multi.getNextResponse();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            MultiRequestSender multi = orbInstance_.getMultiRequestSender();
+            return multi.getNextResponse();
         }
     }
 
-    public boolean get_service_information(short service_type,
-            ServiceInformationHolder service_info) {
+    public boolean get_service_information(short service_type, ServiceInformationHolder service_info) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        service_info.value = new ServiceInformation();
-        service_info.value.service_options = new int[0];
-        service_info.value.service_details = new ServiceDetail[0];
-        return false;
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            service_info.value = new ServiceInformation();
+            service_info.value.service_options = new int[0];
+            service_info.value.service_details = new ServiceDetail[0];
+            return false;
         }
     }
 
@@ -1309,14 +1180,11 @@ public class ORB_impl extends ORBSingleton {
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        // Ensure that other threads get a chance to execute if
-        // work_pending() is being called in a tight loop.
-        Thread.yield();
-
-        return orbControl_.workPending();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            // Ensure that other threads get a chance to execute if
+            // work_pending() is being called in a tight loop.
+            Thread.yield();
+            return orbControl_.workPending();
         }
     }
 
@@ -1324,9 +1192,8 @@ public class ORB_impl extends ORBSingleton {
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-        orbControl_.performWork();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            orbControl_.performWork();
         }
     }
 
@@ -1334,9 +1201,8 @@ public class ORB_impl extends ORBSingleton {
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-        orbControl_.run();
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            orbControl_.run();
         }
     }
 
@@ -1344,9 +1210,8 @@ public class ORB_impl extends ORBSingleton {
         // Ensure that the ORB mutex is not locked during the call to
         // ORBControl methods
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-        orbControl_.shutdownServer(wait_for_completion);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            orbControl_.shutdownServer(wait_for_completion);
         }
     }
 
@@ -1408,39 +1273,26 @@ public class ORB_impl extends ORBSingleton {
 
     public org.omg.CORBA.Object get_value_def(String repid) throws BAD_PARAM {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        try {
-            org.omg.CORBA.Object obj = resolve_initial_references("InterfaceRepository");
-            Repository repository = RepositoryHelper
-                    .narrow(obj);
-            Contained cont = repository.lookup_id(repid);
-            if (cont != null)
-                return ValueDefHelper.narrow(cont);
-        } catch (InvalidName ex) {
-        }
-
-        throw new BAD_PARAM("Repository lookup failed for "
-                + repid);
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
+            try {
+                org.omg.CORBA.Object obj = resolve_initial_references("InterfaceRepository");
+                Repository repository = RepositoryHelper.narrow(obj);
+                Contained cont = repository.lookup_id(repid);
+                if (cont != null) return ValueDefHelper.narrow(cont);
+                throw new BAD_PARAM("Repository lookup failed for " + repid);
+            } catch (InvalidName ex) {
+                throw (BAD_PARAM) new BAD_PARAM("Repository lookup failed for " + repid).initCause(ex);
+            }
         }
     }
 
     public void set_delegate(Object wrapper) {
         try (AutoLock readLock = destroyLock_.getReadLock()) {
-        if (destroy_)
-            throw new OBJECT_NOT_EXIST("ORB is destroyed");
-
-        try {
+            if (destroy_) throw new OBJECT_NOT_EXIST("ORB is destroyed");
             Servant servant = (Servant) wrapper;
-            servant
-            ._set_delegate(new Delegate(
-                    this));
+            servant._set_delegate(new org.apache.yoko.orb.PortableServer.Delegate(this));
         } catch (ClassCastException ex) {
-            throw (BAD_PARAM)new BAD_PARAM(
-                    "Argument is not of type "
-                            + "org.omg.PortableServer." + "Servant").initCause(ex);
-        }
+            throw (BAD_PARAM) new BAD_PARAM("Argument is not of type org.omg.PortableServer.Servant").initCause(ex);
         }
     }
 
@@ -1560,8 +1412,7 @@ public class ORB_impl extends ORBSingleton {
 
         // Create list with options supported by the Object Adaptor
         if (oaOptionFilter_ == null) {
-            oaOptionFilter_ = new OptionFilter(
-                    "ORB.init", "-OA");
+            oaOptionFilter_ = new OptionFilter("ORB.init", "-OA");
             oaOptionFilter_.add("host", 1); // Deprecated
             oaOptionFilter_.add("port", 1); // Deprecated
             oaOptionFilter_.add("numeric", 0); // Deprecated
@@ -1582,8 +1433,7 @@ public class ORB_impl extends ORBSingleton {
             while (i < args.length) {
                 if (args[i].equals("-ORBconfig")) {
                     if (i + 1 >= args.length) {
-                        String msg = "ORB.init: argument expected "
-                                + "for -ORBconfig";
+                        String msg = "ORB.init: argument expected for -ORBconfig";
                         logger.error(msg);
                         throw new INITIALIZE(msg);
                     }
