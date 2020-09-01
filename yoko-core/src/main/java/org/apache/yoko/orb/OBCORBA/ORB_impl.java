@@ -27,6 +27,7 @@ import org.apache.yoko.orb.CORBA.ORBPolicyFactory_impl;
 import org.apache.yoko.orb.CORBA.ORBPolicyManager_impl;
 import org.apache.yoko.orb.CORBA.ORBSingleton;
 import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.CORBA.PolicyMap;
 import org.apache.yoko.orb.DynamicAny.DynAnyFactory_impl;
 import org.apache.yoko.orb.IOP.CodecFactory_impl;
 import org.apache.yoko.orb.Messaging.RebindPolicy_impl;
@@ -198,7 +199,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
-import java.util.Vector;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
@@ -224,7 +224,7 @@ public class ORB_impl extends ORBSingleton {
     private ORBInstance orbInstance_;
 
     // Default set of policies
-    private final List<Policy> policies = new Vector<>();
+    private final PolicyMap policies = new PolicyMap();
 
     // The ORB option filter
     private static OptionFilter orbOptionFilter_;
