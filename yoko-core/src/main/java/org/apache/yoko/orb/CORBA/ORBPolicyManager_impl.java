@@ -24,11 +24,11 @@ import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.SetOverrideType;
 
 import java.util.ArrayList;
-import java.util.BitSet;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Vector;
+import java.util.Set;
 
 import static java.util.Collections.synchronizedList;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
@@ -54,10 +54,9 @@ final public class ORBPolicyManager_impl extends LocalObject implements PolicyMa
 
     public synchronized void set_policy_overrides(Policy[] newPolicies, SetOverrideType set_add) {
         // check for duplicates
-        BitSet checklist = new BitSet();
+        Set<Integer> checklist = new HashSet<Integer>();
         for (Policy p: newPolicies) {
-            if (checklist.get(p.policy_type())) throw new BAD_PARAM(MinorDuplicatePolicyType, COMPLETED_NO);
-            checklist.set(p.policy_type());
+            if (!checklist.add(p.policy_type())) throw new BAD_PARAM(MinorDuplicatePolicyType, COMPLETED_NO);
         }
 
         if ((set_add == SetOverrideType.SET_OVERRIDE) || newPolicies.length == 0) {
