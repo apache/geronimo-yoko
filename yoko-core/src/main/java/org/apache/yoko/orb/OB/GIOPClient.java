@@ -29,7 +29,6 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
-import org.apache.yoko.rmi.util.ObjectUtil;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
@@ -62,11 +61,10 @@ import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
  * The client-side of a GIOP connection.
  */
 final class GIOPClient extends Client {
-    private final String label = ObjectUtil.getNextObjectLabel(this.getClass());
 
     @Override
     public String toString() {
-        return label + ": to " + connector_.get_info() + " -- " + connection_;
+        return super.toString() + " to " + connector_.get_info() + " -- " + connection_;
     }
 
     protected ORBInstance orbInstance_;
@@ -224,7 +222,7 @@ final class GIOPClient extends Client {
         //
         // Create new worker
         //
-        Assert.ensure(concModel_ == Threaded);
+        Assert.ensure(concurrencyModel == Threaded);
         return new GIOPConnectionThreaded(orbInstance_, transport, this);
     }
 

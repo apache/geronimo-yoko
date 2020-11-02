@@ -19,18 +19,18 @@ package org.apache.yoko.orb.OB;
 
 final public class CodeConverters {
     // This class may look immutable, but CodeConverterBase holds reader and writer objects that are stateful and mutable
-    private static final CodeConverters NULL_CONVERTER = new CodeConverters(null, null, null, null);
+    public static final CodeConverters NULL_CONVERTER = new CodeConverters(null, null, null, null);
 
     public final CodeConverterBase inputCharConverter;
     public final CodeConverterBase outputCharConverter;
     public final CodeConverterBase inputWcharConverter;
     public final CodeConverterBase outputWcharConverter;
 
-    public CodeConverters(CodeConverterBase inChar, CodeConverterBase outChar, CodeConverterBase inWchar, CodeConverterBase outWChar) {
-        inputCharConverter = inChar;
-        outputCharConverter = outChar;
-        inputWcharConverter = inWchar;
-        outputWcharConverter = outWChar;
+    private CodeConverters(CodeConverterBase charIn, CodeConverterBase charOut, CodeConverterBase wcharIn, CodeConverterBase wcharOut) {
+        inputCharConverter = charIn;
+        outputCharConverter = charOut;
+        inputWcharConverter = wcharIn;
+        outputWcharConverter = wcharOut;
     }
 
     private CodeConverters(CodeConverters c) {
@@ -38,7 +38,14 @@ final public class CodeConverters {
     }
 
     public static CodeConverters createCopy(CodeConverters template) {
-        return template == null ? NULL_CONVERTER : new CodeConverters(template);
+        if (template == null) return NULL_CONVERTER;
+        if (template == NULL_CONVERTER) return NULL_CONVERTER;
+        return new CodeConverters(template);
+    }
+
+    public static CodeConverters create(CodeConverterBase charIn, CodeConverterBase charOut, CodeConverterBase wcharIn, CodeConverterBase wcharOut) {
+        if (charIn == null && charOut == null && wcharIn == null && wcharOut == null) return NULL_CONVERTER;
+        return new CodeConverters(charIn, charOut, wcharIn, wcharOut);
     }
 
     public boolean equals(Object obj) {

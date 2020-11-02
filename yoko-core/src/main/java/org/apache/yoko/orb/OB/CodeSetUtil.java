@@ -202,7 +202,7 @@ final public class CodeSetUtil {
         final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, tcs_wc);
         final CodeConverterBase outputWcharConverter = getConverter(tcs_wc, nativeWcs);
 
-        return new CodeConverters(inputCharConverter, outputCharConverter, inputWcharConverter, outputWcharConverter);
+        return CodeConverters.create(inputCharConverter, outputCharConverter, inputWcharConverter, outputWcharConverter);
     }
 
     //

@@ -298,7 +298,7 @@ public class Upcall {
         final Throwable t = ex.originalEx;
         try (CmsfOverride o = CmsfThreadLocal.override()) {
             final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
-            CodeConverters codeConverters = new CodeConverters(null, null, null, outputWcharConverter);
+            CodeConverters codeConverters = CodeConverters.create(null, null, null, outputWcharConverter);
             try (OutputStream os = new OutputStream(codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);

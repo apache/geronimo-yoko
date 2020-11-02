@@ -172,7 +172,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
         final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
         final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
-        codeConverters_ = new CodeConverters(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
+        codeConverters_ = CodeConverters.create(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
 
         CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
         if (coreTraceLevels.traceConnections() >= 2) {
