@@ -36,9 +36,8 @@ final public class CollocatedClient extends Client implements DowncallEmitter {
     // CollocatedClient public member implementations
     // ----------------------------------------------------------------------
 
-    public CollocatedClient(CollocatedServer server, int concModel,
-            CodeConverters conv) {
-        super(concModel, conv);
+    public CollocatedClient(CollocatedServer server, int concModel) {
+        super(concModel, CodeConverters.NULL_CONVERTER);
         server_ = server;
     }
 

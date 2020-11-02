@@ -39,30 +39,25 @@ import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAManagerPackage.State;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Vector;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.util.Collections.synchronizedSet;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ClientManager {
     static final Logger logger = Logger.getLogger(ClientManager.class.getName());
-    private boolean destroy_; // True if destroy() was called
+    private boolean destroyed; // True if destroy() was called
 
-    //
-    // The ORB Instance
-    //
-    private ORBInstance orbInstance_;
+    private ORBInstance orbInstance;
 
-    //
-    // All clients
-    //
-    private Vector<Client> allClients_ = new Vector<>();
+    private Set<Client> allClients = synchronizedSet(new HashSet<Client>());
 
-    //
-    // All reusable clients
-    //
-    private Vector<Client> reusableClients_ = new Vector<>();
+    private Set<Client> reusableClients = synchronizedSet(new HashSet<Client>());
 
     //
     // The concurrency model with which new Clients are created
@@ -74,9 +69,9 @@ public final class ClientManager {
     // ----------------------------------------------------------------------
 
     protected void finalize() throws Throwable {
-        Assert.ensure(destroy_);
-        Assert.ensure(allClients_.isEmpty());
-        Assert.ensure(reusableClients_.isEmpty());
+        Assert.ensure(destroyed);
+        Assert.ensure(allClients.isEmpty());
+        Assert.ensure(reusableClients.isEmpty());
 
         super.finalize();
     }
@@ -89,26 +84,26 @@ public final class ClientManager {
         //
         // Don't destroy twice
         //
-        if (destroy_) {
+        if (destroyed) {
             return;
         }
 
         //
         // Set the destroy flag
         //
-        destroy_ = true;
+        destroyed = true;
 
         //
         // Destroy all clients
         //
-        for (Client c : allClients_) c.destroy();
+        for (Client c : allClients) c.destroy();
 
         //
         // Reset internal data
         //
-        orbInstance_ = null;
-        allClients_.removeAllElements();
-        reusableClients_.removeAllElements();
+        orbInstance = null;
+        allClients.clear();
+        reusableClients.clear();
     }
 
     // ----------------------------------------------------------------------
@@ -116,12 +111,12 @@ public final class ClientManager {
     // ----------------------------------------------------------------------
 
     public ClientManager(int concModel) {
-        destroy_ = false;
+        destroyed = false;
         concModel_ = concModel;
     }
 
     public void setORBInstance(ORBInstance instance) {
-        orbInstance_ = instance;
+        orbInstance = instance;
     }
 
     //
@@ -141,7 +136,7 @@ public final class ClientManager {
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
-        if (destroy_) {
+        if (destroyed) {
             throw new INITIALIZE(MinorCodes
                     .describeInitialize(MinorCodes.MinorORBDestroyed),
                     MinorCodes.MinorORBDestroyed,
@@ -152,10 +147,10 @@ public final class ClientManager {
         //
         // Find out whether private clients are requested
         //
-        boolean privateClients = false;
+        boolean reuseConnections = true;
         for (Policy pol : policies) {
             if (pol.policy_type() == CONNECTION_REUSE_POLICY_ID.value) {
-                privateClients = !!!(ConnectionReusePolicyHelper.narrow(pol).value());
+                reuseConnections = ConnectionReusePolicyHelper.narrow(pol).value();
                 break;
             }
         }
@@ -190,7 +185,7 @@ public final class ClientManager {
         //
         // First try to create CollocatedClients
         //
-        POAManagerFactory pmFactory = orbInstance_.getPOAManagerFactory();
+        POAManagerFactory pmFactory = orbInstance.getPOAManagerFactory();
         for (org.omg.PortableServer.POAManager mgr : pmFactory.list()) {
             try {
                 boolean local = false;
@@ -210,15 +205,11 @@ public final class ClientManager {
                     POAManager_impl manager = (POAManager_impl) mgr;
                     CollocatedServer collocatedServer = manager._OB_getCollocatedServer();
 
-                    //
-                    // Create a new CollocatedClient and add the new client to
-                    // both the list of all clients, and the list of clients
-                    // that is returned
-                    //
-                    CodeConverters conv = new CodeConverters(null, null, null, null); // no conversion required?
-                    Client client = new CollocatedClient(collocatedServer, concModel_, conv);
-                    allClients_.addElement(client);
+                    // Create and register a new CollocatedClient
+                    Client client = new CollocatedClient(collocatedServer, concModel_);
+                    allClients.add(client);
 
+                    // add the information for the new client to the collection to be returned
                     for (ProfileInfo profileInfo : client.getUsableProfiles(ior, policies)) {
                         ClientProfilePair pair = new ClientProfilePair();
                         pair.client = client;
@@ -235,11 +226,11 @@ public final class ClientManager {
         }
 
         //
-        // If no private clients are requested, add all existing reusable
+        // If connection reuse is permitted, add all existing reusable
         // clients which are usable for the given IOR and policies
         //
-        if (!privateClients) {
-            for (Client reusableClient : reusableClients_) {
+        if (reuseConnections) {
+            for (Client reusableClient : reusableClients) {
 
                 //
                 // Skip any client whose protocol is not present in the
@@ -264,7 +255,7 @@ public final class ClientManager {
         //
         // Finally, create new GIOPClients for all connectors we can get
         //
-        ConFactoryRegistry conFactoryRegistry = orbInstance_.getConFactoryRegistry();
+        ConFactoryRegistry conFactoryRegistry = orbInstance.getConFactoryRegistry();
         ConFactory[] factories = conFactoryRegistry.get_factories();
         for (ConFactory factory : factories) {
             Connector[] connectors = factory.create_connectors(ior, policies);
@@ -293,9 +284,9 @@ public final class ClientManager {
                 // have.
                 //
                 for (ProfileInfo profileInfo: profileInfos) {
-                    CodeConverters conv = CodeSetUtil.getCodeConverters(orbInstance_, profileInfo);
+                    CodeConverters conv = CodeSetUtil.getCodeConverters(orbInstance, profileInfo);
 
-                    Client newClient = new GIOPClient(orbInstance_, connector, concModel_, conv, enableBidir);
+                    Client newClient = new GIOPClient(orbInstance, connector, concModel_, conv, enableBidir);
 
                     if (!pairs.isEmpty()) {
                         boolean matched = false;
@@ -313,10 +304,7 @@ public final class ClientManager {
                         }
                     }
 
-                    //
-                    // Add the new client to the list of all clients
-                    //
-                    allClients_.addElement(newClient);
+                    allClients.add(newClient);
 
                     //
                     // Add client/profile pairs
@@ -328,13 +316,9 @@ public final class ClientManager {
                         pairs.addElement(pair);
                     }
 
-                    //
                     // If no private clients have been requested, also add the
                     // client to the list of existing reusable clients
-                    //
-                    if (!privateClients) {
-                        reusableClients_.addElement(newClient);
-                    }
+                    if (reuseConnections) reusableClients.add(newClient);
                 }
             }
         }
@@ -390,57 +374,34 @@ public final class ClientManager {
         // Increment the usage count on all clients
         //
         for (ClientProfilePair pair : pairs) {
-            pair.client.incUsage();
+            pair.client.obtain();
         }
         return pairs;
     }
 
     public synchronized void releaseClient(Client client) {
-        //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
-        //
-        if (destroy_) {
-            return;
-        }
-
-        //
-        // TODO:
-        //
-        // We need to examine the entire shutdown sequence again since the
-        // GIOPClientWorkers and what-not get destroyed after the ORB has
-        // been marked as destroyed
-        //
-        // if(destroy_)
-        // throw new org.omg.CORBA.INITIALIZE(
-        // org.apache.yoko.orb.OB.MinorCodes.describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-        // org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
-        // org.omg.CORBA.CompletionStatus.COMPLETED_NO);
-
-        boolean inUse = client.decUsage();
-
-        if (!inUse) {
-            reusableClients_.remove(client);
-
-            if (allClients_.remove(client)) {
-                client.destroy();
-            } else {
-                throw Assert.fail("Release called on unknown client");
-            }
-        }
+        if (destroyed) return;
+        if (client.release()) destroyClient(client);
     }
 
     /**
      * Instructs the client manager never to reuse a client or expect any further notification regarding it
      */
     public synchronized void besmirchClient(Client client) {
-        reusableClients_.remove(client);
-        allClients_.remove(client);
+        if (logger.isLoggable(Level.FINE)) logger.fine("Client besmirched: " + client);
+        destroyClient(client);
+    }
+
+    private void destroyClient(Client client) {
+        reusableClients.remove(client);
+        allClients.remove(client);
         client.destroy();
     }
 
     public boolean equivalent(IOR ior1, IOR ior2) {
-        ConFactoryRegistry conFactoryRegistry = orbInstance_.getConFactoryRegistry();
+        ConFactoryRegistry conFactoryRegistry = orbInstance.getConFactoryRegistry();
 
         for (ConFactory factory : conFactoryRegistry.get_factories()) {
             if (!!!factory.equivalent(ior1, ior2)) {
@@ -451,6 +412,6 @@ public final class ClientManager {
     }
 
     public int hash(IOR ior, int maximum) {
-        return Arrays.hashCode(orbInstance_.getConFactoryRegistry().get_factories());
+        return Arrays.hashCode(orbInstance.getConFactoryRegistry().get_factories());
     }
 }
