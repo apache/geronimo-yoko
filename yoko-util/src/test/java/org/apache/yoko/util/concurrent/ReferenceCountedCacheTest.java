@@ -64,7 +64,7 @@ public class ReferenceCountedCacheTest {
     private volatile boolean retrieving = true;
 
     @After
-    public void setup() {
+    public void teardown() {
         createdInts.clear();
         deletedInts.clear();
         cache = null;
@@ -82,6 +82,79 @@ public class ReferenceCountedCacheTest {
         {assertEquals(Integer.valueOf(1), ref.get());}
         cache.clean();
         assertNull(cache.get("1"));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void testRemoveNullReference() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        cache.remove(null);
+    }
+
+    @Test
+    public void testRemoveNullKey() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        assertFalse(cache.remove(null, 1));
+    }
+
+    @Test
+    public void testRemoveNullValue() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        // remove null value for nonexistent key
+        assertFalse(cache.remove("1", null));
+        cache.getOrCreate("1", factory);
+        // remove null value for known key
+        assertFalse(cache.remove("1", null));
+    }
+
+    @Test
+    public void testRemoveNonExistentValue() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        // remove unknown key and unknown value
+        assertFalse(cache.remove("1", 1));
+        cache.getOrCreate("1", factory);
+        // remove known key and non-identical value
+        assertFalse(cache.remove("1", 1));
+    }
+
+    @Test
+    public void testRemove() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        cache.getOrCreate("1", factory);
+        assertEquals(cache.size(), 1);
+        // retrieve the actual value from the queue
+        Integer value = createdInts.poll();
+        // remove known key and value
+        assertTrue(cache.remove("1", value));
+        // remove previously known key and value
+        assertFalse(cache.remove("1", value));
+    }
+
+    @Test
+    public void testRemoveBeforeClean() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        try (Reference<Integer> r1 = cache.getOrCreate("1", factory);
+             Reference<Integer> r2 = cache.getOrCreate("2", factory);
+             Reference<Integer> r3 = cache.getOrCreate("3", factory)) {
+            // test removing an existing key and value by reference
+            assertEquals(3, cache.size());
+            assertTrue(cache.remove(r1));
+            assertEquals(2, cache.size());
+            assertEquals(0, cache.idleCount());
+        }
+        assertEquals(2, cache.size());
+        assertEquals(2, cache.idleCount());
+        cache.clean();
+        assertEquals(0, cache.size());
+        assertEquals(0, cache.idleCount());
+    }
+
+    @Test//(expected = IllegalStateException.class)
+    public void testRemoveSameReferenceTwice() {
+        cache = new ReferenceCountedCache<>(factory, 0, 5);
+        try (Reference<Integer> ref = cache.getOrCreate("1", factory)) {
+            assertTrue(cache.remove(ref));
+            assertFalse(cache.remove(ref));
+        }
     }
 
     @Test

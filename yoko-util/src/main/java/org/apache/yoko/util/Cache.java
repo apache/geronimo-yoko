@@ -31,13 +31,17 @@ public interface Cache<K, V> {
 
     /**
      * Uncache an item. No cleanup will be performed.
-     * @throws IllegalStateException if valueRef has already been closed
+     *
+     * @return <code>true</code> if the item was removed
      */
-    void remove(Reference<V> ref);
+    boolean remove(Reference<V> ref);
 
     /**
      * Uncache an item. No cleanup will be performed.
-     * @return true iff the item was removed
+     * Removes the entry for the specified key only
+     * if it is currently mapped to the specified value.
+     *
+     * @return <code>true</code> if the item was removed
      */
     boolean remove(K key, V value);
 

@@ -12,6 +12,33 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+/**
+ * A thread-safe map that counts references and facilitates clean-up of unused entries.
+ * References are acquired when any of the getter methods are called:
+ * <ul>
+ *     <li>{@link #get(K)}</li>
+ *     <li>{@link #getOrCreate(K, Factory<V>)}</li>
+ *     <li>{@link #getOrCreate(K, KeyedFactory<K,V>)}</li>
+ * </ul>
+ * Each of these methods returns a reference object that must be
+ * released when no longer required by calling {@link Reference#close()}.
+ *
+ * <p>
+ *
+ * When a value is removed implicitly as a result of a cache clean-up operation,
+ * the {@link Cleaner} provided at construction time is invoked. This provides a way
+ * of registering a call-back object to handle the cleaning up of resources when they
+ * are discarded from the cache.
+ *
+ * No clean-up happens when a value is explicitly removed by a call to either of the remove methods:
+ * <ul>
+ *     <li>{@link #remove(Reference)}</li>
+ *     <li>{@link #remove(K, V)}</li>
+ * </ul>
+ *
+ * @param <K> the key type, compared by equality
+ * @param <V> the value type, compared by identity
+ */
 public class ReferenceCountedCache<K, V> implements Cache<K,V> {
 
     private final ConcurrentMap<K, CountedEntry<K, V>> map = new ConcurrentHashMap<>();
@@ -98,21 +125,21 @@ public class ReferenceCountedCache<K, V> implements Cache<K,V> {
     }
 
     @Override
-    public void remove(Reference<V> ref) {remove(((CountedEntry<K,V>.ValueReference) ref).invalidateAndGetEntry());}
+    public boolean remove(Reference<V> ref) {return remove(((CountedEntry<K,V>.ValueReference) ref).invalidateAndGetEntry());}
 
     @Override
     public boolean remove(K key, V value) {
         if (key == null) return false;
-        CountedEntry<K, V> entry = map.get(key);
+        final CountedEntry<K, V> entry = map.get(key);
+        if (entry == null) return false;
         try (Reference ref = entry.obtain();) {
             if (ref == null) return false;
             if (ref.get() != value) return false;
-            remove(ref);
-            return true;
+            return remove(ref);
         }
     }
 
-    protected void remove(CountedEntry<K,V> entry) {if (entry != null) map.remove(entry.key, entry);}
+    private boolean remove(CountedEntry<K, V> entry) { return entry != null && map.remove(entry.key, entry); }
 
     @Override
     public int clean() {
