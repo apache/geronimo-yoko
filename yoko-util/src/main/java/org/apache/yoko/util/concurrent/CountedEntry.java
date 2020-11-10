@@ -59,31 +59,37 @@ class CountedEntry<K, V> {
 
     // Acquire a reference to this entry.
     private boolean acquire() {
-        RESPIN: do {
+        for (;;) {
             int oldCount = refCount.get();
             switch (oldCount) {
-                case CLEANED:
-                    // terminal state - must fail
-                    return false;
-                case NOT_READY:
-                    blockWhileNotReady();
-                    continue RESPIN;
-                case IDLE:
-                    // grab the ref while it's idle or start again
-                    if (!!!refCount.compareAndSet(IDLE, NOT_READY)) continue RESPIN;
-                    // remove from the idle list
-                    Object self = idlePlace.relinquish();
-                    assert this == self;
-                    idlePlace = null;
-                    // let other threads know this entry is accessible again
-                    notifyReady(1);
-                    return true;
-                default:
-                    // increment the value retrieved or start again
-                    if (!!!refCount.compareAndSet(oldCount, oldCount + 1)) continue RESPIN;
-                    return true;
+            case CLEANED:
+                // terminal state - must fail
+                return false;
+            case NOT_READY:
+                blockWhileNotReady();
+                break;
+            case IDLE:
+                if (rouseFromIdleState()) return true;
+                break;
+            default:
+                // increment the value retrieved or start again
+                if (refCount.compareAndSet(oldCount, oldCount + 1)) return true;
+                break;
             }
-        } while (true);
+        }
+    }
+
+    private boolean rouseFromIdleState() {
+        // grab the ref while it's idle or report failure
+        if (!!!refCount.compareAndSet(IDLE, NOT_READY)) return false;
+        // remove this entry from the idle queue
+        Object self = idlePlace.relinquish();
+        assert this == self;
+        // mark that this entry is no longer in the queue
+        idlePlace = null;
+        // let other threads know this entry is accessible again
+        notifyReady(1);
+        return true;
     }
 
     /**
@@ -121,24 +127,36 @@ class CountedEntry<K, V> {
         }
     }
 
+    /**
+     * Attempt to acquire a counted reference to a value.
+     * If a non-null value is returned, the caller is responsible for
+     * calling {@link ValueReference#close()} on the result
+     * when the reference is no longer required.
+     *
+     * @return the reference, or <code>null</code> if no reference could be obtained
+     */
     ValueReference obtain() {return acquire() ? new ValueReference() : null;}
 
-    /** Clear an entry that still has valid references */
-    private CountedEntry<K, V> purge() {
-        RESPIN: do {
+    /**
+     * Clear an entry that still has valid references.
+     *
+     * @return <code>true</code>> if this invocation was successful,
+     * and <code>false</code> if the entry was already purged
+     */
+    private boolean purge() {
+        for (;;) {
             int oldCount = refCount.get();
-            if (oldCount == CLEANED) return null;
+            if (oldCount == CLEANED) return false;
             if (oldCount < 1) throw new IllegalStateException();
-            if (!!! refCount.compareAndSet(oldCount, CLEANED)) continue RESPIN;
-            return this;
-        } while (true);
+            if (refCount.compareAndSet(oldCount, CLEANED)) return true;
+        }
     }
 
     final class ValueReference implements Reference<V> {
         private final ReferenceCloserTask closer = new ReferenceCloserTask();
         public V get() {return value;}
         public void close() {closer.run();}
-        CountedEntry<K, V> invalidateAndGetEntry() {return closer.purge();}
+        CountedEntry<K, V> invalidateAndGetEntry() {return closer.purge() ? CountedEntry.this : null;}
         Runnable getCloserTask() {return closer;}
     }
 
@@ -147,11 +165,11 @@ class CountedEntry<K, V> {
      * we need to store the clean up details in a separate object that holds
      * no strong reference back to the ValueReference object
      */
-    final class ReferenceCloserTask implements Runnable {
+    private final class ReferenceCloserTask implements Runnable {
         boolean closed;
         public synchronized void run() {closed = closed || release();}
-        synchronized CountedEntry<K,V> purge() {
-            if (closed) throw new IllegalStateException();
+        synchronized boolean purge() {
+            if (closed) return false;
             closed = true;
             return CountedEntry.this.purge();
         }
