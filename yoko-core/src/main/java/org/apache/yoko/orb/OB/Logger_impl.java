@@ -29,50 +29,38 @@ public class Logger_impl implements org.apache.yoko.orb.OB.Logger {
         logger.info(msg);
     }
 
-    public void info(String msg, Throwable e) {
-        logger.log(Level.INFO, msg, e);
-    }
-
-    public void error(String msg) {
+    public void severe(String msg) {
         logger.severe(msg);
-    }
-
-    public void error(String msg, Throwable e) {
-        logger.log(Level.SEVERE, msg, e);
     }
 
     public void warning(String msg) {
         logger.warning(msg);
     }
 
-    public void warning(String msg, Throwable e) {
-        logger.log(Level.WARNING, msg, e);
-    }
 
-    public void debug(String msg) {
+    public void fine(String msg) {
         logger.fine(msg);
     }
 
-    public void debug(String msg, Throwable e) {
-        logger.log(Level.FINE, msg, e);
-    }
-    
+
     public boolean isDebugEnabled() {
         return logger.isLoggable(Level.FINE); 
     }
 
-    public void trace(String category, String msg) {
+    public void trace(String category, final String msg) {
         logger.log(Level.FINE, category, msg);
-        String s = "[ " + category + ": ";
-        int start = 0;
-        int next;
-        while ((next = msg.indexOf('\n', start)) != -1) {
-            s += msg.substring(start, next + 1);
-            s += "  ";
-            start = next + 1;
+        {
+            String s = "[ " + category + ": ";
+            int start = 0;
+            int next;
+            while ((next = msg.indexOf('\n', start)) != -1) {
+                s += msg.substring(start, next + 1);
+                s += "  ";
+                start = next + 1;
+            }
+            s += msg.substring(start);
+            s += " ]";
         }
-        s += msg.substring(start);
-        s += " ]";
         logger.log(Level.FINE, msg);
     }
 

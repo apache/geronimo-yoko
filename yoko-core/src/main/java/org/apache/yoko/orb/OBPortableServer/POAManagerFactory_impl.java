@@ -40,7 +40,6 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.AccFactoryRegistry;
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.IIOP.InetAddrHelper;
 import org.apache.yoko.orb.OCI.InvalidParam;
 import org.apache.yoko.orb.OCI.NoSuchFactory;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -67,6 +66,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.omg.PortableServer.POAManagerPackage.State.INACTIVE;
@@ -128,12 +128,12 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
                 acceptorConfigs.add(config);
                 continue PROTOCOL_LOOP;
             }
-            logger.error("unknown endpoint protocol `" + protocol + "'");
+            logger.severe("unknown endpoint protocol `" + protocol + "'");
             throw new INITIALIZE("unknown endpoint protocol `" + protocol + "'");
         }
 
         if (acceptorConfigs.isEmpty()) {
-            logger.error("no endpoints defined");
+            logger.severe("no endpoints defined");
             throw new INITIALIZE("no endpoints defined");
         }
 
@@ -213,11 +213,11 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
                     acceptors.add(factory.create_acceptor(acceptorConfig.params));
                 } catch (NoSuchFactory ex) {
                     String err = "cannot find factory: " + ex;
-                    logger.error(err, ex);
+                    logger.log(Level.SEVERE, err, ex);
                     throw (INITIALIZE) new INITIALIZE(err).initCause(ex);
                 } catch (InvalidParam ex) {
                     String err = "unable to create acceptor: " + ex.reason;
-                    logger.error(err, ex);
+                    logger.log(Level.SEVERE, err, ex);
                     throw (INITIALIZE) new INITIALIZE(err).initCause(ex);
                 }
             }
@@ -278,7 +278,7 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
         try {
             activeState_.set_status(serverInstance, ServerStatus.STOPPING);
         } catch (SystemException ex) {
-            logger.warning(orbInstance_.getServerId() + ": Cannot contact IMR on shutdown", ex);
+            logger.log(Level.WARNING, orbInstance_.getServerId() + ": Cannot contact IMR on shutdown", ex);
         }
         activeState_ = null;
     }
@@ -329,7 +329,7 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
 
         // IMR::IMRDomain not reachable?
         if (imrDomain == null) {
-            logger.error(serverId + ": IMRDomain not reachable");
+            logger.severe(serverId + ": IMRDomain not reachable");
             throw new INITIALIZE(serverId + ": IMRDomain not reachable");
         }
 
@@ -337,7 +337,7 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
         String exec = properties.getProperty("yoko.orb.imr.register");
         if (exec != null) {
             // TODO: What do we do for Java?
-            logger.error(serverId + ": Self registration not implemented for java servers");
+            logger.severe(serverId + ": Self registration not implemented for java servers");
             throw new INITIALIZE(serverId + ": Self registration not implemented for java servers");
         }
 
@@ -365,19 +365,19 @@ final public class POAManagerFactory_impl extends LocalObject implements POAMana
                 throw Assert.fail(ex);
             }
         } catch (BAD_PARAM ex) {
-            logger.error(serverId + ": (IMR) Server already running", ex);
+            logger.log(Level.SEVERE, serverId + ": (IMR) Server already running", ex);
             throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Server already running").initCause(ex);
         } catch (NoSuchServer ex) {
-            logger.error(serverId + ": (IMR) Not registered with IMR", ex);
+            logger.log(Level.SEVERE, serverId + ": (IMR) Not registered with IMR", ex);
             throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Not registered with IMR").initCause(ex);
         } catch (NoSuchOAD ex) {
-            logger.error(serverId + ": (IMR) No OAD for host", ex);
+            logger.log(Level.SEVERE, serverId + ": (IMR) No OAD for host", ex);
             throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) No OAD for host").initCause(ex);
         } catch (OADNotRunning ex) {
-            logger.error(serverId + ": (IMR) OAD not running", ex);
+            logger.log(Level.SEVERE, serverId + ": (IMR) OAD not running", ex);
             throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) OAD not running").initCause(ex);
         } catch (AlreadyLinked ex) {
-            logger.error(serverId + ": (IMR) Process registered with OAD", ex);
+            logger.log(Level.SEVERE, serverId + ": (IMR) Process registered with OAD", ex);
             throw (INITIALIZE)new INITIALIZE(serverId + ": (IMR) Process registered with OAD").initCause(ex);
         }
     }

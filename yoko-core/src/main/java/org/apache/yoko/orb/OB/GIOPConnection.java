@@ -61,6 +61,7 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
 
 import static java.util.logging.Logger.getLogger;
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
@@ -373,7 +374,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         // New upcall will be started
         if (response.value) upcallsInProgress_++;
 
-        orbInstance_.getLogger().debug("Processing request reqId=" + reqId + " op=" + op.value);
+        orbInstance_.getLogger().fine("Processing request reqId=" + reqId + " op=" + op.value);
 
         return oaInterface_.createUpcall(
                 response.value ? upcallReturnInterface() : null, profileInfo,
@@ -411,7 +412,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         // read in the peer's sending context runtime object
         assignSendingContextRuntime(in, contexts);
 
-        orbInstance_.getLogger().debug("Processing reply for reqId=" + reqId + " status=" + status.value.value());
+        orbInstance_.getLogger().fine("Processing reply for reqId=" + reqId + " status=" + status.value.value());
 
         switch (status.value.value()) {
             case ReplyStatusType_1_2._NO_EXCEPTION:
@@ -604,7 +605,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, false);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
+                        logger.fine("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
                     }
                 } catch (SystemException ex) {
                     logger.warning("An error occurred while reading a "
@@ -622,7 +623,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, true);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
+                        logger.fine("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
                     }
                 } catch (SystemException ex) {
                     logger.warning("An error occurred while reading a "
@@ -656,7 +657,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
     /** process a CloseConnection message */
     private void processCloseConnection(GIOPIncomingMessage msg) {
-        orbInstance_.getLogger().debug("Close connection request received from peer");
+        orbInstance_.getLogger().fine("Close connection request received from peer");
         if (isClientEnabled()) {
             // If the peer closes the connection, all outstanding
             // requests can safely be reissued. Thus we send all
@@ -683,7 +684,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     /** process a system exception */
     boolean processException(State newState, SystemException ex, boolean completed) {
         Assert.ensure(newState == ERROR || newState == CLOSED);
-        orbInstance_.getLogger().debug("processing an exception, state=" + newState, ex);
+        orbInstance_.getLogger().log(Level.FINE, "processing an exception, state=" + newState, ex);
 
         if (setState(newState) == false) return false;
 
@@ -944,7 +945,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             // print this exception out here so applications have at stack trace to work
             // with for problem determination.
 
-            orbInstance_.getLogger().debug("upcall exception", ex);
+            orbInstance_.getLogger().log(Level.FINE, "upcall exception", ex);
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, contexts);
             Util.marshalSystemException(out, ex);
         } catch (SystemException e) {
@@ -972,7 +973,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             Logger logger = orbInstance_.getLogger();
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Sending forward reply to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
+                logger.fine("Sending forward reply to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
             }
 
             IORHelper.write(out, ior);

@@ -37,6 +37,7 @@ import org.omg.Messaging.SYNC_WITH_TRANSPORT;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
+import java.util.logging.Level;
 
 import static org.apache.yoko.util.ObjectFormatter.format;
 
@@ -184,7 +185,7 @@ public class Downcall {
         client.prepareForDowncall(policies);
         reqId_ = client_.getNewRequestID();
         
-        logger_.debug("Downcall created for operation " + op + " with id " + reqId_); 
+        logger_.fine("Downcall created for operation " + op + " with id " + reqId_);
     }
 
     public final ORBInstance orbInstance() {
@@ -237,8 +238,8 @@ public class Downcall {
 
     public final void setReplyContexts(ServiceContexts contexts) {
         if (!replyContexts.isEmpty() && logger_.isDebugEnabled()) {
-            logger_.debug("Expected empty reply contexts, but found " + replyContexts.size());
-            for (ServiceContext sc : contexts) logger_.debug("\t" + format(sc));
+            logger_.fine("Expected empty reply contexts, but found " + replyContexts.size());
+            for (ServiceContext sc : contexts) logger_.fine("\t" + format(sc));
         }
         final MutableServiceContexts mutable = replyContexts.mutable();
         for (ServiceContext sc: contexts) mutable.add(sc, true);
@@ -471,7 +472,7 @@ public class Downcall {
             Assert.ensure(ex_ == null);
             state = State.USER_EXCEPTION;
             exId_ = exId;
-            logger_.debug("Received user exception " + exId);
+            logger_.fine("Received user exception " + exId);
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
     }
@@ -482,7 +483,7 @@ public class Downcall {
             Assert.ensure(ex_ == null);
             state = State.SYSTEM_EXCEPTION;
             ex_ = ex;
-            logger_.debug("Received system exception", ex);
+            logger_.log(Level.FINE, "Received system exception", ex);
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
     }
@@ -498,7 +499,7 @@ public class Downcall {
             Assert.ensure(ex_ == null);
             if (state != State.STALE_CONNECTION) state = State.FAILURE_EXCEPTION;
             ex_ = ex;
-            logger_.debug("Received failure exception", ex);
+            logger_.log(Level.FINE, "Received failure exception", ex);
             if (null != stateWaitCondition) stateWaitCondition.signalAll();
         }
     }

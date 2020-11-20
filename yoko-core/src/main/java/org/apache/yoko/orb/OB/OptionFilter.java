@@ -17,8 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.Logger;
-
 //
 // This class maintains a list of options starting with a particular prefix.
 //
@@ -86,7 +84,7 @@ public final class OptionFilter {
                     if (i + n >= args.length) {
                         String err = errorPrefix_ + ": argument expected for `"
                                 + optionPrefix_ + option + "'";
-                        logger.error(err);
+                        logger.severe(err);
                         throw new org.omg.CORBA.INITIALIZE(err);
                     }
 

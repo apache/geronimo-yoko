@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import java.util.logging.Level;
+
 final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
         implements org.omg.PortableInterceptor.IORInterceptor_3_0 {
     private java.util.Hashtable poas_;
@@ -119,11 +121,11 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
                 if (i != e.poa.length - 1)
                     msg += "/";
             }
-            logger_.error(msg, e);
+            logger_.log(Level.SEVERE, msg, e);
             throw new org.omg.CORBA.INITIALIZE();
         } catch (org.omg.CORBA.SystemException ex) {
             String msg = "IMR: Cannot contact: " + ex.getMessage();
-            logger_.error(msg, ex);
+            logger_.log(Level.SEVERE, msg, ex);
             throw new org.omg.CORBA.INITIALIZE(); // TODO: - some exception
         }
 
@@ -226,7 +228,7 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
                         org.apache.yoko.orb.IMR.POAStatus.NON_EXISTENT);
             } catch (org.omg.CORBA.SystemException ex) {
                 String msg = "IMR: poa_destroy: " + ex.getMessage();
-                logger_.warning(msg, ex);
+                logger_.log(Level.WARNING, msg, ex);
             }
         }
     }
@@ -244,10 +246,10 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
                 as_.set_status(serverInstance_,
                         org.apache.yoko.orb.IMR.ServerStatus.RUNNING);
             } catch (org.omg.CORBA.OBJECT_NOT_EXIST ex) {
-                logger_.error("IMR: Not registered", ex);
+                logger_.log(Level.SEVERE, "IMR: Not registered", ex);
                 throw new org.omg.CORBA.INITIALIZE();
             } catch (org.omg.CORBA.SystemException ex) {
-                logger_.error("IMR: Cannot contact", ex);
+                logger_.log(Level.SEVERE, "IMR: Cannot contact", ex);
                 throw new org.omg.CORBA.INITIALIZE();
             }
 
