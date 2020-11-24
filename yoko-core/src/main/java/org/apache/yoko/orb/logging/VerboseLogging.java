@@ -55,15 +55,12 @@ public enum VerboseLogging {
     }
 
     public static <W extends Throwable> W wrapped(Logger logger, Exception cause, String reason, Factory<W> wrapperFactory) {
-        W result = (W)wrapperFactory.create().initCause(cause);
-        if (logger.isLoggable(FINEST)) logger.log(FINEST, reason, result);
-        else if (logger.isLoggable(FINE)) logger.fine(reason + ": " + result);
-        return result;
+        return logged(logger, (W)wrapperFactory.create().initCause(cause), reason);
     }
 
     /**
      * Create one of these to (optionally) log a decision point
-     * and to add a record to the stack trace of the causal exception
+     * and to add a record of the stack trace to the causal exception
      */
     private static class StackTraceRecord extends Exception {
         StackTraceRecord(String reason) { super(reason); }

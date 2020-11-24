@@ -17,9 +17,6 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.omg.CORBA.OMGVMCID;
-import org.apache.yoko.ApacheVMCID;
-
 public final class MinorCodes {
     public final static int OMGVMCID = org.omg.CORBA.OMGVMCID.value;
 

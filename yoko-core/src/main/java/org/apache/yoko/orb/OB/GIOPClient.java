@@ -29,6 +29,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
@@ -111,7 +112,7 @@ final class GIOPClient extends Client {
     //
     protected synchronized GIOPConnection getWorker(boolean create, final int timeout) {
         if (destroy_)
-            throw new TRANSIENT(describeTransient(MinorActiveConnectionManagement), MinorActiveConnectionManagement, COMPLETED_NO);
+            throw TransientFactory.ACTIVE_CONNECTION_MANAGEMENT.create();
 
         if (connection_ == null)
             reuseInboundConnection();

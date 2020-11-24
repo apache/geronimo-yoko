@@ -30,6 +30,7 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OBPortableServer.DirectServant;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.apache.yoko.util.Factory;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -686,9 +687,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // description for the minor code.
         info.incrementHopCount();
         if (info.getHop() > 10) {
-            throw wrapped(RETRY_LOG, e, "Exceeded location forward hop count", new Factory<TRANSIENT>(){ public TRANSIENT create() {
-                return new TRANSIENT(describeTransient(MinorLocationForwardHopCountExceeded), MinorLocationForwardHopCountExceeded, COMPLETED_NO);
-            }});
+            throw wrapped(RETRY_LOG, e, "Exceeded location forward hop count", TransientFactory.LOCATION_FORWARD_TOO_MANY_HOPS);
         }
 
         // Change the IOR

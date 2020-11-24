@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.apache.yoko.rmi.util.ObjectUtil;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
@@ -162,7 +163,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         // with continuing to receive messages until the peer
         // closes. Instead, we just close the connection, meaning that we
         // can't be 100% sure that the peer gets the last message.
-        processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+        processException(CLOSED, TransientFactory.FORCED_SHUTDOWN.create(), false);
         arrive();
 
     }
@@ -284,7 +285,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             // open under certain circumstances. For example, the receiver
             // thread may not have terminated yet or the receive thread might
             // set the state to GIOPState::Error before termination.
-            processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+            processException(CLOSED, TransientFactory.FORCED_SHUTDOWN.create(), false);
         } finally {
             if (receiverLock.isWriteLockedByCurrentThread()) {
                 receiverLock.writeLock().unlock();

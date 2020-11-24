@@ -27,6 +27,7 @@ import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
@@ -138,8 +139,7 @@ public final class DowncallStub {
         //
         if (clientProfilePairs_.isEmpty()) {
             RETRY_LOG.fine("No profiles available");
-            final String reason = describeTransient(MinorNoUsableProfileInIOR);
-            throw new FailureException(new TRANSIENT(reason, MinorNoUsableProfileInIOR, COMPLETED_NO));
+            throw new FailureException(TransientFactory.NO_USABLE_PROFILE_IN_IOR.create());
         }
 
         ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_.elementAt(0);

@@ -2,6 +2,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import static org.apache.yoko.orb.OB.MinorCodes.*;
 
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.TRANSIENT;
 
@@ -26,10 +27,5 @@ enum Exceptions {;
     static COMM_FAILURE asCommFailure(Exception e, int minor, String message) {
         String msg = String.format("%s: %s: %s", describeCommFailure(minor), message, e.getMessage());
         return (COMM_FAILURE) new COMM_FAILURE(msg, minor, COMPLETED_NO).initCause(e);
-    }
-
-    static TRANSIENT asTransient(Exception e, int minor) {
-        String msg = String.format("%s: %s", describeTransient(minor), e.getMessage());
-        return (TRANSIENT) new TRANSIENT(msg, minor, COMPLETED_NO).initCause(e);
     }
 }

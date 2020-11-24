@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.apache.yoko.orb.exceptions.TransientFactory;
+import org.apache.yoko.orb.logging.VerboseLogging;
 import org.apache.yoko.util.HexConverter;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.Net;
@@ -48,6 +50,9 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.logged;
+import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.util.HexConverter.octetsToAscii;
 
 final class Connector_impl extends org.omg.CORBA.LocalObject implements Connector {
@@ -108,30 +113,23 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
         if (socket_ != null)
             close();
 
-        //
-        // Create socket and connect
-        //
+        final String targetDesc = ("host=" + info_.getHost() + ", port=" + info_.getPort());
         try {
-            logger.fine("Connecting to host=" + info_.getHost() + ", port=" + info_.getPort());
+            if (logger.isLoggable(FINE)) logger.fine("Connecting to " + targetDesc);
             if (connectionHelper_ != null) {
                 InetAddress address = Util.getInetAddress(info_.getHost());
                 socket_ = connectionHelper_.createSocket(ior_, policies_, address, info_.getPort());
             } else {
                 socket_ = extendedConnectionHelper_.createSocket(info_.getHost(), info_.getPort());
             }
-            logger.fine("Connection created with socket " + socket_);
+            if (logger.isLoggable(FINE)) logger.fine("Connection created with socket " + socket_);
         } catch (java.net.ConnectException ex) {
-            logger.log(FINE, "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort(), ex);
-            throw (TRANSIENT)new TRANSIENT(
-                    MinorCodes.describeTransient(MinorCodes.MinorConnectFailed) + "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort() + ": " + ex.getMessage(),
-                    MinorCodes.MinorNoUsableProfileInIOR,
-                    CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw wrapped(CONN_LOG, ex, "Error connecting to " + targetDesc, TransientFactory.CONNECT_FAILED);
         } catch (IOException ex) {
-            logger.log(FINE, "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort(), ex);
-            throw (COMM_FAILURE)new COMM_FAILURE(
-                    MinorCodes.describeCommFailure(MinorCodes.MinorSocket) + "Error connecting to host=" + info_.getHost() + ", port=" + info_.getPort() + ": " + ex.getMessage(),
+            throw logged(CONN_LOG, (COMM_FAILURE) new COMM_FAILURE(
+                    MinorCodes.describeCommFailure(MinorCodes.MinorSocket),
                     MinorCodes.MinorSocket,
-                    CompletionStatus.COMPLETED_NO).initCause(ex);
+                    CompletionStatus.COMPLETED_NO).initCause(ex), "Error connecting to " + targetDesc);
         }
 
         //
@@ -285,11 +283,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             if (socket_ == null)
                 return null;
         } catch (java.net.ConnectException ex) {
-            logger.log(FINE, "Socket connection error", ex);
-            throw new TRANSIENT(
-                    MinorCodes.describeTransient(MinorCodes.MinorConnectFailed) + ": " + ex.getMessage(),
-                    MinorCodes.MinorConnectFailed,
-                    CompletionStatus.COMPLETED_NO);
+            throw wrapped(CONN_LOG, ex, "Socket connection error", TransientFactory.CONNECT_FAILED);
         } catch (IOException ex) {
             logger.log(FINE, "Socket I/O error", ex);
             throw (COMM_FAILURE)new COMM_FAILURE(

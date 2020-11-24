@@ -30,6 +30,7 @@ import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHolder;
 import org.omg.CORBA.BooleanHolder;
@@ -665,7 +666,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             // status of COMPLETED_NO. This is done by calling
             // exception() with the notCompleted parameter set to
             // true.
-            processException(CLOSED, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
+            processException(CLOSED, TransientFactory.CLOSE_CONNECTION.create(), true);
         } else {
             setState(CLOSED);
         }
