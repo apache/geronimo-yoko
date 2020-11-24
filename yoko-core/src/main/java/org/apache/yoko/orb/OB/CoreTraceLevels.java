@@ -83,16 +83,4 @@ final public class CoreTraceLevels {
         return traceConnections_;
     }
 
-    public int traceRetry() {
-        return traceRetry_;
-    }
-
-    public int traceRequestsIn() {
-        return traceRequestsIn_;
-    }
-
-    public int traceRequestsOut() {
-        return traceRequestsOut_;
-    }
-
 }

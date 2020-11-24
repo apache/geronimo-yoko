@@ -30,6 +30,7 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OBPortableServer.DirectServant;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
+import org.apache.yoko.util.Factory;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.DomainManager;
@@ -61,15 +62,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicy;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
 import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
 import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.logged;
+import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
@@ -125,103 +129,50 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             throw ex;
         } catch (COMM_FAILURE | TRANSIENT | NO_RESPONSE ignored) {
         } catch (SystemException e) {
-            logger.log(Level.FINE, "System exception during operation", ex);
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "retry only upon COMM_FAILURE, TRANSIENT "
-                        + "and NO_RESPONSE exceptions";
-                String exMsg = ex.getMessage();
-                if (exMsg != null) {
-                    msg += "\n" + exMsg;
-                }
-                logger.fine("retry: " + msg);
-            }
-            throw ex;
+            logger.log(FINE, "System exception during operation", e);
+            throw logged(RETRY_LOG, e, "Caught a non-retryable exception");
         }
 
         // TODO: Check the Rebind Policy - raise REBIND if the policy
         // is set to NO_RECONNECT, but only if this object reference
         // was previously bound
         //
-        // if(policies_.rebindMode == org.omg.Messaging.NO_RECONNECT.value &&
-        // !ignoreRebind)
-        // {
-        // if(coreTraceLevels.traceRetry() > 0)
-        // {
-        // String msg = "can't try again because NO_RECONNECT is set";
-        // String exMsg = ex.getMessage();
-        // if(exMsg != null)
-        // msg += "\n" + exMsg;
-        // Logger logger = orbInstance_.getLogger();
-        // logger.trace("retry", msg);
-        // }
-        // throw new org.omg.CORBA.REBIND();
-        // }
+        //if (policyList.rebindMode == org.omg.Messaging.NO_RECONNECT.value && !ignoreRebind) {
+        //    logException("retry forbidden by NO_RECONNECT policy - caught exception", ex);
+        //    throw (REBIND)new org.omg.CORBA.REBIND().initCause(ex);
+        //}
 
         // Check policy to see if we should retry on remote exceptions
         if (!policyList.retry.remote && remote) {
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "retry only upon locally raised exceptions\n";
-                String exMsg = ex.getMessage();
-                if (exMsg != null) {
-                    msg += "\n" + exMsg;
-                }
-                logger.fine("retry " + msg);
-            }
-            throw ex;
+            throw logged(RETRY_LOG, ex, "Caught a non-local exception");
         }
 
         // Only try maximum number of times. Zero indicates infinite retry.
         if (policyList.retry.max != 0 && retry > policyList.retry.max) {
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "can't try again, because I "
-                        + "tried maximum times already";
-                String exMsg = ex.getMessage();
-                if (exMsg != null) {
-                    msg += "\n" + exMsg;
-                }
-                logger.fine("retry " + msg);
-            }
-            throw ex;
+            throw logged(RETRY_LOG, ex, "Exceeded retry limit");
         }
 
         // We can't retry if RETRY_NEVER is set
         if (policyList.retry.mode == RETRY_NEVER.value) {
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "can't try again because the "
-                        + "RETRY_NEVER policy is set";
-                String exMsg = ex.getMessage();
-                if (exMsg != null) {
-                    msg += "\n" + exMsg;
-                }
-                logger.fine("retry " + msg);
-            }
-            throw ex;
+            throw logged(RETRY_LOG, ex, "Honor RETRY_NEVER policy");
         }
 
         // We can't retry if RETRY_STRICT is set and the completion
         // status is not COMPLETED_NO
         if (policyList.retry.mode == RETRY_STRICT.value && ex.completed != COMPLETED_NO) {
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "can't try again, because the RETRY_STRICT policy is set\n"
-                        + "and completion status is not COMPLETED_NO";
-                String exMsg = ex.getMessage();
-                if (exMsg != null) msg += "\n" + exMsg;
-                logger.fine("retry " + msg);
-            }
-            throw ex;
+            throw logged(RETRY_LOG, ex, "Honor RETRY_STRICT policy");
         }
 
         // If a retry interval has been set then wait the specified amount of time
         if (policyList.retry.interval != 0) {
-            if (coreTraceLevels.traceRetry() > 0) {
-                String msg = "next attempt in " + policyList.retry.interval + " milliseconds";
-                logger.fine("retry " + msg);
-            }
+            logged(RETRY_LOG, ex, "Delay retry for " + policyList.retry.interval + "ms");
             try {
                 Thread.sleep(policyList.retry.interval);
             } catch (InterruptedException ignored) {
             }
         }
+
+        logged(RETRY_LOG, ex, "Allow retry");
     }
 
     @SuppressWarnings("deprecation")
@@ -461,12 +412,12 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
             DowncallStub downcallStub = _OB_getDowncallStub();
             return downcallStub.invoke(self, outImpl);
         } catch (ApplicationException ex) {
-            logger.log(Level.FINE, "Received ApplicationException for request", ex);
+            logger.log(FINE, "Received ApplicationException for request", ex);
             throw ex;
         } catch (RemarshalException ex) {
             throw ex;
         } catch (Exception ex) {
-            logger.log(Level.FINE, "Received unexpected exception for request", ex);
+            logger.log(FINE, "Received unexpected exception for request", ex);
             _OB_handleException(ex, info, false);
             threadSpecificRetryInfo.set(info);
             // If we reach this point, then we need to reinvoke
@@ -696,10 +647,10 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         } catch (TRANSIENT e) {
             handleTRANSIENT(e, info);
         } catch (SystemException e) {
-            logger.log(Level.FINE, "Received SystemException", e);
+            logger.log(FINE, "Received SystemException", e);
             throw e;
         } catch (RuntimeException e) {
-            logger.log(Level.FINE, "Received RuntimeException", e);
+            logger.log(FINE, "Received RuntimeException", e);
             throw e;
         } catch (Exception shouldNeverHappen) {
             throw Assert.fail(shouldNeverHappen);
@@ -710,39 +661,23 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
         checkRetry(info.getRetry(), e, false);
-        CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
-        if (coreTraceLevels.traceRetry() > 0) {
-            String msg = "trying again (" + info.getRetry() + ") because server sent a TRANSIENT exception";
-            String exMsg = e.getMessage();
-            if (exMsg != null) msg += "\n" + exMsg;
-            logger.fine("retry: " + msg);
-        }
     }
 
     private void handleFailure(FailureException e, RetryInfo info) {
         if (e.incrementRetry) info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
         checkRetry(info.getRetry(), e.exception, false);
-        CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
-        if (coreTraceLevels.traceRetry() > 0) {
-            String msg = "trying again (" + info.getRetry() + ") because of failure";
-            String exMsg = e.exception.getMessage();
-            if (exMsg != null) {
-                msg += "\n" + exMsg;
-            }
-            logger.fine("retry: " + msg);
-        }
     }
 
     private synchronized void handleLocationForward(LocationForward e, RetryInfo info, boolean ignoreRebind) {
-        CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
 
         // Check the Rebind Policy
         //
         // TODO: NO_REBIND should raise exception as well if LocationForward changes client effective QoS policies
         if (policyList.rebindMode == NO_RECONNECT.value && !ignoreRebind) {
-            if (coreTraceLevels.traceRetry() > 0) logger.fine("retry: can't try again, because NO_RECONNECT prevents a transparent location forward");
-            throw new REBIND();
+            throw wrapped(RETRY_LOG, e, "Honouring NO_RECONNECT policy", new Factory<REBIND>(){ public REBIND create() {
+                return new REBIND();
+            }});
         }
 
         // Check for a potential infinite forwarding loop.
@@ -751,8 +686,9 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // description for the minor code.
         info.incrementHopCount();
         if (info.getHop() > 10) {
-            if (coreTraceLevels.traceRetry() > 0) logger.fine("retry: location forward hop count exceeded");
-            throw new TRANSIENT(describeTransient(MinorLocationForwardHopCountExceeded), MinorLocationForwardHopCountExceeded, COMPLETED_NO);
+            throw wrapped(RETRY_LOG, e, "Exceeded location forward hop count", new Factory<TRANSIENT>(){ public TRANSIENT create() {
+                return new TRANSIENT(describeTransient(MinorLocationForwardHopCountExceeded), MinorLocationForwardHopCountExceeded, COMPLETED_NO);
+            }});
         }
 
         // Change the IOR
@@ -765,7 +701,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // The object may have changed from remote to local
         checkLocal = true;
 
-        if (coreTraceLevels.traceRetry() > 0) logger.fine("retry:  trying again because of location forward");
+        logged(RETRY_LOG, e, "Retrying");
     }
 
     public synchronized DowncallStub _OB_getDowncallStub() throws LocationForward, FailureException {
