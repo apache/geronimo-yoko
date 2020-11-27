@@ -24,7 +24,7 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
 import org.apache.yoko.orb.OCI.Transport;
-import org.apache.yoko.orb.exceptions.TransientFactory;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.SystemException;
@@ -171,7 +171,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
             }
         } catch (ConnectException ex) {
             final String msg = "Failure making self connection for host=" + localAddress + ", port=" + port_;
-            throw wrapped(CONN_LOG, ex, msg, TransientFactory.CONNECT_FAILED);
+            throw wrapped(CONN_LOG, ex, msg, Transients.CONNECT_FAILED);
 
         } catch (IOException ex) {
             logger.log(Level.FINE, "Failure making self connection for host=" + localAddress + ", port=" + port_, ex);

@@ -30,7 +30,7 @@ import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
-import org.apache.yoko.orb.exceptions.TransientFactory;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHolder;
 import org.omg.CORBA.BooleanHolder;
@@ -40,7 +40,6 @@ import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.StringHolder;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.SystemExceptionHelper;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.UNKNOWN;
 import org.omg.CORBA.UserException;
 import org.omg.GIOP.KeyAddr;
@@ -71,7 +70,6 @@ import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.HOLDING;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownMessage;
@@ -80,7 +78,6 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownReqId;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorWrongMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD;
@@ -666,7 +663,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             // status of COMPLETED_NO. This is done by calling
             // exception() with the notCompleted parameter set to
             // true.
-            processException(CLOSED, TransientFactory.CLOSE_CONNECTION.create(), true);
+            processException(CLOSED, Transients.CLOSE_CONNECTION.create(), true);
         } else {
             setState(CLOSED);
         }

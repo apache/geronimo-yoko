@@ -17,16 +17,11 @@
 package org.apache.yoko.orb.logging;
 
 import org.apache.yoko.util.Factory;
-import org.omg.CORBA.REBIND;
-import org.omg.CORBA.TRANSIENT;
 
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
-import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 /**
  * Define standard logger objects for the most verbose logging.

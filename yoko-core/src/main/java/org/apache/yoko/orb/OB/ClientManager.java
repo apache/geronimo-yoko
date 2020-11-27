@@ -26,7 +26,7 @@ import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
-import org.apache.yoko.orb.exceptions.TransientFactory;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.BiDirPolicy.BidirectionalPolicy;
@@ -34,7 +34,6 @@ import org.omg.BiDirPolicy.BidirectionalPolicyHelper;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.INV_OBJREF;
 import org.omg.CORBA.Policy;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.IOP.IOR;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAManagerPackage.State;
@@ -47,7 +46,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.Collections.synchronizedSet;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoUsableProfileInIOR;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ClientManager {
@@ -365,7 +363,7 @@ public final class ClientManager {
         // TRANSIENT exception
         //
         if (pairs.isEmpty()) {
-            throw TransientFactory.NO_USABLE_PROFILE_IN_IOR.create();
+            throw Transients.NO_USABLE_PROFILE_IN_IOR.create();
         }
 
         //

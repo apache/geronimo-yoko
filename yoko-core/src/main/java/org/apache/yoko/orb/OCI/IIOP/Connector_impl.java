@@ -17,9 +17,7 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.exceptions.TransientFactory;
-import org.apache.yoko.orb.logging.VerboseLogging;
-import org.apache.yoko.util.HexConverter;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.orb.OB.MinorCodes;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
@@ -34,7 +32,6 @@ import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.Policy;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST;
 import org.omg.IOP.Codec;
 import org.omg.IOP.IOR;
@@ -124,7 +121,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             }
             if (logger.isLoggable(FINE)) logger.fine("Connection created with socket " + socket_);
         } catch (java.net.ConnectException ex) {
-            throw wrapped(CONN_LOG, ex, "Error connecting to " + targetDesc, TransientFactory.CONNECT_FAILED);
+            throw wrapped(CONN_LOG, ex, "Error connecting to " + targetDesc, Transients.CONNECT_FAILED);
         } catch (IOException ex) {
             throw logged(CONN_LOG, (COMM_FAILURE) new COMM_FAILURE(
                     MinorCodes.describeCommFailure(MinorCodes.MinorSocket),
@@ -283,7 +280,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             if (socket_ == null)
                 return null;
         } catch (java.net.ConnectException ex) {
-            throw wrapped(CONN_LOG, ex, "Socket connection error", TransientFactory.CONNECT_FAILED);
+            throw wrapped(CONN_LOG, ex, "Socket connection error", Transients.CONNECT_FAILED);
         } catch (IOException ex) {
             logger.log(FINE, "Socket I/O error", ex);
             throw (COMM_FAILURE)new COMM_FAILURE(

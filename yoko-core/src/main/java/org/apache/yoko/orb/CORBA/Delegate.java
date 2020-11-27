@@ -30,7 +30,7 @@ import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OBPortableServer.DirectServant;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
-import org.apache.yoko.orb.exceptions.TransientFactory;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.util.Factory;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -67,11 +67,9 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicy;
 import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
 import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.logged;
 import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
@@ -687,7 +685,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         // description for the minor code.
         info.incrementHopCount();
         if (info.getHop() > 10) {
-            throw wrapped(RETRY_LOG, e, "Exceeded location forward hop count", TransientFactory.LOCATION_FORWARD_TOO_MANY_HOPS);
+            throw wrapped(RETRY_LOG, e, "Exceeded location forward hop count", Transients.LOCATION_FORWARD_TOO_MANY_HOPS);
         }
 
         // Change the IOR

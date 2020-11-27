@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.IOP.ServiceContexts;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_CONTEXT;
@@ -186,8 +187,7 @@ public final class Util {
             return new BAD_INV_ORDER(reason, minor, status);
         }
         case "IDL:omg.org/CORBA/TRANSIENT:1.0": {
-            String reason = MinorCodes.describeTransient(minor);
-            return new TRANSIENT(reason, minor, status);
+            return Transients.create(minor, status);
         }
         case "IDL:omg.org/CORBA/FREE_MEM:1.0":
             return new FREE_MEM(minor, status);

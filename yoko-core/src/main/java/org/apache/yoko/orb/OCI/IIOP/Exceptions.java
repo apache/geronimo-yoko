@@ -2,12 +2,9 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import static org.apache.yoko.orb.OB.MinorCodes.*;
 
-import org.apache.yoko.orb.exceptions.TransientFactory;
 import org.omg.CORBA.COMM_FAILURE;
-import org.omg.CORBA.TRANSIENT;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 

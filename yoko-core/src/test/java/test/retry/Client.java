@@ -17,6 +17,8 @@
 
 package test.retry;
 
+import org.apache.yoko.orb.exceptions.Transients;
+
 import static org.junit.Assert.assertTrue;
 
 import java.util.Properties;
@@ -34,7 +36,7 @@ public class Client extends test.common.TestBase {
             assertTrue(false);
         } catch (org.omg.CORBA.TRANSIENT ex) {
             // Expected
-            assertTrue(ex.minor == org.apache.yoko.orb.OB.MinorCodes.MinorLocationForwardHopCountExceeded);
+            assertTrue(Transients.LOCATION_FORWARD_TOO_MANY_HOPS.matches(ex));
         }
         System.out.println("Done!");
     }
