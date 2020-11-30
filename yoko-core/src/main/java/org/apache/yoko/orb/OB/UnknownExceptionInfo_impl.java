@@ -19,6 +19,10 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.OB.UnknownExceptionInfo;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 public class UnknownExceptionInfo_impl extends org.omg.CORBA.LocalObject
         implements UnknownExceptionInfo {
     private String operation_;
@@ -60,11 +64,15 @@ public class UnknownExceptionInfo_impl extends org.omg.CORBA.LocalObject
     }
 
     public String describe_exception() {
-        java.io.StringWriter sw = new java.io.StringWriter();
-        java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-        ex_.printStackTrace(pw);
-        pw.flush();
-        return sw.toString();
+        String result = "";
+        try (StringWriter sw = new StringWriter();
+             PrintWriter pw = new PrintWriter(sw);) {
+            ex_.printStackTrace(pw);
+            pw.flush();
+            result += sw;
+        } catch (IOException ignored) {
+        }
+        return result;
     }
 
     public void raise_exception() {

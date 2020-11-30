@@ -58,25 +58,11 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
         return origin.value;
     }
 
-    public synchronized String describe() {
-        String desc = "id: " + PLUGIN_ID.value;
-
-        String localAddr = addr();
-        short localPort = port();
-        desc += "\nlocal address: ";
-        desc += localAddr;
-        desc += ":";
-        desc += (localPort < 0 ? 0xffff + (int) localPort + 1 : localPort);
-
-        String remoteAddr = remote_addr();
-        short remotePort = remote_port();
-        desc += "\nremote address: ";
-        desc += remoteAddr;
-        desc += ":";
-        desc += (remotePort < 0 ? 0xffff + (int) remotePort + 1 : remotePort);
-
-        return desc;
+    public String describe() {
+        return String.format("%s %s:%d -> %s:%d", PLUGIN_ID.value, addr(), unsigned(port()), remote_addr(), unsigned(remote_port()));
     }
+
+    private static int unsigned(short s) { return 0xFFFF & s; }
 
     public Socket getSocket() {return socket;}
 
@@ -170,5 +156,10 @@ public final class TransportInfo_impl extends LocalObject implements TransportIn
     //server-side constructor
     TransportInfo_impl(Transport_impl transport, Acceptor acceptor, ListenerMap lm) {
         this(transport.socket_, Origin.SERVER, lm);
+    }
+
+    @Override
+    public String toString() {
+        return describe();
     }
 }

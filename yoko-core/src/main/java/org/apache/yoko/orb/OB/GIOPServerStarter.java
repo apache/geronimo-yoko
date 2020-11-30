@@ -22,8 +22,10 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import java.util.Vector;
 import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.CLOSED;
 import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.HOLDING;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
 
 abstract class GIOPServerStarter {
     static final Logger logger = Logger.getLogger(GIOPServerStarter.class.getName());
@@ -63,13 +65,7 @@ abstract class GIOPServerStarter {
     // Emit a trace message when closing the acceptor
     //
     protected void logCloseAcceptor() {
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceConnections() > 0) {
-            org.apache.yoko.orb.OCI.AcceptorInfo info = acceptor_.get_info();
-            String msg = "stopped accepting connections\n";
-            msg += info.describe();
-            orbInstance_.getLogger().trace("incoming", msg);
-        }
+        if (CONN_IN_LOG.isLoggable(FINE)) CONN_IN_LOG.fine("stopped accepting connections\n" +  acceptor_.get_info().describe());
     }
 
     protected void reapWorkers() {
@@ -96,14 +92,7 @@ abstract class GIOPServerStarter {
 
         try {
             // Trace acceptor creation
-            CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-            if (coreTraceLevels.traceConnections() > 0) {
-                org.apache.yoko.orb.OCI.AcceptorInfo info = acceptor_
-                        .get_info();
-                String msg = "accepting connections\n";
-                msg += info.describe();
-                orbInstance_.getLogger().trace("incoming", msg);
-            }
+            if (CONN_IN_LOG.isLoggable(FINE)) CONN_IN_LOG.fine("accepting connections\n" + acceptor_.get_info().describe());
 
             // Start listening
             acceptor_.listen();

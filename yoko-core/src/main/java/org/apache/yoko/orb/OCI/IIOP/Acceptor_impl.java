@@ -338,7 +338,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         }
     }
 
-    // TODO: get rid of this finalizer, and use weak refs in AccFactory_impl instead to track Acceptors going away.
+    // TODO: get rid of this finalizer, and use phantom refs in AccFactory_impl instead to track Acceptors going away.
     public void finalize() throws Throwable {
         if (socket_ != null) {
             close();

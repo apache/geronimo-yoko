@@ -22,26 +22,20 @@ import org.omg.CORBA.CODESET_INCOMPATIBLE;
 enum CodeSetDatabase {
     ;
 
-    static CodeConverterBase getConverter(int to, int from) {
-        CodeSetInfo toSet = CodeSetInfo.forRegistryId(to);
+    static CodeConverterBase getConverter(int from, int to) {
         CodeSetInfo fromSet = CodeSetInfo.forRegistryId(from);
-        return getConverter(toSet, fromSet);
+        CodeSetInfo toSet = CodeSetInfo.forRegistryId(to);
+        return getConverter(fromSet, toSet);
     }
 
-    static CodeConverterBase getConverter(CodeSetInfo toSet, CodeSetInfo fromSet) {
+    static CodeConverterBase getConverter(CodeSetInfo fromSet, CodeSetInfo toSet) {
         // Optimization: don't use converter for identical narrow codesets
         if (toSet != null && toSet == fromSet && toSet.max_bytes == 1) return null;
 
-        CodeConverterBase converter = null;
+        if (fromSet == null || toSet == null) return new CodeConverterNone(fromSet, toSet);
 
-        if (fromSet == null || toSet == null) {
-            converter = new CodeConverterNone(fromSet, toSet);
-        } else {
-            // the unsupported codesets should have been filtered out by the initial handshake
-            converter = new CodeConverterImpl(fromSet, toSet);
-        }
-
-        return converter;
+        // the unsupported codesets should have been filtered out by the initial handshake
+        return new CodeConverterImpl(fromSet, toSet);
     }
 
     static int determineTCS(CodeSetComponent clientCS, CodeSetComponent serverCS, int fallback) {

@@ -275,8 +275,7 @@ public class ORB_impl extends ORBSingleton {
             BootManager_impl bootManager = new BootManager_impl(this);
             ConFactoryRegistry conFactoryRegistry = new ConFactoryRegistry_impl();
             AccFactoryRegistry accFactoryRegistry = new AccFactoryRegistry_impl();
-            UnknownExceptionStrategy unknownExceptionStrategy = new UnknownExceptionStrategy_impl(
-                    this);
+            UnknownExceptionStrategy unknownExceptionStrategy = new UnknownExceptionStrategy_impl();
             URLRegistry_impl urlRegistry = new URLRegistry_impl();
 
             orbInstance_ = new ORBInstance(this, orbId,

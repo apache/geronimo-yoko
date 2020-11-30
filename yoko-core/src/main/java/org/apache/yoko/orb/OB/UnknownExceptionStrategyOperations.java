@@ -39,18 +39,5 @@ public interface UnknownExceptionStrategyOperations
      *
      **/
 
-    void
-    unknown_exception(UnknownExceptionInfo info);
-
-    //
-    // IDL:orb.yoko.apache.org/OB/UnknownExceptionStrategy/destroy:1.0
-    //
-    /**
-     *
-     * Clean up resources prior to ORB destruction.
-     *
-     **/
-
-    void
-    destroy();
+    void unknown_exception(UnknownExceptionInfo info);
 }

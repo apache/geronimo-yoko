@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
+import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
+
 final public class CodeConverters {
     // This class may look immutable, but CodeConverterBase holds reader and writer objects that are stateful and mutable
     public static final CodeConverters NULL_CONVERTER = new CodeConverters(null, null, null, null);
@@ -43,9 +46,19 @@ final public class CodeConverters {
         return new CodeConverters(template);
     }
 
-    public static CodeConverters create(CodeConverterBase charIn, CodeConverterBase charOut, CodeConverterBase wcharIn, CodeConverterBase wcharOut) {
+    public static CodeConverters create(ORBInstance orbInst, int alienCs, int alienWcs) {
+        final int nativeCs = orbInst.getNativeCs();
+        final int nativeWcs = orbInst.getNativeWcs();
+        final CodeConverterBase charIn = getConverter(alienCs, nativeCs);
+        final CodeConverterBase charOut = getConverter(nativeCs, alienCs);
+        final CodeConverterBase wcharIn = getConverter(alienWcs, nativeWcs);
+        final CodeConverterBase wcharOut = getConverter(nativeWcs, alienWcs);
         if (charIn == null && charOut == null && wcharIn == null && wcharOut == null) return NULL_CONVERTER;
         return new CodeConverters(charIn, charOut, wcharIn, wcharOut);
+    }
+
+    public static CodeConverters createForWcharWriteOnly() {
+        return new CodeConverters(null, null, null, getConverter(UTF_16, UTF_16));
     }
 
     public boolean equals(Object obj) {
@@ -92,5 +105,13 @@ final public class CodeConverters {
         result = 29 * result + (inputWcharConverter != null ? inputWcharConverter.hashCode() : 0);
         result = 29 * result + (outputWcharConverter != null ? outputWcharConverter.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "CodeConverters{"
+                + "\noutputCharConverter=" + outputCharConverter
+                + "\noutputWcharConverter=" + outputWcharConverter
+                + "\n}";
     }
 }

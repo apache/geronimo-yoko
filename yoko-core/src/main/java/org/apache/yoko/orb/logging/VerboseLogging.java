@@ -22,6 +22,7 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
+import static java.util.logging.Level.WARNING;
 
 /**
  * Define standard logger objects for the most verbose logging.
@@ -37,6 +38,8 @@ public enum VerboseLogging {
      */
 
     public static final Logger CONN_LOG = Logger.getLogger("yoko.verbose.connection");
+    public static final Logger CONN_IN_LOG = Logger.getLogger("yoko.verbose.connection.in");
+    public static final Logger CONN_OUT_LOG = Logger.getLogger("yoko.verbose.connection.out");
     public static final Logger RETRY_LOG = Logger.getLogger("yoko.verbose.retry");
     public static final Logger REQ_IN_LOG = Logger.getLogger("yoko.verbose.request.in");
     public static final Logger REQ_OUT_LOG = Logger.getLogger("yoko.verbose.request.out");
@@ -44,13 +47,18 @@ public enum VerboseLogging {
 
     public static <L extends Throwable> L logged(Logger logger, L loggable, String reason) {
         loggable.addSuppressed(new StackTraceRecord(reason));
-        if (logger.isLoggable(FINEST)) logger.log(FINEST, reason, loggable);
-        else if (logger.isLoggable(FINE)) logger.fine(reason + ": " + loggable);
+        if (logger.isLoggable(FINEST)) logger.log(FINEST, reason, loggable); // usually formats stack trace
+        else if (logger.isLoggable(FINE)) logger.fine(reason + ": " + loggable); // will only log exception.toString()
         return loggable;
     }
 
     public static <W extends Throwable> W wrapped(Logger logger, Exception cause, String reason, Factory<W> wrapperFactory) {
         return logged(logger, (W)wrapperFactory.create().initCause(cause), reason);
+    }
+
+    public static <L extends Throwable> L warned(Logger logger, L loggable, String reason) {
+        logger.log(WARNING, reason, loggable);
+        return loggable;
     }
 
     /**

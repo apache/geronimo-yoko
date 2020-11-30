@@ -48,6 +48,7 @@ import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
 import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.logged;
 import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.util.HexConverter.octetsToAscii;
@@ -280,7 +281,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             if (socket_ == null)
                 return null;
         } catch (java.net.ConnectException ex) {
-            throw wrapped(CONN_LOG, ex, "Socket connection error", Transients.CONNECT_FAILED);
+            throw wrapped(CONN_OUT_LOG, ex, "Socket connection error", Transients.CONNECT_FAILED);
         } catch (IOException ex) {
             logger.log(FINE, "Socket I/O error", ex);
             throw (COMM_FAILURE)new COMM_FAILURE(
