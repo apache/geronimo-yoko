@@ -199,6 +199,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.StringTokenizer;
+import java.util.logging.Level;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
@@ -274,8 +275,7 @@ public class ORB_impl extends ORBSingleton {
             BootManager_impl bootManager = new BootManager_impl(this);
             ConFactoryRegistry conFactoryRegistry = new ConFactoryRegistry_impl();
             AccFactoryRegistry accFactoryRegistry = new AccFactoryRegistry_impl();
-            UnknownExceptionStrategy unknownExceptionStrategy = new UnknownExceptionStrategy_impl(
-                    this);
+            UnknownExceptionStrategy unknownExceptionStrategy = new UnknownExceptionStrategy_impl();
             URLRegistry_impl urlRegistry = new URLRegistry_impl();
 
             orbInstance_ = new ORBInstance(this, orbId,
@@ -484,7 +484,7 @@ public class ORB_impl extends ORBSingleton {
     protected void finalize() throws Throwable {
         if (orbInstance_ != null) {
             Logger logger = orbInstance_.getLogger();
-            logger.debug("ORB.destroy() was not called. This may result in resource leaks.");
+            logger.fine("ORB.destroy() was not called. This may result in resource leaks.");
         }
         super.finalize();
     }
@@ -506,7 +506,7 @@ public class ORB_impl extends ORBSingleton {
 
                 if (seq.length == 0) {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.protocol: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -519,7 +519,7 @@ public class ORB_impl extends ORBSingleton {
                 else if (value.equals("false")) b = false;
                 else {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.connection_reuse: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -532,7 +532,7 @@ public class ORB_impl extends ORBSingleton {
                 else if (value.equals("false")) b = false;
                 else {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.zero_port: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -558,7 +558,7 @@ public class ORB_impl extends ORBSingleton {
                 else if (value.equals("relaxed")) val = LOCATION_TRANSPARENCY_RELAXED.value;
                 else {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.location_transparency: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -571,7 +571,7 @@ public class ORB_impl extends ORBSingleton {
                 else if (value.equals("false")) b = false;
                 else {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.interceptor: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -605,7 +605,7 @@ public class ORB_impl extends ORBSingleton {
                 else if (value.equals("false")) b = false;
                 else {
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.locate_request: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -626,7 +626,7 @@ public class ORB_impl extends ORBSingleton {
                     break;
                 default:
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.rebind: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -650,7 +650,7 @@ public class ORB_impl extends ORBSingleton {
                     break;
                 default:
                     String err = "ORB.init: invalid value for " + "yoko.orb.policy.sync_scope: `" + value + "'";
-                    logger.error(err);
+                    logger.severe(err);
                     throw new INITIALIZE(err);
                 }
 
@@ -667,7 +667,7 @@ public class ORB_impl extends ORBSingleton {
              */
             default:
                 String err = "ORB.init: unknown property `" + key + "'";
-                logger.error(err);
+                logger.severe(err);
                 throw new INITIALIZE(err);
             }
         }
@@ -697,7 +697,7 @@ public class ORB_impl extends ORBSingleton {
                 break;
             default:
                 String err = "ORB.init: invalid value for " + "yoko.orb.policy.retry: `" + value + "'";
-                logger.error(err);
+                logger.severe(err);
                 throw new INITIALIZE(err);
             }
         }
@@ -706,7 +706,7 @@ public class ORB_impl extends ORBSingleton {
                 retry_interval = Integer.parseInt(value);
             } catch (NumberFormatException ex) {
                 String err = "ORB.init: invalid value for yoko.orb.policy.retry.interval: `" + value + "'";
-                logger.error(err, ex);
+                logger.log(Level.SEVERE, err, ex);
                 throw new INITIALIZE(err);
             }
         }
@@ -716,7 +716,7 @@ public class ORB_impl extends ORBSingleton {
             } catch (NumberFormatException ex) {
                 String err = "ORB.init: invalid value for "
                         + "yoko.orb.policy.retry.max: `" + value + "'";
-                logger.error(err, ex);
+                logger.log(Level.SEVERE, err, ex);
                 throw new INITIALIZE(err);
             }
         }
@@ -782,11 +782,11 @@ public class ORB_impl extends ORBSingleton {
                     }
                     // Exceptions have to be ignored here
                     catch (ClassNotFoundException ex) {
-                        logger.warning("ORB.init: initializer class " + className + " not found", ex);
+                        logger.log(Level.WARNING, "ORB.init: initializer class " + className + " not found", ex);
                     } catch (InstantiationException ex) {
-                        logger.warning("ORB.init: error occurred while instantiating initializer class " + className, ex);
+                        logger.log(Level.WARNING, "ORB.init: error occurred while instantiating initializer class " + className, ex);
                     } catch (IllegalAccessException ex) {
-                        logger.warning("ORB.init: cannot access initializer class " + className, ex);
+                        logger.log(Level.WARNING, "ORB.init: cannot access initializer class " + className, ex);
                     }
                 }
             }
@@ -809,7 +809,7 @@ public class ORB_impl extends ORBSingleton {
                 return true;
             }
         } catch (IOException ex) {
-            logger.warning("ORB.init: could not load configuration file " + configFile, ex);
+            logger.log(Level.WARNING, "ORB.init: could not load configuration file " + configFile, ex);
             return false;
         }
     }
@@ -872,7 +872,7 @@ public class ORB_impl extends ORBSingleton {
             } else if (key.equals("yoko.orb.server_name")) {
                 // The server name must begin with an alpha-numeric character
                 if (value.length() == 0 || !Character.isLetterOrDigit(value.charAt(0))) {
-                    logger.error("ORB.init: illegal value for yoko.orb.server_name: " + value);
+                    logger.severe("ORB.init: illegal value for yoko.orb.server_name: " + value);
                     throw new INITIALIZE("ORB.init: illegal value for yoko.orb.server_name: " + value);
                 }
                 serverId = value;
@@ -889,7 +889,7 @@ public class ORB_impl extends ORBSingleton {
                 if (csid != 0 && csid != UTF_8.id)
                     nativeCs = csid;
                 else {
-                    logger.error("ORB.init: unknown value for yoko.orb.native_cs: " + value);
+                    logger.severe("ORB.init: unknown value for yoko.orb.native_cs: " + value);
                     throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_cs: " + value);
                 }
             } else if (key.equals("yoko.orb.native_wcs")) {
@@ -897,7 +897,7 @@ public class ORB_impl extends ORBSingleton {
                 if (csid != 0 && csid != UTF_8.id)
                     nativeWcs = csid;
                 else {
-                    logger.error("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
+                    logger.severe("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
                     throw new INITIALIZE("ORB.init: unknown value for yoko.orb.native_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.default_wcs")) {
@@ -906,12 +906,12 @@ public class ORB_impl extends ORBSingleton {
                 if (csid != 0 && csid != UTF_8.id)
                     defaultWcs = csid;
                 else {
-                    logger.error("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
+                    logger.severe("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
                     throw new INITIALIZE("ORB.init: unknown value for yoko.orb.default_wcs: " + value);
                 }
             } else if (key.equals("yoko.orb.extended_wchar")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    logger.error("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
+                    logger.severe("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
                     throw new INITIALIZE("ORB.init: unknown value for yoko.orb.extended_wchar: " + value);
                 }
             } else if (key.equals("yoko.orb.default_init_ref")) {
@@ -931,7 +931,7 @@ public class ORB_impl extends ORBSingleton {
                 // Ignore
             } else if (key.equals("yoko.orb.use_type_code_cache")) {
                 if (!value.equals("true") && !value.equals("false")) {
-                    logger.error("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
+                    logger.severe("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
                     throw new INITIALIZE("ORB.init: unknown value for yoko.orb.use_type_code_cache: " + value);
                 }
             } else if (key.equals("yoko.orb.giop.max_message_size")) {
@@ -940,7 +940,7 @@ public class ORB_impl extends ORBSingleton {
                     GIOPIncomingMessage.setMaxMessageSize(max);
                     GIOPOutgoingMessage.setMaxMessageSize(max);
                 } catch (NumberFormatException ex) {
-                    logger.error("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value, ex);
+                    logger.log(Level.SEVERE, "ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value, ex);
                     throw new INITIALIZE("ORB.init: invalid value for yoko.orb.giop.max_message_size: " + value);
                 }
             } else if (key.equals("yoko.orb.ami_workers")) {
@@ -1434,7 +1434,7 @@ public class ORB_impl extends ORBSingleton {
                 if (args[i].equals("-ORBconfig")) {
                     if (i + 1 >= args.length) {
                         String msg = "ORB.init: argument expected for -ORBconfig";
-                        logger.error(msg);
+                        logger.severe(msg);
                         throw new INITIALIZE(msg);
                     }
 
@@ -1496,7 +1496,7 @@ public class ORB_impl extends ORBSingleton {
             case "InitRef": {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
-                    logger.error("ORB.init: invalid value for -ORBInitRef");
+                    logger.severe("ORB.init: invalid value for -ORBInitRef");
                     throw new INITIALIZE();
                 }
                 String svc = value[0].substring(0, n);
@@ -1510,7 +1510,7 @@ public class ORB_impl extends ORBSingleton {
             case "property": {
                 int n = value[0].indexOf('=');
                 if (n <= 0 || value[0].length() == n + 1) {
-                    logger.error("ORB.init: invalid value for -ORBproperty");
+                    logger.severe("ORB.init: invalid value for -ORBproperty");
                     throw new INITIALIZE();
                 }
                 String propName = value[0].substring(0, n);

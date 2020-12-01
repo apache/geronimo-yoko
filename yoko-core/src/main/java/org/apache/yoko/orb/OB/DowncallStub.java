@@ -27,10 +27,10 @@ import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.ExceptionList;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.NVList;
@@ -72,9 +72,10 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 //
 // DowncallStub is equivalent to the C++ class OB::MarshalStubImpl
@@ -135,12 +136,8 @@ public final class DowncallStub {
         // failure exception, and let the stub handle this.
         //
         if (clientProfilePairs_.isEmpty()) {
-            CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-            if (coreTraceLevels.traceRetry() >= 2) {
-                logger.fine("retry: no profiles available");
-            }
-
-            throw new FailureException(new TRANSIENT(describeTransient(MinorCodes.MinorNoUsableProfileInIOR), MinorCodes.MinorNoUsableProfileInIOR, CompletionStatus.COMPLETED_NO));
+            RETRY_LOG.fine("No profiles available");
+            throw new FailureException(Transients.NO_USABLE_PROFILE_IN_IOR.create());
         }
 
         ClientProfilePair clientProfilePair = (ClientProfilePair) clientProfilePairs_.elementAt(0);
@@ -362,7 +359,7 @@ public final class DowncallStub {
                     MinorCodes.describeBadInvOrder(
                             MinorCodes.MinorShutdownCalled),
                             MinorCodes.MinorShutdownCalled,
-                            CompletionStatus.COMPLETED_NO);
+                            COMPLETED_NO);
 
         for (ClientProfilePair pair : clientProfilePairs_) {
             if (pair.client == client && pair.profile == profile) {
@@ -389,7 +386,7 @@ public final class DowncallStub {
         // We can't retry if RETRY_STRICT or RETRY_NEVER is set and the
         // completion status is not COMPLETED_NO
         //
-        if (policies_.retry.mode != RETRY_ALWAYS.value && ex.exception.completed != CompletionStatus.COMPLETED_NO) {
+        if (policies_.retry.mode != RETRY_ALWAYS.value && ex.exception.completed != COMPLETED_NO) {
             throw ex;
         }
 
@@ -429,11 +426,11 @@ public final class DowncallStub {
                     }
 
                     //
-                    // If the client doesn't support twoway invocations,
+                    // If the client doesn't support two-way invocations,
                     // then silently pretend the locate request succeeded
                     //
                     if (!client.twoway()) {
-                        logger.fine("Twoway invocations not supported, returning true"); 
+                        logger.fine("Two-way invocations not supported, returning true");
                         return true;
                     }
                 } catch (SystemException ex) {

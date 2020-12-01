@@ -17,22 +17,12 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.Logger;
-import org.apache.yoko.orb.OB.UnknownExceptionInfo;
-import org.apache.yoko.orb.OB.UnknownExceptionStrategy;
+import org.apache.yoko.orb.logging.VerboseLogging;
 
-//
-// An UnknownExceptionStrategy will be called by the ORB when a servant
-// raises an unexpected exception
-//
-public class UnknownExceptionStrategy_impl extends org.omg.CORBA.LocalObject
-        implements UnknownExceptionStrategy {
-    protected org.omg.CORBA.ORB orb_;
-
-    public UnknownExceptionStrategy_impl(org.omg.CORBA.ORB orb) {
-        orb_ = orb;
-    }
-
+/**
+ * An UnknownExceptionStrategy will be called by the ORB when a servant raises an unexpected exception
+ */
+public class UnknownExceptionStrategy_impl extends org.omg.CORBA.LocalObject implements UnknownExceptionStrategy {
     //
     // Handle an unknown exception. If this method doesn't throw
     // a SystemException, the ORB will return CORBA::UNKNOWN to
@@ -40,32 +30,11 @@ public class UnknownExceptionStrategy_impl extends org.omg.CORBA.LocalObject
     //
     public void unknown_exception(UnknownExceptionInfo info) {
         String msg = "Servant method raised a non-CORBA exception";
+        if (info.response_expected()) msg += "\n\tClient receives this exception as CORBA::UNKNOWN";
+        msg += "\n\toperation name: \""+ info.operation() + '"';
+        msg += "\n\ttransport info: " + info.transport_info();
+        msg += "\n\texception: " + info.describe_exception();
 
-        if (info.response_expected())
-            msg += "\nClient receives this exception as CORBA::UNKNOWN";
-
-        msg += "\noperation name: \"";
-        msg += info.operation();
-        msg += '"';
-
-        org.apache.yoko.orb.OCI.TransportInfo transportInfo = info
-                .transport_info();
-        if (transportInfo != null) {
-            String desc = transportInfo.describe();
-            msg += '\n';
-            msg += desc;
-        } else {
-            msg += "\nCollocated method call";
-        }
-
-        msg += "\n";
-        msg += info.describe_exception();
-
-        Logger logger = ((org.apache.yoko.orb.CORBA.ORB) orb_).logger();
-        logger.warning(msg);
-    }
-
-    public void destroy() {
-        orb_ = null;
+        VerboseLogging.REQ_IN_LOG.warning(msg);
     }
 }

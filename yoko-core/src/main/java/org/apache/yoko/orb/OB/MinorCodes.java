@@ -17,19 +17,16 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.omg.CORBA.OMGVMCID;
 import org.apache.yoko.ApacheVMCID;
+import org.omg.CORBA.OMGVMCID;
 
 public final class MinorCodes {
-    public final static int OMGVMCID = org.omg.CORBA.OMGVMCID.value;
-
-    public final static int OOCVMCID = org.apache.yoko.ApacheVMCID.value;
 
     // ----------------------------------------------------------------------
     // Minor error codes for INITIALIZE
     // ----------------------------------------------------------------------
 
-    public final static int MinorORBDestroyed = 1 | OOCVMCID;
+    public final static int MinorORBDestroyed = 1 | ApacheVMCID.value;
 
     public static String describeInitialize(int minor) {
         String result = null;
@@ -50,13 +47,13 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorMissingLocalValueImplementation = 1 | OMGVMCID;
+    public final static int MinorMissingLocalValueImplementation = 1 | OMGVMCID.value;
 
-    public final static int MinorIncompatibleValueImplementationVersion = 2 | OMGVMCID;
+    public final static int MinorIncompatibleValueImplementationVersion = 2 | OMGVMCID.value;
 
-    public final static int MinorNotSupportedByLocalObject = 3 | OMGVMCID;
+    public final static int MinorNotSupportedByLocalObject = 3 | OMGVMCID.value;
 
-    public final static int MinorDIINotSupportedByLocalObject = 4 | OMGVMCID;
+    public final static int MinorDIINotSupportedByLocalObject = 4 | OMGVMCID.value;
 
     public static String describeNoImplement(int minor) {
         String result = null;
@@ -89,9 +86,9 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorUnregisteredValue = 1 | OMGVMCID;
+    public final static int MinorUnregisteredValue = 1 | OMGVMCID.value;
 
-    public final static int MinorCannotDispatch = 2 | OMGVMCID;
+    public final static int MinorCannotDispatch = 2 | OMGVMCID.value;
 
     public static String describeObjectNotExist(int minor) {
         String result = null;
@@ -117,96 +114,96 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorValueFactoryError = 1 | OMGVMCID;
+    public final static int MinorValueFactoryError = 1 | OMGVMCID.value;
 
-    public final static int MinorRepositoryIdExists = 2 | OMGVMCID;
+    public final static int MinorRepositoryIdExists = 2 | OMGVMCID.value;
 
-    public final static int MinorNameExists = 3 | OMGVMCID;
+    public final static int MinorNameExists = 3 | OMGVMCID.value;
 
-    public final static int MinorInvalidContainer = 4 | OMGVMCID;
+    public final static int MinorInvalidContainer = 4 | OMGVMCID.value;
 
-    public final static int MinorNameClashInInheritedContext = 5 | OMGVMCID;
+    public final static int MinorNameClashInInheritedContext = 5 | OMGVMCID.value;
 
-    public final static int MinorBadAbstractInterfaceType = 6 | OMGVMCID;
+    public final static int MinorBadAbstractInterfaceType = 6 | OMGVMCID.value;
 
-    public final static int MinorBadSchemeName = 7 | OMGVMCID;
+    public final static int MinorBadSchemeName = 7 | OMGVMCID.value;
 
-    public final static int MinorBadAddress = 8 | OMGVMCID;
+    public final static int MinorBadAddress = 8 | OMGVMCID.value;
 
-    public final static int MinorBadSchemeSpecificPart = 9 | OMGVMCID;
+    public final static int MinorBadSchemeSpecificPart = 9 | OMGVMCID.value;
 
-    public final static int MinorOther = 10 | OMGVMCID;
+    public final static int MinorOther = 10 | OMGVMCID.value;
 
-    public final static int MinorInvalidAbstractInterfaceInheritance = 11 | OMGVMCID;
+    public final static int MinorInvalidAbstractInterfaceInheritance = 11 | OMGVMCID.value;
 
-    public final static int MinorInvalidValueInheritance = 12 | OMGVMCID;
+    public final static int MinorInvalidValueInheritance = 12 | OMGVMCID.value;
 
-    public final static int MinorIncompleteTypeCodeParameter = 13 | OMGVMCID;
+    public final static int MinorIncompleteTypeCodeParameter = 13 | OMGVMCID.value;
 
-    public final static int MinorInvalidObjectId = 14 | OMGVMCID;
+    public final static int MinorInvalidObjectId = 14 | OMGVMCID.value;
 
-    public final static int MinorInvalidName = 15 | OMGVMCID;
+    public final static int MinorInvalidName = 15 | OMGVMCID.value;
 
-    public final static int MinorInvalidId = 16 | OMGVMCID;
+    public final static int MinorInvalidId = 16 | OMGVMCID.value;
 
-    public final static int MinorInvalidMemberName = 17 | OMGVMCID;
+    public final static int MinorInvalidMemberName = 17 | OMGVMCID.value;
 
-    public final static int MinorDuplicateLabel = 18 | OMGVMCID;
+    public final static int MinorDuplicateLabel = 18 | OMGVMCID.value;
 
-    public final static int MinorIncompatibleLabelType = 19 | OMGVMCID;
+    public final static int MinorIncompatibleLabelType = 19 | OMGVMCID.value;
 
-    public final static int MinorInvalidDiscriminatorType = 20 | OMGVMCID;
+    public final static int MinorInvalidDiscriminatorType = 20 | OMGVMCID.value;
 
-    public final static int MinorNoExceptionInAny = 21 | OMGVMCID;
+    public final static int MinorNoExceptionInAny = 21 | OMGVMCID.value;
 
-    public final static int MinorUnlistedUserException = 22 | OMGVMCID;
+    public final static int MinorUnlistedUserException = 22 | OMGVMCID.value;
 
-    public final static int MinorNoWcharCodeSet = 23 | OMGVMCID;
+    public final static int MinorNoWcharCodeSet = 23 | OMGVMCID.value;
 
-    public final static int MinorServiceContextIdOutOfRange = 24 | OMGVMCID;
+    public final static int MinorServiceContextIdOutOfRange = 24 | OMGVMCID.value;
 
-    public final static int MinorEnumValueOutOfRange = 25 | OMGVMCID;
+    public final static int MinorEnumValueOutOfRange = 25 | OMGVMCID.value;
 
-    public final static int MinorInvalidServiceContextId = 26 | OMGVMCID;
+    public final static int MinorInvalidServiceContextId = 26 | OMGVMCID.value;
 
-    public final static int MinorObjectIsNull = 27 | OMGVMCID;
+    public final static int MinorObjectIsNull = 27 | OMGVMCID.value;
 
-    public final static int MinorInvalidComponentId = 28 | OMGVMCID;
+    public final static int MinorInvalidComponentId = 28 | OMGVMCID.value;
 
-    public final static int MinorInvalidProfileId = 29 | OMGVMCID;
+    public final static int MinorInvalidProfileId = 29 | OMGVMCID.value;
 
-    public final static int MinorDuplicatePolicyType = 30 | OMGVMCID;
+    public final static int MinorDuplicatePolicyType = 30 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorDuplicateDeclarator = 1 | OOCVMCID;
+    public final static int MinorDuplicateDeclarator = 1 | ApacheVMCID.value;
 
-    public final static int MinorInvalidValueModifier = 2 | OOCVMCID;
+    public final static int MinorInvalidValueModifier = 2 | ApacheVMCID.value;
 
-    public final static int MinorDuplicateValueInit = 3 | OOCVMCID;
+    public final static int MinorDuplicateValueInit = 3 | ApacheVMCID.value;
 
-    public final static int MinorAbstractValueInit = 4 | OOCVMCID;
+    public final static int MinorAbstractValueInit = 4 | ApacheVMCID.value;
 
-    public final static int MinorDuplicateBaseType = 5 | OOCVMCID;
+    public final static int MinorDuplicateBaseType = 5 | ApacheVMCID.value;
 
-    public final static int MinorSingleThreadedOnly = 6 | OOCVMCID;
+    public final static int MinorSingleThreadedOnly = 6 | ApacheVMCID.value;
 
-    public final static int MinorNameRedefinitionInImmediateScope = 7 | OOCVMCID;
+    public final static int MinorNameRedefinitionInImmediateScope = 7 | ApacheVMCID.value;
 
-    public final static int MinorInvalidValueBoxType = 8 | OOCVMCID;
+    public final static int MinorInvalidValueBoxType = 8 | ApacheVMCID.value;
 
-    public final static int MinorInvalidLocalInterfaceInheritance = 9 | OOCVMCID;
+    public final static int MinorInvalidLocalInterfaceInheritance = 9 | ApacheVMCID.value;
 
-    public final static int MinorConstantTypeMismatch = 10 | OOCVMCID;
+    public final static int MinorConstantTypeMismatch = 10 | ApacheVMCID.value;
 
-    public final static int MinorInvalidPattern = 11 | OOCVMCID;
+    public final static int MinorInvalidPattern = 11 | ApacheVMCID.value;
 
-    public final static int MinorInvalidScope = 12 | OOCVMCID;
+    public final static int MinorInvalidScope = 12 | ApacheVMCID.value;
     
-    public final static int MinorInvalidContextID = 13 | OOCVMCID;
+    public final static int MinorInvalidContextID = 13 | ApacheVMCID.value;
     
-    public final static int MinorIncompatibleObjectType = 14 | OOCVMCID;
+    public final static int MinorIncompatibleObjectType = 14 | ApacheVMCID.value;
     
     public static String describeBadParam(int minor) {
         String result = null;
@@ -399,46 +396,46 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorDependencyPreventsDestruction = 1 | OMGVMCID;
+    public final static int MinorDependencyPreventsDestruction = 1 | OMGVMCID.value;
 
-    public final static int MinorIndestructibleObject = 2 | OMGVMCID;
+    public final static int MinorIndestructibleObject = 2 | OMGVMCID.value;
 
-    public final static int MinorDestroyWouldBlock = 3 | OMGVMCID;
+    public final static int MinorDestroyWouldBlock = 3 | OMGVMCID.value;
 
-    public final static int MinorShutdownCalled = 4 | OMGVMCID;
+    public final static int MinorShutdownCalled = 4 | OMGVMCID.value;
 
-    public final static int MinorDuplicateSend = 5 | OMGVMCID;
+    public final static int MinorDuplicateSend = 5 | OMGVMCID.value;
 
-    public final static int MinorServantManagerAlreadySet = 6 | OMGVMCID;
+    public final static int MinorServantManagerAlreadySet = 6 | OMGVMCID.value;
 
-    public final static int MinorInvalidUseOfDSIArguments = 7 | OMGVMCID;
+    public final static int MinorInvalidUseOfDSIArguments = 7 | OMGVMCID.value;
 
-    public final static int MinorInvalidUseOfDSIContext = 8 | OMGVMCID;
+    public final static int MinorInvalidUseOfDSIContext = 8 | OMGVMCID.value;
 
-    public final static int MinorInvalidUseOfDSIResult = 9 | OMGVMCID;
+    public final static int MinorInvalidUseOfDSIResult = 9 | OMGVMCID.value;
 
-    public final static int MinorRequestAlreadySent = 10 | OMGVMCID;
+    public final static int MinorRequestAlreadySent = 10 | OMGVMCID.value;
 
-    public final static int MinorRequestNotSent = 11 | OMGVMCID;
+    public final static int MinorRequestNotSent = 11 | OMGVMCID.value;
 
-    public final static int MinorResponseAlreadyReceived = 12 | OMGVMCID;
+    public final static int MinorResponseAlreadyReceived = 12 | OMGVMCID.value;
 
-    public final static int MinorSynchronousRequest = 13 | OMGVMCID;
+    public final static int MinorSynchronousRequest = 13 | OMGVMCID.value;
 
-    public final static int MinorInvalidPICall = 14 | OMGVMCID;
+    public final static int MinorInvalidPICall = 14 | OMGVMCID.value;
 
-    public final static int MinorServiceContextExists = 15 | OMGVMCID;
+    public final static int MinorServiceContextExists = 15 | OMGVMCID.value;
 
-    public final static int MinorPolicyFactoryExists = 16 | OMGVMCID;
+    public final static int MinorPolicyFactoryExists = 16 | OMGVMCID.value;
 
-    public final static int MinorNoCreatePOA = 17 | OMGVMCID;
+    public final static int MinorNoCreatePOA = 17 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorBadConcModel = 1 | OOCVMCID;
+    public final static int MinorBadConcModel = 1 | ApacheVMCID.value;
 
-    public final static int MinorORBRunning = 2 | OOCVMCID;
+    public final static int MinorORBRunning = 2 | ApacheVMCID.value;
 
     public static String describeBadInvOrder(int minor) {
         String result = null;
@@ -536,66 +533,66 @@ public final class MinorCodes {
     //
     // Yoko specific minor codes
     //
-    public final static int MinorRecv = 1 | OOCVMCID;
+    public final static int MinorRecv = 1 | ApacheVMCID.value;
 
-    public final static int MinorSend = 2 | OOCVMCID;
+    public final static int MinorSend = 2 | ApacheVMCID.value;
 
-    public final static int MinorRecvZero = 3 | OOCVMCID;
+    public final static int MinorRecvZero = 3 | ApacheVMCID.value;
 
-    public final static int MinorSendZero = 4 | OOCVMCID;
+    public final static int MinorSendZero = 4 | ApacheVMCID.value;
 
-    public final static int MinorSocket = 5 | OOCVMCID;
+    public final static int MinorSocket = 5 | ApacheVMCID.value;
 
-    public final static int MinorSetsockopt = 6 | OOCVMCID;
+    public final static int MinorSetsockopt = 6 | ApacheVMCID.value;
 
-    public final static int MinorGetsockopt = 7 | OOCVMCID;
+    public final static int MinorGetsockopt = 7 | ApacheVMCID.value;
 
-    public final static int MinorBind = 8 | OOCVMCID;
+    public final static int MinorBind = 8 | ApacheVMCID.value;
 
-    public final static int MinorListen = 9 | OOCVMCID;
+    public final static int MinorListen = 9 | ApacheVMCID.value;
 
-    public final static int MinorConnect = 10 | OOCVMCID;
+    public final static int MinorConnect = 10 | ApacheVMCID.value;
 
-    public final static int MinorAccept = 11 | OOCVMCID;
+    public final static int MinorAccept = 11 | ApacheVMCID.value;
 
-    public final static int MinorSelect = 12 | OOCVMCID;
+    public final static int MinorSelect = 12 | ApacheVMCID.value;
 
-    public final static int MinorSetSoTimeout = 26 | OOCVMCID;
+    public final static int MinorSetSoTimeout = 26 | ApacheVMCID.value;
 
-    public final static int MinorGetsockname = 27 | OOCVMCID;
+    public final static int MinorGetsockname = 27 | ApacheVMCID.value;
 
-    public final static int MinorGetpeername = 28 | OOCVMCID;
+    public final static int MinorGetpeername = 28 | ApacheVMCID.value;
 
-    public final static int MinorGethostname = 13 | OOCVMCID;
+    public final static int MinorGethostname = 13 | ApacheVMCID.value;
 
-    public final static int MinorGethostbyname = 14 | OOCVMCID;
+    public final static int MinorGethostbyname = 14 | ApacheVMCID.value;
 
-    public final static int MinorWSAStartup = 15 | OOCVMCID;
+    public final static int MinorWSAStartup = 15 | ApacheVMCID.value;
 
-    public final static int MinorWSACleanup = 16 | OOCVMCID;
+    public final static int MinorWSACleanup = 16 | ApacheVMCID.value;
 
-    public final static int MinorNoGIOP = 17 | OOCVMCID;
+    public final static int MinorNoGIOP = 17 | ApacheVMCID.value;
 
-    public final static int MinorUnknownMessage = 18 | OOCVMCID;
+    public final static int MinorUnknownMessage = 18 | ApacheVMCID.value;
 
-    public final static int MinorWrongMessage = 19 | OOCVMCID;
+    public final static int MinorWrongMessage = 19 | ApacheVMCID.value;
 
-    public final static int MinorMessageError = 21 | OOCVMCID;
+    public final static int MinorMessageError = 21 | ApacheVMCID.value;
 
-    public final static int MinorFragment = 22 | OOCVMCID;
+    public final static int MinorFragment = 22 | ApacheVMCID.value;
 
-    public final static int MinorUnknownReqId = 24 | OOCVMCID;
+    public final static int MinorUnknownReqId = 24 | ApacheVMCID.value;
 
-    public final static int MinorVersion = 25 | OOCVMCID;
+    public final static int MinorVersion = 25 | ApacheVMCID.value;
 
-    public final static int MinorPipe = 23 | OOCVMCID;
+    public final static int MinorPipe = 23 | ApacheVMCID.value;
 
-    public final static int MinorUnknownReplyMessage = 29 | OOCVMCID;
+    public final static int MinorUnknownReplyMessage = 29 | ApacheVMCID.value;
 
     //
     // Yoko deprecated minor codes
     //
-    public final static int MinorDeprecatedCloseConnection = 20 | OOCVMCID;
+    public final static int MinorDeprecatedCloseConnection = 20 | ApacheVMCID.value;
 
     public static String describeCommFailure(int minor) {
         String result = null;
@@ -725,13 +722,13 @@ public final class MinorCodes {
     //
     // Yoko specific minor codes
     //
-    public final static int MinorNoIntfRepos = 1 | OOCVMCID;
+    public final static int MinorNoIntfRepos = 1 | ApacheVMCID.value;
 
-    public final static int MinorLookupAmbiguous = 2 | OOCVMCID;
+    public final static int MinorLookupAmbiguous = 2 | ApacheVMCID.value;
 
-    public final static int MinorIllegalRecursion = 3 | OOCVMCID;
+    public final static int MinorIllegalRecursion = 3 | ApacheVMCID.value;
 
-    public final static int MinorNoEntry = 4 | OOCVMCID;
+    public final static int MinorNoEntry = 4 | ApacheVMCID.value;
 
     public static String describeIntfRepos(int minor) {
         String result = null;
@@ -764,115 +761,115 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorNoValueFactory = 1 | OMGVMCID;
+    public final static int MinorNoValueFactory = 1 | OMGVMCID.value;
 
-    public final static int MinorDSIResultBeforeContext = 2 | OMGVMCID;
+    public final static int MinorDSIResultBeforeContext = 2 | OMGVMCID.value;
 
-    public final static int MinorDSIInvalidParameterList = 3 | OMGVMCID;
+    public final static int MinorDSIInvalidParameterList = 3 | OMGVMCID.value;
 
-    public final static int MinorLocalObject = 4 | OMGVMCID;
+    public final static int MinorLocalObject = 4 | OMGVMCID.value;
 
-    public final static int MinorWcharSentByClient = 5 | OMGVMCID;
+    public final static int MinorWcharSentByClient = 5 | OMGVMCID.value;
 
-    public final static int MinorWcharSentByServer = 6 | OMGVMCID;
+    public final static int MinorWcharSentByServer = 6 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorReadOverflow = 1 | OOCVMCID;
+    public final static int MinorReadOverflow = 1 | ApacheVMCID.value;
 
-    public final static int MinorReadBooleanOverflow = 2 | OOCVMCID;
+    public final static int MinorReadBooleanOverflow = 2 | ApacheVMCID.value;
 
-    public final static int MinorReadCharOverflow = 3 | OOCVMCID;
+    public final static int MinorReadCharOverflow = 3 | ApacheVMCID.value;
 
-    public final static int MinorReadWCharOverflow = 4 | OOCVMCID;
+    public final static int MinorReadWCharOverflow = 4 | ApacheVMCID.value;
 
-    public final static int MinorReadOctetOverflow = 5 | OOCVMCID;
+    public final static int MinorReadOctetOverflow = 5 | ApacheVMCID.value;
 
-    public final static int MinorReadShortOverflow = 6 | OOCVMCID;
+    public final static int MinorReadShortOverflow = 6 | ApacheVMCID.value;
 
-    public final static int MinorReadUShortOverflow = 7 | OOCVMCID;
+    public final static int MinorReadUShortOverflow = 7 | ApacheVMCID.value;
 
-    public final static int MinorReadLongOverflow = 8 | OOCVMCID;
+    public final static int MinorReadLongOverflow = 8 | ApacheVMCID.value;
 
-    public final static int MinorReadULongOverflow = 9 | OOCVMCID;
+    public final static int MinorReadULongOverflow = 9 | ApacheVMCID.value;
 
-    public final static int MinorReadLongLongOverflow = 10 | OOCVMCID;
+    public final static int MinorReadLongLongOverflow = 10 | ApacheVMCID.value;
 
-    public final static int MinorReadULongLongOverflow = 11 | OOCVMCID;
+    public final static int MinorReadULongLongOverflow = 11 | ApacheVMCID.value;
 
-    public final static int MinorReadFloatOverflow = 12 | OOCVMCID;
+    public final static int MinorReadFloatOverflow = 12 | ApacheVMCID.value;
 
-    public final static int MinorReadDoubleOverflow = 13 | OOCVMCID;
+    public final static int MinorReadDoubleOverflow = 13 | ApacheVMCID.value;
 
-    public final static int MinorReadLongDoubleOverflow = 14 | OOCVMCID;
+    public final static int MinorReadLongDoubleOverflow = 14 | ApacheVMCID.value;
 
-    public final static int MinorReadStringOverflow = 15 | OOCVMCID;
+    public final static int MinorReadStringOverflow = 15 | ApacheVMCID.value;
 
-    public final static int MinorReadStringZeroLength = 16 | OOCVMCID;
+    public final static int MinorReadStringZeroLength = 16 | ApacheVMCID.value;
 
-    public final static int MinorReadStringNullChar = 17 | OOCVMCID;
+    public final static int MinorReadStringNullChar = 17 | ApacheVMCID.value;
 
-    public final static int MinorReadStringNoTerminator = 18 | OOCVMCID;
+    public final static int MinorReadStringNoTerminator = 18 | ApacheVMCID.value;
 
-    public final static int MinorReadWStringOverflow = 19 | OOCVMCID;
+    public final static int MinorReadWStringOverflow = 19 | ApacheVMCID.value;
 
-    public final static int MinorReadWStringZeroLength = 20 | OOCVMCID;
+    public final static int MinorReadWStringZeroLength = 20 | ApacheVMCID.value;
 
-    public final static int MinorReadWStringNullWChar = 21 | OOCVMCID;
+    public final static int MinorReadWStringNullWChar = 21 | ApacheVMCID.value;
 
-    public final static int MinorReadWStringNoTerminator = 22 | OOCVMCID;
+    public final static int MinorReadWStringNoTerminator = 22 | ApacheVMCID.value;
 
-    public final static int MinorReadFixedOverflow = 23 | OOCVMCID;
+    public final static int MinorReadFixedOverflow = 23 | ApacheVMCID.value;
 
-    public final static int MinorReadFixedInvalid = 24 | OOCVMCID;
+    public final static int MinorReadFixedInvalid = 24 | ApacheVMCID.value;
 
-    public final static int MinorReadBooleanArrayOverflow = 25 | OOCVMCID;
+    public final static int MinorReadBooleanArrayOverflow = 25 | ApacheVMCID.value;
 
-    public final static int MinorReadCharArrayOverflow = 26 | OOCVMCID;
+    public final static int MinorReadCharArrayOverflow = 26 | ApacheVMCID.value;
 
-    public final static int MinorReadWCharArrayOverflow = 27 | OOCVMCID;
+    public final static int MinorReadWCharArrayOverflow = 27 | ApacheVMCID.value;
 
-    public final static int MinorReadOctetArrayOverflow = 28 | OOCVMCID;
+    public final static int MinorReadOctetArrayOverflow = 28 | ApacheVMCID.value;
 
-    public final static int MinorReadShortArrayOverflow = 29 | OOCVMCID;
+    public final static int MinorReadShortArrayOverflow = 29 | ApacheVMCID.value;
 
-    public final static int MinorReadUShortArrayOverflow = 30 | OOCVMCID;
+    public final static int MinorReadUShortArrayOverflow = 30 | ApacheVMCID.value;
 
-    public final static int MinorReadLongArrayOverflow = 31 | OOCVMCID;
+    public final static int MinorReadLongArrayOverflow = 31 | ApacheVMCID.value;
 
-    public final static int MinorReadULongArrayOverflow = 32 | OOCVMCID;
+    public final static int MinorReadULongArrayOverflow = 32 | ApacheVMCID.value;
 
-    public final static int MinorReadLongLongArrayOverflow = 33 | OOCVMCID;
+    public final static int MinorReadLongLongArrayOverflow = 33 | ApacheVMCID.value;
 
-    public final static int MinorReadULongLongArrayOverflow = 34 | OOCVMCID;
+    public final static int MinorReadULongLongArrayOverflow = 34 | ApacheVMCID.value;
 
-    public final static int MinorReadFloatArrayOverflow = 35 | OOCVMCID;
+    public final static int MinorReadFloatArrayOverflow = 35 | ApacheVMCID.value;
 
-    public final static int MinorReadDoubleArrayOverflow = 36 | OOCVMCID;
+    public final static int MinorReadDoubleArrayOverflow = 36 | ApacheVMCID.value;
 
-    public final static int MinorReadLongDoubleArrayOverflow = 37 | OOCVMCID;
+    public final static int MinorReadLongDoubleArrayOverflow = 37 | ApacheVMCID.value;
 
-    public final static int MinorReadInvTypeCodeIndirection = 38 | OOCVMCID;
+    public final static int MinorReadInvTypeCodeIndirection = 38 | ApacheVMCID.value;
 
-    public final static int MinorLongDoubleNotSupported = 40 | OOCVMCID;
+    public final static int MinorLongDoubleNotSupported = 40 | ApacheVMCID.value;
     
-    public final static int MinorNativeNotSupported = 41 | OOCVMCID;
+    public final static int MinorNativeNotSupported = 41 | ApacheVMCID.value;
 
-    public final static int MinorReadInvalidIndirection = 42 | OOCVMCID;
+    public final static int MinorReadInvalidIndirection = 42 | ApacheVMCID.value;
 
-    public final static int MinorReadIDMismatch = 43 | OOCVMCID;
+    public final static int MinorReadIDMismatch = 43 | ApacheVMCID.value;
 
-    public final static int MinorReadUnsupported = 44 | OOCVMCID;
+    public final static int MinorReadUnsupported = 44 | ApacheVMCID.value;
 
-    public final static int MinorWriteUnsupported = 45 | OOCVMCID;
+    public final static int MinorWriteUnsupported = 45 | ApacheVMCID.value;
     
-    public final static int MinorLoadStub = 46 | OOCVMCID;
+    public final static int MinorLoadStub = 46 | ApacheVMCID.value;
 
     //
     // Yoko deprecated minor codes
     //
-    public final static int MinorDeprecatedWriteObjectLocal = 39 | OOCVMCID;
+    public final static int MinorDeprecatedWriteObjectLocal = 39 | ApacheVMCID.value;
 
     public static String describeMarshal(int minor) {
         String result = null;
@@ -1097,14 +1094,14 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorNoUsableProfile = 1 | OMGVMCID;
+    public final static int MinorNoUsableProfile = 1 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorMessageSizeLimit = 1 | OOCVMCID;
+    public final static int MinorMessageSizeLimit = 1 | ApacheVMCID.value;
 
-    public final static int MinorThreadLimit = 2 | OOCVMCID;
+    public final static int MinorThreadLimit = 2 | ApacheVMCID.value;
 
     public static String describeImpLimit(int minor) {
         String result = null;
@@ -1138,7 +1135,7 @@ public final class MinorCodes {
     //
     // Yoko specific minor codes
     //
-    public final static int MinorAllocationFailure = 1 | OOCVMCID;
+    public final static int MinorAllocationFailure = 1 | ApacheVMCID.value;
 
     public static String describeNoMemory(int minor) {
         String result = null;
@@ -1153,85 +1150,13 @@ public final class MinorCodes {
     }
 
     // ----------------------------------------------------------------------
-    // Minor error codes for TRANSIENT
-    // ----------------------------------------------------------------------
-
-    //
-    // PortableInterceptor minor codes
-    //
-    public final static int MinorRequestDiscarded = 1 | OMGVMCID;
-
-    public final static int MinorNoUsableProfileInIOR = 2 | OMGVMCID;
-
-    public final static int MinorRequestCancelled = 3 | OMGVMCID;
-
-    public final static int MinorPOADestroyed = 4 | OMGVMCID;
-
-    //
-    // Yoko specific minor codes
-    //
-    public final static int MinorConnectFailed = 1 | OOCVMCID;
-
-    public final static int MinorCloseConnection = 2 | OOCVMCID;
-
-    public final static int MinorActiveConnectionManagement = 3 | OOCVMCID;
-
-    public final static int MinorForcedShutdown = 4 | OOCVMCID;
-
-    public final static int MinorLocationForwardHopCountExceeded = 5 | OOCVMCID;
-
-    public static String describeTransient(int minor) {
-        String result = null;
-
-        switch (minor) {
-        case MinorRequestDiscarded:
-            result = "request has been discarded";
-            break;
-
-        case MinorNoUsableProfileInIOR:
-            result = "no usable profile in IOR";
-            break;
-
-        case MinorRequestCancelled:
-            result = "request has been cancelled";
-            break;
-
-        case MinorPOADestroyed:
-            result = "POA has been destroyed";
-            break;
-
-        case MinorConnectFailed:
-            result = "attempt to establish connection failed";
-            break;
-
-        case MinorCloseConnection:
-            result = "got a `CloseConnection' message";
-            break;
-
-        case MinorActiveConnectionManagement:
-            result = "active connection management closed connection";
-            break;
-
-        case MinorForcedShutdown:
-            result = "forced connection shutdown because of timeout";
-            break;
-
-        case MinorLocationForwardHopCountExceeded:
-            result = "maximum forwarding count (10) exceeded";
-            break;
-        }
-
-        return result;
-    }
-
-    // ----------------------------------------------------------------------
     // Minor error codes for NO_RESOURCES
     // ----------------------------------------------------------------------
 
     //
     // PortableInterceptor minor codes
     //
-    public final static int MinorInvalidBinding = 1 | OMGVMCID;
+    public final static int MinorInvalidBinding = 1 | OMGVMCID.value;
 
     public static String describeNoResources(int minor) {
         String result = null;
@@ -1253,9 +1178,9 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorUnknownUserException = 1 | OMGVMCID;
+    public final static int MinorUnknownUserException = 1 | OMGVMCID.value;
 
-    public final static int MinorSystemExceptionNotSupported = 2 | OMGVMCID;
+    public final static int MinorSystemExceptionNotSupported = 2 | OMGVMCID.value;
 
     public static String describeUnknown(int minor) {
         String result = null;
@@ -1280,16 +1205,16 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorCannotReconcilePolicy = 1 | OMGVMCID;
+    public final static int MinorCannotReconcilePolicy = 1 | OMGVMCID.value;
 
-    public final static int MinorInvalidPolicyType = 2 | OMGVMCID;
+    public final static int MinorInvalidPolicyType = 2 | OMGVMCID.value;
 
-    public final static int MinorNoPolicyFactory = 3 | OMGVMCID;
+    public final static int MinorNoPolicyFactory = 3 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorNoPolicy = 1 | OOCVMCID;
+    public final static int MinorNoPolicy = 1 | ApacheVMCID.value;
 
     public static String describeInvPolicy(int minor) {
         String result = null;
@@ -1323,9 +1248,9 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorNoWcharSupport = 1 | OMGVMCID;
+    public final static int MinorNoWcharSupport = 1 | OMGVMCID.value;
 
-    public final static int MinorWcharCodeSetRequired = 2 | OMGVMCID;
+    public final static int MinorWcharCodeSetRequired = 2 | OMGVMCID.value;
 
     public static String describeInvObjref(int minor) {
         String result = null;
@@ -1350,16 +1275,16 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorIncompleteTypeCode = 1 | OMGVMCID;
+    public final static int MinorIncompleteTypeCode = 1 | OMGVMCID.value;
 
-    public final static int MinorInvalidMemberType = 2 | OMGVMCID;
+    public final static int MinorInvalidMemberType = 2 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
-    public final static int MinorInvalidUnionDiscriminator = 1 | OOCVMCID;
+    public final static int MinorInvalidUnionDiscriminator = 1 | ApacheVMCID.value;
     
-    public final static int MinorInvalidPropertyType = 2 | OOCVMCID; 
+    public final static int MinorInvalidPropertyType = 2 | ApacheVMCID.value;
 
     public static String describeBadTypecode(int minor) {
         String result = null;
@@ -1392,15 +1317,15 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorSystemExceptionInUnknownAdapter = 1 | OMGVMCID;
+    public final static int MinorSystemExceptionInUnknownAdapter = 1 | OMGVMCID.value;
 
-    public final static int MinorServantNotFound = 2 | OMGVMCID;
+    public final static int MinorServantNotFound = 2 | OMGVMCID.value;
 
-    public final static int MinorNoDefaultServant = 3 | OMGVMCID;
+    public final static int MinorNoDefaultServant = 3 | OMGVMCID.value;
 
-    public final static int MinorNoServantManager = 4 | OMGVMCID;
+    public final static int MinorNoServantManager = 4 | OMGVMCID.value;
 
-    public final static int MinorIncarnateViolatedPOAPolicy = 5 | OMGVMCID;
+    public final static int MinorIncarnateViolatedPOAPolicy = 5 | OMGVMCID.value;
 
     public static String describeObjAdapter(int minor) {
         String result = null;
@@ -1437,17 +1362,17 @@ public final class MinorCodes {
     //
     // Standard minor codes
     //
-    public final static int MinorNoCharacterMapping = 1 | OMGVMCID;
+    public final static int MinorNoCharacterMapping = 1 | OMGVMCID.value;
 
     //
     // Yoko specific minor codes
     //
     
-    public final static int MinorNoAlias = 1 | OOCVMCID;
+    public final static int MinorNoAlias = 1 | ApacheVMCID.value;
     
-    public final static int MinorUTF8Overflow = 2 | OOCVMCID;
+    public final static int MinorUTF8Overflow = 2 | ApacheVMCID.value;
     
-    public final static int MinorUTF8Encoding = 3 | OOCVMCID;
+    public final static int MinorUTF8Encoding = 3 | ApacheVMCID.value;
 
     public static String describeDataConversion(int minor) {
         String result = null;
@@ -1482,9 +1407,9 @@ public final class MinorCodes {
     //
     // Yoko specific minor codes
     //
-    public final static int MinorTypeMismatch = 1 | OOCVMCID;
+    public final static int MinorTypeMismatch = 1 | ApacheVMCID.value;
 
-    public final static int MinorNullValueNotAllowed = 2 | OOCVMCID;
+    public final static int MinorNullValueNotAllowed = 2 | ApacheVMCID.value;
 
     public static String describeBadOperation(int minor) {
         String result = null;
@@ -1513,7 +1438,7 @@ public final class MinorCodes {
     //
     // Yoko specific minor codes
     //
-    public final static int MinorNoPatternMatch = 1 | OOCVMCID;
+    public final static int MinorNoPatternMatch = 1 | ApacheVMCID.value;
 
     public static String describeBadContext(int minor) {
         String result = null;

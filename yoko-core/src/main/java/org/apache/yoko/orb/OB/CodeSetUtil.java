@@ -23,11 +23,10 @@ import org.omg.CONV_FRAME.CodeSetComponent;
 import org.omg.CONV_FRAME.CodeSetComponentInfo;
 import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
 import org.omg.CONV_FRAME.CodeSetComponentInfoHolder;
+import org.omg.CONV_FRAME.CodeSetContext;
 import org.omg.CONV_FRAME.CodeSetContextHelper;
-import org.omg.CONV_FRAME.CodeSetContextHolder;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.TAG_CODE_SETS;
-import org.omg.IOP.TaggedComponent;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -130,16 +129,17 @@ final public class CodeSetUtil {
     //
     // Extract codeset information
     //
-    static boolean getCodeSetInfoFromComponents(ORBInstance orbInstance,
-            ProfileInfo profileInfo,
-            CodeSetComponentInfoHolder info) {
+    static CodeSetComponentInfo getCodeSetInfoFromComponents(ORBInstance orbInstance, ProfileInfo profileInfo) {
         //
         // Only IIOP 1.1 or newer has codeset information
         //
         if (profileInfo.major == 1 && profileInfo.minor > 0) {
             for (int i = 0; i < profileInfo.components.length; i++) {
-                if (checkForCodeSetInfo(profileInfo.components[i], info))
-                    return true;
+                if (profileInfo.components[i].tag == TAG_CODE_SETS.value) {
+                    InputStream in = new InputStream(profileInfo.components[i].component_data);
+                    in._OB_readEndian();
+                    return CodeSetComponentInfoHelper.read(in);
+                }
             }
         }
         //
@@ -148,15 +148,13 @@ final public class CodeSetUtil {
         //
         else {
             if (orbInstance.extendedWchar()) {
-                info.value = new CodeSetComponentInfo(
+                return new CodeSetComponentInfo(
                         new CodeSetComponent(ISO_LATIN_1.id, new int[0]),
                         new CodeSetComponent(UCS_2.id, new int[0]));
-
-                return true;
             }
         }
 
-        return false;
+        return null;
     }
 
     //
@@ -164,67 +162,29 @@ final public class CodeSetUtil {
     //
     static CodeConverters getCodeConverters(ORBInstance orbInstance, ProfileInfo profileInfo) {
         //
-        // Set codeset defaults: ISO 8859-1 for char, no default for wchar
-        // (13.7.2.4) but ORBacus uses default_wcs, which is initially 0
-        //
-        CodeSetComponentInfoHolder serverInfo = new CodeSetComponentInfoHolder();
-        serverInfo.value = new CodeSetComponentInfo();
-        serverInfo.value.ForCharData = new CodeSetComponent();
-        serverInfo.value.ForWcharData = new CodeSetComponent();
-        serverInfo.value.ForCharData.native_code_set = ISO_LATIN_1.id;
-        serverInfo.value.ForCharData.conversion_code_sets = new int[0];
-        serverInfo.value.ForWcharData.native_code_set = orbInstance.getDefaultWcs();
-        serverInfo.value.ForWcharData.conversion_code_sets = new int[0];
-
-        //
         // Set up code converters
         //
-        int nativeCs = orbInstance.getNativeCs();
-        CodeSetComponent client_cs = createCodeSetComponent(nativeCs, false);
-        int tcs_c = ISO_LATIN_1.id;
-        int nativeWcs = orbInstance.getNativeWcs();
-        CodeSetComponent client_wcs = createCodeSetComponent(nativeWcs, true);
-        int tcs_wc = orbInstance.getDefaultWcs();
-
         //
         // Other transmission codesets than the defaults can only be
         // determined if a codeset profile was present in the IOR.
         // The fallbacks in this case according to the specification
         // are UTF-8 (not ISOLATIN1!) and UTF-16 (not UCS2!).
         //
-        if (getCodeSetInfoFromComponents(orbInstance, profileInfo, serverInfo)) {
-            tcs_c = determineTCS(client_cs, serverInfo.value.ForCharData, UTF_8.id);
-            tcs_wc = determineTCS(client_wcs, serverInfo.value.ForWcharData, UTF_16.id);
-        }
 
-        final CodeConverterBase inputCharConverter = getConverter(nativeCs, tcs_c);
-        final CodeConverterBase outputCharConverter = getConverter(tcs_c, nativeCs);
-        final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, tcs_wc);
-        final CodeConverterBase outputWcharConverter = getConverter(tcs_wc, nativeWcs);
+        final CodeSetComponentInfo info = getCodeSetInfoFromComponents(orbInstance, profileInfo);
 
-        return CodeConverters.create(inputCharConverter, outputCharConverter, inputWcharConverter, outputWcharConverter);
+        if (info == null) return CodeConverters.create(orbInstance, ISO_LATIN_1.id, orbInstance.getDefaultWcs());
+
+        CodeSetComponent client_cs = createCodeSetComponent(orbInstance.getNativeCs(), false);
+        CodeSetComponent client_wcs = createCodeSetComponent(orbInstance.getNativeWcs(), true);
+        final int tcs_c = determineTCS(client_cs, info.ForCharData, UTF_8.id);
+        final int tcs_wc = determineTCS(client_wcs, info.ForWcharData, UTF_16.id);
+        return CodeConverters.create(orbInstance, tcs_c, tcs_wc);
     }
 
-    //
-    // Check for codeset information in a tagged component
-    //
-    static boolean checkForCodeSetInfo(TaggedComponent comp, CodeSetComponentInfoHolder info) {
-        if (comp.tag == TAG_CODE_SETS.value) {
-            InputStream in = new InputStream(comp.component_data);
-            in._OB_readEndian();
-            info.value = CodeSetComponentInfoHelper.read(in);
-            return true;
-        }
-
-        return false;
-    }
-
-    //
-    // Extract codeset context from service context
-    //
-    static void extractCodeSetContext(ServiceContext context, CodeSetContextHolder ctx) {
-        InputStream in = new InputStream(context.context_data);
+    static CodeSetContext extractCodeSetContext(ServiceContext csSC) {
+        InputStream in = new InputStream(csSC.context_data);
         in._OB_readEndian();
-        ctx.value = CodeSetContextHelper.read(in);
+        return CodeSetContextHelper.read(in);
     }
 }

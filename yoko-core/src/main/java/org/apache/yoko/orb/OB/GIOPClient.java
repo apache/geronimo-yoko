@@ -29,6 +29,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Reference;
@@ -38,7 +39,6 @@ import org.omg.CONV_FRAME.CodeSetContextHelper;
 import org.omg.CORBA.NO_RESPONSE;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.SystemException;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
 import org.omg.IOP.SendingContextRunTime;
@@ -51,10 +51,11 @@ import javax.rmi.CORBA.ValueHandler;
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINEST;
 import static javax.rmi.CORBA.Util.createValueHandler;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorActiveConnectionManagement;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 /**
@@ -111,7 +112,7 @@ final class GIOPClient extends Client {
     //
     protected synchronized GIOPConnection getWorker(boolean create, final int timeout) {
         if (destroy_)
-            throw new TRANSIENT(describeTransient(MinorActiveConnectionManagement), MinorActiveConnectionManagement, COMPLETED_NO);
+            throw Transients.ACTIVE_CONNECTION_MANAGEMENT.create();
 
         if (connection_ == null)
             reuseInboundConnection();
@@ -169,30 +170,16 @@ final class GIOPClient extends Client {
 
         connection_.activateClientSide();
 
-        //
         // log the reusing of the connection
-        //
-        if (orbInstance_.getCoreTraceLevels().traceConnections() > 0) {
-            String msg = "reusing established bidir connection\n" + connection_.transport().get_info().describe();
-            orbInstance_.getLogger().trace("outgoing", msg);
-        }
+        if (CONN_OUT_LOG.isLoggable(FINE)) CONN_OUT_LOG.fine("reusing established bidir connection\n" + connection_.transport());
     }
 
     private GIOPConnectionThreaded createOutboundConnection(int t) {
-        //
         // Trace connection attempt
-        //
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceConnections() > 0) {
-            String msg = "trying to establish connection\n";
-            msg += "timeout: ";
-            if (t >= 0) {
-                msg += t;
-                msg += "ms\n";
-            } else
-                msg += "none\n";
-            msg += connector_.get_info().describe();
-            orbInstance_.getLogger().trace("outgoing", msg);
+        if (CONN_OUT_LOG.isLoggable(FINE)) {
+            String timeout = t >= 0 ? t + "ms" : "none";
+            String msg = String.format("trying to establish connection: %s    timeout: %s", connector_, timeout);
+            CONN_OUT_LOG.fine(msg);
         }
 
         //
@@ -349,33 +336,13 @@ final class GIOPClient extends Client {
             byte major = down.profileInfo().major;
             byte minor = down.profileInfo().minor;
             if (!connection.isRequestSent() && (major > 1 || minor >= 1)) {
-                CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-                if (coreTraceLevels.traceConnections() >= 2) {
-                    CodeConverters conv = codeConverters();
-                    String msg = "sending transmission code sets";
-                    msg += "\nchar code set: ";
-                    if (conv.outputCharConverter != null) {
-                        msg += conv.outputCharConverter.getDestinationCodeSet().description;
-                    } else {
-                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeCs());
-                        msg += info == null ? null : info.description;
-                    }
-                    msg += "\nwchar code set: ";
-                    if (conv.outputWcharConverter != null)
-                        msg += conv.outputWcharConverter.getDestinationCodeSet().description;
-                    else {
-                        CodeSetInfo info = CodeSetInfo.forRegistryId(orbInstance_.getNativeWcs());
-                        msg += info == null ? null : info.description;
-                    }
-                    orbInstance_.getLogger().trace("outgoing", msg);
-                }
+                if (CONN_OUT_LOG.isLoggable(FINEST)) CONN_OUT_LOG.finest("sending transmission code sets: \n" + codeConverters());
 
                 Assert.ensure(codeSetSC_ != null);
                 down.addToRequestContexts(codeSetSC_);
 
                 Assert.ensure(codeBaseSC_ != null);
                 down.addToRequestContexts(codeBaseSC_);
-
             }
 
             // 

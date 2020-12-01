@@ -47,7 +47,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
-import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class Upcall {
@@ -297,8 +296,7 @@ public class Upcall {
     private static void createUnknownExceptionServiceContexts(UnknownException ex, ServiceContexts replyContexts) {
         final Throwable t = ex.originalEx;
         try (CmsfOverride o = CmsfThreadLocal.override()) {
-            final CodeConverterBase outputWcharConverter = getConverter(UTF_16, UTF_16);
-            CodeConverters codeConverters = CodeConverters.create(null, null, null, outputWcharConverter);
+            CodeConverters codeConverters = CodeConverters.createForWcharWriteOnly();
             try (OutputStream os = new OutputStream(codeConverters, GIOP1_2)) {
                 os._OB_writeEndian();
                 os.write_value(t, Throwable.class);

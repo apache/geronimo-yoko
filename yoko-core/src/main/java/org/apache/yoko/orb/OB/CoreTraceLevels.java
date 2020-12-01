@@ -18,19 +18,8 @@
 package org.apache.yoko.orb.OB;
 
 final public class CoreTraceLevels {
-    private int traceConnections_;
-
-    private int traceRetry_;
-
-    private int traceRequestsIn_;
-
-    private int traceRequestsOut_;
 
     public CoreTraceLevels(Logger logger, java.util.Properties properties) {
-        traceConnections_ = 0;
-        traceRetry_ = 0;
-        traceRequestsIn_ = 0;
-        traceRequestsOut_ = 0;
 
         String propRoot = "yoko.orb.trace.";
         java.util.Enumeration keys = properties.keys();
@@ -44,32 +33,32 @@ final public class CoreTraceLevels {
 
             if (key.equals("yoko.orb.trace.connections")) {
                 try {
-                    traceConnections_ = Integer.parseInt(value);
+                    Integer.parseInt(value);
                 } catch (NumberFormatException ex) {
                     logger.warning("ORB.init: invalid value for " + key);
                 }
             } else if (key.equals("yoko.orb.trace.retry")) {
                 try {
-                    traceRetry_ = Integer.parseInt(value);
+                    Integer.parseInt(value);
                 } catch (NumberFormatException ex) {
                     logger.warning("ORB.init: invalid value for " + key);
                 }
             } else if (key.equals("yoko.orb.trace.requests")) {
                 try {
-                    traceRequestsIn_ = Integer.parseInt(value);
-                    traceRequestsOut_ = Integer.parseInt(value);
+                    Integer.parseInt(value);
+                    Integer.parseInt(value);
                 } catch (NumberFormatException ex) {
                     logger.warning("ORB.init: invalid value for " + key);
                 }
             } else if (key.equals("yoko.orb.trace.requests_in")) {
                 try {
-                    traceRequestsIn_ = Integer.parseInt(value);
+                    Integer.parseInt(value);
                 } catch (NumberFormatException ex) {
                     logger.warning("ORB.init: invalid value for " + key);
                 }
             } else if (key.equals("yoko.orb.trace.requests_out")) {
                 try {
-                    traceRequestsOut_ = Integer.parseInt(value);
+                    Integer.parseInt(value);
                 } catch (NumberFormatException ex) {
                     logger.warning("ORB.init: invalid value for " + key);
                 }
@@ -78,21 +67,4 @@ final public class CoreTraceLevels {
             }
         }
     }
-
-    public int traceConnections() {
-        return traceConnections_;
-    }
-
-    public int traceRetry() {
-        return traceRetry_;
-    }
-
-    public int traceRequestsIn() {
-        return traceRequestsIn_;
-    }
-
-    public int traceRequestsOut() {
-        return traceRequestsOut_;
-    }
-
 }

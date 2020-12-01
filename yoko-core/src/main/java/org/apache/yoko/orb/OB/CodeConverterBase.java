@@ -135,4 +135,8 @@ abstract public class CodeConverterBase {
 
     public abstract char convert(char value);
 
+    @Override
+    public String toString() {
+        return "CodeConverter[" + sourceCodeSet + " -> " + destinationCodeSet + ']';
+    }
 }

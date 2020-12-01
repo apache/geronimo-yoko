@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.rmi.util.ObjectUtil;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
@@ -44,15 +45,12 @@ import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.STALE;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorForcedShutdown;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
-import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class GIOPConnectionThreaded extends GIOPConnection {
@@ -162,7 +160,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         // with continuing to receive messages until the peer
         // closes. Instead, we just close the connection, meaning that we
         // can't be 100% sure that the peer gets the last message.
-        processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+        processException(CLOSED, Transients.FORCED_SHUTDOWN.create(), false);
         arrive();
 
     }
@@ -284,7 +282,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             // open under certain circumstances. For example, the receiver
             // thread may not have terminated yet or the receive thread might
             // set the state to GIOPState::Error before termination.
-            processException(CLOSED, new TRANSIENT(describeTransient(MinorForcedShutdown), MinorForcedShutdown, COMPLETED_MAYBE), false);
+            processException(CLOSED, Transients.FORCED_SHUTDOWN.create(), false);
         } finally {
             if (receiverLock.isWriteLockedByCurrentThread()) {
                 receiverLock.writeLock().unlock();

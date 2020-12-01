@@ -29,6 +29,7 @@ import static java.util.logging.Logger.getLogger;
 import static org.apache.yoko.orb.OB.Connection.Access.CLOSE;
 import static org.apache.yoko.orb.OB.Connection.Access.READ;
 import static org.apache.yoko.orb.OB.Connection.Access.WRITE;
+import static org.apache.yoko.orb.OB.Connection.Flag.CLOSING_LOGGED;
 import static org.apache.yoko.util.CollectionExtras.readOnlyEnumSet;
 
 abstract class Connection {
@@ -104,7 +105,7 @@ abstract class Connection {
         abstract void applyTo(Connection conn);
     }
 
-    private interface Flag {
+    interface Flag {
         int REQUEST_SENT = 1;
         int DESTROYED = 4;
         int REPLY_SENT = 2;
@@ -139,13 +140,12 @@ abstract class Connection {
     final synchronized boolean isOutbound() { return (flags & Flag.OUTBOUND) != 0; }
     final synchronized boolean isClientEnabled() { return (flags & Flag.CLIENT_ENABLED) != 0; }
     final synchronized boolean isServerEnabled() { return (flags & Flag.SERVER_ENABLED) != 0; }
-    final synchronized boolean isClosingLogged() { return (flags & Flag.CLOSING_LOGGED) != 0; }
     final synchronized void markRequestSent() { flags |= Flag.REQUEST_SENT; }
     final synchronized void markDestroyed() { flags |= Flag.DESTROYED; }
     final synchronized void markOutbound() { flags |= Flag.OUTBOUND; }
     final synchronized void markClientEnabled() { flags |= Flag.CLIENT_ENABLED; }
     final synchronized void markServerEnabled() { flags |= Flag.SERVER_ENABLED; }
-    final synchronized void markClosingLogged() { flags |= Flag.CLOSING_LOGGED; }
+    final synchronized boolean markClosingLogged() { try { return (flags & CLOSING_LOGGED) == 0; } finally { flags |= CLOSING_LOGGED; } }
 
     /** callback method when the ACM signals a timeout */
     abstract void ACM_callback();

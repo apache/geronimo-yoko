@@ -44,21 +44,20 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
 
-final public class Transport_impl extends LocalObject implements
-        Transport {
+final public class Transport_impl extends LocalObject implements Transport {
     // This data member must not be private because the info object
     // must be able to access it
     public final Socket socket_; // The socket
 
-    private InputStream in_; // The socket's input stream
+    private final InputStream in_; // The socket's input stream
 
-    private OutputStream out_; // The socket's output stream
+    private final OutputStream out_; // The socket's output stream
 
     private volatile boolean shutdown_; // True if shutdown() was called
 
     private int soTimeout_ = 0; // The value for setSoTimeout()
 
-    private TransportInfo_impl info_; // Transport information
+    private final TransportInfo_impl info_; // Transport information
     
     // the real logger backing instance.  We use the interface class as the locator
     private static final Logger logger = Logger.getLogger(Transport.class.getName());
@@ -322,6 +321,6 @@ final public class Transport_impl extends LocalObject implements
     }
     
     public String toString() {
-        return "iiop transport using socket " + socket_; 
+        return String.format("Transport to %s with socket %s", info_, socket_);
     }
 }

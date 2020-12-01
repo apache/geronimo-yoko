@@ -18,18 +18,20 @@
 package org.apache.yoko.orb.OB;
 
 import java.util.EnumSet;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
-import static java.util.Collections.unmodifiableSet;
+import static java.util.Collections.unmodifiableMap;
 import static java.util.EnumSet.complementOf;
-import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_4;
-import static org.apache.yoko.orb.OB.CharMapInfo.CM_IDENTITY;
 import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_2;
 import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_3;
+import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_4;
 import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_5;
 import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_7;
 import static org.apache.yoko.orb.OB.CharMapInfo.CM_8859_9;
+import static org.apache.yoko.orb.OB.CharMapInfo.CM_IDENTITY;
 
 public enum CodeSetInfo {
     NONE("none", 0x00000000, 2, new short[0]),
@@ -227,7 +229,17 @@ public enum CodeSetInfo {
     EBCDIC_Japanese_English__and_JEF("EBCDIC(Japanese English) and JEF; Japanese encoding method for mainframe", 0x10040006, 3, new short[]{0x0001, 0x0081}),
     ;
 
-    public static final Set<CodeSetInfo> REGISTRY = unmodifiableSet(complementOf(EnumSet.of(NONE)));
+    private static final Map<Integer, CodeSetInfo> REGISTRY;
+
+    static {
+        // The enums have a natural order (i.e. the order of declaration)
+        // Enum sets iterate in that order.
+        // Use a linked hash map to preserve the iteration order.
+        // This preserves the consistent lookup behaviour when searching by name.
+        Map<Integer, CodeSetInfo> m = new LinkedHashMap<>();
+        for (CodeSetInfo info: complementOf(EnumSet.of(NONE))) m.put(info.id, info);
+        REGISTRY = unmodifiableMap(m);
+    }
 
     public final short max_bytes;
 
@@ -252,29 +264,24 @@ public enum CodeSetInfo {
     public static int getRegistryIdForName(String name) {
         Objects.requireNonNull(name);
 
-        //
         // Check if codeset name is listed in registry
         // Return first match so that shortcuts can be used
-        //
-        for (final CodeSetInfo value: REGISTRY) {
+        for (final CodeSetInfo value: REGISTRY.values()) {
             if (value.description.contains(name)) return value.id;
         }
 
-        //
         // Name not found
-        //
         return NONE.id;
     }
 
-    public static CodeSetInfo forRegistryId(int rgy_value) {
-        //
-        // Check if codeset id is listed in registry
-        //
-        for (final CodeSetInfo value: REGISTRY) {
-            if (value.id == rgy_value) return value;
-        }
+    /** @return null if registryId unknown */
+    public static CodeSetInfo forRegistryId(int registryId) {
+        return REGISTRY.get(registryId);
+    }
 
-        return null;
+    public static String describe(int registryId) {
+        final CodeSetInfo info = REGISTRY.get(registryId);
+        return null == info ? NONE.description : info.description;
     }
 
     boolean isCompatibleWith(CodeSetInfo that) {

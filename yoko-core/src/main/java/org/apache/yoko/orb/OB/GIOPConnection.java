@@ -29,9 +29,8 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ReadBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
-import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.CONV_FRAME.CodeSetContext;
-import org.omg.CONV_FRAME.CodeSetContextHolder;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.NO_IMPLEMENT;
@@ -39,7 +38,6 @@ import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.StringHolder;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.SystemExceptionHelper;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.UNKNOWN;
 import org.omg.CORBA.UserException;
 import org.omg.GIOP.KeyAddr;
@@ -61,15 +59,16 @@ import java.util.Properties;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import static java.util.logging.Level.FINE;
 import static java.util.logging.Logger.getLogger;
-import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
 import static org.apache.yoko.orb.OB.Connection.State.ACTIVE;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.HOLDING;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorCloseConnection;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageError;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorNotSupportedByLocalObject;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownMessage;
@@ -78,7 +77,13 @@ import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownReqId;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorWrongMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeNoImplement;
-import static org.apache.yoko.orb.OB.MinorCodes.describeTransient;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.REQ_IN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.logged;
+import static org.apache.yoko.orb.logging.VerboseLogging.warned;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.GIOP.LocateStatusType_1_2.OBJECT_FORWARD;
@@ -101,8 +106,6 @@ import static org.omg.GIOP.MsgType_1_1._Reply;
 import static org.omg.GIOP.MsgType_1_1._Request;
 
 abstract class GIOPConnection extends Connection implements DowncallEmitter, UpcallReturn {
-    private static final java.util.logging.Logger logger = getLogger(GIOPConnection.class.getName());
-
     /** the next request id */
     private final AtomicInteger nextRequestId;
 
@@ -158,49 +161,17 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     /** read the codeset information from the service contexts */
     private void readCodeConverters(ServiceContexts contexts) {
         if (codeConverters_ != null) return;
-        ServiceContext cssc = contexts.get(CodeSets.value);
-        if (cssc == null) return;
-        CodeSetContextHolder codeSetContextH = new CodeSetContextHolder();
-        CodeSetUtil.extractCodeSetContext(cssc, codeSetContextH);
-        CodeSetContext codeSetContext = codeSetContextH.value;
+        ServiceContext csSC = contexts.get(CodeSets.value);
+        if (csSC == null) return;
+        CodeSetContext csCtx = CodeSetUtil.extractCodeSetContext(csSC);
 
-        final int nativeCs = orbInstance_.getNativeCs();
-        final int alienCs = codeSetContext.char_data;
-        final int nativeWcs = orbInstance_.getNativeWcs();
-        final int alienWcs = codeSetContext.wchar_data;
-        final CodeConverterBase inputCharConverter = getConverter(nativeCs, alienCs);
-        final CodeConverterBase outputCharConverter = getConverter(alienCs, nativeCs);
-        final CodeConverterBase inputWcharConverter = getConverter(nativeWcs, alienWcs);
-        final CodeConverterBase outputWcharConverter = getConverter(alienWcs, nativeWcs);
-        codeConverters_ = CodeConverters.create(inputCharConverter, outputWcharConverter, inputWcharConverter, outputWcharConverter);
+        this.codeConverters_ = CodeConverters.create(orbInstance_, csCtx.char_data, csCtx.wchar_data);
 
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceConnections() >= 2) {
-            String msg = "receiving transmission code sets";
-            msg += "\nchar code set: ";
-            if (codeConverters_.inputCharConverter != null) {
-                msg += codeConverters_.inputCharConverter.getSourceCodeSet().description;
-            } else {
-                if (alienCs == 0) {
-                    msg += "none";
-                } else {
-                    CodeSetInfo info = CodeSetInfo.forRegistryId(nativeCs);
-                    msg += info != null ? info.description : null;
-                }
-            }
-            msg += "\nwchar code set: ";
-            if (codeConverters_.inputWcharConverter != null) {
-                msg += codeConverters_.inputWcharConverter.getSourceCodeSet().description;
-            } else {
-                if (alienWcs == 0) {
-                    msg += "none";
-                } else {
-                    CodeSetInfo info = CodeSetInfo.forRegistryId(nativeWcs);
-                    msg += info != null ? info.description : null;
-                }
-            }
-
-            orbInstance_.getLogger().trace("incoming", msg);
+        if (CONN_IN_LOG.isLoggable(Level.FINEST)) {
+            String msg = String.format("receiving transmission code sets%nchar code set: %s%nwchar code set: %s",
+                    CodeSetInfo.describe(csCtx.char_data),
+                    CodeSetInfo.describe(csCtx.wchar_data));
+            CONN_IN_LOG.finest(msg);
         }
     }
 
@@ -242,19 +213,10 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     }
 
     /** log the closing of this connection */
-    private synchronized void logClose(boolean initiatedClosure) {
-        if (isClosingLogged()) return;
-
-        markClosingLogged();
-
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceConnections() > 0) {
-            TransportInfo info = transport_.get_info();
-            String msg = "closing connection\n";
-            msg += info.describe();
-
-            orbInstance_.getLogger().trace(initiatedClosure ? "outgoing" : "incoming", msg);
-        }
+    private void logClose(boolean initiatedClosure) {
+        if (!!!markClosingLogged()) return;
+        final Logger conn_log = initiatedClosure ? CONN_OUT_LOG : CONN_IN_LOG;
+        if (conn_log.isLoggable(FINE)) conn_log.fine("Closing connection: " + transport_);
     }
 
     /** main entry point into message processing - delegate to a specific methods */
@@ -373,7 +335,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         // New upcall will be started
         if (response.value) upcallsInProgress_++;
 
-        orbInstance_.getLogger().debug("Processing request reqId=" + reqId + " op=" + op.value);
+        orbInstance_.getLogger().fine("Processing request reqId=" + reqId + " op=" + op.value);
 
         return oaInterface_.createUpcall(
                 response.value ? upcallReturnInterface() : null, profileInfo,
@@ -411,7 +373,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         // read in the peer's sending context runtime object
         assignSendingContextRuntime(in, contexts);
 
-        orbInstance_.getLogger().debug("Processing reply for reqId=" + reqId + " status=" + status.value.value());
+        orbInstance_.getLogger().fine("Processing reply for reqId=" + reqId + " status=" + status.value.value());
 
         switch (status.value.value()) {
             case ReplyStatusType_1_2._NO_EXCEPTION:
@@ -488,22 +450,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
         // Make sure the transport can send a reply
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
-            String message = "Discarding locate request - transport "
-                    + "does not support twoway invocations";
-
-            TransportInfo transportInfo = transport_
-                    .get_info();
-            if (transportInfo != null) {
-                String desc = transportInfo.describe();
-                message += '\n';
-                message += desc;
-            } else {
-                message += "\nCollocated method call";
-            }
-
-            Logger logger = orbInstance_.getLogger();
-            logger.warning(message);
-
+            REQ_IN_LOG.warning("Discarding locate request - transport does not support two-way invocations: " + transport_);
             return;
         }
 
@@ -588,7 +535,6 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         }
 
         InputStream in = msg.input();
-        Logger logger = orbInstance_.getLogger();
 
         switch (status.value.value()) {
             case _UNKNOWN_OBJECT:
@@ -603,15 +549,11 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, false);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
-                    }
+                    if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
+
                 } catch (SystemException ex) {
-                    logger.warning("An error occurred while reading a "
-                                    + "locate reply, possibly indicating\n"
-                                    + "an interoperability problem. You may "
-                                    + "need to set the LocateRequestPolicy\n"
-                                    + "to false.");
+                    warned(REQ_OUT_LOG, ex, "An error occurred while reading a locate reply, possibly indicating "
+                            + "an interoperability problem. You may need to set the LocateRequestPolicy to false.");
                     down.setSystemException(ex);
                     processException(ERROR, ex, false);
                 }
@@ -621,15 +563,10 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                 try {
                     IOR ior = IORHelper.read(in);
                     down.setLocationForward(ior, true);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
-                    }
+                    if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine("Locate request forwarded to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
                 } catch (SystemException ex) {
-                    logger.warning("An error occurred while reading a "
-                                    + "locate reply, possibly indicating\n"
-                                    + "an interoperability problem. You may "
-                                    + "need to set the LocateRequestPolicy\n"
-                                    + "to false.");
+                    warned(REQ_OUT_LOG, ex,"An error occurred while reading a locate reply, possibly indicating "
+                                    + "an interoperability problem. You may need to set the LocateRequestPolicy to false.");
                     down.setSystemException(ex);
                     processException(ERROR, ex, false);
                 }
@@ -641,6 +578,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
                     SystemException ex = SystemExceptionHelper.read(in);
                     down.setSystemException(ex);
                 } catch (SystemException ex) {
+                    logged(REQ_IN_LOG, ex, "Could not read incoming system exception");
                     down.setSystemException(ex);
                     processException(ERROR, ex, false);
                 }
@@ -656,7 +594,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
 
     /** process a CloseConnection message */
     private void processCloseConnection(GIOPIncomingMessage msg) {
-        orbInstance_.getLogger().debug("Close connection request received from peer");
+        orbInstance_.getLogger().fine("Close connection request received from peer");
         if (isClientEnabled()) {
             // If the peer closes the connection, all outstanding
             // requests can safely be reissued. Thus we send all
@@ -664,7 +602,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             // status of COMPLETED_NO. This is done by calling
             // exception() with the notCompleted parameter set to
             // true.
-            processException(CLOSED, new TRANSIENT(describeTransient(MinorCloseConnection), MinorCloseConnection, COMPLETED_NO), true);
+            processException(CLOSED, Transients.CLOSE_CONNECTION.create(), true);
         } else {
             setState(CLOSED);
         }
@@ -683,7 +621,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     /** process a system exception */
     boolean processException(State newState, SystemException ex, boolean completed) {
         Assert.ensure(newState == ERROR || newState == CLOSED);
-        orbInstance_.getLogger().debug("processing an exception, state=" + newState, ex);
+        logged(CONN_LOG, ex, "processing an exception, state=" + newState);
 
         if (setState(newState) == false) return false;
 
@@ -771,13 +709,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             idleTimeout_ = Integer.parseInt(value);
 
         // Trace new outgoing connection
-        CoreTraceLevels coreTraceLevels = orbInstance_.getCoreTraceLevels();
-        if (coreTraceLevels.traceConnections() > 0) {
-            TransportInfo info = transport_.get_info();
-            String msg = "new connection\n";
-            msg += info.describe();
-            orbInstance_.getLogger().trace("client-side", msg);
-        }
+        if (CONN_OUT_LOG.isLoggable(FINE)) CONN_OUT_LOG.fine("new connection " + transport_);
     }
 
     /** server-side constructor */
@@ -839,25 +771,9 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
     public void upcallEndReply(Upcall upcall) {
         // Make sure the transport can send a reply
         if (transport_.mode() == SendReceiveMode.ReceiveOnly) {
-            String msg = "Discarding reply - transport does not "
-                    + "support twoway invocations";
-
-            msg += "\noperation name: \"";
-            msg += upcall.operation();
-            msg += '"';
-
-            TransportInfo transportInfo = transport_
-                    .get_info();
-            if (transportInfo != null) {
-                String desc = transportInfo.describe();
-                msg += '\n';
-                msg += desc;
-            } else {
-                msg += "\nCollocated method call";
-            }
-
-            Logger logger = orbInstance_.getLogger();
-            logger.warning(msg);
+            REQ_IN_LOG.warning("Discarding reply - transport does not support two-way invocations: "
+                    + "\noperation name: \"" + upcall.operation() + '"'
+                    + "\n transport: " + transport_);
 
             return;
         }
@@ -944,7 +860,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
             // print this exception out here so applications have at stack trace to work
             // with for problem determination.
 
-            orbInstance_.getLogger().debug("upcall exception", ex);
+            orbInstance_.getLogger().log(FINE, "upcall exception", ex);
             outgoing.writeReplyHeader(reqId, ReplyStatusType_1_2.SYSTEM_EXCEPTION, contexts);
             Util.marshalSystemException(out, ex);
         } catch (SystemException e) {
@@ -969,12 +885,7 @@ abstract class GIOPConnection extends Connection implements DowncallEmitter, Upc
         ReplyStatusType_1_2 status = perm ? ReplyStatusType_1_2.LOCATION_FORWARD_PERM : ReplyStatusType_1_2.LOCATION_FORWARD;
         try {
             outgoing.writeReplyHeader(reqId, status, contexts);
-            Logger logger = orbInstance_.getLogger();
-
-            if (logger.isDebugEnabled()) {
-                logger.debug("Sending forward reply to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
-            }
-
+            if (REQ_IN_LOG.isLoggable(FINE)) REQ_IN_LOG.fine("Sending forward reply to " + IORDump.PrintObjref(orbInstance_.getORB(), ior));
             IORHelper.write(out, ior);
         } catch (SystemException ex) {
             // Nothing may go wrong here, otherwise we might have a

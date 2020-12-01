@@ -53,7 +53,7 @@ public final class ConnectorInfo_impl extends LocalObject implements ConnectorIn
 
     public int tag() {return TAG_INTERNET_IOP.value;}
 
-    public String describe() {return String.format("id: %s%nremote address: %s:%d", PLUGIN_ID.value, remote_addr(), port);}
+    public String describe() {return String.format("%s -> %s:%d", id(),  remote_addr(), getPort());}
 
     public String remote_addr() {return getInetAddress().getHostAddress();}
 

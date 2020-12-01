@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static testify.hex.HexBuilder.buildHex;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.Matchers.arrayWithSize;
-import static org.junit.Assert.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;

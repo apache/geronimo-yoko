@@ -24,6 +24,7 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.orb.exceptions.Transients;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.SystemException;
@@ -57,12 +58,12 @@ import java.util.logging.Logger;
 
 import static org.apache.yoko.orb.OB.MinorCodes.MinorAccept;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorBind;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorConnectFailed;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asTransient;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 
 final class Acceptor_impl extends LocalObject implements Acceptor {
     static final Logger logger = Logger.getLogger(Acceptor_impl.class.getName());
@@ -169,8 +170,9 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
                 socket = extConnHelper.createSelfConnection(localAddress, port_);
             }
         } catch (ConnectException ex) {
-            logger.log(Level.FINE, "Failure making self connection for host=" + localAddress + ", port=" + port_, ex);
-            throw asTransient(ex, MinorConnectFailed);
+            final String msg = "Failure making self connection for host=" + localAddress + ", port=" + port_;
+            throw wrapped(CONN_LOG, ex, msg, Transients.CONNECT_FAILED);
+
         } catch (IOException ex) {
             logger.log(Level.FINE, "Failure making self connection for host=" + localAddress + ", port=" + port_, ex);
             throw asCommFailure(ex, MinorSocket);
@@ -336,7 +338,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         }
     }
 
-    // TODO: get rid of this finalizer, and use weak refs in AccFactory_impl instead to track Acceptors going away.
+    // TODO: get rid of this finalizer, and use phantom refs in AccFactory_impl instead to track Acceptors going away.
     public void finalize() throws Throwable {
         if (socket_ != null) {
             close();

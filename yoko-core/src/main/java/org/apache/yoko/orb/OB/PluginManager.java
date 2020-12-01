@@ -19,6 +19,8 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.osgi.ProviderLocator;
 
+import java.util.logging.Level;
+
 public final class PluginManager {
     //
     // The ORB
@@ -132,7 +134,7 @@ public final class PluginManager {
             } catch (Exception ex) {
                 String err = "unable to load OCI plug-in `" + name + "':\n"
                         + ex.getMessage();
-                logger.error(err, ex);
+                logger.log(Level.SEVERE, err, ex);
                 return null;
             }
 

@@ -339,27 +339,9 @@ public final class ORBInstance {
 
         // Client and server executors shut down in the ORBControl
         
-        //
-        // Destroy the ConFactoryRegistry
-        //
-        // conFactoryRegistry_.destroy(); // No destroy operation defined
         conFactoryRegistry_ = null;
-
-        //
-        // Destroy the AccFactoryRegistry
-        //
-        // accFactoryRegistry_.destroy(); // No destroy operation defined
         accFactoryRegistry_ = null;
-
-        //
-        // Destroy the UnknownExceptionStrategy
-        //
-        unknownExceptionStrategy_.destroy();
         unknownExceptionStrategy_ = null;
-
-        //
-        // Destroy the Asynchonous message handler
-        //
         asyncHandler_.shutdown();
         asyncHandler_ = null;
     }
