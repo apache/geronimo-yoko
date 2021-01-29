@@ -28,10 +28,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -188,6 +185,6 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
 
     protected final A getAnnotation(AnnotatedElement elem) {
         return findAnnotation(elem, annoType)
-                .orElseThrow(() -> new Error(elem + String.format(" does not use the @%s annotation", annoType.getSimpleName())));
+                .orElseThrow(() -> new NoSuchElementException(elem + String.format(" does not use the @%s annotation", annoType.getSimpleName())));
     }
 }
