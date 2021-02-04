@@ -18,15 +18,14 @@ package org.apache.yoko;
 
 import acme.Echo;
 import acme.EchoImpl;
-import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.util.HexConverter;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
+import testify.jupiter.annotation.Logging;
+import testify.jupiter.annotation.RetriedTest;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
@@ -37,18 +36,12 @@ import testify.jupiter.annotation.iiop.ServerControl;
 import testify.util.Stubs;
 
 import java.rmi.RemoteException;
-import java.util.Collection;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ForkJoinPool;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
+import static testify.jupiter.annotation.Logging.LoggingLevel.FINE;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
@@ -145,8 +138,8 @@ public class ServerRestartTest {
      * @param clientOrb
      * @throws Exception
      */
-    @Test
-    @RepeatedTest(50)
+    @RetriedTest(maxRuns = 50)
+    @Logging(value = "yoko.verbose.retry", level = FINE)
     public void testMultipleThreadsAcrossRestart(ORB clientOrb) throws Exception {
         testMultipleThreads(clientOrb);
         serverControl.restart();
