@@ -12,19 +12,27 @@
  */
 package testify.jupiter.annotation;
 
-import org.junit.jupiter.api.TestInstance;
-import org.junit.jupiter.api.extension.*;
-import org.junit.platform.commons.support.AnnotationSupport;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import testify.jupiter.annotation.impl.Steward;
 
+import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.AnnotatedElement;
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.logging.*;
+import java.util.LinkedList;
+import java.util.Optional;
+import java.util.PriorityQueue;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
@@ -59,7 +67,6 @@ public @interface Logging {
  * The steward handles enabling and disabling logging. It is stored using the Jupiter
  */
 class LoggingSteward extends Steward<Logging> {
-    final Handler destinationHandler;
     final BufferedHandler bufferedHandler;
     final Logger logger;
     final Level oldLevel;
@@ -69,9 +76,7 @@ class LoggingSteward extends Steward<Logging> {
         final String component = annotation.value();
         final Level newLevel = annotation.level().level;
         // set up the handlers
-        destinationHandler = new ConsoleHandler();
-        destinationHandler.setLevel(newLevel);
-        bufferedHandler = new BufferedHandler();
+        bufferedHandler = new BufferedHandler(new PrintWriter(System.out));
         bufferedHandler.setLevel(newLevel);
         // find the logger
         logger = Logger.getLogger(component);
@@ -81,11 +86,12 @@ class LoggingSteward extends Steward<Logging> {
         logger.addHandler(bufferedHandler);
     }
 
-    boolean logOnSuccess() { return annotation.logOnSuccess(); }
-
     void reset() { bufferedHandler.reset(); }
 
-    void flush() { bufferedHandler.flushTo(destinationHandler); }
+    void logResult(boolean hasTestFailed) {
+        bufferedHandler.setResult(hasTestFailed);
+        if (hasTestFailed || annotation.logOnSuccess()) bufferedHandler.logTest();
+    }
 
     @Override
     public void close() {
@@ -104,56 +110,85 @@ class LoggingExtension implements BeforeAllCallback, BeforeTestExecutionCallback
 
     @Override
     public void beforeTestExecution(ExtensionContext ctx) throws Exception {
-        LoggingSteward.getSteward(ctx)
-                .ifPresent(LoggingSteward::reset);
+        LoggingSteward.getSteward(ctx).ifPresent(LoggingSteward::reset);
     }
 
     @Override
     public void afterTestExecution(ExtensionContext ctx) throws Exception {
-        LoggingSteward.getSteward(ctx)
-                .filter(steward -> ctx.getExecutionException()
-                        .map(e -> true)
-                        .orElseGet(steward::logOnSuccess))
-                .ifPresent(LoggingSteward::flush);
+        LoggingSteward.getSteward(ctx).ifPresent(steward -> steward.logResult(ctx.getExecutionException().isPresent()));
     }
 }
 
 class BufferedHandler extends Handler {
-    ConcurrentMap<Long, Queue<LogRecord>> buffers;
-    ThreadLocal<Queue<LogRecord>> buffer;
+    static final class ThreadJournal extends LinkedList<LogRecord> implements Comparable<ThreadJournal> {
+        final Thread thread = Thread.currentThread();
 
-    BufferedHandler() {
+        @Override
+        public int compareTo(ThreadJournal that) {
+            final LogRecord thisRec = this.peek();
+            final LogRecord thatRec = that.peek();
+            if (null == thisRec) return (null == thatRec) ? 0 : 1;
+            if (null == thatRec) return -1;
+            return Long.signum(thisRec.getMillis() - thatRec.getMillis());
+        }
+    }
+
+    final PrintWriter out;
+    long epoch;
+    Queue<ThreadJournal> buffers;
+    ThreadLocal<ThreadJournal> buffer;
+    char prefix;
+
+    BufferedHandler(PrintWriter out) {
+        this.out = out;
         reset();
     }
 
-    private Queue<LogRecord> newQueueForThread(Long threadId) { return new LinkedList<>(); }
-    private Queue<LogRecord> queueForThread() { return buffers.computeIfAbsent(Thread.currentThread().getId(), this::newQueueForThread); }
-
     public void reset() {
-        buffers = new ConcurrentHashMap<>();
-        buffer = ThreadLocal.withInitial(this::queueForThread);
+        epoch = System.currentTimeMillis();
+        buffers = new ConcurrentLinkedQueue<>();
+        buffer = ThreadLocal.withInitial(() -> {
+            ThreadJournal result = new ThreadJournal();
+            buffers.add(result);
+            return result;
+        });
     }
 
-    public void flushTo(Handler handler) {
-        PriorityQueue<Queue<LogRecord>> pq = new PriorityQueue<>( (l1, l2) -> {
-            if (l1.isEmpty()) return l2.isEmpty() ? 0 : 1;
-            if (l2.isEmpty()) return -1;
-            return Long.signum(l1.peek().getMillis() - l2.peek().getMillis());
-        });
+    void setResult(boolean hasTestFailed) {
+        prefix = hasTestFailed ? '\u274C' : '\u2714';
+    }
 
-        pq.addAll(buffers.values());
-
-        for (Queue<LogRecord> nextThread = pq.poll(); nextThread != null; nextThread = pq.poll()) {
-            if (nextThread.isEmpty()) continue;
+    void logTest() {
+        // Run the opening credits
+        buffers.stream().map(j -> j.thread).forEach(this::introduceThread);
+        // and now for the main feature
+        PriorityQueue<ThreadJournal> pq = new PriorityQueue<>(buffers);
+        for (ThreadJournal nextJournal = pq.poll(); nextJournal != null; nextJournal = pq.poll()) {
+            if (nextJournal.isEmpty()) continue;
             // the nextThread queue is no longer in the priority queue
             // so we can safely poll it, which can change its priority
-            handler.publish(nextThread.poll());
-            if (nextThread.isEmpty()) continue;
+            printLog(nextJournal.poll());
+            if (nextJournal.isEmpty()) continue;
             // now the queue has a different priority
             // we can reinsert it into the priority queue
-            // and we will see it again when it reaches the front of the queue again
-            pq.add(nextThread);
+            pq.add(nextJournal);
         }
+    }
+
+    private void introduceThread(Thread t) {
+        out.printf("%c %08x: [%13s] %s%n", prefix, t.getId(), t.getState(), t.getName());
+    }
+
+    private void printLog(LogRecord rec) {
+        // format: ss.mmm  _____tid  [logger]  message
+        out.printf("%c %02d.%03d  %08x  [%s]  %s%n",
+                prefix,
+                rec.getMillis() /1000,
+                rec.getMillis() %1000,
+                rec.getThreadID(),
+                rec.getLoggerName(),
+                rec.getMessage());
+        out.flush();
     }
 
     @Override
@@ -164,5 +199,4 @@ class BufferedHandler extends Handler {
 
     @Override
     public void close() throws SecurityException {}
-
 }
