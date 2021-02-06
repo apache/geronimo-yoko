@@ -14,26 +14,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util;
+package testify.jupiter.annotation.logging;
 
-import java.util.function.Predicate;
+import java.util.LinkedList;
+import java.util.logging.LogRecord;
 
-public enum Predicates {
-    ;
-
-    @SafeVarargs
-    public static <T> Predicate<T> allOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> true;
-        for (Predicate<T> p: predicates) result = result.and(p);
-        return result;
+/**
+ * A linked list of LogRecords with chronological ordering of first element.
+ */
+final class Journal extends LinkedList<LogRecord> implements Comparable<Journal> {
+    @Override
+    public int compareTo(Journal that) {
+        final LogRecord thisRec = this.peek();
+        final LogRecord thatRec = that.peek();
+        if (null == thisRec) return (null == thatRec) ? 0 : 1;
+        if (null == thatRec) return -1;
+        return Long.signum(thisRec.getMillis() - thatRec.getMillis());
     }
-
-    @SafeVarargs
-    public static <T> Predicate<T> anyOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> false;
-        for (Predicate<T> p: predicates) result = result.or(p);
-        return result;
-    }
-
-    public static <T> Predicate<T> not(Predicate<T> predicate) { return t -> ! predicate.test(t); }
 }
