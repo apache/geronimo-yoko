@@ -17,23 +17,46 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.logging.VerboseLogging;
 import org.apache.yoko.rmi.util.ObjectUtil;
 
-//
-// RetryInfo holds counters which track the number of
-// retries and location forward replies
-//
-public class RetryInfo {
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
+
+/**
+ * RetryInfo holds counters which track the number of retries and location forward replies
+ */
+
+public final class RetryInfo {
     private final String label = ObjectUtil.getNextObjectLabel(RetryInfo.class);
     private int retry; // retry count
     private int hop; // forward hop count
 
-    public int getRetry() { return retry; }
-    public int getHop() { return hop; }
+    public RetryInfo() {
+        if (RETRY_LOG.isLoggable(FINER)) RETRY_LOG.finer(label + ": created");
+    }
+
+    public int getRetry() {
+        if (RETRY_LOG.isLoggable(FINER)) RETRY_LOG.finer(label + ": retry count is " + retry);
+        return retry;
+    }
+
+    public int getHop() {
+        if (RETRY_LOG.isLoggable(FINER)) RETRY_LOG.finer(label + ": hop count is " + hop);
+        return hop;
+    }
+
     public void incrementRetryCount() {
         retry++;
+        if (RETRY_LOG.isLoggable(FINE)) RETRY_LOG.fine(label + ": retry count incremented to " + retry);
     }
-    public void incrementHopCount() { hop++; }
+
+    public void incrementHopCount() {
+        hop++;
+        retry = 0;
+        if (RETRY_LOG.isLoggable(FINE)) RETRY_LOG.fine(label + ": hop count incremented to " + hop);
+    }
 
     @Override
     public String toString() { return label + "{retry=" + retry + ", hop=" + hop + '}'; }
