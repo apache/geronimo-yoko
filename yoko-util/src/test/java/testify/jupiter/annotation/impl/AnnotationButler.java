@@ -17,10 +17,7 @@
 package testify.jupiter.annotation.impl;
 
 import org.hamcrest.Matcher;
-import org.hamcrest.MatcherAssert;
 import org.junit.platform.commons.support.HierarchyTraversalMode;
-import org.opentest4j.AssertionFailedError;
-import testify.util.Predicates;
 
 import java.io.Serializable;
 import java.lang.annotation.Annotation;
@@ -30,7 +27,7 @@ import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -41,14 +38,9 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedFields;
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods;
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static org.junit.platform.commons.support.AnnotationSupport.*;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
-import static testify.util.Predicates.allOf;
-import static testify.util.Reflect.getMatchingConstructor;
-import static testify.util.Reflect.getMatchingTypeName;
 
 public class AnnotationButler<A extends Annotation> implements Serializable {
     public static <A extends Annotation> Spec<A> forClass(Class<A> annoType) {
@@ -130,22 +122,8 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
             return this;
         }
 
-        public Spec<A> assertFieldHasMatchingConcreteType(String pattern, Class<?>... allowedConstructorParameterTypes) {
-            assertions = assertions.andThen(member -> {
-                if (!!!(member instanceof Field)) return;
-                Field field = (Field)member;
-                String expectedTypeName = getMatchingTypeName(field.getType(), pattern);
-                try {
-                    getMatchingConstructor(expectedTypeName, allowedConstructorParameterTypes);
-                } catch (AssertionFailedError assertionFailedError) {
-                    throw (Error) fail("Could not process annotation " + annoName + " on field " + field, assertionFailedError);
-                }
-            });
-            return this;
-        }
-
         public Spec<A> filter(Predicate<A> filter) { filters = filters.and(filter); return this; }
-        public AnnotationButler<A> recruit() { return new AnnotationButler(annoType, filters, assertions); }
+        public AnnotationButler<A> recruit() { return new AnnotationButler<>(annoType, filters, assertions); }
     }
 
     private final Class<A> annoType;
@@ -166,7 +144,6 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                 .collect(toList());
     }
 
-
     public List<Field> findFields(Class<?> clazz) {
         return findAnnotatedFields(clazz, annoType)
                 .stream()
@@ -175,19 +152,14 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                 .collect(toList());
     }
 
-
     private boolean filter(AnnotatedElement elem) {
         return findAnnotation(elem, annoType)
                 .map(filters::test)
                 .orElseThrow(Error::new); // the annotation MUST be present
     }
 
-    public boolean hasAnnotatedMethods(Class<?> clazz) {
-        return !!! findMethods(clazz).isEmpty();
-    }
-
     protected final A getAnnotation(AnnotatedElement elem) {
         return findAnnotation(elem, annoType)
-                .orElseThrow(() -> new Error(elem + String.format(" does not use the @%s annotation", annoType.getSimpleName())));
+                .orElseThrow(() -> new NoSuchElementException(elem + String.format(" does not use the @%s annotation", annoType.getSimpleName())));
     }
 }

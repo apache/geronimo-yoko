@@ -14,26 +14,28 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util;
+package testify.jupiter.annotation.logging;
 
-import java.util.function.Predicate;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public enum Predicates {
-    ;
+/** Applies a log setting and remembers how to undo it. */
+class LogSetting {
+    private final Logger logger;
+    private final Level oldLevel;
+    private final Handler handler;
 
-    @SafeVarargs
-    public static <T> Predicate<T> allOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> true;
-        for (Predicate<T> p: predicates) result = result.and(p);
-        return result;
+    LogSetting(Logging annotation, Handler handler) {
+        this.logger = Logger.getLogger(annotation.value());
+        this.handler = handler;
+        this.oldLevel = logger.getLevel();
+        logger.setLevel(annotation.level().level);
+        logger.addHandler(handler);
     }
 
-    @SafeVarargs
-    public static <T> Predicate<T> anyOf(Predicate<T>...predicates) {
-        Predicate<T> result = t -> false;
-        for (Predicate<T> p: predicates) result = result.or(p);
-        return result;
+    void undo() {
+        logger.setLevel(oldLevel); // this might be a no-op but that's ok
+        logger.removeHandler(handler);
     }
-
-    public static <T> Predicate<T> not(Predicate<T> predicate) { return t -> ! predicate.test(t); }
 }

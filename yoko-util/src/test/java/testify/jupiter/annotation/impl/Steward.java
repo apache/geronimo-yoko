@@ -18,15 +18,13 @@ package testify.jupiter.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
+import testify.jupiter.annotation.Annotations;
 
 import java.lang.annotation.Annotation;
-import java.lang.annotation.Repeatable;
-import java.util.Collections;
-import java.util.List;
+import java.lang.reflect.AnnotatedElement;
 import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * This class provides the mechanism to create, store, and retrieve
@@ -42,47 +40,27 @@ import java.util.stream.Stream;
  * there will exist at most one such artifact. This artifact will be retrieved
  * and used by the implementing child class to allow state to be propagated from
  * one method invocation to another during the handling of the specified annotation
- *
- * @param <A> the annotation type to be used
+ * <p>
+ * <em>Use of this as a base class renders child logic difficult to follow.
+ * This base class is deprecated in favour of a single invocation of
+ * {@link Annotations#getAnnotationHandler(ExtensionContext, Class, Class, Function)}
+ * which also supports repeatable annotations.</em>
  */
+@Deprecated
 public class Steward<A extends Annotation> implements CloseableResource {
-    private final AnnotationButler<A> butler;
     protected final A annotation;
 
-    protected Steward(Class<A> annotationClass, Class<?> annotatedClass) {
-        this.butler = AnnotationButler.forClass(annotationClass).recruit();
-        this.annotation = butler.getAnnotation(annotatedClass);
+    protected Steward(Class<A> annotationClass, AnnotatedElement elem) {
+        this.annotation = AnnotationButler.forClass(annotationClass).recruit().getAnnotation(elem);
     }
 
-    protected static <S extends Steward> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
-        return ctx.getStore(Namespace.create(type)).getOrComputeIfAbsent(ctx.getRequiredTestClass(), constructor, type);
+    protected static <S extends Steward<?>> S getInstanceForContext(ExtensionContext ctx, Class<S> type, Function<Class<?>, S> constructor) {
+        final Store store = ctx.getStore(Namespace.create(type));
+        final Class<?> testClass = ctx.getRequiredTestClass();
+        return store.getOrComputeIfAbsent(testClass, constructor, type);
     }
 
-    /**
-     * Child classes that have any clean up work to do should override this method.
-     */
+    /** Child classes that have any clean up work to do should override this method. */
     @Override
     public void close() { /* do nothing */ }
 }
-
-//abstract class MultiSteward<A extends Annotation, C extends Annotation> extends Steward<C> implements Iterable<Steward<A>>{
-//    private final List<Steward<A>> subStewards;
-//
-//    protected MultiSteward(Class<A> annotationClass, Class<C> containerAnnotationClass, Function<C, A[]> valueMethodRef, Class<?> annotatedClass) {
-//        super(containerAnnotationClass, annotatedClass);
-//        validateRepeatableRelationship(annotationClass, containerAnnotationClass);
-//        this.subStewards = Collections.unmodifiableList(
-//                Stream.of(valueMethodRef.apply(annotation))
-//                        .map(c -> )
-//                        .collect(Collectors.toList()));
-//
-//    }
-//
-//    private static <A extends Annotation, B extends Annotation> void validateRepeatableRelationship(Class<B> annotationClass, Class<A> containerAnnotationClass) {
-//        Repeatable repeatable = annotationClass.getAnnotation(Repeatable.class);
-//        if (repeatable != null && repeatable.value() == containerAnnotationClass) return;
-//        throw new Error(annotationClass + " does not declare @Repeatable(" + containerAnnotationClass.getSimpleName() + ")");
-//    }
-//
-//
-//}

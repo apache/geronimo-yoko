@@ -18,11 +18,13 @@ package org.apache.yoko;
 
 import acme.Echo;
 import acme.EchoImpl;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
+import testify.jupiter.annotation.RetriedTest;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
@@ -30,14 +32,19 @@ import testify.jupiter.annotation.iiop.ConfigureServer.Control;
 import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
 import testify.jupiter.annotation.iiop.ServerControl;
+import testify.jupiter.annotation.logging.Logging;
 import testify.util.Stubs;
 
 import java.rmi.RemoteException;
+import java.util.concurrent.ForkJoinPool;
+import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static java.util.stream.Collectors.joining;
+import static org.junit.jupiter.api.Assertions.*;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
+import static testify.jupiter.annotation.logging.Logging.Suppression.ON_FAILURE;
+import static testify.jupiter.annotation.logging.Logging.Suppression.ON_SUCCESS;
 
 @ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
 public class ServerRestartTest {
@@ -102,5 +109,47 @@ public class ServerRestartTest {
         ctx1.bind_new_context(new NameComponent[]{new NameComponent("wibble", "")});
         // force the other stub to reconnect
         ctx2.bind_new_context(new NameComponent[]{new NameComponent("splong", "")});
+    }
+
+    /** Test a single thread calling the server from naming lookup to invocation */
+    @Test
+    public void testMultipleThreads(ORB clientOrb) throws Exception {
+        assertNotNull(stubUrl);
+        final int parallelism = 2;
+        String actual  = new ForkJoinPool(parallelism + 1)
+                .submit( () -> IntStream.range(0, parallelism)
+                        .mapToObj(Integer::toString)
+                        .parallel()
+                        .map(expected -> {
+                            System.out.println("Starting task " + expected);
+                            Echo echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
+                            String result;
+                            try { result = echo.echo(expected); } catch (RemoteException e) { throw (Error)Assertions.fail(e); }
+                            assertEquals(expected, result, Thread.currentThread().getName() + " should successfully look up and invoke the echo object");
+                            return result;
+                        }).sorted().collect(joining(""))
+                ).get();
+        System.out.println(actual);
+        String expected = IntStream.range(0, parallelism).mapToObj(Integer::toString).sorted().collect(joining(""));
+        assertEquals(expected, actual);
+    }
+
+    /**
+     * Test the restart behaviour when the client is multi-threaded.
+     * Since this is non-deterministic, we repeat this test enough times to be confident of seeing significant failures.
+     * @param clientOrb
+     * @throws Exception
+     */
+    @RetriedTest(maxRuns = 50)
+    @Logging(value = "yoko.verbose.retry", level = FINE)
+    @Logging(value = "yoko.verbose.connection", level = FINE)
+    public void testMultipleThreadsAcrossRestart(ORB clientOrb) throws Exception {
+        testMultipleThreads(clientOrb);
+        serverControl.restart();
+        testMultipleThreads(clientOrb);
+        serverControl.restart();
+        testMultipleThreads(clientOrb);
+        serverControl.restart();
+        testMultipleThreads(clientOrb);
     }
 }
