@@ -32,13 +32,12 @@ class LoggingExtension implements BeforeAllCallback, BeforeTestExecutionCallback
 
     @Override
     public void beforeTestExecution(ExtensionContext ctx) {
-        getTestLogger(ctx).ifPresent(TestLogger::beforeTestExecution);
+        getTestLogger(ctx).ifPresent(o -> o.beforeTestExecution(ctx));
     }
 
     @Override
     public void afterTestExecution(ExtensionContext ctx) {
-        final boolean failed = ctx.getExecutionException().isPresent();
-        getTestLogger(ctx).ifPresent(o -> o.afterTestExecution(failed));
+        getTestLogger(ctx).ifPresent(o -> o.afterTestExecution(ctx));
     }
 
     static Optional<TestLogger> getTestLogger(ExtensionContext ctx) {

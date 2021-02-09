@@ -24,7 +24,6 @@ import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
-import testify.jupiter.annotation.logging.Logging;
 import testify.jupiter.annotation.RetriedTest;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
@@ -33,6 +32,7 @@ import testify.jupiter.annotation.iiop.ConfigureServer.Control;
 import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
 import testify.jupiter.annotation.iiop.ServerControl;
+import testify.jupiter.annotation.logging.Logging;
 import testify.util.Stubs;
 
 import java.rmi.RemoteException;
@@ -41,8 +41,10 @@ import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.*;
-import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
+import static testify.jupiter.annotation.logging.Logging.Suppression.ON_FAILURE;
+import static testify.jupiter.annotation.logging.Logging.Suppression.ON_SUCCESS;
 
 @ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
 public class ServerRestartTest {
@@ -139,9 +141,13 @@ public class ServerRestartTest {
      * @throws Exception
      */
     @RetriedTest(maxRuns = 50)
-    @Logging(value = "yoko.verbose.retry", level = FINE, logOnSuccess = true)
-    @Logging(value = "yoko.verbose.connection", level = FINE, logOnSuccess = true)
+    @Logging(value = "yoko.verbose.retry", level = FINE)
+    @Logging(value = "yoko.verbose.connection", level = FINE)
     public void testMultipleThreadsAcrossRestart(ORB clientOrb) throws Exception {
+        testMultipleThreads(clientOrb);
+        serverControl.restart();
+        testMultipleThreads(clientOrb);
+        serverControl.restart();
         testMultipleThreads(clientOrb);
         serverControl.restart();
         testMultipleThreads(clientOrb);

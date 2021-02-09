@@ -42,6 +42,7 @@ import static java.util.Collections.singletonList;
 public @interface RetriedTest {
     int maxRuns();
     int maxFailures() default 1;
+    int maxSuccesses() default Integer.MAX_VALUE;
 
     class ContextProvider implements TestTemplateInvocationContextProvider {
         @Override
@@ -63,16 +64,18 @@ public @interface RetriedTest {
      * It implements Spliterator purely to make it easy to treat as a stream.
      */
     class Context implements TestTemplateInvocationContext, AfterTestExecutionCallback {
-        private int runs;
+        private int successes;
         private int failures;
 
         static Stream<TestTemplateInvocationContext> stream(RetriedTest annotation) {
             Preconditions.condition(annotation.maxRuns() > 0, "The maximum number of runs must be greater than zero." );
-            Preconditions.condition(annotation.maxFailures() > 0, "The maximum number of failures must be greater than zero." );
+            Preconditions.condition(annotation.maxFailures() > 0, "The maximum allowed failures must be greater than zero." );
+            Preconditions.condition(annotation.maxSuccesses() > 0, "The maximum allowed successes must be greater than zero." );
             Context ctx = new Context();
             return Streams.stream(action -> {
-                if (annotation.maxRuns() == ctx.runs) return false;
                 if (annotation.maxFailures() == ctx.failures) return false;
+                if (annotation.maxSuccesses() == ctx.successes) return false;
+                if (annotation.maxRuns() == ctx.failures + ctx.successes) return false;
                 action.accept(ctx);
                 return true;
             });
@@ -85,8 +88,8 @@ public @interface RetriedTest {
 
         @Override
         public void afterTestExecution(ExtensionContext context) throws Exception {
-            runs++;
             if (context.getExecutionException().isPresent()) failures++;
+            else successes++;
         }
     }
 }

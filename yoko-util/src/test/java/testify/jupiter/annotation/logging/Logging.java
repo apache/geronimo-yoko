@@ -17,6 +17,8 @@
 package testify.jupiter.annotation.logging;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.platform.commons.support.AnnotationSupport;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -24,6 +26,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.logging.Level;
 
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
@@ -32,13 +35,12 @@ import static java.lang.annotation.ElementType.TYPE;
  * this annotation will enable logging for the duration of the test.
  */
 @ExtendWith(LoggingExtension.class)
-@Target({TYPE, METHOD})
+@Target({TYPE, METHOD, ANNOTATION_TYPE})
 @Retention(RetentionPolicy.RUNTIME)
 @Repeatable(Logging.Container.class)
 public @interface Logging {
     String value() default ""; // if unspecified, apply to the root logger
     LoggingLevel level() default LoggingLevel.ALL;
-    boolean logOnSuccess() default false;
     enum LoggingLevel {
         OFF(Level.OFF),
         SEVERE(Level.SEVERE),
@@ -53,7 +55,29 @@ public @interface Logging {
         LoggingLevel(Level level) { this.level = level; }
     }
 
-    @Target({TYPE, METHOD})
+    enum Suppression {
+        ON_FAILURE, ON_SUCCESS, NEVER;
+        private static Suppression DEFAULT = ON_SUCCESS;
+
+        static Suppression forContext(ExtensionContext ctx) {
+            return ctx.getElement()
+                    .flatMap(e -> AnnotationSupport.findAnnotation(e, Suppressed.class))
+                    .map(Suppressed::value)
+                    .orElse(DEFAULT);
+        }
+
+        public boolean isRequired(boolean hasTestFailed) {
+            return this == (hasTestFailed ? ON_FAILURE : ON_SUCCESS);
+        }
+    }
+
+    @Target({TYPE, METHOD, ANNOTATION_TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Suppressed {
+        Suppression value();
+    }
+
+    @Target({TYPE, METHOD, ANNOTATION_TYPE})
     @Retention(RetentionPolicy.RUNTIME)
     @interface Container {
         Logging[] value();
