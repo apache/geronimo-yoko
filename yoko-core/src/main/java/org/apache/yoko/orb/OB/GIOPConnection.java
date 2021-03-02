@@ -63,7 +63,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
-import static java.util.logging.Logger.getLogger;
 import static org.apache.yoko.orb.OB.Connection.State.ACTIVE;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;

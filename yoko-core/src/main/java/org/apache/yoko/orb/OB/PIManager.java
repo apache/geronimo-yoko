@@ -55,7 +55,11 @@ import org.omg.PortableServer.Servant;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
+import static java.util.logging.Level.CONFIG;
+import static org.apache.yoko.orb.OB.PIManager.Interceptors.describe;
+import static org.apache.yoko.orb.logging.VerboseLogging.IOR_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.REQ_IN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.apache.yoko.util.CollectionExtras.allOf;
 import static org.apache.yoko.util.CollectionExtras.filterByType;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
@@ -90,14 +94,17 @@ final public class PIManager {
     }
 
     public void addIORInterceptor(IORInterceptor interceptor, boolean insertAtHead) throws DuplicateName {
+        if (IOR_LOG.isLoggable(CONFIG)) IOR_LOG.config("Registering " + describe(interceptor));
         addInterceptorToList(interceptor, this.iorInterceptors, insertAtHead);
     }
 
     public void addClientRequestInterceptor(ClientRequestInterceptor interceptor) throws DuplicateName {
+        if (REQ_OUT_LOG.isLoggable(CONFIG)) REQ_OUT_LOG.config("Registering " + describe(interceptor));
         addInterceptorToList(interceptor, clientRequestInterceptors, false);
     }
 
     public void addServerRequestInterceptor(ServerRequestInterceptor interceptor) throws DuplicateName {
+        if (REQ_IN_LOG.isLoggable(CONFIG)) REQ_IN_LOG.config("Registering " + describe(interceptor));
         addInterceptorToList(interceptor, serverRequestInterceptors, false);
     }
 
@@ -295,5 +302,14 @@ final public class PIManager {
 
     public boolean haveServerInterceptors() {
         return allOrbInitializersHaveBeenInvoked && !serverRequestInterceptors.isEmpty();
+    }
+
+    enum Interceptors {
+        ;
+
+        static String describe(ClientRequestInterceptor i) { return "client request interceptor " + describe0(i); }
+        static String describe(ServerRequestInterceptor i) { return "server request interceptor " + describe0(i); }
+        static String describe(IORInterceptor i) { return "ior interceptor " + describe0(i); }
+        private static String describe0(Interceptor i) { return i.name() + " of type " + i.getClass().getName(); }
     }
 }

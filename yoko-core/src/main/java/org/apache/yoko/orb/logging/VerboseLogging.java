@@ -25,24 +25,79 @@ import static java.util.logging.Level.FINEST;
 import static java.util.logging.Level.WARNING;
 
 /**
- * Define standard logger objects for the most verbose logging.
+ * Define standard logger objects for yoko verbose logging.
+ * The intention here is to log according to what is happening rather than which particular class or method it happens in.
+ * This logging should be useful to a user of Yoko in understanding the behaviour of their application.
+ * <p>
+ *     <strong>
+ *         N.B. Anything that is specific to debugging a class or method within Yoko may still be traced to that class's Logger.
+ *     </strong>
+ * </p>
  */
 public enum VerboseLogging {
     ;
 
     /*
-     * These loggers replace the older mechanism in
+     * N.B. These loggers replace the older mechanism in
      * <code>org.apache.yoko.orb.OB.CoreTraceLevels</code> and
      * <code>org.apache.yoko.orb.OB.Logger</code> and
      * <code>org.apache.yoko.orb.OB.Logger_impl</code>
      */
 
+    /** The verbose logging for all of Yoko: <pre>
+     * CONFIG: Config / startup only
+     * FINE:   Minimal overview of operations
+     * FINER:  Detail of operations
+     * FINEST: Maximum detail of operations
+     </pre>*/
+    public static final Logger ROOT_LOG = Logger.getLogger("yoko.verbose");
+
+    /** Connection logging: <pre>
+     * CONFIG: timeout settings etc.
+     * FINE:   open/accept/close connection to/from endpoint
+     * FINER:  code sets, codebase, YASF, service context counting
+     * FINEST: requests, request counts, parallel requests etc.
+     * </pre>
+     * <br/>
+     */
     public static final Logger CONN_LOG = Logger.getLogger("yoko.verbose.connection");
+    /** @see #CONN_LOG */
     public static final Logger CONN_IN_LOG = Logger.getLogger("yoko.verbose.connection.in");
+    /** @see #CONN_LOG */
     public static final Logger CONN_OUT_LOG = Logger.getLogger("yoko.verbose.connection.out");
+
+
     public static final Logger RETRY_LOG = Logger.getLogger("yoko.verbose.retry");
-    public static final Logger REQ_IN_LOG = Logger.getLogger("yoko.verbose.request.in");
+
+    /** IOR logging: <pre>
+     * CONFIG: IOR interceptor addition
+     * FINE:
+     * FINER:
+     * FINEST:
+     * </pre>
+     */
+    public static final Logger IOR_LOG = Logger.getLogger("yoko.verbose.ior");
+
+    /** Request logging: <pre>
+     * CONFIG: Request interceptor addition
+     * FINE:
+     * FINER:
+     * FINEST:
+     * </pre>
+     */
+    public static final Logger REQ_LOG = Logger.getLogger("yoko.verbose.request");
+    /** @see #REQ_LOG */
     public static final Logger REQ_OUT_LOG = Logger.getLogger("yoko.verbose.request.out");
+    /** @see #REQ_LOG */
+    public static final Logger REQ_IN_LOG = Logger.getLogger("yoko.verbose.request.in");
+
+    /** Marshalling logging: <pre>
+     * CONFIG:
+     * FINE:
+     * FINER:
+     * FINEST:
+     * </pre>
+     */
     public static final Logger MARSHAL_LOG = Logger.getLogger("yoko.verbose.marshal");
 
     public static <L extends Throwable> L logged(Logger logger, L loggable, String reason) {
@@ -66,6 +121,9 @@ public enum VerboseLogging {
      * and to add a record of the stack trace to the causal exception
      */
     private static class StackTraceRecord extends Exception {
-        StackTraceRecord(String reason) { super(reason); }
+        private static final long serialVersionUID = 1L;
+        StackTraceRecord(String reason) {
+            super(reason);
+        }
     }
 }
