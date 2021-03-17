@@ -57,7 +57,6 @@ public class TestInterceptorsThatThrow {
         private final Invoker<Target> invoker;
         final int minor = 1000000000 + this.ordinal();
         private InterceptionPoint(Invoker<Target> invoker) {this.invoker = invoker;}
-        void invoke(Target target) throws RemoteException {invoker.invoke(target);}
     }
 
     @UseWithServerOrb
@@ -118,7 +117,6 @@ public class TestInterceptorsThatThrow {
         default void send_reply() throws RemoteException {}
         default void send_exception() throws RemoteException {}
         default void send_other() throws RemoteException {}
-
     }
 
     public static class TargetImpl extends PortableRemoteObject implements Target {
