@@ -1,7 +1,6 @@
 package test.fvd;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 
 import org.omg.CORBA.ORB;
 
@@ -12,7 +11,7 @@ public class MissingFieldsClient extends TestBase {
     private static final ApeClassLoader apeLoader = new ApeClassLoader().doNotLoad();
 
     public static void main(String...args) throws Exception {
-        if (apeLoader.apeMain(args))
+        if (apeLoader.apeInvoke(args))
             return;
         ////////////////////// CODE BELOW HERE EXECUTES IN APE LOADER ONLY //////////////////////
         final String refFile = args[0];
