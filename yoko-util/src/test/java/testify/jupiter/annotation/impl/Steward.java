@@ -42,9 +42,9 @@ import java.util.function.Function;
  * one method invocation to another during the handling of the specified annotation
  * <p>
  * <em>Use of this as a base class renders child logic difficult to follow.
- * This base class is deprecated in favour of a single invocation of
- * {@link Annotations#getAnnotationHandler(ExtensionContext, Class, Class, Function)}
- * which also supports repeatable annotations.</em>
+ * This base class is deprecated in favour of a single invocation of one of
+ * the convenience methods on the {@link Annotations} class,
+ * which supports both single and repeatable annotations.</em>
  */
 @Deprecated
 public class Steward<A extends Annotation> implements CloseableResource {
