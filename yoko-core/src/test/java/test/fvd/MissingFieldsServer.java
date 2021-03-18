@@ -21,7 +21,7 @@ public class MissingFieldsServer extends TestBase {
     private static final ApeClassLoader apeLoader = new ApeClassLoader().doNotLoad();
 
     public static void main(String...args) {
-        if (apeLoader.apeInvoke(args)) return;
+        if (apeLoader.apeInvoke((Object)args)) return;
         ////////////////////// CODE BELOW HERE EXECUTES IN APE LOADER ONLY //////////////////////
         final String refFile = args[0];
         Marshalling.valueOf(args[1]);          // client version

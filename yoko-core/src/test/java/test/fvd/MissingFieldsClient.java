@@ -11,7 +11,7 @@ public class MissingFieldsClient extends TestBase {
     private static final ApeClassLoader apeLoader = new ApeClassLoader().doNotLoad();
 
     public static void main(String...args) throws Exception {
-        if (apeLoader.apeInvoke(args))
+        if (apeLoader.apeInvoke((Object)args))
             return;
         ////////////////////// CODE BELOW HERE EXECUTES IN APE LOADER ONLY //////////////////////
         final String refFile = args[0];
