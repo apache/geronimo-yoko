@@ -28,27 +28,55 @@ import java.util.function.Function;
 
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
-import static testify.util.Predicates.not;
 
 public enum Annotations {
     ;
-    public static <A extends Annotation> List<A> findOneOrManyAnnotations(AnnotatedElement e, Class<A> annotationType) {
+    private static <A extends Annotation> List<A> findOneOrManyAnnotations(final AnnotatedElement e, final Class<?> testClass, final Class<A> annotationType) {
+        List<A> result = listAnnotations(e, annotationType);
+        if (result.isEmpty() && e != testClass) result = listAnnotations(testClass, annotationType);
+        return result.isEmpty() ? null : result;
+    }
+
+    private static <A extends Annotation> List<A> listAnnotations(AnnotatedElement e, Class<A> annotationType) {
         return findAnnotation(e, annotationType)
                 .map(Collections::singletonList)
                 .orElse(findRepeatableAnnotations(e, annotationType));
     }
 
     public static <A extends Annotation, T extends CloseableResource>
-    Optional<T> getAnnotationHandler(
+    Optional<T> getRepeatableAnnotationHandler(
             ExtensionContext ctx,
             Class<A> annotationType,
             Class<T> handlerType,
             Function<List<A>, T> factory) {
-        final ExtensionContext.Store store = ctx.getStore(ExtensionContext.Namespace.create(handlerType));
-        final Object key = ctx.getRequiredTestClass();
+        final ExtensionContext.Store store = getTestContextStore(ctx, handlerType, "repeatable annotation");
+        final Class<?> testClass = ctx.getRequiredTestClass();
         return ctx.getElement()
-                .map(e -> findOneOrManyAnnotations(e, annotationType))
-                .filter(not(List::isEmpty))
-                .map(annos -> store.getOrComputeIfAbsent(key, k -> factory.apply(annos), handlerType));
+                .map(e -> findOneOrManyAnnotations(e, testClass, annotationType))
+                .map(annos -> store.getOrComputeIfAbsent(testClass, k -> factory.apply(annos), handlerType));
+    }
+
+    private static <A extends Annotation> A findSingleAnnotation(final AnnotatedElement e, final Class<?> testClass, final Class<A> annotationType) {
+        A result = findAnnotation(e, annotationType).orElse(null);
+        if (null == result && e != testClass) result = findAnnotation(testClass, annotationType).orElse(null);
+        return result;
+    }
+
+    public static <A extends Annotation, T extends CloseableResource>
+    Optional<T> getSingleAnnotationHandler(
+            ExtensionContext ctx,
+            Class<A> annotationType,
+            Class<T> handlerType,
+            Function<A, T> factory) {
+        final ExtensionContext.Store store = getTestContextStore(ctx, handlerType, "single annotation");
+        final Class<?> testClass = ctx.getRequiredTestClass();
+        return ctx.getElement()
+                .map(e -> findSingleAnnotation(e, testClass, annotationType)) // find the annotation on the annotated element
+                .map(annotation -> store.getOrComputeIfAbsent(testClass, k -> factory.apply(annotation), handlerType));
+    }
+
+    /** get a test-context-specific store to cache the handler for the lifetime of the context */
+    private static ExtensionContext.Store getTestContextStore(ExtensionContext ctx, Object...nameSpaceParts) {
+        return ctx.getStore(ExtensionContext.Namespace.create(nameSpaceParts));
     }
 }

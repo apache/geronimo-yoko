@@ -25,8 +25,8 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
+import testify.jupiter.annotation.Annotations;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
-import testify.jupiter.annotation.impl.Steward;
 import testify.util.ArrayUtils;
 import testify.util.Predicates;
 
@@ -58,18 +58,21 @@ public @interface ConfigureOrb {
         READ_ONLY(NameServiceInitializer.class, NameServiceInitializer.NS_REMOTE_ACCESS_ARG, "readOnly"),
         READ_WRITE(NameServiceInitializer.class, NameServiceInitializer.NS_REMOTE_ACCESS_ARG, "readWrite");
         final String[] args;
-        final Optional<Class<? extends ORBInitializer>> initializerClass;
+        private final Class<? extends ORBInitializer> initializerClass;
 
         NameService() {
             this.args = new String[0];
-            this.initializerClass = Optional.empty();
+            this.initializerClass = null;
         }
 
         NameService(Class<? extends ORBInitializer> initializerClass, String...args) {
             this.args = args;
-            this.initializerClass = Optional.of(initializerClass);
+            this.initializerClass = initializerClass;
         }
 
+        Optional<Class<? extends ORBInitializer>> getInitializerClass() {
+            return Optional.ofNullable(initializerClass);
+        }
     }
 
     String[] args() default "";
@@ -82,7 +85,7 @@ public @interface ConfigureOrb {
     @interface UseWithOrb {}
 }
 
-class OrbSteward extends Steward<ConfigureOrb> {
+class OrbSteward implements ExtensionContext.Store.CloseableResource {
     private static final Class<?> CONNECTION_HELPER_CLASS;
     private static final Class<?> EXTENDED_CONNECTION_HELPER_CLASS;
 
@@ -97,23 +100,32 @@ class OrbSteward extends Steward<ConfigureOrb> {
 
     @SuppressWarnings("unused")
     interface NullIiopConnectionHelper{}
-    private final ORB orb;
-    private OrbSteward(Class<?> testClass) {
-        super(ConfigureOrb.class, testClass);
-        this.orb = ORB.init(args(annotation, testClass, this::isOrbModifier), props(annotation, testClass, this::isOrbModifier)); }
+    private final ConfigureOrb annotation;
+    private ORB orb;
+    OrbSteward(ConfigureOrb annotation) { this.annotation = annotation; }
+
+    /** Get the unique ORB for the supplied test context */
+    private synchronized ORB getOrbInstance(ExtensionContext ctx) {
+        if (orb != null) return orb;
+        Class<?> testClass = ctx.getRequiredTestClass();
+        this.orb = ORB.init(args(annotation, testClass, this::isOrbModifier), props(annotation, testClass, this::isOrbModifier));
+        return this.orb;
+    }
 
     @Override
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
     // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
-    public void close() {
+    public synchronized void close() {
+        if (orb == null) return;
         orb.shutdown(true);
         orb.destroy();
+        orb = null;
     }
 
     private boolean isOrbModifier(Class<?> c) { return isAnnotated(c, ConfigureOrb.UseWithOrb.class); }
 
     /** Check that the supplied types are known types to be used as ORB extensions */
-    private static void validateOrbModifierType(Class type) {
+    private static void validateOrbModifierType(Class<?> type) {
         assertTrue(isStatic(type), "Class " + type.getName() + " should be static");
         assertTrue(isPublic(type), "Class " + type.getName() + " should be public");
         // we know about ORB initializers
@@ -161,11 +173,12 @@ class OrbSteward extends Steward<ConfigureOrb> {
             props.put(arr[0], arr.length < 2 ? "" : arr[1]);
         }
         // add initializer properties for each specified initializer class
+        //noinspection unchecked
         getNestedModifierTypes(testClass, nestedClassFilter)
                 .filter(ORBInitializer.class::isAssignableFrom)
                 .forEachOrdered(initializer -> addORBInitializerProp(props,  (Class<? extends ORBInitializer>) initializer));
         // add initializer property for name service if configured
-        cfg.nameService().initializerClass.ifPresent(c -> addORBInitializerProp(props, c));
+        cfg.nameService().getInitializerClass().ifPresent(c -> addORBInitializerProp(props, c));
         return props;
     }
 
@@ -176,8 +189,11 @@ class OrbSteward extends Steward<ConfigureOrb> {
         props.put(name, "true");
     }
 
-    /** Get a client ORB */
-    static ORB getOrb(ExtensionContext ctx) { return Steward.getInstanceForContext(ctx, OrbSteward.class, OrbSteward::new).orb; }
+    static ORB getOrb(ExtensionContext ctx) {
+        return Annotations.getSingleAnnotationHandler(ctx, ConfigureOrb.class, OrbSteward.class, OrbSteward::new)
+                .map(steward -> steward.getOrbInstance(ctx))
+                .orElseThrow(Error::new); // error in framework, not calling code
+    }
 }
 
 /** Must be registered using the {@link ExtendWith} annotation */

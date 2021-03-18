@@ -41,6 +41,6 @@ class LoggingExtension implements BeforeAllCallback, BeforeTestExecutionCallback
     }
 
     static Optional<TestLogger> getTestLogger(ExtensionContext ctx) {
-        return Annotations.getAnnotationHandler(ctx, Logging.class, TestLogger.class, TestLogger::new);
+        return Annotations.getRepeatableAnnotationHandler(ctx, Logging.class, TestLogger.class, TestLogger::new);
     }
 }
