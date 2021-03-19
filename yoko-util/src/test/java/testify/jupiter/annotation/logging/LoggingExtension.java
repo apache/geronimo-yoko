@@ -20,11 +20,13 @@ import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import testify.jupiter.annotation.Annotations;
+import testify.jupiter.annotation.Summoner;
 
+import java.util.List;
 import java.util.Optional;
 
 class LoggingExtension implements BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback {
+    private static final Summoner<List<Logging>, TestLogger> SUMMONER = Summoner.forRepeatableAnnotation(Logging.class, TestLogger.class, TestLogger::new);
     @Override
     public void beforeAll(ExtensionContext ctx) {
         getTestLogger(ctx);
@@ -41,6 +43,6 @@ class LoggingExtension implements BeforeAllCallback, BeforeTestExecutionCallback
     }
 
     static Optional<TestLogger> getTestLogger(ExtensionContext ctx) {
-        return Annotations.getRepeatableAnnotationHandler(ctx, Logging.class, TestLogger.class, TestLogger::new);
+        return SUMMONER.forContext(ctx).summon();
     }
 }

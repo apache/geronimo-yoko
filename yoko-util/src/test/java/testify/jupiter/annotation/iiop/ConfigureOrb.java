@@ -25,7 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
-import testify.jupiter.annotation.Annotations;
+import testify.jupiter.annotation.Summoner;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.util.ArrayUtils;
 import testify.util.Predicates;
@@ -189,8 +189,9 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
         props.put(name, "true");
     }
 
+    private static final Summoner<ConfigureOrb, OrbSteward> SUMMONER = Summoner.forAnnotation(ConfigureOrb.class, OrbSteward.class, OrbSteward::new);
     static ORB getOrb(ExtensionContext ctx) {
-        return Annotations.getSingleAnnotationHandler(ctx, ConfigureOrb.class, OrbSteward.class, OrbSteward::new)
+        return SUMMONER.forContext(ctx).summon()
                 .map(steward -> steward.getOrbInstance(ctx))
                 .orElseThrow(Error::new); // error in framework, not calling code
     }
