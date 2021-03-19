@@ -20,7 +20,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import testify.jupiter.annotation.Annotations;
+import testify.jupiter.annotation.Summoner;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
@@ -42,8 +42,7 @@ import java.util.function.Function;
  * one method invocation to another during the handling of the specified annotation
  * <p>
  * <em>Use of this as a base class renders child logic difficult to follow.
- * This base class is deprecated in favour of a single invocation of one of
- * the convenience methods on the {@link Annotations} class,
+ * This base class is deprecated in favour of the {@link Summoner} interface,
  * which supports both single and repeatable annotations.</em>
  */
 @Deprecated
