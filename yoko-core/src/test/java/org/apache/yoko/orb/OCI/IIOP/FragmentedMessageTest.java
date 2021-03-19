@@ -35,7 +35,7 @@ import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
 import org.omg.PortableInterceptor.ORBInitializer;
 import testify.bus.Bus;
 import testify.jupiter.annotation.Tracing;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
+import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 
@@ -124,7 +124,7 @@ public class FragmentedMessageTest {
      * Look out for tagged components from the {@link ServerSideFragmenter} and redirect traffic via the specified
      * alternative port.
      */
-    @ConfigureOrb.UseWithOrb
+    @UseWithOrb("client orb")
     public static class ClientSideFragmenter implements ExtendedConnectionHelper {
         private ConnectionHelper connHelper = new DefaultConnectionHelper();
 
@@ -175,7 +175,7 @@ public class FragmentedMessageTest {
      * Specifically, it inserts one that describes an alternative port.
      * The {@link ClientSideFragmenter} sees this component and then redirects the traffic via the alternative port.
      */
-    @ConfigureServer.UseWithServerOrb
+    @UseWithOrb("server orb")
     public static class ServerSideFragmenter extends LocalObject implements IORInterceptor, ORBInitializer {
         private volatile Relay relay;
 
@@ -227,5 +227,3 @@ public class FragmentedMessageTest {
         public void destroy() { }
     }
 }
-
-

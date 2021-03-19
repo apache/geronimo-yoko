@@ -42,7 +42,6 @@ import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
 
 import javax.rmi.CORBA.Stub;
 import javax.rmi.PortableRemoteObject;
@@ -57,7 +56,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  */
 @ConfigureServer(newProcess = false)
 public class CodecObjectReferenceTest {
-    @UseWithOrb
+    @UseWithOrb("client orb")
     public static class CreateClientSideCodec extends LocalObject implements ORBInitializer {
         public void pre_init(ORBInitInfo info) {}
         public void post_init(ORBInitInfo info) {
@@ -69,7 +68,7 @@ public class CodecObjectReferenceTest {
         }
     }
 
-    @UseWithServerOrb
+    @UseWithOrb("server orb")
     public static class CreateServerSideCodec extends LocalObject implements ORBInitializer {
         public void pre_init(ORBInitInfo info) {}
         public void post_init(ORBInitInfo info) {
@@ -81,7 +80,7 @@ public class CodecObjectReferenceTest {
         }
     }
 
-    @UseWithServerOrb
+    @UseWithOrb("server orb")
     public static class StartNameService extends NameServiceInitializer {} // ensure server ORB has a NameService
 
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
