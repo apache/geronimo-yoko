@@ -27,9 +27,9 @@ import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
+import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.UseWithServerOrb;
 import testify.util.Stack;
 
 import javax.rmi.CORBA.Util;
@@ -59,7 +59,7 @@ public class TestInterceptorsThatThrow {
         private InterceptionPoint(Invoker<Target> invoker) {this.invoker = invoker;}
     }
 
-    @UseWithServerOrb
+    @UseWithOrb("server orb")
     public static class InterceptorThatThrows extends LocalObject implements ServerRequestInterceptor, ORBInitializer {
         public void pre_init(ORBInitInfo info) {
             try {

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitializer;
 import testify.jupiter.annotation.Summoner;
+import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.util.ArrayUtils;
 import testify.util.Predicates;
@@ -42,6 +43,7 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.AnnotationSupport.isAnnotated;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
@@ -75,6 +77,7 @@ public @interface ConfigureOrb {
         }
     }
 
+    String value() default "orb";
     String[] args() default "";
     String[] props() default "";
     NameService nameService() default NONE;
@@ -82,7 +85,9 @@ public @interface ConfigureOrb {
 
     @Target({ANNOTATION_TYPE, TYPE})
     @Retention(RUNTIME)
-    @interface UseWithOrb {}
+    @interface UseWithOrb {
+        String value() default ".*";
+    }
 }
 
 class OrbSteward implements ExtensionContext.Store.CloseableResource {
@@ -98,11 +103,16 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
         }
     }
 
+    private final String orbName;
+
     @SuppressWarnings("unused")
     interface NullIiopConnectionHelper{}
     private final ConfigureOrb annotation;
     private ORB orb;
-    OrbSteward(ConfigureOrb annotation) { this.annotation = annotation; }
+    OrbSteward(ConfigureOrb annotation) {
+        this.annotation = annotation;
+        this.orbName = annotation.value();
+    }
 
     /** Get the unique ORB for the supplied test context */
     private synchronized ORB getOrbInstance(ExtensionContext ctx) {
@@ -122,7 +132,12 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
         orb = null;
     }
 
-    private boolean isOrbModifier(Class<?> c) { return isAnnotated(c, ConfigureOrb.UseWithOrb.class); }
+    private boolean isOrbModifier(Class<?> c) {
+        return findAnnotation(c, UseWithOrb.class)
+                .map(UseWithOrb::value)
+                .filter(orbName::matches)
+                .isPresent();
+    }
 
     /** Check that the supplied types are known types to be used as ORB extensions */
     private static void validateOrbModifierType(Class<?> type) {
@@ -195,6 +210,11 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
                 .map(steward -> steward.getOrbInstance(ctx))
                 .orElseThrow(Error::new); // error in framework, not calling code
     }
+
+    static ORB getOrb(ExtensionContext ctx, ConfigureOrb config) {
+        return SUMMONER.forContext(ctx).summon(config).getOrbInstance(ctx);
+    }
+
 }
 
 /** Must be registered using the {@link ExtendWith} annotation */

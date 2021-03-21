@@ -43,10 +43,8 @@ import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.*;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
-import static testify.jupiter.annotation.logging.Logging.Suppression.ON_FAILURE;
-import static testify.jupiter.annotation.logging.Logging.Suppression.ON_SUCCESS;
 
-@ConfigureServer(orb = @ConfigureOrb(nameService = READ_WRITE))
+@ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 public class ServerRestartTest {
     @Control
     public static ServerControl serverControl;
