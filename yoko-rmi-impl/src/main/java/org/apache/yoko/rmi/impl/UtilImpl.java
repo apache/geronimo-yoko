@@ -550,58 +550,38 @@ public class UtilImpl implements UtilDelegate {
         }
     }
 
-    static public Class<?> loadClass0(String name, String codebase, ClassLoader loader)
-            throws ClassNotFoundException {
+    static public Class<?> loadClass0(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
 
         try {
             return ProviderLocator.loadClass(name, null, loader);
-        } catch (ClassNotFoundException e) {
-            //skip
-        }
-        Class<?> result = null;
-
-        ClassLoader stackLoader = null;
-        ClassLoader thisLoader = Util.class.getClassLoader();
-        Class<?>[] stack = _secman.getClassContext();
-        for (int i = 1; i < stack.length; i++) {
-            ClassLoader testLoader = stack[i].getClassLoader();
-            if (testLoader != null && testLoader != thisLoader) {
-                stackLoader = thisLoader;
-                break;
-            }
+        } catch (ClassNotFoundException ignored) {
         }
 
+        final ClassLoader stackLoader = getStackLoader();
         if (stackLoader != null) {
             try {
-                result = stackLoader.loadClass(name);
-            } catch (ClassNotFoundException ex) {
-                // skip //
-            }
-
-            if (result != null) {
-                return result;
+                final Class<?> result = stackLoader.loadClass(name);
+                if (result != null) return result;
+            } catch (ClassNotFoundException ignored) {
             }
         }
 
         // try loading using our loader, just in case we really were loaded
         // using the same classloader the delegate is in.
+        ClassLoader thisLoader = Util.class.getClassLoader();
         if (thisLoader != null) {
             try {
-                result = thisLoader.loadClass(name);
-            } catch (ClassNotFoundException ex) {
-                // skip //
-            }
-
-            if (result != null) {
-                return result;
+                final Class<?> result = thisLoader.loadClass(name);
+                if (result != null) return result;
+            } catch (ClassNotFoundException ignored) {
             }
         }
 
-        if (codebase != null && !"".equals(codebase)
-                && !Boolean.getBoolean("java.rmi.server.useCodeBaseOnly")) {
+        if (codebase != null && !"".equals(codebase) && !Boolean.getBoolean("java.rmi.server.useCodeBaseOnly")) {
             logger.finer("trying RMIClassLoader");
             try (URLClassLoader url_loader = new URLClassLoader(new URL[]{new URL(codebase)}, loader)) {
-                result = url_loader.loadClass(name);
+                final Class<?> result = url_loader.loadClass(name);
+                if (result != null) return result;
             } catch (ClassNotFoundException ex) {
                 logger.log(Level.FINER, "RMIClassLoader says " + ex.getMessage(), ex);
             } catch (MalformedURLException ex) {
@@ -609,48 +589,41 @@ public class UtilImpl implements UtilDelegate {
                 logger.finer("FAILED class download " + name + " from " + codebase + " " + ex.getMessage());
             } catch (RuntimeException ex) {
                 logger.log(Level.FINER, "FAILED class download " + name + " from " + codebase + " " + ex.getMessage(), ex);
-            } catch (IOException unimportant) {
+            } catch (IOException ignored) {
             }
-
-            if (result != null) {
-                return result;
-            }
-
         } else {
-
             codebase = (String) AccessController.doPrivileged(new GetSystemPropertyAction("java.rmi.server.codebase"));
-
             if (codebase != null) {
                 try {
-                    result = java.rmi.server.RMIClassLoader.loadClass(codebase,
-                            name);
-                } catch (ClassNotFoundException ex) {
-                    // skip //
-                } catch (MalformedURLException ex) {
-                    // skip //
-                }
-
-                if (result != null) {
-                    return result;
+                    final Class<?> result = java.rmi.server.RMIClassLoader.loadClass(codebase, name);
+                    if (result != null) return result;
+                } catch (ClassNotFoundException | MalformedURLException ignored) {
                 }
             }
         }
 
-        if (loader == null) {
-            loader = getContextClassLoader();
-        }
+        if (loader == null) loader = getContextClassLoader();
 
         try {
-            result = loader.loadClass(name);
+            final Class<?> result = loader.loadClass(name);
+            if (result != null) return result;
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINER, "LocalLoader says " + ex.getMessage(), ex);
         }
 
-        if (result != null) {
-            return result;
-        }
-
         throw new ClassNotFoundException(name);
+    }
+
+    private static ClassLoader getStackLoader() {
+        // walk down the stack looking for the first class loader that is NOT
+        //  - the system class loader (null)
+        //  - the loader that loaded Util.class
+        final ClassLoader thisLoader = Util.class.getClassLoader();
+        for (Class<?> candidateContextClass : _secman.getClassContext()) {
+            final ClassLoader candidateLoader = candidateContextClass.getClassLoader();
+            if (null != candidateLoader && thisLoader != candidateLoader) return candidateLoader;
+        }
+        return null;
     }
 
     public boolean isLocal(Stub stub) throws RemoteException {
