@@ -645,7 +645,7 @@ class ValueDescriptor extends TypeDescriptor {
         logger.fine("reading fields for " + type.getName());
 
         for (FieldDescriptor _field : _fields) {
-
+            if (null == _field) continue;
             logger.fine("reading field " + _field.java_name + " of type " + _field.getType().getName() + " using " + _field.getClass().getName());
 
             try {
