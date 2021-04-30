@@ -54,7 +54,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
  * The codecs retrieved from an ORBInitInfo should be capable
  * of marshalling and demarshalling an object reference.
  */
-@ConfigureServer(newProcess = false)
+@ConfigureServer
 public class CodecObjectReferenceTest {
     @UseWithOrb("client orb")
     public static class CreateClientSideCodec extends LocalObject implements ORBInitializer {

@@ -26,6 +26,7 @@ import org.omg.CORBA.ORB;
 import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.jupiter.annotation.Summoner;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer.AfterServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
@@ -35,7 +36,6 @@ import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ServerComms.ServerOp;
 import testify.jupiter.annotation.impl.AnnotationButler;
-import testify.jupiter.annotation.impl.Steward;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.Repeatable;
@@ -57,7 +57,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static javax.rmi.PortableRemoteObject.narrow;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
@@ -151,8 +150,9 @@ public @interface ConfigureServer {
     }
 }
 
-class ServerSteward extends Steward<ConfigureServer> {
-    private final String name;
+class ServerSteward {
+    private static final Summoner<ConfigureServer, ServerSteward> SUMMONER = Summoner.forAnnotation(ConfigureServer.class, ServerSteward.class, ServerSteward::new);
+    private final ConfigureServer config;
     private final List<Field> controlFields;
     private final List<Field> nameServiceUrlFields;
     private final List<Field> corbanameUrlFields;
@@ -161,15 +161,15 @@ class ServerSteward extends Steward<ConfigureServer> {
     private final List<Method> afterMethods;
     private ServerComms serverComms;
 
-    private ServerSteward(Class<?> testClass) {
-        super(ConfigureServer.class, testClass);
-        this.name = annotation.serverName();
+    private ServerSteward(ConfigureServer config, ExtensionContext context) {
+        this.config = config;
+        Class<?> testClass = context.getRequiredTestClass();
         this.controlFields = AnnotationButler.forClass(Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(ServerControl.class)
-                .filter(anno -> anno.serverName().equals(this.name))
+                .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
         this.nameServiceUrlFields = AnnotationButler.forClass(NameServiceUrl.class)
@@ -180,7 +180,7 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(String.class)
-                .filter(anno -> anno.serverName().equals(this.name))
+                .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
         this.corbanameUrlFields = AnnotationButler.forClass(CorbanameUrl.class)
@@ -191,7 +191,7 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(String.class)
-                .filter(anno -> anno.serverName().equals(this.name))
+                .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
         this.clientStubFields = AnnotationButler.forClass(ClientStub.class)
@@ -199,7 +199,7 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(Remote.class)
-                .filter(anno -> anno.serverName().equals(this.name))
+                .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
         this.beforeMethods = AnnotationButler.forClass(BeforeServer.class)
@@ -207,7 +207,7 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertPublic()
                 .assertStatic()
                 .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), this.name))
+                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
                 .recruit()
                 .findMethods(testClass);
         this.afterMethods = AnnotationButler.forClass(AfterServer.class)
@@ -215,7 +215,7 @@ class ServerSteward extends Steward<ConfigureServer> {
                 .assertPublic()
                 .assertStatic()
                 .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), this.name))
+                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
                 .recruit()
                 .findMethods(testClass);
         assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
@@ -225,13 +225,13 @@ class ServerSteward extends Steward<ConfigureServer> {
                 + "\n - OR the test must annotate a public static field with@" + ClientStub.class.getSimpleName());
 
         // blow up if the config is bogus
-        if (annotation.newProcess()) return;
-        if (annotation.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
+        if (config.newProcess()) return;
+        if (config.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
                 + " cannot include JVM arguments unless newProcess is set to true");
     }
 
     Bus getBus(ExtensionContext ctx) {
-        return getPartRunner(ctx).bus(name);
+        return getPartRunner(ctx).bus(config.serverName());
     }
 
     void beforeAll(ExtensionContext ctx) throws Exception{
@@ -249,12 +249,12 @@ class ServerSteward extends Steward<ConfigureServer> {
     private void startServer(ExtensionContext ctx) {
         PartRunner runner = getPartRunner(ctx);
         // does this part run in a thread or a new process?
-        if (annotation.newProcess()) runner.useNewJVMWhenForking(annotation.jvmArgs());
+        if (config.newProcess()) runner.useNewJVMWhenForking(config.jvmArgs());
         else runner.useNewThreadWhenForking();
 
-        final Properties props = props(annotation.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        final String[] args = args(annotation.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        serverComms = new ServerComms(name, props, args);
+        final Properties props = props(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        final String[] args = args(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        serverComms = new ServerComms(config.serverName(), props, args);
         serverComms.launch(runner);
         serverComms.control(ServerOp.START_SERVER);
     }
@@ -305,17 +305,17 @@ class ServerSteward extends Steward<ConfigureServer> {
     private boolean isServerOrbModifier(Class<?> c) {
         return findAnnotation(c, UseWithOrb.class)
                 .map(UseWithOrb::value)
-                .map(annotation.serverOrb().value()::matches)
+                .map(config.serverOrb().value()::matches)
                 .orElse(false);
     }
 
 
     static ServerSteward getInstance(ExtensionContext ctx) {
-        return Steward.getInstanceForContext(ctx, ServerSteward.class, ServerSteward::new);
+        return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
     }
 
     public ORB getClientOrb(ExtensionContext ctx) {
-        return OrbSteward.getOrb(ctx, annotation.clientOrb());
+        return OrbSteward.getOrb(ctx, config.clientOrb());
     }
 }
 
