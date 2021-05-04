@@ -16,7 +16,6 @@
  */
 package testify.jupiter.annotation.iiop;
 
-import org.apache.yoko.orb.OB.Client;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.junit.jupiter.api.Assertions;
@@ -49,6 +48,7 @@ import testify.bus.StringRef;
 import testify.bus.TypeRef;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
+import testify.jupiter.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 import testify.util.Maps;
 import testify.util.Optionals;
@@ -71,6 +71,7 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -91,6 +92,8 @@ final class ServerComms implements Serializable {
     private enum ServerRequest implements EnumRef<ServerOp> {SEND}
     private enum MethodRequest implements MethodRef {SEND}
     private enum FieldRequest implements FieldRef {INIT}
+    private enum BeginLogging implements TypeRef<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
+    private enum EndLogging implements TypeRef<Consumer<TestLogger>> {END_LOGGING}
     private enum Result implements TypeRef<Throwable> {RESULT}
 
     private static String REQUEST_COUNT_PREFIX = "Request#";
@@ -105,6 +108,8 @@ final class ServerComms implements Serializable {
 
     private transient volatile ServerInstance server;
     private transient CountDownLatch serverShutdown;
+    /** The logger to be used, per test. Server-side only! */
+    private transient Optional<TestLogger> testLogger;
 
     class ServerInstance {
         final ORB orb;
@@ -208,6 +213,8 @@ final class ServerComms implements Serializable {
         this.bus.onMsg(ServerRequest.SEND, op -> completeRequest("control operation ", this::control0, op));
         this.bus.onMsg(FieldRequest.INIT, field -> completeRequest("instantiation of field " , this::instantiate0, field));
         this.bus.onMsg(MethodRequest.SEND, method -> completeRequest("invocation of ", this::invoke0, method));
+        this.bus.onMsg(BeginLogging.BEGIN_LOGGING, supplier -> completeRequest("start logging", this::beginLogging0, supplier));
+        this.bus.onMsg(EndLogging.END_LOGGING, consumer -> completeRequest("start logging", this::endLogging0, consumer));
     }
 
     void control(ServerOp op) throws ControlOperationFailed {
@@ -262,6 +269,29 @@ final class ServerComms implements Serializable {
         return ReflectionSupport.invokeMethod(m, null, params);
     }
 
+    void beginLogging(Supplier<Optional<TestLogger>> supplier) {
+        assertClientSide();
+        bus.put(BeginLogging.BEGIN_LOGGING, supplier);
+        waitForCompletion(t -> new LoggingFailed("Failure beginning logging", t));
+    }
+
+    void beginLogging0(Supplier<Optional<TestLogger>> supplier) {
+        assertServer(true);
+        this.testLogger = supplier.get();
+    }
+
+    void endLogging(Consumer<TestLogger> consumer) {
+        assertClientSide();
+        bus.put(EndLogging.END_LOGGING, consumer);
+        waitForCompletion(t -> new LoggingFailed("Failure ending logging", t));
+    }
+
+    void endLogging0(Consumer<TestLogger> consumer) {
+        assertServer(true);
+        this.testLogger.ifPresent(consumer);
+        this.testLogger = null; // DELIBERATE! Invoking end without begin is an error
+    }
+
     String instantiate(Field f) throws FieldInstantiationFailed {
         assertClientSide();
         bus.put(FieldRequest.INIT, f);
@@ -309,7 +339,7 @@ final class ServerComms implements Serializable {
         }
     }
 
-    private <T extends Throwable> void waitForCompletion(Function<Throwable, T> wrapper) throws T {
+    private <T extends ServerResult> void waitForCompletion(Function<Throwable, T> wrapper) throws T {
         assertClientSide();
         final String requestId = getNextRequestId();
         bus.log("Waiting for completion of " + requestId);
@@ -352,24 +382,27 @@ final class ServerComms implements Serializable {
         }
     }
 
-
-    static class ServerCommsException extends RuntimeException {
-        ServerCommsException(String message, Throwable cause) { super(message, cause); }
+    static class ServerResult extends RuntimeException {
+        ServerResult(String message, Throwable cause) { super(message, cause); }
     }
 
-    static class ServerLaunchFailed extends ServerCommsException {
+    static class ServerLaunchFailed extends ServerResult {
         ServerLaunchFailed(Throwable cause) { super("Server launch failed", cause); }
     }
 
-    static class ControlOperationFailed extends ServerCommsException {
+    static class ControlOperationFailed extends ServerResult {
         ControlOperationFailed(ServerOp op, Throwable cause) { super("Received exception from server while trying to issue " + op + " request", cause); }
     }
 
-    static class MethodInvocationFailed extends ServerCommsException {
+    static class MethodInvocationFailed extends ServerResult {
         MethodInvocationFailed(Method m, Throwable cause) { super("Received exception from server while trying to invoke method:\n    " + m, cause); }
     }
 
-    static class FieldInstantiationFailed extends ServerCommsException {
+    static class FieldInstantiationFailed extends ServerResult {
         FieldInstantiationFailed(Field f, Throwable cause) { super("Received exception from server while trying to instantiate field:\n    " + f, cause); }
+    }
+
+    static class LoggingFailed extends ServerResult {
+        LoggingFailed(String reason, Throwable t) { super(reason, t); }
     }
 }

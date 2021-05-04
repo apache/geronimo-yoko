@@ -17,7 +17,9 @@
 package testify.jupiter.annotation.iiop;
 
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
@@ -36,6 +38,7 @@ import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ServerComms.ServerOp;
 import testify.jupiter.annotation.impl.AnnotationButler;
+import testify.jupiter.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.Repeatable;
@@ -152,17 +155,25 @@ public @interface ConfigureServer {
 
 class ServerSteward {
     private static final Summoner<ConfigureServer, ServerSteward> SUMMONER = Summoner.forAnnotation(ConfigureServer.class, ServerSteward.class, ServerSteward::new);
-    private final ConfigureServer config;
     private final List<Field> controlFields;
     private final List<Field> nameServiceUrlFields;
     private final List<Field> corbanameUrlFields;
     private final List<Field> clientStubFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
+    private final boolean newProcess;
+    private final String[] jvmArgs;
+    private final String serverName;
     private ServerComms serverComms;
+    private ConfigureOrb serverOrbConfig;
+    private ConfigureOrb clientOrbConfig;
 
     private ServerSteward(ConfigureServer config, ExtensionContext context) {
-        this.config = config;
+        this.newProcess = config.newProcess();
+        this.jvmArgs = config.jvmArgs();
+        this.serverName = config.serverName();
+        this.serverOrbConfig = config.serverOrb();
+        this.clientOrbConfig = config.clientOrb();
         Class<?> testClass = context.getRequiredTestClass();
         this.controlFields = AnnotationButler.forClass(Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
@@ -227,11 +238,11 @@ class ServerSteward {
         // blow up if the config is bogus
         if (config.newProcess()) return;
         if (config.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
-                + " cannot include JVM arguments unless newProcess is set to true");
+                + " must not include JVM arguments unless newProcess is set to true");
     }
 
     Bus getBus(ExtensionContext ctx) {
-        return getPartRunner(ctx).bus(config.serverName());
+        return getPartRunner(ctx).bus(serverName);
     }
 
     void beforeAll(ExtensionContext ctx) throws Exception{
@@ -249,12 +260,12 @@ class ServerSteward {
     private void startServer(ExtensionContext ctx) {
         PartRunner runner = getPartRunner(ctx);
         // does this part run in a thread or a new process?
-        if (config.newProcess()) runner.useNewJVMWhenForking(config.jvmArgs());
+        if (newProcess) runner.useNewJVMWhenForking(jvmArgs);
         else runner.useNewThreadWhenForking();
 
-        final Properties props = props(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        final String[] args = args(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        serverComms = new ServerComms(config.serverName(), props, args);
+        final Properties props = props(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        final String[] args = args(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        serverComms = new ServerComms(serverName, props, args);
         serverComms.launch(runner);
         serverComms.control(ServerOp.START_SERVER);
     }
@@ -305,7 +316,7 @@ class ServerSteward {
     private boolean isServerOrbModifier(Class<?> c) {
         return findAnnotation(c, UseWithOrb.class)
                 .map(UseWithOrb::value)
-                .map(config.serverOrb().value()::matches)
+                .map(serverOrbConfig.value()::matches)
                 .orElse(false);
     }
 
@@ -315,12 +326,19 @@ class ServerSteward {
     }
 
     public ORB getClientOrb(ExtensionContext ctx) {
-        return OrbSteward.getOrb(ctx, config.clientOrb());
+        return OrbSteward.getOrb(ctx, clientOrbConfig);
+    }
+
+    public void beginLogging(ExtensionContext ctx) {
+        if (newProcess) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
+    }
+
+    public void endLogging(ExtensionContext ctx) {
+        if (newProcess) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
     }
 }
 
-
-class ServerExtension implements BeforeAllCallback, AfterAllCallback, ParameterResolver {
+class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, ParameterResolver {
     enum ParamType {
         BUS(Bus.class),
         CLIENT_ORB(ORB.class);
@@ -368,5 +386,15 @@ class ServerExtension implements BeforeAllCallback, AfterAllCallback, ParameterR
     @Override
     public void afterAll(ExtensionContext ctx) throws Exception {
         ServerSteward.getInstance(ctx).afterAll(ctx);
+    }
+
+    @Override
+    public void beforeTestExecution(ExtensionContext ctx) throws Exception {
+        ServerSteward.getInstance(ctx).beginLogging(ctx);
+    }
+
+    @Override
+    public void afterTestExecution(ExtensionContext ctx) throws Exception {
+        ServerSteward.getInstance(ctx).endLogging(ctx);
     }
 }

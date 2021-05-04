@@ -78,7 +78,7 @@ public class TestLogger {
     /** Get a logging action to run after a test has executed */
     public static Consumer<TestLogger> getLogFinisher(ExtensionContext ctx) {
         boolean hasTestFailed = ctx.getExecutionException().isPresent();
-        boolean loggingNeeded = Suppression.forContext(ctx).isRequired(hasTestFailed);
+        boolean loggingNeeded = !Suppression.forContext(ctx).isRequired(hasTestFailed);
         return (SerializableConsumer<TestLogger>) logger -> logger.finishLogging(loggingNeeded, hasTestFailed);
     }
 
