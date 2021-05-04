@@ -26,6 +26,7 @@ import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.opentest4j.AssertionFailedError;
 import testify.jupiter.annotation.RetriedTest;
+import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
@@ -46,6 +47,7 @@ import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRIT
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
+@Tracing(".*ServerComms.*")
 public class ServerRestartTest {
     @Control
     public static ServerControl serverControl;
@@ -122,6 +124,7 @@ public class ServerRestartTest {
 
     /** Test a single thread calling the server from naming lookup to invocation */
     @Test
+    @Logging
     public void testMultipleThreads(ORB clientOrb) throws Exception {
         assertNotNull(stubUrl);
         final int parallelism = 2;
@@ -136,7 +139,9 @@ public class ServerRestartTest {
                             try { result = echo.echo(expected); } catch (RemoteException e) { throw (Error)Assertions.fail(e); }
                             assertEquals(expected, result, Thread.currentThread().getName() + " should successfully look up and invoke the echo object");
                             return result;
-                        }).sorted().collect(joining(""))
+                        })
+                        .sorted()
+                        .collect(joining(""))
                 ).get();
         System.out.println(actual);
         String expected = IntStream.range(0, parallelism).mapToObj(Integer::toString).sorted().collect(joining(""));
