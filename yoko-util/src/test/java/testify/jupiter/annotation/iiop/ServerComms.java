@@ -360,7 +360,6 @@ final class ServerComms implements Serializable {
             bus.put(requestId, prefix + parameter + " completed normally");
         } catch (Throwable e) {
             // if there was an error, send that back instead
-
             bus.put(Result.RESULT, new ServerSideException(e));
             bus.put(requestId, prefix + parameter + " completed abnormally with exception " + e);
         }
@@ -372,7 +371,7 @@ final class ServerComms implements Serializable {
 
     static class ServerSideException extends RuntimeException {
         ServerSideException(Throwable cause) {
-            super("Server side threw " + cause + "\n" + fullText(cause));
+            super(String.format("Server side thread %08x threw %s\n%s", Thread.currentThread().getId(), cause, fullText(cause)));
         }
 
         private static String fullText(Throwable cause) {
