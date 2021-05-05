@@ -42,6 +42,7 @@ import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
 
 @Repeatable(ConfigureMultiServer.class)
 @ExtendWith(ServerExtension.class)
@@ -49,9 +50,10 @@ import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatio
 @ConfigurePartRunner
 @Retention(RUNTIME)
 public @interface ConfigureServer {
+    enum Separation {COLLOCATED, INTER_ORB, INTER_PROCESS}
     String DEFAULT_SERVER_NAME = "server";
     String serverName() default DEFAULT_SERVER_NAME;
-    boolean newProcess() default false;
+    Separation separation() default INTER_ORB;
     String[] jvmArgs() default {};
 
     /** Define the config for the ORB the client for this server will use. */

@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
 import static testify.jupiter.annotation.iiop.OrbSteward.args;
 import static testify.jupiter.annotation.iiop.OrbSteward.props;
 import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
@@ -47,19 +48,11 @@ class ServerSteward {
     private final List<Field> clientStubFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
-    private final boolean newProcess;
-    private final String[] jvmArgs;
-    private final String serverName;
+    private final ConfigureServer config;
     private ServerComms serverComms;
-    private ConfigureOrb serverOrbConfig;
-    private ConfigureOrb clientOrbConfig;
 
     private ServerSteward(ConfigureServer config, ExtensionContext context) {
-        this.newProcess = config.newProcess();
-        this.jvmArgs = config.jvmArgs();
-        this.serverName = config.serverName();
-        this.serverOrbConfig = config.serverOrb();
-        this.clientOrbConfig = config.clientOrb();
+        this.config = config;
         Class<?> testClass = context.getRequiredTestClass();
         this.controlFields = AnnotationButler.forClass(ConfigureServer.Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
@@ -121,14 +114,14 @@ class ServerSteward {
                 + "\n - OR the test must annotate a public static field with@" + ConfigureServer.Control.class.getSimpleName()
                 + "\n - OR the test must annotate a public static field with@" + ConfigureServer.ClientStub.class.getSimpleName());
 
-        // blow up if the config is bogus
-        if (config.newProcess()) return;
-        if (config.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
-                + " must not include JVM arguments unless newProcess is set to true");
+        // blow up if jvm args specified unnecessarily
+        if (config.separation() != INTER_PROCESS && config.jvmArgs().length > 0)
+            throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
+                    + " must not include JVM arguments unless it is configured as " + INTER_PROCESS);
     }
 
     Bus getBus(ExtensionContext ctx) {
-        return getPartRunner(ctx).bus(serverName);
+        return getPartRunner(ctx).bus(config.serverName());
     }
 
     void beforeAll(ExtensionContext ctx) {
@@ -146,12 +139,12 @@ class ServerSteward {
     private void startServer(ExtensionContext ctx) {
         PartRunner runner = getPartRunner(ctx);
         // does this part run in a thread or a new process?
-        if (newProcess) runner.useNewJVMWhenForking(jvmArgs);
+        if (config.separation() == INTER_PROCESS) runner.useNewJVMWhenForking(config.jvmArgs());
         else runner.useNewThreadWhenForking();
 
-        final Properties props = props(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        final String[] args = args(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        serverComms = new ServerComms(serverName, props, args);
+        final Properties props = props(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        final String[] args = args(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
+        serverComms = new ServerComms(config.serverName(), props, args);
         serverComms.launch(runner);
         serverComms.control(ServerComms.ServerOp.START_SERVER);
     }
@@ -203,7 +196,7 @@ class ServerSteward {
     private boolean isServerOrbModifier(Class<?> c) {
         return findAnnotation(c, ConfigureOrb.UseWithOrb.class)
                 .map(ConfigureOrb.UseWithOrb::value)
-                .map(serverOrbConfig.value()::matches)
+                .map(config.serverOrb().value()::matches)
                 .orElse(false);
     }
 
@@ -213,14 +206,14 @@ class ServerSteward {
     }
 
     public ORB getClientOrb(ExtensionContext ctx) {
-        return OrbSteward.getOrb(ctx, clientOrbConfig);
+        return OrbSteward.getOrb(ctx, config.clientOrb());
     }
 
     public void beginLogging(ExtensionContext ctx) {
-        if (newProcess) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
+        if (config.separation() == INTER_PROCESS) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
     }
 
     public void endLogging(ExtensionContext ctx) {
-        if (newProcess) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
+        if (config.separation() == INTER_PROCESS) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
     }
 }
