@@ -28,47 +28,20 @@ import org.omg.CORBA.ORB;
 import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
-import testify.jupiter.annotation.Summoner;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer.AfterServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.Control;
-import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ServerComms.ServerOp;
-import testify.jupiter.annotation.impl.AnnotationButler;
-import testify.jupiter.annotation.logging.TestLogger;
-import testify.parts.PartRunner;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.rmi.Remote;
-import java.util.List;
 import java.util.Optional;
-import java.util.Properties;
-import java.util.regex.Pattern;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static javax.rmi.PortableRemoteObject.narrow;
-import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.Matchers.is;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
-import static testify.jupiter.annotation.iiop.OrbSteward.args;
-import static testify.jupiter.annotation.iiop.OrbSteward.props;
-import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
-import static testify.util.Reflect.setStaticField;
 
 @Repeatable(ConfigureMultiServer.class)
 @ExtendWith(ServerExtension.class)
@@ -102,7 +75,7 @@ public @interface ConfigureServer {
      */
     @Target({ANNOTATION_TYPE, METHOD})
     @Retention(RUNTIME)
-    public @interface AfterServer {
+    @interface AfterServer {
         /** A regular expression to match which servers to run against */
         String serverPattern() default ".*";
     }
@@ -112,7 +85,7 @@ public @interface ConfigureServer {
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
-    public @interface ClientStub {
+    @interface ClientStub {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
@@ -124,7 +97,7 @@ public @interface ConfigureServer {
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
-    public @interface CorbanameUrl {
+    @interface CorbanameUrl {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
@@ -136,7 +109,7 @@ public @interface ConfigureServer {
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
-    public @interface NameServiceUrl {
+    @interface NameServiceUrl {
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
         String serverName() default DEFAULT_SERVER_NAME;
     }
@@ -147,194 +120,9 @@ public @interface ConfigureServer {
      */
     @Target({ANNOTATION_TYPE, FIELD})
     @Retention(RUNTIME)
-    public @interface Control {
+    @interface Control {
         /** A literal string to match the server name. Not a regular expression since the controller controls exactly one server. */
         String serverName() default DEFAULT_SERVER_NAME;
-    }
-}
-
-class ServerSteward {
-    private static final Summoner<ConfigureServer, ServerSteward> SUMMONER = Summoner.forAnnotation(ConfigureServer.class, ServerSteward.class, ServerSteward::new);
-    private final List<Field> controlFields;
-    private final List<Field> nameServiceUrlFields;
-    private final List<Field> corbanameUrlFields;
-    private final List<Field> clientStubFields;
-    private final List<Method> beforeMethods;
-    private final List<Method> afterMethods;
-    private final boolean newProcess;
-    private final String[] jvmArgs;
-    private final String serverName;
-    private ServerComms serverComms;
-    private ConfigureOrb serverOrbConfig;
-    private ConfigureOrb clientOrbConfig;
-
-    private ServerSteward(ConfigureServer config, ExtensionContext context) {
-        this.newProcess = config.newProcess();
-        this.jvmArgs = config.jvmArgs();
-        this.serverName = config.serverName();
-        this.serverOrbConfig = config.serverOrb();
-        this.clientOrbConfig = config.clientOrb();
-        Class<?> testClass = context.getRequiredTestClass();
-        this.controlFields = AnnotationButler.forClass(Control.class)
-                .requireTestAnnotation(ConfigureServer.class)
-                .assertPublic()
-                .assertStatic()
-                .assertFieldTypes(ServerControl.class)
-                .filter(anno -> anno.serverName().equals(config.serverName()))
-                .recruit()
-                .findFields(testClass);
-        this.nameServiceUrlFields = AnnotationButler.forClass(NameServiceUrl.class)
-                .requireTestAnnotation(ConfigureServer.class,
-                        "the test server must have its name service configured",
-                        cfg -> cfg.serverOrb().nameService(),
-                        anyOf(is(READ_ONLY), is(READ_WRITE)))
-                .assertPublic()
-                .assertStatic()
-                .assertFieldTypes(String.class)
-                .filter(anno -> anno.serverName().equals(config.serverName()))
-                .recruit()
-                .findFields(testClass);
-        this.corbanameUrlFields = AnnotationButler.forClass(CorbanameUrl.class)
-                .requireTestAnnotation(ConfigureServer.class,
-                        "the test server must have its name service configured",
-                        cfg -> cfg.serverOrb().nameService(),
-                        anyOf(is(READ_ONLY), is(READ_WRITE)))
-                .assertPublic()
-                .assertStatic()
-                .assertFieldTypes(String.class)
-                .filter(anno -> anno.serverName().equals(config.serverName()))
-                .recruit()
-                .findFields(testClass);
-        this.clientStubFields = AnnotationButler.forClass(ClientStub.class)
-                .requireTestAnnotation(ConfigureServer.class)
-                .assertPublic()
-                .assertStatic()
-                .assertFieldTypes(Remote.class)
-                .filter(anno -> anno.serverName().equals(config.serverName()))
-                .recruit()
-                .findFields(testClass);
-        this.beforeMethods = AnnotationButler.forClass(BeforeServer.class)
-                .requireTestAnnotation(ConfigureServer.class)
-                .assertPublic()
-                .assertStatic()
-                .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
-                .recruit()
-                .findMethods(testClass);
-        this.afterMethods = AnnotationButler.forClass(AfterServer.class)
-                .requireTestAnnotation(ConfigureServer.class)
-                .assertPublic()
-                .assertStatic()
-                .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
-                .recruit()
-                .findMethods(testClass);
-        assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
-                + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
-                + "\n - EITHER the test must annotate a public static method with@" + ConfigureServer.BeforeServer.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with@" + Control.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with@" + ClientStub.class.getSimpleName());
-
-        // blow up if the config is bogus
-        if (config.newProcess()) return;
-        if (config.jvmArgs().length > 0) throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
-                + " must not include JVM arguments unless newProcess is set to true");
-    }
-
-    Bus getBus(ExtensionContext ctx) {
-        return getPartRunner(ctx).bus(serverName);
-    }
-
-    void beforeAll(ExtensionContext ctx) throws Exception{
-        startServer(ctx);
-        populateControlFields(ctx);
-        injectNameServiceURL();
-        instantiateServerObjects(ctx);
-        beforeServer(ctx);
-    }
-
-    void afterAll(ExtensionContext ctx) {
-        afterServer(ctx);
-    }
-
-    private void startServer(ExtensionContext ctx) {
-        PartRunner runner = getPartRunner(ctx);
-        // does this part run in a thread or a new process?
-        if (newProcess) runner.useNewJVMWhenForking(jvmArgs);
-        else runner.useNewThreadWhenForking();
-
-        final Properties props = props(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        final String[] args = args(serverOrbConfig, ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        serverComms = new ServerComms(serverName, props, args);
-        serverComms.launch(runner);
-        serverComms.control(ServerOp.START_SERVER);
-    }
-
-    private void populateControlFields(ExtensionContext ctx) {
-        ServerControl serverControl =  new ServerControl(){
-            public void start() {
-                serverComms.control(ServerOp.START_SERVER);
-                injectNameServiceURL();
-                instantiateServerObjects(ctx);
-            }
-            public void stop() {
-                serverComms.control(ServerOp.STOP_SERVER);
-                injectNameServiceURL();
-            }
-        };
-        this.controlFields.forEach(f -> setStaticField(f, serverControl));
-    }
-
-    private void injectNameServiceURL() {
-        nameServiceUrlFields.stream().forEach(f -> setStaticField(f, serverComms.getNameServiceUrl()));
-    }
-
-    private void instantiateServerObjects(ExtensionContext ctx) {
-        ORB clientOrb = ServerSteward.getInstance(ctx).getClientOrb(ctx);
-        corbanameUrlFields.stream().forEach(f -> {
-            String url = serverComms.instantiate(f);
-            setStaticField(f, url);
-        });
-        clientStubFields.stream().forEach(f -> {
-            // instantiate the remote field on the server
-            String ior = serverComms.instantiate(f);
-            // instantiate the stub on the client
-            setStaticField(f, narrow(clientOrb.string_to_object(ior), f.getType()));
-        });
-    }
-
-    private void beforeServer(ExtensionContext ctx) throws Exception {
-        // drive the before methods
-        beforeMethods.stream().forEach(serverComms::invoke);
-    }
-
-    private void afterServer(ExtensionContext ctx) {
-        // drive the after methods
-        afterMethods.stream().forEach(serverComms::invoke);
-    }
-
-    private boolean isServerOrbModifier(Class<?> c) {
-        return findAnnotation(c, UseWithOrb.class)
-                .map(UseWithOrb::value)
-                .map(serverOrbConfig.value()::matches)
-                .orElse(false);
-    }
-
-
-    static ServerSteward getInstance(ExtensionContext ctx) {
-        return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
-    }
-
-    public ORB getClientOrb(ExtensionContext ctx) {
-        return OrbSteward.getOrb(ctx, clientOrbConfig);
-    }
-
-    public void beginLogging(ExtensionContext ctx) {
-        if (newProcess) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
-    }
-
-    public void endLogging(ExtensionContext ctx) {
-        if (newProcess) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
     }
 }
 
@@ -353,7 +141,7 @@ class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTest
     }
 
     @Override
-    public void beforeAll(ExtensionContext ctx) throws Exception {
+    public void beforeAll(ExtensionContext ctx) {
         // check for conflicting annotations
         if (findAnnotation(ctx.getRequiredTestClass(), ConfigureOrb.class).isPresent()
                 || findAnnotation(ctx.getElement(), ConfigureOrb.class).isPresent())
@@ -384,17 +172,11 @@ class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTest
     }
 
     @Override
-    public void afterAll(ExtensionContext ctx) throws Exception {
-        ServerSteward.getInstance(ctx).afterAll(ctx);
-    }
+    public void afterAll(ExtensionContext ctx) { ServerSteward.getInstance(ctx).afterAll(ctx); }
 
     @Override
-    public void beforeTestExecution(ExtensionContext ctx) throws Exception {
-        ServerSteward.getInstance(ctx).beginLogging(ctx);
-    }
+    public void beforeTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).beginLogging(ctx); }
 
     @Override
-    public void afterTestExecution(ExtensionContext ctx) throws Exception {
-        ServerSteward.getInstance(ctx).endLogging(ctx);
-    }
+    public void afterTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).endLogging(ctx); }
 }
