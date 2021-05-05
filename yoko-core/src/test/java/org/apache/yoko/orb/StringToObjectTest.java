@@ -28,15 +28,13 @@ import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.PortableInterceptor.ClientRequestInfo;
-import org.omg.PortableInterceptor.ORBInitInfo;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableServer.POA;
 import testify.bus.Bus;
-import testify.bus.StringRef;
-import testify.bus.TypeRef;
-import testify.bus.VoidRef;
+import testify.bus.StringSpec;
+import testify.bus.TypeSpec;
+import testify.bus.VoidSpec;
 import testify.iiop.TestClientRequestInterceptor;
-import testify.iiop.TestServerRequestInterceptor;
 import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
@@ -81,9 +79,9 @@ public class StringToObjectTest {
                 .get(ServerEvent.STOPPED);
     }
 
-    enum Port implements TypeRef<Integer> {NUMBER}
-    enum Host implements StringRef {NAME}
-    enum ServerEvent implements VoidRef {STARTED, RESTART_ORB, ORB_RESTARTED, STOP, STOPPED}
+    enum Port implements TypeSpec<Integer> {NUMBER}
+    enum Host implements StringSpec {NAME}
+    enum ServerEvent implements VoidSpec {STARTED, RESTART_ORB, ORB_RESTARTED, STOP, STOPPED}
 
     private static void runServer(Bus bus) throws Exception {
         Properties props = new Properties();

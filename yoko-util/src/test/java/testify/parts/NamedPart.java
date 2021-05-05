@@ -17,14 +17,14 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.TypeRef;
+import testify.bus.TypeSpec;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class NamedPart implements TestPart {
-    private enum Event implements TypeRef<Throwable> {STARTED, ENDED}
+    private enum Event implements TypeSpec<Throwable> {STARTED, ENDED}
     private static final ConcurrentMap<String, AtomicInteger> uids = new ConcurrentHashMap<>();
     final String name;
     private final TestPart part;

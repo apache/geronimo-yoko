@@ -56,7 +56,7 @@ class LogBusImpl implements LogBus {
 
     private static final String[] DEFAULT_PATTERNS = {".*"};
 
-    enum LogSpec implements StringRef {SPEC}
+    enum LogSpec implements StringSpec {SPEC}
 
     private static final Package MY_PKG = LogBusImpl.class.getPackage();
 

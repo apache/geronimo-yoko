@@ -16,7 +16,7 @@
  */
 package testify.bus;
 
-public interface VoidRef extends TypeRef<Void> {
-    default String stringify(Void v) { return "null"; }
-    default Void unstringify(String s) { return null; }
+public interface StringSpec extends TypeSpec<String> {
+    default String stringify(String s) { return s; }
+    default String unstringify(String s) { return s; }
 }

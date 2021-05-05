@@ -18,7 +18,7 @@ package testify.bus;
 
 import java.lang.reflect.Field;
 
-public interface FieldRef extends TypeRef<Field> {
+public interface FieldSpec extends TypeSpec<Field> {
     @Override
     default String stringify(Field field) {
         return field.getDeclaringClass().getName() + "#" + field.getName();

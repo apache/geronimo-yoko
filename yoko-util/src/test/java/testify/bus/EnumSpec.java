@@ -18,7 +18,7 @@ package testify.bus;
 
 import java.util.stream.Stream;
 
-public interface EnumRef<E extends Enum<E>> extends TypeRef<E> {
+public interface EnumSpec<E extends Enum<E>> extends TypeSpec<E> {
     @Override
     default String stringify(E e) {
         return e.getDeclaringClass().getName() + "#" + e.name();

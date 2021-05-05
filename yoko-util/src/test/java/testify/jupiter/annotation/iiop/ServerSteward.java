@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCATED;
 import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
 import static testify.jupiter.annotation.iiop.OrbSteward.args;
 import static testify.jupiter.annotation.iiop.OrbSteward.props;
@@ -170,7 +171,7 @@ class ServerSteward {
     }
 
     private void instantiateServerObjects(ExtensionContext ctx) {
-        ORB clientOrb = ServerSteward.getInstance(ctx).getClientOrb(ctx);
+        ORB clientOrb = getClientOrb(ctx);
         corbanameUrlFields.forEach(f -> {
             String url = serverComms.instantiate(f);
             setStaticField(f, url);

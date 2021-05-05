@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 
-public interface MethodRef extends TypeRef<Method> {
+public interface MethodSpec extends TypeSpec<Method> {
     @Override
     default String stringify(Method method) {
         return method.getDeclaringClass().getName() + "#" + method.getName() + "#"

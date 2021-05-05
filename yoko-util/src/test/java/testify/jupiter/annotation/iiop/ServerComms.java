@@ -40,12 +40,12 @@ import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantRetentionPolicyValue;
 import org.omg.PortableServer.ThreadPolicyValue;
 import testify.bus.Bus;
-import testify.bus.EnumRef;
-import testify.bus.FieldRef;
+import testify.bus.EnumSpec;
+import testify.bus.FieldSpec;
 import testify.bus.LogLevel;
-import testify.bus.MethodRef;
-import testify.bus.StringRef;
-import testify.bus.TypeRef;
+import testify.bus.MethodSpec;
+import testify.bus.StringSpec;
+import testify.bus.TypeSpec;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.logging.TestLogger;
@@ -86,15 +86,14 @@ import static testify.util.Reflect.newInstance;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
-
     enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
-    enum ServerInfo implements StringRef {NAME_SERVICE_URL}
-    private enum ServerRequest implements EnumRef<ServerOp> {SEND}
-    private enum MethodRequest implements MethodRef {SEND}
-    private enum FieldRequest implements FieldRef {INIT}
-    private enum BeginLogging implements TypeRef<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
-    private enum EndLogging implements TypeRef<Consumer<TestLogger>> {END_LOGGING}
-    private enum Result implements TypeRef<Throwable> {RESULT}
+    enum ServerInfo implements StringSpec {NAME_SERVICE_URL}
+    private enum ServerRequest implements EnumSpec<ServerOp> {SEND}
+    private enum MethodRequest implements MethodSpec {SEND}
+    private enum FieldRequest implements FieldSpec {INIT}
+    private enum BeginLogging implements TypeSpec<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
+    private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
+    private enum Result implements TypeSpec<Throwable> {RESULT}
 
     private static String REQUEST_COUNT_PREFIX = "Request#";
     private final String serverName;
@@ -110,6 +109,8 @@ final class ServerComms implements Serializable {
     private transient CountDownLatch serverShutdown;
     /** The logger to be used, per test. Server-side only! */
     private transient Optional<TestLogger> testLogger;
+
+    private transient ServerComms otherSide; // can only be populated if the server is in the same process as the client
 
     class ServerInstance {
         final ORB orb;

@@ -18,7 +18,7 @@ package testify.parts;
 
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-import testify.bus.TypeRef;
+import testify.bus.TypeSpec;
 import testify.streams.BiStream;
 
 import java.io.IOError;
@@ -29,14 +29,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Stream;
 
 public class ProcessRunner implements Runner<Process>{
     private final String[] jvmArgs;
 
     public ProcessRunner(String...jvmArgs) {this.jvmArgs = jvmArgs;}
 
-    private enum Part implements TypeRef<NamedPart> {NAMED_PART}
+    private enum Part implements TypeSpec<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
     public static void main(String[] args) {

@@ -17,10 +17,10 @@
 package acme;
 
 import testify.bus.Bus;
-import testify.bus.StringRef;
+import testify.bus.StringSpec;
 
 public class EchoImpl implements Echo {
-    private enum BusKey implements StringRef {MESSAGE}
+    private enum BusKey implements StringSpec {MESSAGE}
     final Bus bus;
 
     public EchoImpl(Bus bus) {this.bus = bus;}
