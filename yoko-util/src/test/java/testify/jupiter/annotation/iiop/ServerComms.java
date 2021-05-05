@@ -48,6 +48,7 @@ import testify.bus.StringSpec;
 import testify.bus.TypeSpec;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.ServerName;
 import testify.jupiter.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 import testify.util.Maps;
@@ -86,6 +87,11 @@ import static testify.util.Reflect.newInstance;
 import static testify.util.Reflect.newMatchingInstance;
 
 final class ServerComms implements Serializable {
+    /*
+     * An instance of this class is constructed for the client.
+     * This is serialized and de-serialized into an instance for the server.
+     * After the initial object copy, all further communications are via the Bus.
+     */
     enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
     enum ServerInfo implements StringSpec {NAME_SERVICE_URL}
     private enum ServerRequest implements EnumSpec<ServerOp> {SEND}
@@ -95,13 +101,13 @@ final class ServerComms implements Serializable {
     private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
     private enum Result implements TypeSpec<Throwable> {RESULT}
 
-    private static String REQUEST_COUNT_PREFIX = "Request#";
-    private final String serverName;
+    private static final String REQUEST_COUNT_PREFIX = "Request#";
+    private final ServerName serverName;
     private final Properties props;
     private final String[] args;
     private transient Bus bus;
     private String nsUrl;
-    /** The constructor initializes this to true but it will be false when de-serialized. */
+    /** true when constructed, false when deserialized */
     private transient final boolean inClient;
     private transient int methodCount;
 
@@ -141,7 +147,7 @@ final class ServerComms implements Serializable {
                         rootPoa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY),
                         rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
                 };
-                childPoa = rootPoa.create_POA(serverName, pm, policies);
+                childPoa = rootPoa.create_POA(serverName.toString(), pm, policies);
 
             } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
                 throw Throw.andThrowAgain(e);
@@ -164,7 +170,7 @@ final class ServerComms implements Serializable {
         }
     }
 
-    ServerComms(String serverName, Properties props, String[] args) {
+    ServerComms(ServerName serverName, Properties props, String[] args) {
         this.inClient = true;
         this.serverName = serverName;
         this.props = props;
@@ -207,7 +213,7 @@ final class ServerComms implements Serializable {
         bus.log("Received server shutdown");
     }
 
-    private void launch0(String name) {
+    private void launch0(ServerName name) {
         this.bus.log("Server started");
         this.serverShutdown = new CountDownLatch(1);
         // register the control, method invocation, and field instantiation handlers

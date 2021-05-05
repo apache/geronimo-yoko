@@ -25,7 +25,6 @@ import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.List;
 import java.util.Properties;
-import java.util.regex.Pattern;
 
 import static javax.rmi.PortableRemoteObject.narrow;
 import static org.hamcrest.CoreMatchers.anyOf;
@@ -98,7 +97,7 @@ class ServerSteward {
                 .assertPublic()
                 .assertStatic()
                 .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
+                .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
         this.afterMethods = AnnotationButler.forClass(ConfigureServer.AfterServer.class)
@@ -106,7 +105,7 @@ class ServerSteward {
                 .assertPublic()
                 .assertStatic()
                 .assertParameterTypes(Bus.class, ORB.class)
-                .filter(anno -> Pattern.matches(anno.serverPattern(), config.serverName()))
+                .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
         assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && beforeMethods.isEmpty(), () -> ""

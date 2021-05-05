@@ -29,7 +29,6 @@ import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
 
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.rmi.Remote;
@@ -43,16 +42,17 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
+import static testify.jupiter.annotation.iiop.ConfigureServer.ServerName.DEFAULT_SERVER;
 
-@Repeatable(ConfigureMultiServer.class)
 @ExtendWith(ServerExtension.class)
 @Target({ANNOTATION_TYPE, TYPE})
 @ConfigurePartRunner
 @Retention(RUNTIME)
 public @interface ConfigureServer {
+    enum ServerName {DEFAULT_SERVER}
     enum Separation {COLLOCATED, INTER_ORB, INTER_PROCESS}
-    String DEFAULT_SERVER_NAME = "server";
-    String serverName() default DEFAULT_SERVER_NAME;
+
+    ServerName serverName() default DEFAULT_SERVER;
     Separation separation() default INTER_ORB;
     String[] jvmArgs() default {};
 
@@ -68,8 +68,7 @@ public @interface ConfigureServer {
     @Target({ANNOTATION_TYPE, METHOD})
     @Retention(RUNTIME)
     @interface BeforeServer {
-        /** A regular expression to match which servers to run against */
-        String serverPattern() default ".*";
+        ServerName value() default DEFAULT_SERVER;
     }
 
     /**
@@ -78,8 +77,7 @@ public @interface ConfigureServer {
     @Target({ANNOTATION_TYPE, METHOD})
     @Retention(RUNTIME)
     @interface AfterServer {
-        /** A regular expression to match which servers to run against */
-        String serverPattern() default ".*";
+        ServerName value() default DEFAULT_SERVER;
     }
 
     /**
@@ -91,7 +89,7 @@ public @interface ConfigureServer {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
-        String serverName() default DEFAULT_SERVER_NAME;
+        ServerName serverName() default DEFAULT_SERVER;
     }
 
     /**
@@ -103,7 +101,7 @@ public @interface ConfigureServer {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
-        String serverName() default DEFAULT_SERVER_NAME;
+        ServerName serverName() default DEFAULT_SERVER;
     }
 
     /**
@@ -113,7 +111,7 @@ public @interface ConfigureServer {
     @Retention(RUNTIME)
     @interface NameServiceUrl {
         /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
-        String serverName() default DEFAULT_SERVER_NAME;
+        ServerName serverName() default DEFAULT_SERVER;
     }
 
 
@@ -124,7 +122,7 @@ public @interface ConfigureServer {
     @Retention(RUNTIME)
     @interface Control {
         /** A literal string to match the server name. Not a regular expression since the controller controls exactly one server. */
-        String serverName() default DEFAULT_SERVER_NAME;
+        ServerName serverName() default DEFAULT_SERVER;
     }
 }
 
