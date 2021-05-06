@@ -80,6 +80,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
@@ -181,8 +182,8 @@ final class ServerComms implements Serializable {
         return Objects.requireNonNull(nsUrl, () -> { throw new IllegalStateException("Name service not available"); });
     }
 
-    private void assertClientSide() { assertTrue(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the client"); }
-    private void assertServerSide() { assertFalse(inClient, () -> Stack.getCallingFrame(1) + " must only be used on the server"); }
+    private void assertClientSide() { if (!inClient) fail(Stack.getCallingFrame(1) + " must only be used on the client"); }
+    private void assertServerSide() { if (inClient) fail(Stack.getCallingFrame(1) + " must only be used on the server"); }
 
     private static final boolean IS_STARTED = true;
     private static final boolean IS_STOPPED = false;
@@ -257,7 +258,7 @@ final class ServerComms implements Serializable {
             serverShutdown.countDown();
             break;
         default:
-            throw (Error)Assertions.fail("Unknown op type: " + op);
+            throw (Error) fail("Unknown op type: " + op);
         }
     }
 
