@@ -166,7 +166,7 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
     }
 
     private static Stream<Class<?>> getNestedModifierTypes(Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
-        return Stream.of(testClass.getDeclaredClasses())
+        return Stream.of(testClass.getClasses())
                 .filter(nestedClassFilter)
                 .peek(OrbSteward::validateOrbModifierType);
     }

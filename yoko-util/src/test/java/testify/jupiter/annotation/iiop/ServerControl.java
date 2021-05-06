@@ -17,7 +17,7 @@
 package testify.jupiter.annotation.iiop;
 
 public interface ServerControl {
-    void stop();
     void start();
+    void stop();
     default void restart() { stop(); start(); }
 }

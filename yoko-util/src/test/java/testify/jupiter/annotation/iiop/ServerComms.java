@@ -69,6 +69,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -103,6 +105,9 @@ final class ServerComms implements Serializable {
     private enum Result implements TypeSpec<Throwable> {RESULT}
 
     private static final String REQUEST_COUNT_PREFIX = "Request#";
+    private static final Map<UUID, ORB> ORB_MAP = new ConcurrentHashMap<>();
+
+    private final UUID uuid = UUID.randomUUID();
     private final ServerName serverName;
     private final Properties props;
     private final String[] args;
@@ -238,6 +243,7 @@ final class ServerComms implements Serializable {
             assertServer(IS_STOPPED);
             assertNull(server, "Server already started");
             this.server = new ServerInstance();
+            ORB_MAP.put(uuid, server.orb);
             this.props.setProperty("yoko.iiop.port", "" + server.port);
             this.props.setProperty("yoko.iiop.host", server.host);
             this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(server.host), server.port);
@@ -247,6 +253,7 @@ final class ServerComms implements Serializable {
             assertServer(IS_STARTED);
             server.stop();
             server = null;
+            ORB_MAP.remove(uuid);
             this.nsUrl = null;
             bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
             break;
@@ -260,6 +267,15 @@ final class ServerComms implements Serializable {
         default:
             throw (Error) fail("Unknown op type: " + op);
         }
+    }
+
+    /**
+     * This must only be called on the client instance of this object.
+     * @return the server ORB if the server is running in the same process
+     */
+    Optional<ORB> getServerOrb() {
+        assertClientSide();
+        return Optional.ofNullable(ORB_MAP.get(uuid));
     }
 
     void invoke(Method m) throws MethodInvocationFailed {

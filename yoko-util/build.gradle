@@ -1,5 +1,7 @@
 dependencies {
-  compile project(":yoko-rmi-spec")
+    // depend on the Yoko spec jars
+  spec project(':yoko-rmi-spec')
+
   testImplementation project(":yoko-core")
 }
 

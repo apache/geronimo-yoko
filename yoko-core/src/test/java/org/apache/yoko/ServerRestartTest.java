@@ -24,6 +24,7 @@ import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
+import org.opentest4j.AssertionFailedError;
 import testify.jupiter.annotation.RetriedTest;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
@@ -60,13 +61,23 @@ public class ServerRestartTest {
 
     /** Test the framework is functioning correctly */
     @Test
+    public void testServerControlButDoNothing(ORB clientOrb) throws Exception {
+
+    }
+
+    @Test
+    public void testServerControlLeaveServerStopped(ORB clientOrb) throws Exception {
+        serverControl.stop();
+    }
+
+    @Test
     public void testServerControl(ORB clientOrb) throws Exception {
         assertEquals("hello", stub.echo("hello"));
-        assertThrows(Exception.class, serverControl::start);
+        assertThrows(AssertionFailedError.class, serverControl::start);
         serverControl.stop();
         assertThrows(RemoteException.class, () -> stub.echo(""));
-        assertThrows(Exception.class, serverControl::stop);
-        assertThrows(Exception.class, serverControl::restart);
+        assertThrows(AssertionFailedError.class, serverControl::stop);
+        assertThrows(AssertionFailedError.class, serverControl::restart);
         serverControl.start();
         serverControl.restart();
         serverControl.stop();

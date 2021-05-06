@@ -30,6 +30,7 @@ import static javax.rmi.PortableRemoteObject.narrow;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
@@ -49,10 +50,13 @@ class ServerSteward {
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
     private final ConfigureServer config;
-    private ServerComms serverComms;
+    private final ExtensionContext context;
+    private final ServerComms serverComms;
+    private final ServerController serverControl;
 
     private ServerSteward(ConfigureServer config, ExtensionContext context) {
         this.config = config;
+        this.context = context;
         Class<?> testClass = context.getRequiredTestClass();
         this.controlFields = AnnotationButler.forClass(ConfigureServer.Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
@@ -118,6 +122,18 @@ class ServerSteward {
         if (config.separation() != INTER_PROCESS && config.jvmArgs().length > 0)
             throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
                     + " must not include JVM arguments unless it is configured as " + INTER_PROCESS);
+
+        PartRunner runner = getPartRunner(context);
+        // does this part run in a thread or a new process?
+        if (this.config.separation() == INTER_PROCESS) runner.useNewJVMWhenForking(this.config.jvmArgs());
+        else runner.useNewThreadWhenForking();
+
+        final Properties props = props(this.config.serverOrb(), context.getRequiredTestClass(), this::isServerOrbModifier);
+        final String[] args = args(this.config.serverOrb(), context.getRequiredTestClass(), this::isServerOrbModifier);
+        this.serverComms = new ServerComms(this.config.serverName(), props, args);
+        serverComms.launch(runner);
+
+        this.serverControl = new ServerController();
     }
 
     Bus getBus(ExtensionContext ctx) {
@@ -125,43 +141,15 @@ class ServerSteward {
     }
 
     void beforeAll(ExtensionContext ctx) {
-        startServer(ctx);
         populateControlFields(ctx);
-        injectNameServiceURL();
-        instantiateServerObjects(ctx);
-        beforeServer(ctx);
+        serverControl.start();
     }
 
     void afterAll(ExtensionContext ctx) {
-        afterServer(ctx);
-    }
-
-    private void startServer(ExtensionContext ctx) {
-        PartRunner runner = getPartRunner(ctx);
-        // does this part run in a thread or a new process?
-        if (config.separation() == INTER_PROCESS) runner.useNewJVMWhenForking(config.jvmArgs());
-        else runner.useNewThreadWhenForking();
-
-        final Properties props = props(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        final String[] args = args(config.serverOrb(), ctx.getRequiredTestClass(), this::isServerOrbModifier);
-        serverComms = new ServerComms(config.serverName(), props, args);
-        serverComms.launch(runner);
-        serverComms.control(ServerComms.ServerOp.START_SERVER);
+        serverControl.ensureStopped();
     }
 
     private void populateControlFields(ExtensionContext ctx) {
-        ServerControl serverControl = new ServerControl() {
-            public void start() {
-                serverComms.control(ServerComms.ServerOp.START_SERVER);
-                injectNameServiceURL();
-                instantiateServerObjects(ctx);
-            }
-
-            public void stop() {
-                serverComms.control(ServerComms.ServerOp.STOP_SERVER);
-                injectNameServiceURL();
-            }
-        };
         this.controlFields.forEach(f -> setStaticField(f, serverControl));
     }
 
@@ -200,20 +188,52 @@ class ServerSteward {
                 .orElse(false);
     }
 
-
     static ServerSteward getInstance(ExtensionContext ctx) {
         return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
     }
 
     public ORB getClientOrb(ExtensionContext ctx) {
-        return OrbSteward.getOrb(ctx, config.clientOrb());
+        return config.separation() == COLLOCATED ? serverComms.getServerOrb().orElseThrow(Error::new) : OrbSteward.getOrb(ctx, config.clientOrb());
     }
 
-    public void beginLogging(ExtensionContext ctx) {
+
+    public void beforeEach(ExtensionContext ctx) {
+        serverControl.ensureStarted();
+    }
+
+    public void beforeTestExecution(ExtensionContext ctx) {
         if (config.separation() == INTER_PROCESS) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
     }
 
-    public void endLogging(ExtensionContext ctx) {
+    public void afterTestExecution(ExtensionContext ctx) {
         if (config.separation() == INTER_PROCESS) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
+    }
+
+    private class ServerController implements ServerControl  {
+        boolean started;
+
+        public synchronized void start() {
+            assertFalse(started, "Server should be stopped when ServerControl.start() is invoked");
+            serverComms.control(ServerComms.ServerOp.START_SERVER);
+            started = true;
+            injectNameServiceURL();
+            instantiateServerObjects(context);
+            beforeServer(context);
+        }
+
+        public synchronized void stop() {
+            assertTrue(started, "Server should be started when ServerControl.stop() is invoked");
+            serverComms.control(ServerComms.ServerOp.STOP_SERVER);
+            started = false;
+            afterServer(context);
+        }
+
+        synchronized void ensureStarted() {
+            if (!started) start();
+        }
+
+        synchronized void ensureStopped() {
+            if (started) stop();
+        }
     }
 }

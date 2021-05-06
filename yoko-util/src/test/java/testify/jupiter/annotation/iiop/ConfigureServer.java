@@ -19,6 +19,7 @@ package testify.jupiter.annotation.iiop;
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
@@ -126,7 +127,12 @@ public @interface ConfigureServer {
     }
 }
 
-class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, ParameterResolver {
+class ServerExtension implements
+        BeforeAllCallback, AfterAllCallback,
+        BeforeEachCallback,
+        BeforeTestExecutionCallback, AfterTestExecutionCallback,
+        ParameterResolver {
+
     enum ParamType {
         BUS(Bus.class),
         CLIENT_ORB(ORB.class);
@@ -151,6 +157,10 @@ class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTest
     }
 
     @Override
+    public void beforeEach(ExtensionContext ctx) throws Exception { ServerSteward.getInstance(ctx).beforeEach(ctx); }
+
+
+    @Override
     public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) {
         return ParamType.forClass(pCtx.getParameter().getType()).isPresent();
     }
@@ -172,11 +182,11 @@ class ServerExtension implements BeforeAllCallback, AfterAllCallback, BeforeTest
     }
 
     @Override
+    public void beforeTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).beforeTestExecution(ctx); }
+
+    @Override
+    public void afterTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).afterTestExecution(ctx); }
+
+    @Override
     public void afterAll(ExtensionContext ctx) { ServerSteward.getInstance(ctx).afterAll(ctx); }
-
-    @Override
-    public void beforeTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).beginLogging(ctx); }
-
-    @Override
-    public void afterTestExecution(ExtensionContext ctx) { ServerSteward.getInstance(ctx).endLogging(ctx); }
 }
