@@ -18,7 +18,6 @@ package testify.jupiter.annotation.iiop;
 
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
-import org.junit.jupiter.api.Assertions;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.ORB;
@@ -72,6 +71,7 @@ import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -117,7 +117,9 @@ final class ServerComms implements Serializable {
     private transient final boolean inClient;
     private transient int methodCount;
 
-    private transient volatile ServerInstance server;
+    /** This should only ever be used on the server, and always hold a null on the client. */
+    private final AtomicReference<ServerInstance> serverRef = new AtomicReference<>();
+
     private transient CountDownLatch serverShutdown;
     /** The logger to be used, per test. Server-side only! */
     private transient Optional<TestLogger> testLogger;
@@ -195,9 +197,9 @@ final class ServerComms implements Serializable {
     private void assertServer(boolean serverShouldBeStarted) {
         assertServerSide();
         if (serverShouldBeStarted)
-            assertNotNull(server, "Server not started");
+            assertNotNull(serverRef.get(), "Server not started");
         else
-            assertNull(server, "Server already started");
+            assertNull(serverRef.get(), "Server already started");
     }
 
     public void launch(PartRunner runner) {
@@ -238,28 +240,32 @@ final class ServerComms implements Serializable {
     }
 
     private void control0(ServerOp op) {
+        final ServerInstance oldServer = serverRef.get();
         switch (op) {
         case START_SERVER:
             assertServer(IS_STOPPED);
-            assertNull(server, "Server already started");
-            this.server = new ServerInstance();
-            ORB_MAP.put(uuid, server.orb);
-            this.props.setProperty("yoko.iiop.port", "" + server.port);
-            this.props.setProperty("yoko.iiop.host", server.host);
-            this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(server.host), server.port);
+            final ServerInstance newServer = new ServerInstance();
+            if (!this.serverRef.compareAndSet(null, newServer)) fail("Server already started");
+            ORB_MAP.put(uuid, newServer.orb);
+            this.props.setProperty("yoko.iiop.port", "" + newServer.port);
+            this.props.setProperty("yoko.iiop.host", newServer.host);
+            this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(newServer.host), newServer.port);
             bus.put(NAME_SERVICE_URL, nsUrl);
             break;
         case STOP_SERVER:
             assertServer(IS_STARTED);
-            server.stop();
-            server = null;
+            oldServer.stop();
+            if (!this.serverRef.compareAndSet(oldServer, null)) fail("unexpected concurrent modification of server instance");
             ORB_MAP.remove(uuid);
             this.nsUrl = null;
             bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
             break;
         case KILL_SERVER:
             bus.log("killing server");
-            if (server != null) server.stop();
+            if (oldServer != null) {
+                oldServer.stop();
+                if (!this.serverRef.compareAndSet(oldServer, null)) fail("unexpected concurrent modification of server instance");
+            }
             this.nsUrl = null;
             bus.put(NAME_SERVICE_URL, "SERVER STOPPED");
             serverShutdown.countDown();
@@ -287,7 +293,7 @@ final class ServerComms implements Serializable {
     private Object invoke0(Method m) {
         assertServer(IS_STARTED);
         final Object[] params = Stream.of(m.getParameterTypes())
-                .map(server.paramMap::get)
+                .map(serverRef.get().paramMap::get)
                 .collect(toList())
                 .toArray(new Object[0]);
         return ReflectionSupport.invokeMethod(m, null, params);
@@ -300,7 +306,7 @@ final class ServerComms implements Serializable {
     }
 
     void beginLogging0(Supplier<Optional<TestLogger>> supplier) {
-        assertServer(true);
+        assertServer(IS_STARTED);
         this.testLogger = supplier.get();
     }
 
@@ -311,7 +317,7 @@ final class ServerComms implements Serializable {
     }
 
     void endLogging0(Consumer<TestLogger> consumer) {
-        assertServer(true);
+        assertServer(IS_STARTED);
         this.testLogger.ifPresent(consumer);
         this.testLogger = null; // DELIBERATE! Invoking end without begin is an error
     }
@@ -334,7 +340,7 @@ final class ServerComms implements Serializable {
                     findAnnotation(f, ClientStub.class).map(ClientStub::value),
                     findAnnotation(f, CorbanameUrl.class).map(CorbanameUrl::value));
 
-            IMPL o = newInstance(implClass, server.paramMap);
+            IMPL o = newInstance(implClass, serverRef.get().paramMap);
             // create the tie
             if (!!!(o instanceof PortableRemoteObject)) {
                 PortableRemoteObject.exportObject(o);
@@ -346,16 +352,16 @@ final class ServerComms implements Serializable {
             }
             tie.setTarget(o);
             // do the POA things
-            server.childPoa.activate_object(tie);
+            serverRef.get().childPoa.activate_object(tie);
             // put the result on the bus
             String result;
             if (f.getType() == String.class) {
-                NamingContext root = NamingContextHelper.narrow(server.orb.resolve_initial_references("NameService"));
+                NamingContext root = NamingContextHelper.narrow(serverRef.get().orb.resolve_initial_references("NameService"));
                 NameComponent[] cosName = {new NameComponent(f.getName(), "")};
                 root.bind(cosName, tie.thisObject());
                 result = this.nsUrl + "#" + f.getName();
             } else {
-                result = server.orb.object_to_string(tie.thisObject());
+                result = serverRef.get().orb.object_to_string(tie.thisObject());
             }
             bus.put(f.getName(), result);
         } catch (Throwable throwable) {
