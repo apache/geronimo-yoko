@@ -109,7 +109,7 @@ configure(testProjects) {
     doFirst {workingDir.mkdirs()}
     testLogging {
       // set options for log level LIFECYCLE
-      events "passed", "skipped", "failed", "standardOut"
+      events "skipped", "failed" //, "passed", "standardOut"
       showExceptions true
       exceptionFormat "full"
       showCauses true
@@ -117,7 +117,7 @@ configure(testProjects) {
 
       // set options for log level DEBUG and INFO
       debug {
-        events "started", "passed", "skipped", "failed", "standardOut", "standardError"
+        events "skipped", "failed"//, "started", "passed", "standardOut", "standardError"
         exceptionFormat "full"
       }
       info.events = debug.events
