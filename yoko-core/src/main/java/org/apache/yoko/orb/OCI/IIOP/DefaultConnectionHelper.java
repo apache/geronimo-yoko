@@ -24,16 +24,15 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.ServerSocket;
+import java.net.SocketAddress;
 
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
-
 
 public class DefaultConnectionHelper implements ConnectionHelper {
     public void init(ORB orb, String parms) {
@@ -49,8 +48,10 @@ public class DefaultConnectionHelper implements ConnectionHelper {
     }
 
     private static Socket createSocket(InetAddress address, int port) throws IOException {
-        final Socket socket = new Socket(address, port);
+        final SocketAddress endpoint = new InetSocketAddress(address, port);
+        final Socket socket = new Socket();
         socket.setTcpNoDelay(true);
+        socket.connect(endpoint);
         return socket;
     }
 
@@ -59,10 +60,16 @@ public class DefaultConnectionHelper implements ConnectionHelper {
     }
 
     public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException {
-        ServerSocket serverSocket = new ServerSocket(port, backlog, address);
-        serverSocket.setReuseAddress(true);
-        serverSocket.setPerformancePreferences(0, 2, 1);
-        return serverSocket;
+        try {
+            final SocketAddress endpoint = new InetSocketAddress(address, port);
+            final ServerSocket serverSocket = new ServerSocket();
+            serverSocket.setReuseAddress(port != 0);
+            serverSocket.setPerformancePreferences(0, 2, 1);
+            serverSocket.bind(endpoint, backlog);
+            return serverSocket;
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw e;
+        }
     }
 }
-
