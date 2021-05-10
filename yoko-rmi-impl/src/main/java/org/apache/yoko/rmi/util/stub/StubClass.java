@@ -127,7 +127,7 @@ public final class StubClass {
                 });
     }
 
-    public static Class make(final ClassLoader loader, final Class super_class,
+    public static <S extends Stub> Class<S> make(final ClassLoader loader, final Class super_class,
             final Class[] interfaces, final MethodRef[] methods,
             final Method[] superMethods, final Object[] data,
             final Method handler_method, final String package_name,
@@ -148,12 +148,12 @@ public final class StubClass {
      *            array has filled in java.lang.reflect.Method objects for the
      *            generated trampolines.
      */
-    public static Class make(final ClassLoader loader, final Class super_class,
+    public static <S extends Stub> Class<S> make(final ClassLoader loader, final Class super_class,
             final Class[] interfaces, final MethodRef[] methods,
             final Method[] superMethods, final Object[] data,
             final Method handler_method, final String package_name,
             final String class_name, final StubInitializer initializer) {
-        return (Class) java.security.AccessController
+        return (Class<S>) java.security.AccessController
                 .doPrivileged(new java.security.PrivilegedAction() {
                     public Object run() {
 

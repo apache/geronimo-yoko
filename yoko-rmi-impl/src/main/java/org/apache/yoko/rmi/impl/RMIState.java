@@ -18,21 +18,25 @@
 
 package org.apache.yoko.rmi.impl;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.Map;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
 import javax.rmi.CORBA.Stub;
-import javax.rmi.CORBA.ValueHandler;
+import javax.rmi.CORBA.Tie;
+import javax.rmi.CORBA.Util;
+import javax.rmi.PortableRemoteObject;
 
 import org.apache.yoko.rmi.api.PortableRemoteObjectExt;
 import org.apache.yoko.rmi.api.PortableRemoteObjectState;
-import org.apache.yoko.rmi.util.NodeleteSynchronizedMap;
+import org.apache.yoko.rmi.util.NoDeleteSynchronizedMap;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -40,7 +44,6 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
 import org.omg.PortableServer.POAPackage.InvalidPolicy;
-
 
 public class RMIState implements PortableRemoteObjectState {
     static final Logger logger = Logger.getLogger(RMIState.class.getName());
@@ -139,29 +142,17 @@ public class RMIState implements PortableRemoteObjectState {
     // data for use in PortableRemoteObjectImpl
     //
 
-    java.util.Map stub_map = new NodeleteSynchronizedMap() {
-        public java.util.Map initialValue() {
-            return new HashMap();
-        }
-    };
+    Map<Class<?>, Constructor<? extends Stub>> stub_map = new NoDeleteSynchronizedMap<>();
 
     //
     // data for use in UtilImpl
     //
-    java.util.Map tie_map = java.util.Collections
-            .synchronizedMap(new IdentityHashMap());
+    Map<Remote, Tie> tie_map = java.util.Collections.synchronizedMap(new IdentityHashMap<Remote, Tie>());
 
-    private java.util.Map static_stub_map = new NodeleteSynchronizedMap() {
-        public java.util.Map initialValue() {
-            return new HashMap();
-        }
-    };
+    private Map<Class<?>, StaticStubEntry> static_stub_map = new NoDeleteSynchronizedMap<>();
 
     private URL _codebase;
 
-    //
-    //
-    //
     public void setCodeBase(URL codebase) {
         _codebase = codebase;
     }
@@ -178,7 +169,7 @@ public class RMIState implements PortableRemoteObjectState {
     }
 
     static class StaticStubEntry {
-        java.lang.reflect.Constructor stub_constructor;
+        Constructor<? extends Stub> stub_constructor;
     }
 
     /**
@@ -194,12 +185,11 @@ public class RMIState implements PortableRemoteObjectState {
 
     public Stub getStaticStub(String codebase, Class type) {
 
-        StaticStubEntry ent = (StaticStubEntry) static_stub_map.get(type);
+        StaticStubEntry ent = static_stub_map.get(type);
         if (ent == null) {
             ent = new StaticStubEntry();
 
-            java.lang.reflect.Constructor cons = findConstructor(codebase,
-                    getNewStubClassName(type));
+            Constructor<? extends Stub> cons = findConstructor(codebase, getNewStubClassName(type));
 
             if (cons != null
                     && !javax.rmi.CORBA.Stub.class.isAssignableFrom(cons
@@ -251,28 +241,20 @@ public class RMIState implements PortableRemoteObjectState {
         return null;
     }
 
-    private java.lang.reflect.Constructor findConstructor(String codebase,
-            String stubName) {
+    private <S extends Stub> Constructor<S> findConstructor(String codebase, String stubName) {
         try {
-            Class stubClass = javax.rmi.CORBA.Util.loadClass(stubName,
-                    codebase, getClassLoader());
-            return stubClass.getConstructor(new Class[0]);
+            Class<S> stubClass = (Class<S>) Util.loadClass(stubName, codebase, getClassLoader());
+            return stubClass.getConstructor();
 
         } catch (NoSuchMethodException ex) {
-            logger.log(Level.WARNING, "stub class " + stubName
-                    + " has no default constructor", ex);
-
+            logger.log(Level.WARNING, "stub class " + stubName + " has no default constructor", ex);
         } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINE, "failed to load remote class " + stubName + " from "
-                    + codebase, ex);
-            // ignore //
+            logger.log(Level.FINE, "failed to load remote class " + stubName + " from " + codebase, ex);
         }
-
         return null;
     }
 
-    String getNewStubClassName(Class c) {
-
+    String getNewStubClassName(Class<?> c) {
         String cname = c.getName();
 
         String pkgname = null;
@@ -307,7 +289,7 @@ public class RMIState implements PortableRemoteObjectState {
     public void exportObject(Remote remote) throws RemoteException {
         //PortableRemoteObjectExt.pushState(this);
         try {
-            javax.rmi.PortableRemoteObject.exportObject(remote);
+            PortableRemoteObject.exportObject(remote);
         } finally {
             //PortableRemoteObjectExt.popState();
         }
@@ -316,7 +298,7 @@ public class RMIState implements PortableRemoteObjectState {
     public void unexportObject(Remote remote) throws RemoteException {
         //PortableRemoteObjectExt.pushState(this);
         try {
-            javax.rmi.PortableRemoteObject.unexportObject(remote);
+            PortableRemoteObject.unexportObject(remote);
         } finally {
             //PortableRemoteObjectExt.popState();
         }
