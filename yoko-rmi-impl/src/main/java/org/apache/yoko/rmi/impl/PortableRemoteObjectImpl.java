@@ -321,70 +321,73 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         methods[mdesc.length] = new MethodRef(stub_write_replace);
 
 
-        Class<?> clazz = null;
+        Class<? extends Stub> stubClass = null;
 
         try {
             /* Construct class! */
-            clazz = StubClass.make(/* the class loader to use */
-            UtilImpl.getClassLoader(type),
+            stubClass = StubClass.make(
+                    /* the class loader to use */
+                    UtilImpl.getClassLoader(type),
 
-            /* the bean developer's bean class */
-            RMIStub.class,
+                    /* the bean developer's bean class */
+                    RMIStub.class,
 
-            /* interfaces */
-            new Class[] { type },
+                    /* interfaces */
+                    new Class[] { type },
 
-            /* the methods */
-            methods,
+                    /* the methods */
+                    methods,
 
-            /* contains only ejbCreate */
-            null,
+                    /* contains only ejbCreate */
+                    null,
 
-            /* our data objects */
-            descriptors,
+                    /* our data objects */
+                    descriptors,
 
-            /* the handler method */
-            getPOAStubInvokeMethod(),
+                    /* the handler method */
+                    getPOAStubInvokeMethod(),
 
-            /* package name (use superclass') */
-            getPackageName(type),
+                    /* package name (use superclass') */
+                    getPackageName(type),
 
-            /* provider of handlers */
-            getRMIStubInitializer());
-        } catch (java.lang.NoClassDefFoundError ex) {
+                    /* provider of handlers */
+                    getRMIStubInitializer()
+            );
+        } catch (NoClassDefFoundError ex) {
             /* Construct class! */
-            clazz = StubClass.make(/* the class loader to use */
-            getClassLoader(),
+            stubClass = StubClass.make(
+                    /* the class loader to use */
+                    getClassLoader(),
 
-            /* the bean developer's bean class */
-            RMIStub.class,
+                    /* the bean developer's bean class */
+                    RMIStub.class,
 
-            /* interfaces */
-            new Class[] { type },
+                    /* interfaces */
+                    new Class[] { type },
 
-            /* the methods */
-            methods,
+                    /* the methods */
+                    methods,
 
-            /* contains only ejbCreate */
-            null,
+                    /* contains only ejbCreate */
+                    null,
 
-            /* our data objects */
-            descriptors,
+                    /* our data objects */
+                    descriptors,
 
-            /* the handler method */
-            getPOAStubInvokeMethod(),
+                    /* the handler method */
+                    getPOAStubInvokeMethod(),
 
-            /* package name (use superclass') */
-            getPackageName(type),
+                    /* package name (use superclass') */
+                    getPackageName(type),
 
-            /* provider of handlers */
-            getRMIStubInitializer());
-
+                    /* provider of handlers */
+                    getRMIStubInitializer()
+            );
         }
 
-        if (clazz != null) {
+        if (stubClass != null) {
             try {
-                cons = (Constructor<? extends Stub>) clazz.getConstructor();
+                cons = stubClass.getConstructor();
                 state.stub_map.put(type, cons);
             } catch (NoSuchMethodException e) {
                 LOGGER.log(Level.FINER, "constructed stub has no default constructor", e);
