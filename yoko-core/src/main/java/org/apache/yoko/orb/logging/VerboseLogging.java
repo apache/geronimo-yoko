@@ -17,6 +17,7 @@
 package org.apache.yoko.orb.logging;
 
 import org.apache.yoko.util.Factory;
+import org.apache.yoko.util.Wrapper;
 
 import java.util.logging.Logger;
 
@@ -100,6 +101,15 @@ public enum VerboseLogging {
      */
     public static final Logger MARSHAL_LOG = Logger.getLogger("yoko.verbose.marshal");
 
+    /**
+     * Use this as a pass-through method for an exception when it is being processed without a new exception being created.
+     * It will help to determine the code location where the processing happens by:&mdash;
+     * <ul>
+     * <li> Adding a stack trace to the suppressed exceptions on <code>loggable</code>. </li>
+     * <li> Logging the provided <code>reason</code> and exception message if {@link java.util.logging.Level#FINE} logging is enabled. </li>
+     * <li> Logging the decorated exception (i.e. with added stack trace) if {@link java.util.logging.Level#FINEST} logging is enabled. </li>
+     * </ul>
+     */
     public static <L extends Throwable> L logged(Logger logger, L loggable, String reason) {
         loggable.addSuppressed(new StackTraceRecord(reason));
         if (logger.isLoggable(FINEST)) logger.log(FINEST, reason, loggable); // usually formats stack trace
@@ -107,10 +117,26 @@ public enum VerboseLogging {
         return loggable;
     }
 
+    /**
+     * Use this as a pass-through method to wrap and log an exception.
+     * @see #logged(Logger, Throwable, String)
+     */
     public static <W extends Throwable> W wrapped(Logger logger, Exception cause, String reason, Factory<W> wrapperFactory) {
         return logged(logger, (W)wrapperFactory.create().initCause(cause), reason);
     }
 
+    /**
+     * Use this as a pass-through method to wrap and log an exception.
+     * @see #logged(Logger, Throwable, String)
+     */
+    public static <V extends Throwable, W extends Throwable> W wrapped(Logger logger, V cause, String reason, Wrapper<V,W> wrapperFactory) {
+        return logged(logger, wrapperFactory.wrap(cause), reason);
+    }
+
+    /**
+     * Use this as a pass-through (or not) method to log <code>loggable</code> and <code>reason</code>
+     * to <code>logger</code> at the {@link java.util.logging.Level#WARNING} level.
+     */
     public static <L extends Throwable> L warned(Logger logger, L loggable, String reason) {
         logger.log(WARNING, reason, loggable);
         return loggable;
