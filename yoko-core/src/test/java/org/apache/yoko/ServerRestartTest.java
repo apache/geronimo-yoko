@@ -26,7 +26,6 @@ import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.opentest4j.AssertionFailedError;
 import testify.jupiter.annotation.RetriedTest;
-import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
@@ -42,12 +41,13 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
-@Tracing(".*ServerComms.*")
 public class ServerRestartTest {
     @Control
     public static ServerControl serverControl;
@@ -61,7 +61,6 @@ public class ServerRestartTest {
     @ClientStub(EchoImpl.class)
     public static Echo stub;
 
-    /** Test the framework is functioning correctly */
     @Test
     public void testServerControlButDoNothing(ORB clientOrb) throws Exception {
 
@@ -106,6 +105,17 @@ public class ServerRestartTest {
         assertEquals(oldStubUrl, ServerRestartTest.stubUrl);
         echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
         echo.echo("splong");
+    }
+
+    @Test
+    @Logging("yoko.verbose.connection.in")
+    void testRestart() {
+        serverControl.restart();
+    }
+
+    @RetriedTest(maxRuns = 500)
+    void testMultipleRestarts() {
+        serverControl.restart();
     }
 
     /** Test client behaviour across server restart */
