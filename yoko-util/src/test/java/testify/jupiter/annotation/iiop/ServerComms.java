@@ -78,10 +78,8 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
@@ -245,16 +243,20 @@ final class ServerComms implements Serializable {
         case START_SERVER:
             assertServer(IS_STOPPED);
             final ServerInstance newServer = new ServerInstance();
+            System.out.println("### server started on " + newServer.host + ":" + newServer.port);
             if (!this.serverRef.compareAndSet(null, newServer)) fail("Server already started");
             ORB_MAP.put(uuid, newServer.orb);
-            this.props.setProperty("yoko.iiop.port", "" + newServer.port);
-            this.props.setProperty("yoko.iiop.host", newServer.host);
+            // set the endpoint property which seems to take precedence
+            String endpointSpec = String.format("iiop --bind %1$s --host %1$s --port %2$d", newServer.host, newServer.port);
+            this.props.setProperty("yoko.orb.oa.endpoint", endpointSpec);
+            // set the host and port properties for completeness
             this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(newServer.host), newServer.port);
             bus.put(NAME_SERVICE_URL, nsUrl);
             break;
         case STOP_SERVER:
             assertServer(IS_STARTED);
             oldServer.stop();
+            System.out.println("### server stopped on " + oldServer.host + ":" + oldServer.port);
             if (!this.serverRef.compareAndSet(oldServer, null)) fail("unexpected concurrent modification of server instance");
             ORB_MAP.remove(uuid);
             this.nsUrl = null;
