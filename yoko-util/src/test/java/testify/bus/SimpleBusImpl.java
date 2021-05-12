@@ -115,7 +115,7 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         try {
             Object obj = properties.computeIfAbsent(key, s -> new CountDownLatch(1));
             // if it wasn't there, block until it arrives
-            if (obj instanceof CountDownLatch) ((CountDownLatch) obj).await(10, SECONDS);
+            if (obj instanceof CountDownLatch) ((CountDownLatch) obj).await(20, SECONDS);
             // rethrow any stored error
             //noinspection ThrowableNotThrown
             reThrowErrorIfPresent();
