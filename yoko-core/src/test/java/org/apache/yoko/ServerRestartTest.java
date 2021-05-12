@@ -113,7 +113,7 @@ public class ServerRestartTest {
         serverControl.restart();
     }
 
-    @RetriedTest(maxRuns = 500)
+    @RetriedTest(maxRuns = 50)
     void testMultipleRestarts() {
         serverControl.restart();
     }

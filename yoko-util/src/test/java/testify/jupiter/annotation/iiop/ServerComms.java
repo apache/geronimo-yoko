@@ -18,8 +18,11 @@ package testify.jupiter.annotation.iiop;
 
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.COMM_FAILURE;
+import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
@@ -38,6 +41,7 @@ import org.omg.PortableServer.RequestProcessingPolicyValue;
 import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantRetentionPolicyValue;
 import org.omg.PortableServer.ThreadPolicyValue;
+import org.opentest4j.TestAbortedException;
 import testify.bus.Bus;
 import testify.bus.EnumSpec;
 import testify.bus.FieldSpec;
@@ -63,7 +67,10 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.net.BindException;
 import java.rmi.Remote;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -100,7 +107,7 @@ final class ServerComms implements Serializable {
     private enum FieldRequest implements FieldSpec {INIT}
     private enum BeginLogging implements TypeSpec<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
     private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
-    private enum Result implements TypeSpec<Throwable> {RESULT}
+    private enum Result implements TypeSpec<ServerSideException> {RESULT}
 
     private static final String REQUEST_COUNT_PREFIX = "Request#";
     private static final Map<UUID, ORB> ORB_MAP = new ConcurrentHashMap<>();
@@ -108,6 +115,7 @@ final class ServerComms implements Serializable {
     private final UUID uuid = UUID.randomUUID();
     private final ServerName serverName;
     private final Properties props;
+    private final Map<Object, Object> originalProps;
     private final String[] args;
     private transient Bus bus;
     private String nsUrl;
@@ -180,6 +188,7 @@ final class ServerComms implements Serializable {
         this.inClient = true;
         this.serverName = serverName;
         this.props = props;
+        this.originalProps = Collections.unmodifiableMap(new HashMap<Object, Object>(props));
         this.args = args;
     }
 
@@ -242,16 +251,33 @@ final class ServerComms implements Serializable {
         switch (op) {
         case START_SERVER:
             assertServer(IS_STOPPED);
-            final ServerInstance newServer = new ServerInstance();
-            System.out.println("### server started on " + newServer.host + ":" + newServer.port);
-            if (!this.serverRef.compareAndSet(null, newServer)) fail("Server already started");
-            ORB_MAP.put(uuid, newServer.orb);
-            // set the endpoint property which seems to take precedence
-            String endpointSpec = String.format("iiop --bind %1$s --host %1$s --port %2$d", newServer.host, newServer.port);
-            this.props.setProperty("yoko.orb.oa.endpoint", endpointSpec);
-            // set the host and port properties for completeness
-            this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(newServer.host), newServer.port);
-            bus.put(NAME_SERVICE_URL, nsUrl);
+            try {
+                final ServerInstance newServer = new ServerInstance();
+                System.out.println("### server started on " + newServer.host + ":" + newServer.port);
+                if (!this.serverRef.compareAndSet(null, newServer)) fail("Server already started");
+                ORB_MAP.put(uuid, newServer.orb);
+                // set the endpoint property which seems to take precedence
+                String endpointSpec = String.format("iiop --bind %1$s --host %1$s --port %2$d", newServer.host, newServer.port);
+                this.props.setProperty("yoko.orb.oa.endpoint", endpointSpec);
+                // set the host and port properties for completeness
+                this.nsUrl = String.format("corbaname:iiop:%s:%d", escapeHostForUseInUrl(newServer.host), newServer.port);
+                bus.put(NAME_SERVICE_URL, nsUrl);
+            } catch (INITIALIZE e) {
+                if (! (e.getCause() instanceof COMM_FAILURE)) throw e;
+                if (! (e.getCause().getCause() instanceof BindException)) throw e;
+                // In some CI environments the endpoint that we assume is still free
+                // may be in use - perhaps grabbed by some eager concurrent process on the same system?
+                // If this is so, we need to discard our recorded endpoint affinity for this test
+                String assumptionMessage = "Could not bind to endpoint " + props.getProperty("yoko.orb.oa.endpoint");
+                props.clear();
+                props.putAll(originalProps);
+                // and ensure the client fails an assumption on the calling test thread.
+                throw new ServerSideException(e) {
+                    ServerSideException resolve() {
+                        throw new TestAbortedException(assumptionMessage, this);
+                    }
+                };
+            }
             break;
         case STOP_SERVER:
             assertServer(IS_STARTED);
@@ -377,8 +403,9 @@ final class ServerComms implements Serializable {
         bus.log("Waiting for completion of " + requestId);
         String info = bus.get(requestId);
         bus.log(requestId + ": " + info);
-        final Throwable result = bus.get(Result.RESULT);
-        if (result != null) throw wrapper.apply(result);
+        final ServerSideException result = bus.get(Result.RESULT);
+        if (result == null) return;
+        throw wrapper.apply(result.resolve());
     }
 
     private <T> void completeRequest(String prefix, Consumer<T> consumer, T parameter) {
@@ -390,6 +417,9 @@ final class ServerComms implements Serializable {
             // on successful completion, send back a null
             bus.put(Result.RESULT, null);
             bus.put(requestId, prefix + parameter + " completed normally");
+        } catch (ServerSideException e) {
+            bus.put(Result.RESULT, e);
+            bus.put(requestId, prefix + parameter + " completed abnormally with exception " + e);
         } catch (Throwable e) {
             // if there was an error, send that back instead
             bus.put(Result.RESULT, new ServerSideException(e));
@@ -411,6 +441,8 @@ final class ServerComms implements Serializable {
             cause.printStackTrace(new PrintWriter(sw));
             return sw.toString();
         }
+
+        ServerSideException resolve() { return this; }
     }
 
     static class ServerResult extends RuntimeException {
