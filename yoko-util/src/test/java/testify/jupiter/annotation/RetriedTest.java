@@ -20,6 +20,7 @@ import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.api.extension.*;
 import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.util.Preconditions;
+import org.opentest4j.TestAbortedException;
 import testify.streams.Streams;
 
 import java.lang.annotation.ElementType;
@@ -32,8 +33,15 @@ import java.util.stream.Stream;
 import static java.util.Collections.singletonList;
 
 /**
+ * <p>
  * This test can be run multiple times, until at least one failure occurs.
  * In other words: if at first you do succeed, try until you fail.
+ * </p>
+ * <p>
+ * It also allows for tests that are programmatically aborted (e.g. by a failing assumption).
+ * If the total number of runs is reached without any successes or failures occurring, no further tests will be run.
+ * If there are any successes or failures, the total number of allowed aborted tests increases significantly.
+ * </p>
  */
 @Target({ ElementType.ANNOTATION_TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
@@ -63,23 +71,33 @@ public @interface RetriedTest {
      * This class holds the mutable state for the collection of test runs.
      * It implements Spliterator purely to make it easy to treat as a stream.
      */
-    class Context implements TestTemplateInvocationContext, AfterTestExecutionCallback {
-        private int successes;
-        private int failures;
-
+    class Context implements TestTemplateInvocationContext, BeforeTestExecutionCallback, TestExecutionExceptionHandler, AfterTestExecutionCallback {
         static Stream<TestTemplateInvocationContext> stream(RetriedTest annotation) {
             Preconditions.condition(annotation.maxRuns() > 0, "The maximum number of runs must be greater than zero." );
             Preconditions.condition(annotation.maxFailures() > 0, "The maximum allowed failures must be greater than zero." );
             Preconditions.condition(annotation.maxSuccesses() > 0, "The maximum allowed successes must be greater than zero." );
-            Context ctx = new Context();
+            Context ctx = new Context(annotation);
             return Streams.stream(action -> {
-                if (annotation.maxFailures() == ctx.failures) return false;
-                if (annotation.maxSuccesses() == ctx.successes) return false;
-                if (annotation.maxRuns() == ctx.failures + ctx.successes) return false;
+                if (ctx.completed()) return false;
                 action.accept(ctx);
                 return true;
             });
         }
+
+        private int remainingRuns;
+        private int remainingFailures;
+        private int remainingSuccesses;
+        private int remainingAborted;
+        private boolean passed;
+
+        Context(RetriedTest annotation) {
+            remainingRuns = annotation.maxRuns();
+            remainingFailures = annotation.maxFailures();
+            remainingSuccesses = annotation.maxSuccesses();
+            remainingAborted = remainingRuns; // will only trigger if there are no failures or successes;
+        }
+
+        boolean completed() { return 0 == remainingRuns * remainingSuccesses * remainingFailures * remainingAborted; }
 
         @Override
         public List<Extension> getAdditionalExtensions() {
@@ -87,9 +105,31 @@ public @interface RetriedTest {
         }
 
         @Override
+        public void beforeTestExecution(ExtensionContext context) throws Exception {
+            passed = true;
+        }
+
+        @Override
+        public void handleTestExecutionException(ExtensionContext context, Throwable throwable) throws Throwable {
+            passed = false;
+            if (throwable instanceof TestAbortedException) {
+                remainingAborted--;
+                if (remainingAborted == 0) throw throwable;
+                remainingRuns++;
+            } else {
+                remainingFailures--;
+                remainingAborted += 10;
+            }
+            throw throwable;
+        }
+
+        @Override
         public void afterTestExecution(ExtensionContext context) throws Exception {
-            if (context.getExecutionException().isPresent()) failures++;
-            else successes++;
+            remainingRuns--;
+            if (passed) {
+                remainingSuccesses--;
+                remainingAborted += 10;
+            }
         }
     }
 }
