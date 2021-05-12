@@ -42,9 +42,14 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCATED;
 
 @ConfigureServer
 public class TestInterceptorsThatThrow {
+    /** Re-run the tests collocated */
+    @ConfigureServer(separation = COLLOCATED)
+    static class Collocated extends TestInterceptorsThatThrow {}
+
     enum InterceptionPoint {
         receive_request_service_contexts(Target::receive_request_service_contexts),
         receive_request(Target::receive_request),

@@ -30,19 +30,19 @@ class EventBusImpl implements EventBus {
     }
 
     @Override
-    public <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return userBus.hasKey(key.fullName()); }
+    public <K extends Enum<K> & TypeSpec<?>> boolean hasKey(K key) { return userBus.hasKey(key.fullName()); }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return key.unstringify(userBus.get(key.fullName())); }
+    public <K extends Enum<K> & TypeSpec<T>, T> T get(K key) { return key.unstringify(userBus.get(key.fullName())); }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return key.unstringify(userBus.peek(key.fullName())); }
+    public <K extends Enum<K> & TypeSpec<T>, T> T peek(K key) { return key.unstringify(userBus.peek(key.fullName())); }
     @Override
-    public <K extends Enum<K> & TypeRef<? super T>, T> Bus put(K key, T value) { userBus.put(key.fullName(), key.stringify(value)); return null; }
+    public <K extends Enum<K> & TypeSpec<? super T>, T> Bus put(K key, T value) { userBus.put(key.fullName(), key.stringify(value)); return null; }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> Bus put(K key) { put(key, null); return null; }
+    public <K extends Enum<K> & TypeSpec<T>, T> Bus put(K key) { put(key, null); return null; }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> Bus onMsg(K key, Consumer<T> action) { userBus.onMsg(key.fullName(), s -> action.accept(key.unstringify(s))); return null; }
+    public <K extends Enum<K> & TypeSpec<T>, T> Bus onMsg(K key, Consumer<T> action) { userBus.onMsg(key.fullName(), s -> action.accept(key.unstringify(s))); return null; }
     @Override
-    public <K extends Enum<K> & TypeRef<K>> Bus onMsg(K key, Runnable action) { onMsg(key, s -> action.run()); return null; }
+    public <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action) { onMsg(key, s -> action.run()); return null; }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, userBus.user); }

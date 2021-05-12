@@ -56,19 +56,19 @@ class BusImpl implements Bus {
     public Bus forUser(String user) { return simpleBus.forUser(user); }
 
     @Override
-    public <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key) { return eventBus.hasKey(key); }
+    public <K extends Enum<K> & TypeSpec<?>> boolean hasKey(K key) { return eventBus.hasKey(key); }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> T get(K key) { return eventBus.get(key); }
+    public <K extends Enum<K> & TypeSpec<T>, T> T get(K key) { return eventBus.get(key); }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> T peek(K key) { return eventBus.peek(key); }
+    public <K extends Enum<K> & TypeSpec<T>, T> T peek(K key) { return eventBus.peek(key); }
     @Override
-    public <K extends Enum<K> & TypeRef<? super T>, T> Bus put(K key, T value) { eventBus.put(key, value); return this; }
+    public <K extends Enum<K> & TypeSpec<? super T>, T> Bus put(K key, T value) { eventBus.put(key, value); return this; }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> Bus put(K key) { eventBus.put(key); return this; }
+    public <K extends Enum<K> & TypeSpec<T>, T> Bus put(K key) { eventBus.put(key); return this; }
     @Override
-    public <K extends Enum<K> & TypeRef<T>, T> Bus onMsg(K key, Consumer<T> action) { eventBus.onMsg(key, action); return this; }
+    public <K extends Enum<K> & TypeSpec<T>, T> Bus onMsg(K key, Consumer<T> action) { eventBus.onMsg(key, action); return this; }
     @Override
-    public <K extends Enum<K> & TypeRef<K>> Bus onMsg(K key, Runnable action) { eventBus.onMsg(key, action); return this; }
+    public <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action) { eventBus.onMsg(key, action); return this; }
 
     @Override
     public String isLoggingEnabled(LogLevel level) { return logBus.isLoggingEnabled(level); }

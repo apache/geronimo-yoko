@@ -39,6 +39,8 @@ public interface PartRunner {
      */
     Bus bus(String partName);
 
+    default Bus bus(Enum<?> member) { return bus(member.toString()); }
+
     PartRunner useNewJVMWhenForking(String...jvmArgs);
     PartRunner useNewThreadWhenForking();
 
@@ -46,6 +48,10 @@ public interface PartRunner {
 
     default PartRunner fork(String partName, TestPart part, Consumer<Bus> endAction) {
         return fork(partName, part).endWith(partName, endAction);
+    }
+
+    default PartRunner fork(Enum<?> partName, TestPart part, Consumer<Bus> endAction) {
+        return fork(partName.toString(), part, endAction);
     }
 
     default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
@@ -61,6 +67,8 @@ public interface PartRunner {
     }
 
     PartRunner endWith(String partName, Consumer<Bus> endAction);
+
+    default PartRunner endWith(Enum<?> partName, Consumer<Bus> endAction) { return endWith(partName.toString(), endAction); }
 
     void join();
 }

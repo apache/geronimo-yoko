@@ -58,7 +58,7 @@ final public class Transport_impl extends LocalObject implements Transport {
     private int soTimeout_ = 0; // The value for setSoTimeout()
 
     private final TransportInfo_impl info_; // Transport information
-    
+
     // the real logger backing instance.  We use the interface class as the locator
     private static final Logger logger = Logger.getLogger(Transport.class.getName());
 
@@ -73,8 +73,8 @@ final public class Transport_impl extends LocalObject implements Transport {
             try {
                 socket_.setSoTimeout(soTimeout_);
             } catch (SocketException ex) {
-                logger.log(Level.FINE, "Socket setup error", ex); 
-                
+                logger.log(Level.FINE, "Socket setup error", ex);
+
                 throw (COMM_FAILURE)new COMM_FAILURE(
                         describeCommFailure(MinorSetSoTimeout)
                                 + ": socket error during setSoTimeout: "
@@ -82,11 +82,11 @@ final public class Transport_impl extends LocalObject implements Transport {
                         MinorSetSoTimeout,
                         CompletionStatus.COMPLETED_NO).initCause(ex);
             } catch (NullPointerException ex) {
-                logger.log(Level.FINE, "Socket setup error", ex); 
+                logger.log(Level.FINE, "Socket setup error", ex);
                 throw (COMM_FAILURE)new COMM_FAILURE(
                         describeCommFailure(MinorSetSoTimeout)
                                 + ": NullPointerException error during setSoTimeout: "
-                                + ex.getMessage(), 
+                                + ex.getMessage(),
                         MinorSetSoTimeout,
                         CompletionStatus.COMPLETED_NO).initCause(ex);
             }
@@ -126,7 +126,7 @@ final public class Transport_impl extends LocalObject implements Transport {
             // This exception can be ignored.
             //
         } catch (IOException ex) {
-            logger.log(Level.FINE, "Socket shutdown error", ex); 
+            logger.log(Level.FINE, "Socket shutdown error", ex);
             throw (InternalError)new InternalError().initCause(ex);
         }
     }
@@ -157,7 +157,7 @@ final public class Transport_impl extends LocalObject implements Transport {
     }
 
     public void shutdown() {
-        logger.info("shutdown: " + this); 
+        logger.fine("shutdown: " + this);
         shutdown_ = true;
         shutdownSocket(); // Shutdown send side only
         // blocking in recv()
@@ -176,14 +176,14 @@ final public class Transport_impl extends LocalObject implements Transport {
                 if (!writeBuffer.readFrom(in_))
                     throw new COMM_FAILURE(describeCommFailure(MinorRecvZero), MinorRecvZero, CompletionStatus.COMPLETED_NO);
             } catch (InterruptedIOException ex) {
-                logger.log(Level.FINE, "Received interrupted exception", ex); 
+                logger.log(Level.FINE, "Received interrupted exception", ex);
 
                 if (!block)
                     return;
                 if (shutdown_)
                     throw asCommFailure(ex, MinorRecv, "Interrupted I/O exception during shutdown");
             } catch (IOException ex) {
-                logger.log(Level.FINE, "Socket read error", ex); 
+                logger.log(Level.FINE, "Socket read error", ex);
                 throw asCommFailure(ex, MinorRecv, "I/O error during read");
             } catch (NullPointerException ex) {
                 logger.log(Level.FINE, "Socket read error", ex);
@@ -194,9 +194,9 @@ final public class Transport_impl extends LocalObject implements Transport {
 
     public void send(ReadBuffer readBuffer, boolean block) {
         setBlock(block);
-        
+
         logger.fine("Sending buffer of size " + readBuffer.available() + " to " + socket_);
-        
+
         while (!readBuffer.isComplete()) {
             try {
                 readBuffer.writeTo(out_);
@@ -291,8 +291,8 @@ final public class Transport_impl extends LocalObject implements Transport {
     public Transport_impl(Acceptor acceptor, Socket socket, ListenerMap lm) {
         socket_ = socket;
         shutdown_ = false;
-        
-        logger.fine("Creating new transport for socket " + socket); 
+
+        logger.fine("Creating new transport for socket " + socket);
 
         //
         // Cache the streams associated with the socket, for
@@ -319,7 +319,7 @@ final public class Transport_impl extends LocalObject implements Transport {
 
         super.finalize();
     }
-    
+
     public String toString() {
         return String.format("Transport to %s with socket %s", info_, socket_);
     }

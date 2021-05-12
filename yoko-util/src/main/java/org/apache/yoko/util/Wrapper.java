@@ -14,23 +14,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package acme;
+package org.apache.yoko.util;
 
-import testify.bus.Bus;
-import testify.bus.StringSpec;
-
-public class EchoImpl implements Echo {
-    private enum BusKey implements StringSpec {MESSAGE}
-    final Bus bus;
-
-    public EchoImpl(Bus bus) {this.bus = bus;}
-
-    @Override
-    public String echo(String s) {
-        bus.log("EchoImpl " + this + " echoing '" + s + "'");
-        bus.put(BusKey.MESSAGE, s);
-        return s;
-    }
-
-    public static String getLastMessage(Bus bus) { return bus.get(BusKey.MESSAGE); }
+public interface Wrapper<V, W> {
+    W wrap(V value);
 }

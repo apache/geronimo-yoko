@@ -20,7 +20,7 @@ import java.util.Set;
 
 import static java.util.EnumSet.range;
 
-public enum LogLevel implements StringRef {
+public enum LogLevel implements StringSpec {
     DEBUG, INFO, DEFAULT, WARN, ERROR;
     public Set<LogLevel> andHigher() { return range(this, ERROR); }
     public boolean includes(LogLevel level) { return andHigher().contains(level); }

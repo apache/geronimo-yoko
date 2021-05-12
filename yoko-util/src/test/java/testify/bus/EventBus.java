@@ -25,11 +25,11 @@ import java.util.function.Consumer;
 // objects accessible outside the package.
 @SuppressWarnings("UnusedReturnValue")
 interface EventBus {
-    <K extends Enum<K> & TypeRef<?>> boolean hasKey(K key);
-    <K extends Enum<K> & TypeRef<T>, T> T get(K key);
-    <K extends Enum<K> & TypeRef<T>, T> T peek(K key);
-    <K extends Enum<K> & TypeRef<? super T>, T> Bus put(K key, T value);
-    <K extends Enum<K> & TypeRef<T>, T> Bus put(K key);
-    <K extends Enum<K> & TypeRef<T>, T> Bus onMsg(K key, Consumer<T> action);
-    <K extends Enum<K> & TypeRef<K>> Bus onMsg(K key, Runnable action);
+    <K extends Enum<K> & TypeSpec<?>> boolean hasKey(K key);
+    <K extends Enum<K> & TypeSpec<T>, T> T get(K key);
+    <K extends Enum<K> & TypeSpec<T>, T> T peek(K key);
+    <K extends Enum<K> & TypeSpec<? super T>, T> Bus put(K key, T value);
+    <K extends Enum<K> & TypeSpec<T>, T> Bus put(K key);
+    <K extends Enum<K> & TypeSpec<T>, T> Bus onMsg(K key, Consumer<T> action);
+    <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action);
 }

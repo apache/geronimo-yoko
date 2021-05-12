@@ -17,19 +17,24 @@
 package testify.jupiter.annotation.logging;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import testify.jupiter.annotation.logging.Logging.Suppression;
+import testify.util.SerialUtil.SerializableConsumer;
+import testify.util.SerialUtil.SerializableSupplier;
 
 import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 
 import static java.util.Collections.unmodifiableList;
 import static java.util.stream.Collectors.toList;
+import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 import static testify.jupiter.annotation.logging.CodeNameGenerator.toCodeNameMap;
 import static testify.util.Queues.drainInOrder;
 
@@ -37,64 +42,63 @@ import static testify.util.Queues.drainInOrder;
  * Log each test and conditionally print out the log messages
  * as required by the annotation for that test.
  */
-class TestLogger implements CloseableResource {
+public class TestLogger {
     private Map<Long, String> codeNames;
 
-    private final PrintWriter out;
+    private final PrintWriter out = new PrintWriter(System.out);
     private final List<LogSetting> settings;
-    private long epoch;
-    private Queue<Thread> threads;
-    private Queue<Journal> journals;
-    private ThreadLocal<Journal> journalsByThread;
+    private final long epoch = System.currentTimeMillis();
+    private final Queue<Thread> threads = new ConcurrentLinkedQueue<>();
+    private final Queue<Journal> journals = new ConcurrentLinkedQueue<>();
+    private final ThreadLocal<Journal> journalsByThread = ThreadLocal.withInitial(() -> {
+        threads.add(Thread.currentThread());
+        Journal result = new Journal();
+        journals.add(result);
+        return result;
+    });;
 
     TestLogger(List<Logging> annotations) {
-        this.out = new PrintWriter(System.out);
         this.settings = unmodifiableList(annotations.stream()
                 .map(this::asSetting)
                 .collect(toList()));
-        this.init();
-    }
-
-    private void init() {
-        epoch = System.currentTimeMillis();
-        threads = new ConcurrentLinkedQueue<>();
-        journals = new ConcurrentLinkedQueue<>();
-        journalsByThread = ThreadLocal.withInitial(() -> {
-            threads.add(Thread.currentThread());
-            Journal result = new Journal();
-            journals.add(result);
-            return result;
-        });
     }
 
     private LogSetting asSetting(Logging annotation) {
         return new LogSetting(annotation, this.getHandler(annotation));
     }
 
-    void beforeTestExecution(ExtensionContext ctx) {
-        init();
+    /** Get a serializable action to create a test logger if one is configured for the test) */
+    public static Supplier<Optional<TestLogger>> getLogStarter(ExtensionContext ctx) {
+        return Optional.of(findRepeatableAnnotations(ctx.getTestMethod(), Logging.class))
+                .filter(l -> l.size() > 0)
+                .map(annotations -> (SerializableSupplier<Optional<TestLogger>>)() -> Optional.of(new TestLogger(annotations)))
+                .orElse(Optional::empty);
     }
 
-    void afterTestExecution(ExtensionContext ctx) {
+    /** Get a logging action to run after a test has executed */
+    public static Consumer<TestLogger> getLogFinisher(ExtensionContext ctx) {
         boolean hasTestFailed = ctx.getExecutionException().isPresent();
-        if (Suppression.forContext(ctx).isRequired(hasTestFailed)) return;
+        boolean loggingNeeded = !Suppression.forContext(ctx).isRequired(hasTestFailed);
+        return (SerializableConsumer<TestLogger>) logger -> logger.finishLogging(loggingNeeded, hasTestFailed);
+    }
 
+    private void finishLogging(boolean loggingNeeded, boolean hasTestFailed) {
+        if (!loggingNeeded) return;
         char flag = hasTestFailed ? '\u274C' : '\u2714';
-        // Casting
+        // BEGIN LOG
+        out.printf("%1$c%1$c%1$cBEGIN TEST LOGGING REPLAY%1$c%1$c%1$c%n", flag);
+        // PRINT THREAD KEY
         this.codeNames = threads.stream()
                 .sorted((t1,t2) -> t1.getName().compareTo(t2.getName())) // sort in name order
                 .map(Thread::getId)
                 .collect(toCodeNameMap());
-        // Opening title
-        out.printf("%1$c%1$c%1$cBEGIN TEST LOGGING REPLAY%1$c%1$c%1$c%n", flag);
-        // Opening credits
         threads.forEach(this::introduceThread);
-        // Main feature
+        // PRINT LOGS
         drainInOrder(journals).forEachOrdered(this::printLog);
-        // End title
+        // END LOG
         out.printf("%1$c%1$c%1$cEND TEST LOGGING REPLAY%1$c%1$c%1$c%n", flag);
-        // Release
         out.flush();
+            settings.forEach(LogSetting::undo);
     }
 
     private void introduceThread(Thread t) {
@@ -120,9 +124,5 @@ class TestLogger implements CloseableResource {
             public void flush() {}
             public void close() throws SecurityException {}
         };
-    }
-
-    public void close() {
-        settings.forEach(LogSetting::undo);
     }
 }

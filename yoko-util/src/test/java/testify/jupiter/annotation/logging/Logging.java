@@ -56,8 +56,12 @@ public @interface Logging {
     }
 
     enum Suppression {
-        ON_FAILURE, ON_SUCCESS, NEVER;
-        private static Suppression DEFAULT = ON_SUCCESS;
+        ALWAYS { public boolean isRequired(boolean ignored) { return true; }},
+        ON_FAILURE { public boolean isRequired(boolean testFailed) { return testFailed; }},
+        ON_SUCCESS { public boolean isRequired(boolean testFailed) { return !testFailed; }},
+        NEVER { public boolean isRequired(boolean ignored) { return false; }};
+
+        private static final Suppression DEFAULT = ON_SUCCESS;
 
         static Suppression forContext(ExtensionContext ctx) {
             return ctx.getElement()
@@ -66,9 +70,7 @@ public @interface Logging {
                     .orElse(DEFAULT);
         }
 
-        public boolean isRequired(boolean hasTestFailed) {
-            return this == (hasTestFailed ? ON_FAILURE : ON_SUCCESS);
-        }
+        public abstract boolean isRequired(boolean hasTestFailed);
     }
 
     @Target({TYPE, METHOD, ANNOTATION_TYPE})

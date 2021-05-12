@@ -28,15 +28,15 @@ import java.io.Serializable;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
 
 @ConfigureServer(
+        separation = INTER_PROCESS,
         jvmArgs = {
-//                "-Djava.util.logging.config.class=test.logging.LogJavaSerializationToConsole",
                 "-Djdk.serialFilter=!org.apache.yoko.SerialFilterTest$ForbiddenMessage;"+
                         "maxarray=" + SerialFilterTest.MAX_ARR_LEN + ";" +
                         "maxdepth=" + SerialFilterTest.MAX_DEPTH
-        },
-        newProcess = true
+        }
 )
 public class SerialFilterTest {
     public static final int MAX_ARR_LEN = 200;

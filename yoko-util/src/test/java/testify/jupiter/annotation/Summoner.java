@@ -18,6 +18,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
@@ -43,6 +44,10 @@ public interface Summoner<P, S> {
         return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotation);
     }
 
+    static <A extends Annotation, S> Summoner<A, S> forAnnotation(Class<A> annotationType, Class<S> stewardType, BiFunction<A, ExtensionContext, S> factory) {
+        return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotation);
+    }
+
     static <A extends Annotation, S> Summoner<List<A>, S> forRepeatableAnnotation(Class<A> annotationType, Class<S> stewardType, Function<List<A>, S> factory) {
         return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotations);
     }
@@ -60,13 +65,13 @@ public interface Summoner<P, S> {
 class SummonerImpl<A extends Annotation, P, S> implements Summoner<P, S>, Summoner.StewardSummoner<P, S> {
     private final Class<A> annotationType;
     private final Class<S> stewardType;
-    private final Function<P, S> factory;
+    private final BiFunction<P, ExtensionContext, S> factory;
     private final Function<SummonerImpl<A, P, S>, Optional<P>> finder;
     private final ExtensionContext context;
     private final Class<?> testClass;
     private final ExtensionContext.Store store;
 
-    SummonerImpl(Class<A> annotationType, Class<S> stewardType, Function<P, S> factory, ExtensionContext context, Function<SummonerImpl<A, P, S>, Optional<P>> finder) {
+    SummonerImpl(Class<A> annotationType, Class<S> stewardType, BiFunction<P, ExtensionContext, S> factory, ExtensionContext context, Function<SummonerImpl<A, P, S>, Optional<P>> finder) {
         this.annotationType = annotationType;
         this.stewardType = stewardType;
         this.factory = factory;
@@ -76,10 +81,14 @@ class SummonerImpl<A extends Annotation, P, S> implements Summoner<P, S>, Summon
         this.store = context == null ? null : context.getStore(ExtensionContext.Namespace.create(stewardType, "test annotation steward namespace"));
     }
 
-    @Override
+    SummonerImpl(Class<A> annotationType, Class<S> stewardType, Function<P, S> factory, ExtensionContext context, Function<SummonerImpl<A, P, S>, Optional<P>> finder) {
+        this(annotationType, stewardType, (p, c)  -> factory.apply(p), context, finder);
+    }
+
+        @Override
     public SummonerImpl<A, P, S> forContext(ExtensionContext context) { return new SummonerImpl<>(annotationType, stewardType, factory, context, finder); }
 
-    public final S summon(P parameter) { return store.getOrComputeIfAbsent(parameter, factory, stewardType); }
+    public final S summon(P parameter) { return store.getOrComputeIfAbsent(parameter, p -> factory.apply(p, context), stewardType); } // curried function, yum!
 
     public final Optional<S> summon() { return finder.apply(this).map(this::summon); }
 

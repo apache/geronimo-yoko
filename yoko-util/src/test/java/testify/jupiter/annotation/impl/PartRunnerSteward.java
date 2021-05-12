@@ -18,18 +18,22 @@ package testify.jupiter.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.jupiter.annotation.Summoner;
 import testify.parts.PartRunner;
 
-public class PartRunnerSteward extends Steward<ConfigurePartRunner> {
+public class PartRunnerSteward implements ExtensionContext.Store.CloseableResource {
+    private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
     private final PartRunner partRunner;
+    private final ConfigurePartRunner config;
+    private final Class<?> testClass;
 
-    private PartRunnerSteward(Class<?> testClass) {
-        super(ConfigurePartRunner.class, testClass);
+    private PartRunnerSteward(ConfigurePartRunner config, ExtensionContext context) {
+        this.config = config;
+        this.testClass = context.getRequiredTestClass();
         this.partRunner = PartRunner.create();
         TracingSteward.addTraceSettings(partRunner, testClass);
     }
 
-    @Override
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
     // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
     public void close() {
@@ -38,6 +42,6 @@ public class PartRunnerSteward extends Steward<ConfigurePartRunner> {
 
     public static PartRunner getPartRunner(ExtensionContext ctx) {
         // PartRunners are always one per test, so get one for the root context
-        return Steward.getInstanceForContext(ctx, PartRunnerSteward.class, PartRunnerSteward::new).partRunner;
+        return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new).partRunner;
     }
 }

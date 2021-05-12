@@ -18,7 +18,7 @@ package testify.bus;
 
 import testify.util.SerialUtil;
 
-public interface TypeRef<T> {
+public interface TypeSpec<T> {
     Class<? extends Enum> getDeclaringClass();
     String name();
     @SuppressWarnings("unchecked")

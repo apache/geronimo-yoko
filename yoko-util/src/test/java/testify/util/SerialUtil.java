@@ -24,10 +24,16 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.Base64;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public enum SerialUtil {
     ;
+
+    public interface SerializableConsumer<T> extends Consumer<T>, Serializable {}
+    public interface SerializableSupplier<T> extends Supplier<T>, Serializable {}
 
     public static String stringify(Object payload) {
         if (payload == null) return "<null>";

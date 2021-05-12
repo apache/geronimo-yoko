@@ -24,6 +24,7 @@ import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
+import org.opentest4j.AssertionFailedError;
 import testify.jupiter.annotation.RetriedTest;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
@@ -40,7 +41,9 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
 
@@ -58,15 +61,24 @@ public class ServerRestartTest {
     @ClientStub(EchoImpl.class)
     public static Echo stub;
 
-    /** Test the framework is functioning correctly */
+    @Test
+    public void testServerControlButDoNothing(ORB clientOrb) throws Exception {
+
+    }
+
+    @Test
+    public void testServerControlLeaveServerStopped(ORB clientOrb) throws Exception {
+        serverControl.stop();
+    }
+
     @Test
     public void testServerControl(ORB clientOrb) throws Exception {
         assertEquals("hello", stub.echo("hello"));
-        assertThrows(Exception.class, serverControl::start);
+        assertThrows(AssertionFailedError.class, serverControl::start);
         serverControl.stop();
         assertThrows(RemoteException.class, () -> stub.echo(""));
-        assertThrows(Exception.class, serverControl::stop);
-        assertThrows(Exception.class, serverControl::restart);
+        assertThrows(AssertionFailedError.class, serverControl::stop);
+        assertThrows(AssertionFailedError.class, serverControl::restart);
         serverControl.start();
         serverControl.restart();
         serverControl.stop();
@@ -95,6 +107,17 @@ public class ServerRestartTest {
         echo.echo("splong");
     }
 
+    @Test
+    @Logging("yoko.verbose.connection.in")
+    void testRestart() {
+        serverControl.restart();
+    }
+
+    @RetriedTest(maxRuns = 50)
+    void testMultipleRestarts() {
+        serverControl.restart();
+    }
+
     /** Test client behaviour across server restart */
     @Test
     public void testTwoStubsAcrossRestart(ORB clientOrb) throws Exception {
@@ -111,6 +134,7 @@ public class ServerRestartTest {
 
     /** Test a single thread calling the server from naming lookup to invocation */
     @Test
+    @Logging
     public void testMultipleThreads(ORB clientOrb) throws Exception {
         assertNotNull(stubUrl);
         final int parallelism = 2;
@@ -125,7 +149,9 @@ public class ServerRestartTest {
                             try { result = echo.echo(expected); } catch (RemoteException e) { throw (Error)Assertions.fail(e); }
                             assertEquals(expected, result, Thread.currentThread().getName() + " should successfully look up and invoke the echo object");
                             return result;
-                        }).sorted().collect(joining(""))
+                        })
+                        .sorted()
+                        .collect(joining(""))
                 ).get();
         System.out.println(actual);
         String expected = IntStream.range(0, parallelism).mapToObj(Integer::toString).sorted().collect(joining(""));

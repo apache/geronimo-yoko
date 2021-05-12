@@ -53,21 +53,20 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorAccept;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorBind;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
+import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
+import static org.apache.yoko.orb.OCI.IIOP.CommFailures.ACCEPT;
+import static org.apache.yoko.orb.OCI.IIOP.CommFailures.BIND;
+import static org.apache.yoko.orb.OCI.IIOP.CommFailures.GET_HOST_BY_NAME;
+import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SET_SOCK_OPT;
+import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SOCKET;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.logged;
 import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 
 final class Acceptor_impl extends LocalObject implements Acceptor {
-    static final Logger logger = Logger.getLogger(Acceptor_impl.class.getName());
-
     enum ProfileCardinality { ZERO, ONE, MANY }
 
     // Some data members must not be private because the info object must be able to access them
@@ -101,14 +100,18 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
     }
 
     public void close() {
-        logger.log(Level.FINE, "Closing server socket with host=" + localAddress + ", port=" + port_, new Exception("Stack trace"));
+        if (CONN_IN_LOG.isLoggable(FINE))
+            CONN_IN_LOG.fine("Closing server socket with host=" + localAddress + ", port=" + port_);
         info_._OB_destroy();
 
         try {
             socket_.close();
-            logger.log(Level.FINE, "Closed server socket with host=" + localAddress + ", port=" + port_);
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.fine("Closed server socket with host=" + localAddress + ", port=" + port_);
         } catch (IOException ex) {
-            logger.log(Level.FINE, "Exception closing server socket with host=" + localAddress + ", port=" + port_, ex);
+            // maybe this should be a warning?
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.log(FINE, "Exception closing server socket with host=" + localAddress + ", port=" + port_, ex);
         }
     }
 
@@ -122,18 +125,14 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
             if (!block) socket_.setSoTimeout(1);
             else socket_.setSoTimeout(0);
 
-            logger.fine("Accepting connection for host=" + localAddress + ", port=" + port_);
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.fine("Accepting connection for host=" + localAddress + ", port=" + port_);
             socket = socket_.accept();
-            logger.fine("Received inbound connection on socket " + socket);
-        } catch (InterruptedIOException ex) {
-            if (!block) return null; // Timeout
-            else {
-                logger.log(Level.FINE, "Failure accepting connection for host=" + localAddress + ", port=" + port_, ex);
-                throw asCommFailure(ex, MinorAccept);
-            }
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.fine("Received inbound connection on socket " + socket);
         } catch (IOException ex) {
-            logger.log(Level.FINE, "Failure accepting connection for host=" + localAddress + ", port=" + port_, ex);
-            throw asCommFailure(ex, MinorAccept);
+            if (!block && ex instanceof InterruptedIOException) return null; // Timeout
+            throw wrapped(CONN_IN_LOG, ex, "Failure accepting connection for host=" + localAddress + ", port=" + port_, ACCEPT);
         }
 
         // Set TCP_NODELAY and SO_KEEPALIVE options
@@ -141,21 +140,20 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
             socket.setTcpNoDelay(true);
             if (keepAlive_) socket.setKeepAlive(true);
         } catch (SocketException ex) {
-            logger.log(Level.FINE, "Failure configuring server connection for host=" + localAddress + ", port=" + port_, ex);
-            throw asCommFailure(ex, MinorSetsockopt);
+            throw wrapped(CONN_IN_LOG, ex, "Failure configuring server connection for host=" + localAddress + ", port=" + port_, SET_SOCK_OPT);
         }
 
         try {
             Transport tr = new Transport_impl(this, socket, listenMap_);
-            logger.fine("Inbound connection received from " + socket.getInetAddress()); 
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.fine("Inbound connection received from " + socket.getInetAddress());
             return tr;
         } catch (SystemException ex) {
             try {
                 socket.close();
             } catch (IOException e) {
             }
-            logger.log(Level.FINE, "error creating inbound connection", ex);
-            throw ex;
+            throw logged(CONN_IN_LOG, ex, "error creating inbound connection");
         }
 
     }
@@ -170,24 +168,22 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
                 socket = extConnHelper.createSelfConnection(localAddress, port_);
             }
         } catch (ConnectException ex) {
-            final String msg = "Failure making self connection for host=" + localAddress + ", port=" + port_;
-            throw wrapped(CONN_LOG, ex, msg, Transients.CONNECT_FAILED);
+            throw wrapped(CONN_IN_LOG, ex, "Failure making self connection for host=" + localAddress + ", port=" + port_, Transients.CONNECT_FAILED);
 
         } catch (IOException ex) {
-            logger.log(Level.FINE, "Failure making self connection for host=" + localAddress + ", port=" + port_, ex);
-            throw asCommFailure(ex, MinorSocket);
+            throw wrapped(CONN_IN_LOG, ex, "Failure making self connection for host=" + localAddress + ", port=" + port_, SOCKET);
         }
 
         // Set TCP_NODELAY option
         try {
             socket.setTcpNoDelay(true);
         } catch (SocketException ex) {
-            logger.log(Level.FINE, "Failure configuring self connection for host=" + localAddress + ", port=" + port_, ex);
             try {
                 socket.close();
             } catch (IOException e) {
+                ex.addSuppressed(e);
             }
-            throw asCommFailure(ex);
+            throw wrapped(CONN_IN_LOG, ex, "Failure configuring self connection for host=" + localAddress + ", port=" + port_, SET_SOCK_OPT);
         }
 
         // Create and return new transport
@@ -299,22 +295,14 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         if (backlog == 0) backlog = 50; // 50 is the JDK's default value
 
         try {
-            this.localAddress = address == null
-                    ? InetAddress.getLoopbackAddress() // use the loopback address for connection to self
-                    : Util.getInetAddress(address);    // use the explicit bind address for connection to self
-        } catch (UnknownHostException ex) {
-            logger.log(Level.FINE, "Could not resolve bind address", ex);
-            throw asCommFailure(ex);
-        }
-
-
-        try {
             // Create socket and bind to requested network interface
             if (address == null) {
+                this.localAddress = InetAddress.getLoopbackAddress(); // use loopback address for connection to self
                 this.socket_ = extConnHelper == null
                         ? connHelper.createServerSocket(port, backlog)
                         : extConnHelper.createServerSocket(port, backlog, params);
             } else {
+                this.localAddress = Util.getInetAddress(address);    // use the explicit bind address for connection to self
                 this.socket_ = extConnHelper == null
                         ? connHelper.createServerSocket(port, backlog, localAddress)
                         : extConnHelper.createServerSocket(port, backlog, localAddress, params);
@@ -322,14 +310,15 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
 
             // Read back the port. This is needed if the port was selected by the operating system.
             port_ = socket_.getLocalPort();
-            logger.fine("Acceptor created using socket " + socket_);
+            if (CONN_IN_LOG.isLoggable(FINE))
+                CONN_IN_LOG.fine("Acceptor created using socket " + socket_);
 
+        } catch (UnknownHostException ex) {
+            throw wrapped(CONN_IN_LOG, ex, "Could not resolve bind address", GET_HOST_BY_NAME);
         } catch (BindException ex) {
-            logger.log(Level.FINE, "Failure binding server socket to " + address + ", port=" + port, ex);
-            throw asCommFailure(ex, MinorBind);
+            throw wrapped(CONN_IN_LOG, ex, "Failure binding server socket to " + address + ", port=" + port, BIND);
         } catch (IOException ex) {
-            logger.log(Level.FINE, "Failure binding server socket to " + address + ", port=" + port, ex);
-            throw asCommFailure(ex, MinorSocket);
+            throw wrapped(CONN_IN_LOG, ex, "Failure binding server socket to " + address + ", port=" + port, SOCKET);
         }
 
         // Add this entry to the listenMap_ as an endpoint to remap
@@ -349,8 +338,8 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
             for (String s : hosts_) listenMap_.remove(s, (short) port_);
         }
     }
-    
+
     public String toString() {
-        return "Acceptor listening on " + socket_; 
+        return "Acceptor listening on " + socket_;
     }
 }
