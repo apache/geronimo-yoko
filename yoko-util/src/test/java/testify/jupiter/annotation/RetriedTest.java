@@ -30,7 +30,10 @@ import java.lang.annotation.Target;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static java.lang.Math.log;
+import static java.lang.Math.round;
 import static java.util.Collections.singletonList;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * <p>
@@ -78,26 +81,28 @@ public @interface RetriedTest {
             Preconditions.condition(annotation.maxSuccesses() > 0, "The maximum allowed successes must be greater than zero." );
             Context ctx = new Context(annotation);
             return Streams.stream(action -> {
-                if (ctx.completed()) return false;
+                System.out.println("### ctx.finished() == " + ctx.finished());
+                if (ctx.finished()) return false;
                 action.accept(ctx);
                 return true;
             });
         }
 
-        private int remainingRuns;
-        private int remainingFailures;
-        private int remainingSuccesses;
-        private int remainingAborted;
-        private boolean passed;
+        private int allowedRuns;
+        private int allowedFailures;
+        private int allowedSuccesses;
+        private int allowedSkipped;
+        private enum State {SUCCESS, FAILURE, SKIPPED}
+        private State testState;
 
         Context(RetriedTest annotation) {
-            remainingRuns = annotation.maxRuns();
-            remainingFailures = annotation.maxFailures();
-            remainingSuccesses = annotation.maxSuccesses();
-            remainingAborted = remainingRuns; // will only trigger if there are no failures or successes;
+            allowedRuns = annotation.maxRuns();
+            allowedFailures = annotation.maxFailures();
+            allowedSuccesses = annotation.maxSuccesses();
+            allowedSkipped = 20 + 10 * (int)log(allowedRuns); // at least 20, increasing with order of magnitude
         }
 
-        boolean completed() { return 0 == remainingRuns * remainingSuccesses * remainingFailures * remainingAborted; }
+        boolean finished() { return 0 == (allowedRuns * allowedSuccesses * allowedFailures * allowedSkipped); }
 
         @Override
         public List<Extension> getAdditionalExtensions() {
@@ -106,29 +111,22 @@ public @interface RetriedTest {
 
         @Override
         public void beforeTestExecution(ExtensionContext context) throws Exception {
-            passed = true;
+            testState = State.SUCCESS; // this will be changed if the test throws an exception
         }
 
         @Override
         public void handleTestExecutionException(ExtensionContext context, Throwable throwable) throws Throwable {
-            passed = false;
-            if (throwable instanceof TestAbortedException) {
-                remainingAborted--;
-                if (remainingAborted == 0) throw throwable;
-                remainingRuns++;
-            } else {
-                remainingFailures--;
-                remainingAborted += 10;
-            }
+            testState = throwable instanceof TestAbortedException ? State.SKIPPED : State.FAILURE;
             throw throwable;
         }
 
         @Override
         public void afterTestExecution(ExtensionContext context) throws Exception {
-            remainingRuns--;
-            if (passed) {
-                remainingSuccesses--;
-                remainingAborted += 10;
+            switch (testState) {
+            case SKIPPED: allowedSkipped--; break;
+            case FAILURE: allowedSkipped++; allowedRuns--; allowedFailures--; break;
+            case SUCCESS: allowedSkipped++; allowedRuns--; allowedSuccesses--; break;
+            default: fail("this code should be unreachable");
             }
         }
     }
