@@ -14,4 +14,4 @@
   org.apache.yoko.core,               \
   org.apache.yoko.util,               \
   org.apache.servicemix.bundles.bcel, \
-  org.apache.yoko.test
+  yoko.test

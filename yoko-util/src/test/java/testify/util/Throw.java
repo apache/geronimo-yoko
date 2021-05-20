@@ -16,6 +16,8 @@
  */
 package testify.util;
 
+import org.opentest4j.AssertionFailedError;
+
 public enum Throw {
     ;
 
@@ -32,5 +34,28 @@ public enum Throw {
     @SuppressWarnings("unchecked")
     private static <T extends Throwable> T useTypeErasureMadnessToThrowAnyCheckedException(Throwable t) throws T {
         throw (T)t;
+    }
+
+    public static <T> T invokeWithImpunity(Supplier<T> supplier) {
+        try {
+            return supplier.get();
+        } catch (Throwable t) {
+            throw new AssertionFailedError(null, t);
+        }
+    }
+
+    public static <T, R> R invokeWithImpunity(Function<T, R> function, T t) {
+        return invokeWithImpunity(function.curry(t));
+    }
+
+    @FunctionalInterface
+    public interface Supplier<T> {
+        T get() throws Throwable;
+    }
+
+    @FunctionalInterface
+    public interface Function<T, R> {
+        R apply(T t) throws Throwable;
+        default Supplier<R> curry(T t) { return () -> apply(t); }
     }
 }

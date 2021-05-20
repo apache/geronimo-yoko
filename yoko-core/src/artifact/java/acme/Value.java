@@ -1,4 +1,4 @@
-package test.fvd;
+package acme;
 
 import java.io.Serializable;
 
