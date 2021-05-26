@@ -36,9 +36,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.orb.OB.Connection.Access.READ;
 import static org.apache.yoko.orb.OB.Connection.Access.WRITE;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
@@ -51,10 +53,13 @@ import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.DATA_IN_LOG;
+import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class GIOPConnectionThreaded extends GIOPConnection {
-    private static final Logger logger = Logger.getLogger(GIOPConnectionThreaded.class.getName());
 
     private final class Shutdown implements Runnable {
 
@@ -71,7 +76,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         Receiver() {
             receiverLock.readLock().lock();
         }
-        
+
         public void run() {
             try {
                 execReceive();
@@ -172,8 +177,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
         // don't shutdown if there are pending upcalls
         if (upcallsInProgress_ > 0 || getState() != CLOSING) {
-            logger.fine("pending upcalls: " + upcallsInProgress_ + " state: " + getState());
-         
+            CONN_IN_LOG.info("pending upcalls: " + upcallsInProgress_ + " state: " + getState());
             return;
         }
 
@@ -191,7 +195,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 messageQueue_.add(orbInstance_, out.getBufferReader());
             }
         } else {
-            logger.fine("could not send close connection message");
+            CONN_IN_LOG.fine("could not send close connection message");
         }
 
         // now create the shutdown thread
@@ -204,7 +208,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             try {
                 getExecutor().submit(new Shutdown());
             } catch (RejectedExecutionException ree) {
-                logger.log(Level.WARNING, "Could not submit shutdown task", ree);
+                CONN_IN_LOG.log(Level.WARNING, "Could not submit shutdown task", ree);
             }
         } catch (OutOfMemoryError ex) {
             processException(CLOSED, new IMP_LIMIT(describeImpLimit(MinorThreadLimit), MinorThreadLimit, COMPLETED_NO), false);
@@ -232,7 +236,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         super(orbInstance, transport, oa);
         orbInstance.getServerPhaser().register();
     }
-    
+
     private ExecutorService getExecutor() {
         if (this.isOutbound())
             return orbInstance_.getClientExecutor();
@@ -265,7 +269,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
         // shutdown the transport
         // synchronization on sendMutex_ is needed to avoid a deadlock in some oracle and ibm jdks between send and shutdown
-        // https://bugs.openjdk.java.net/browse/JDK-8013809 deadlock in SSLSocketImpl between between write and close 
+        // https://bugs.openjdk.java.net/browse/JDK-8013809 deadlock in SSLSocketImpl between between write and close
         synchronized (sendMutex) {
             transport_.shutdown();
         }
@@ -292,8 +296,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
     // called from a receiver thread to perform a reception
     private void execReceive() {
-        
-        logger.fine("Receiving incoming message " + this); 
+        if (CONN_IN_LOG.isLoggable(FINE)) CONN_IN_LOG.fine("Receiving incoming message " + this);
         GIOPIncomingMessage inMsg = new GIOPIncomingMessage(orbInstance_);
 
         while (true) {
@@ -302,7 +305,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
             // Receive header, blocking, detect connection loss
             try {
-                logger.fine("Reading message header");
+                CONN_IN_LOG.finest("Reading message header");
                 transport_.receive(writer, true);
                 Assert.ensure(writer.isComplete());
             } catch (SystemException ex) {
@@ -313,7 +316,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             // Header is complete
             try {
                 inMsg.extractHeader(writer.readFromStart());
-                logger.fine("Header received for message of size " + inMsg.size());
+                if (CONN_IN_LOG.isLoggable(FINER)) CONN_IN_LOG.finer("Header received for message of size " + inMsg.size());
                 // grow the buffer
                 writer.ensureAvailable(inMsg.size());
             } catch (SystemException ex) {
@@ -324,7 +327,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             if (!writer.isComplete()) {
                 // Receive body, blocking
                 try {
-                    logger.fine("Receiving message body of size " + inMsg.size()); 
+                    if (CONN_IN_LOG.isLoggable(FINER)) CONN_IN_LOG.finer("Receiving message body of size " + inMsg.size());
                     transport_.receive(writer, true);
                     Assert.ensure(writer.isComplete());
                 } catch (SystemException ex) {
@@ -332,10 +335,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                     break;
                 }
             }
-            if (logger.isLoggable(Level.FINE)) {
-                logger.fine("Message body received ");
-                logger.fine("Received message are: \n" + writer.dumpAllData());
-            }
+            if (DATA_IN_LOG.isLoggable(FINEST)) DATA_IN_LOG.finest("Message body received: \n" + writer.dumpAllData());
 
             gate.admit();
 
@@ -362,7 +362,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
             // A valid upcall means we have a full message and not just
             // a fragment or error, so we can proceed to invoke it
-            logger.fine("Processing message using upcall " + upcall.getClass().getName());
+            if (CONN_IN_LOG.isLoggable(FINER)) CONN_IN_LOG.finer("Processing message using upcall " + upcall.getClass().getName());
             // in the BiDir case, this upcall could result in a
             // nested call back and forth. This requires a new
             // receiverThread to handle the reply (the invocation of
@@ -372,7 +372,10 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
             // if we have received a bidirectional context then we need
             // to spawn a new thread to handle nested calls (just in case)
-            if (receivedBidirContext) addReceiverThread();
+            if (receivedBidirContext) {
+                if (CONN_IN_LOG.isLoggable(FINER)) CONN_IN_LOG.finer("In bidirectional mode, so submitting a new receiver task");
+                addReceiverThread();
+            }
 
             upcall.invoke();
 
@@ -410,8 +413,8 @@ final class GIOPConnectionThreaded extends GIOPConnection {
     public boolean send(Downcall down, boolean block) {
         Assert.ensure(transport_.mode() != ReceiveOnly);
         Assert.ensure(down.unsent());
-        
-        logger.fine("Sending a request with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " on transport " + transport_); 
+
+        if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine("Sending a request downcall=" + down + " transport=" + transport_);
 
         // if we send off a message in the loop, this var might help us
         // to prevent a further locking to check the status
@@ -439,22 +442,20 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
         // now prepare to send it either blocking or non-blocking
         // depending on the call mode param
-        if (block) {
+        if (block) { // TODO - deduplicate these if and else blocks
             // Get the request timeout
             int t = down.policies().requestTimeout;
             int msgcount = 0;
 
             // now we can start sending off the messages
-            while (true) {
+            for (;;) {
                 // Get a message to send from the unsent queue
                 ReadBuffer readBuffer;
                 Downcall nextDown;
 
                 synchronized (this) {
                     if (!down.unsent()) break;
-
                     Assert.ensure(messageQueue_.hasUnsent());
-
                     readBuffer = messageQueue_.getFirstUnsentBuffer();
                     nextDown = messageQueue_.moveFirstUnsentToPending();
                 }
@@ -471,9 +472,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                             transport_.send_timeout(readBuffer, t);
 
                             // Timeout?
-                            if (!readBuffer.isComplete()) {
-                                throw new NO_RESPONSE();
-                            }
+                            if (!readBuffer.isComplete()) throw new NO_RESPONSE();
                         }
                     }
                 } catch (SystemException ex) {
@@ -485,24 +484,17 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 if (!(msgSentMarked || nextDown == null || nextDown.operation().equals("_locate"))) {
                     msgSentMarked = true;
                     markRequestSent();
-                    // debug
-                    if (logger.isLoggable(Level.FINE)) {
-                        logger.fine(String.format("Sent message in blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                msgcount, readBuffer.length(), readBuffer.dumpRemainingData()));
-                        msgcount++;
-                    }
+                    if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(
+                            String.format("Sent message (blocking) at msgcount=%d, size=%d, the message piece is: %n%s",
+                                    msgcount++, readBuffer.length(), readBuffer.dumpRemainingData()));
                 }
             }
         } else { // Non blocking
             synchronized (this) {
             	int msgcount = 0;
-                while (true) {
-                    if (!down.unsent())
-                        break;
-
+                for (;;) {
+                    if (!down.unsent()) break;
                     Assert.ensure(messageQueue_.hasUnsent());
-
-                    // get the first message to send
                     ReadBuffer readBuffer = messageQueue_.getFirstUnsentBuffer();
 
                     // send this buffer, non-blocking
@@ -528,18 +520,16 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                         if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
                             markRequestSent();
-                            if (logger.isLoggable(Level.FINE)) {
-                                logger.fine(String.format("Sent message in non-blocking at msgcount=%d, size=%d, the message piece is: %n%s",
-                                        msgcount, readBuffer.length(), readBuffer.dumpRemainingData()));
-                                msgcount++;
-                            }
+                            if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(
+                                    String.format("Sent message (non-blocking) at msgcount=%d, size=%d, the message piece is: %n%s",
+                                            msgcount++, readBuffer.length(), readBuffer.dumpRemainingData()));
                         }
                     }
                 }
             }
         }
 
-        logger.fine(" Request send completed with Downcall of type " + down.getClass().getName());
+        if (REQ_OUT_LOG.isLoggable(FINER)) REQ_OUT_LOG.finer(" Request send completed downcall=" + down);
         return !down.responseExpected();
     }
 
@@ -560,7 +550,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         case CLOSED:
             setState(STALE);
         case ERROR:
-            logger.fine("writing not enabled for this connection");
+            CONN_LOG.fine("writing not enabled for this connection");
             down.setFailureException(new TRANSIENT());
             writeProhibited = true;
             break;
@@ -572,11 +562,11 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
     // client-side receive method (from DowncallEmitter)
     public boolean receive(Downcall down, boolean block) {
-        logger.fine("Receiving response with Downcall of type " + down.getClass().getName() + " for operation " + down.operation() + " from transport " + transport_);
+        if (REQ_OUT_LOG.isLoggable(FINER)) REQ_OUT_LOG.finer("Receiving response downcall=" + down + " transport=" + transport_);
         // Try to receive the reply
         try {
             boolean result = down.waitUntilCompleted(block);
-            logger.fine("Completed receiving response with Downcall of type " + down.getClass().getName());
+            if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine("Received response downcall=" + down + " from transport " + transport_);
             return result;
         } catch (SystemException ex) {
             processException(CLOSED, ex, false);

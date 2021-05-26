@@ -20,10 +20,8 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.OB.Connection.State;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Transport;
-import org.apache.yoko.orb.logging.VerboseLogging;
 
 import java.util.concurrent.ExecutorService;
-import java.util.logging.Level;
 
 import static java.util.logging.Level.INFO;
 import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.ACTIVE;

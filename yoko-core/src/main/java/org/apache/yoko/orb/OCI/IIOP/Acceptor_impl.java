@@ -62,7 +62,6 @@ import static org.apache.yoko.orb.OCI.IIOP.CommFailures.GET_HOST_BY_NAME;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SET_SOCK_OPT;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SOCKET;
 import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.logged;
 import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
 
