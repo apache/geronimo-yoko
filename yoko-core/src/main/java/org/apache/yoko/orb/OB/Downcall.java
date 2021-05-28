@@ -572,4 +572,9 @@ public class Downcall {
             return true;
         }
     }
+
+    @Override
+    public String toString() {
+        return String.format("%s[ reqId_=%d op_=%s state=%s]", this.getClass().getSimpleName(), reqId_, op_, state);
+    }
 }

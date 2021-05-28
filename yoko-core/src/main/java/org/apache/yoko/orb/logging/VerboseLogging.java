@@ -67,6 +67,13 @@ public enum VerboseLogging {
     /** @see #CONN_LOG */
     public static final Logger CONN_OUT_LOG = Logger.getLogger("yoko.verbose.connection.out");
 
+    /** Log data transmissions */
+    public static final Logger DATA_LOG = Logger.getLogger("yoko.verbose.data");
+    /** Log data received */
+    public static final Logger DATA_IN_LOG = Logger.getLogger("yoko.verbose.data.in");
+    /** Log data sent */
+    public static final Logger DATA_OUT_LOG = Logger.getLogger("yoko.verbose.data.out");
+
 
     public static final Logger RETRY_LOG = Logger.getLogger("yoko.verbose.retry");
 

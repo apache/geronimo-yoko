@@ -349,15 +349,18 @@ public final class IORUtil {
     //
     // Convert an octet buffer into human-friendly data dump
     //
-    public static void dump_octets(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
-        if (count <= 0) {
-            return; 
-        }
+    public static StringBuilder dump_octets(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
+        if (count <= 0) return sb;
+
+        int endIndex = offset + count;
+        int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
+        String indexFormat = "%0" + indexWidth + "X:  ";
+        String indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
+
+        sb.append(String.format(indexFormat, offset));
 
         final StringBuilder ascii = new StringBuilder(18);
-        switch (offset%0x10) {
-            case 0:
-                break;
+        switch (offset % 0x10) {
             case 0xf: sb.append("  ");  ascii.append(" ");
             case 0xe: sb.append("  ");  ascii.append(" ");
             case 0xd: sb.append("  ");  ascii.append(" ");
@@ -373,41 +376,37 @@ public final class IORUtil {
             case 0x3: sb.append("  ");  ascii.append(" ");
             case 0x2: sb.append("  ");  ascii.append(" ");
             case 0x1: sb.append("  ");  ascii.append(" ");
+            case 0x0:
         }
         
         ascii.append(" \"");
-        
-        for (int i = offset; i < (offset + count); i++) {
+
+        for (int i = offset; i < endIndex; i++) {
             final int b = oct[i] & 0xff;
-            
+
             // build up the ascii string for the end of the line
             ascii.append((PRINTABLE_CHAR_LOW < b && b < PRINTABLE_CHAR_HIGH)? (char)b : '.');
-            
-            // print the high hex nybble
-            sb.append(HEX_DIGIT[b>>4]);
-            // and the low hex nybble
-            sb.append(HEX_DIGIT[b&0xf]);
-            
-            if (i%0x4 == (0x4-1)) {
+
+            // print the high hex nybble and the low hex nybble
+            sb.append(HEX_DIGIT[b>>4]).append(HEX_DIGIT[b&0xf]);
+
+            if (i % 0x4 == (0x4 - 1)) {
                 // space the columns on every 4-byte boundary
                 sb.append(' ');
-                if (i%0x10 == (0x10-1)) {
+                if (i % 0x10 == (0x10-1)) {
                     // write the ascii interpretation on the end of every line
-                    sb.append(ascii).append("\"\n");
+                    sb.append(ascii).append("\"");
                     ascii.setLength(0);
                     ascii.append(" \"");
-                    if (i%0x100 == (0x100-1)) {
-                        // separating line every 0x100 bytes
-                        //         00000000 00000000 00000000 00000000  "................"
-                        sb.append("-----------------------------------\n");
-                    }
+                    // put in a separator line every 0x100 bytes
+                    if (i % 0x100 == (0x100 - 1)) sb.append("\n").append(indexSpaces).append("-----------------------------------");
+                    // add a newline and a new index if the dump continues onto the next line
+                    if (i + 1 < endIndex) sb.append("\n").append(String.format(indexFormat, i + 1));
                 }
             }
         }
         
-        switch ((offset+count)%0x10) {
-            case 0:
-                break;
+        switch (endIndex % 0x10) {
             case 0x1: sb.append("  ");
             case 0x2: sb.append("  ");
             case 0x3: sb.append("   ");
@@ -422,8 +421,11 @@ public final class IORUtil {
             case 0xc: sb.append("  ");
             case 0xd: sb.append("  ");
             case 0xe: sb.append("  ");
-            case 0xf: sb.append("   ").append(ascii).append("\"\n");
+            case 0xf: sb.append("   ");
+            case 0x0: sb.append(ascii).append("\"");
         }
+
+        return sb;
     }
 
     //
@@ -437,24 +439,13 @@ public final class IORUtil {
     // Convert an octet buffer into a single-line readable data dump. 
     //
     public static void format_octets(byte[] oct, int offset, int count, StringBuilder sb) {
-        if (count <= 0) {
-            return; 
-        }
-
-        sb.append('"'); 
-
+        if (count <= 0) return;
+        sb.append('"');
         for (int i = offset; i < offset + count; i++) {
-            int n = (int) oct[i] & 0xff;
-            if (n >= 32 && n <= 127) {
-                sb.append((char)n); 
-            }
-            else {
-                sb.append('?'); 
-            }
+            int n = oct[i] & 0xff;
+            sb.append(n >= 32 && n <= 127 ? (char) n : '?');
         }
-
-        sb.append('"'); 
-
+        sb.append('"');
     }
 
     //
