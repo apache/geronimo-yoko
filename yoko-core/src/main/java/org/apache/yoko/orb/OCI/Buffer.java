@@ -109,8 +109,8 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
             return true;
         }
 
-        void dumpTo(StringBuilder dump) {
-            IORUtil.dump_octets(data, 0, length, dump);
+        StringBuilder dumpTo(StringBuilder dump) {
+            return IORUtil.dump_octets(data, 0, length, dump);
         }
 
         @Override
@@ -147,13 +147,10 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
     }
 
     public final String dumpAllData() {
-        StringBuilder dump = new StringBuilder();
-        dump.append(String.format("Core len=0x%x All core data=%n%n", length()));
-        dumpData(dump);
-        return dump.toString();
+        return dumpData(new StringBuilder()).toString();
     }
 
-    abstract void dumpData(StringBuilder dump);
+    abstract StringBuilder dumpData(StringBuilder dump);
 
     public final T setPosition(int p) { position = p; return (T)this; }
     public final T rewind(int n) { position -= n; return (T)this;}

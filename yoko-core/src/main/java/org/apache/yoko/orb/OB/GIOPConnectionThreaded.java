@@ -37,6 +37,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Level;
 
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
@@ -47,6 +48,7 @@ import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.STALE;
+import static org.apache.yoko.orb.OB.GIOPConnectionThreaded.MessageType.describeMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
@@ -294,6 +296,71 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
+    public enum MessageType{
+        REQUEST(0, true),
+        REPLY(1, true),
+        CANCEL_REQUEST(2),
+        LOCATE_REQUEST(3),
+        LOCATE_REPLY(4),
+        CLOSE_CONNECTION(5),
+        MESSAGE_ERROR(6),
+        FRAGMENT(7),
+        UNKNOWN(-1);
+        final int id;
+        final boolean fragmentable;
+        MessageType(int id) { this(id, false); }
+        MessageType(int id, boolean fragmentable) { this.id = id; this.fragmentable = fragmentable; }
+
+        public static String describeMessage(ReadBuffer buffer) {
+            buffer.skipBytes(4);
+            byte major = buffer.readByte();
+            byte minor = buffer.readByte();
+            byte flags = buffer.readByte();
+            boolean fragmentToFollow = (major > 1 || minor > 0) && ((flags & 2) == 2);
+            boolean littleEndian = flags % 2 == 1;
+            MessageType type = valueOf(buffer.readByte());
+            int size = littleEndian ? buffer.readInt_LE() : buffer.readInt();
+            String reqId = "";
+            if (type.requestIdAlwaysAtIndex12(major, minor)) reqId = " REQUEST ID=" + (littleEndian ? buffer.readInt_LE() : buffer.readInt());
+            String frag = type.fragmentable ? " FRAGMENT TO FOLLOW=" + fragmentToFollow : "";
+            final String msg = "GIOP " + major + "." + minor + " " + type + " MESSAGE " + size + " octets" + reqId + frag;
+            return msg;
+        }
+
+        public boolean requestIdAlwaysAtIndex12(byte major, byte minor) {
+            switch (this) {
+                case REQUEST:
+                case REPLY:
+                case FRAGMENT:
+                    return minor > 1 || major > 1;
+                case CANCEL_REQUEST:
+                case LOCATE_REQUEST:
+                case LOCATE_REPLY:
+                    return true;
+                case CLOSE_CONNECTION:
+                case MESSAGE_ERROR:
+                case UNKNOWN:
+                    return false;
+            }
+            throw new Error("incomplete switch statement");
+        }
+
+        public static MessageType valueOf(int i) {
+            switch (i) {
+                case 0: return REQUEST;
+                case 1: return REPLY;
+                case 2: return CANCEL_REQUEST;
+                case 3: return LOCATE_REQUEST;
+                case 4: return LOCATE_REPLY;
+                case 5: return CLOSE_CONNECTION;
+                case 6: return MESSAGE_ERROR;
+                case 7: return FRAGMENT;
+                default: return UNKNOWN;
+            }
+        }
+    }
+
+
     // called from a receiver thread to perform a reception
     private void execReceive() {
         if (CONN_IN_LOG.isLoggable(FINE)) CONN_IN_LOG.fine("Receiving incoming message " + this);
@@ -335,7 +402,9 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                     break;
                 }
             }
-            if (DATA_IN_LOG.isLoggable(FINEST)) DATA_IN_LOG.finest("Message body received: \n" + writer.dumpAllData());
+
+            if (DATA_IN_LOG.isLoggable(FINEST)) DATA_IN_LOG.finest("\nINCOMING " + describeMessage(writer.readFromStart()) + "\n" + writer.dumpAllData());
+            else if (DATA_IN_LOG.isLoggable(FINE)) DATA_IN_LOG.fine("\nINCOMING " + describeMessage(writer.readFromStart()));
 
             gate.admit();
 
@@ -450,8 +519,8 @@ final class GIOPConnectionThreaded extends GIOPConnection {
             // now we can start sending off the messages
             for (;;) {
                 // Get a message to send from the unsent queue
-                ReadBuffer readBuffer;
-                Downcall nextDown;
+                final ReadBuffer readBuffer;
+                final Downcall nextDown;
 
                 synchronized (this) {
                     if (!down.unsent()) break;
@@ -484,9 +553,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 if (!(msgSentMarked || nextDown == null || nextDown.operation().equals("_locate"))) {
                     msgSentMarked = true;
                     markRequestSent();
-                    if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(
-                            String.format("Sent message (blocking) at msgcount=%d, size=%d, the message piece is: %n%s",
-                                    msgcount++, readBuffer.length(), readBuffer.dumpRemainingData()));
+                    if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(format("Sent message blocking=%s msgcount=%d size=%d", block, msgcount++, readBuffer.length()));
                 }
             }
         } else { // Non blocking
@@ -520,9 +587,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                         if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
                             msgSentMarked = true;
                             markRequestSent();
-                            if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(
-                                    String.format("Sent message (non-blocking) at msgcount=%d, size=%d, the message piece is: %n%s",
-                                            msgcount++, readBuffer.length(), readBuffer.dumpRemainingData()));
+                            if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(format("Sent message blocking=%s msgcount=%d size=%d", block, msgcount++, readBuffer.length()));
                         }
                     }
                 }

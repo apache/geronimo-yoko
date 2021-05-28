@@ -212,7 +212,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
     }
 
     @Override
-    void dumpData(StringBuilder dump) {
-        core.dumpTo(dump);
+    StringBuilder dumpData(StringBuilder dump) {
+        return core.dumpTo(dump);
     }
 }

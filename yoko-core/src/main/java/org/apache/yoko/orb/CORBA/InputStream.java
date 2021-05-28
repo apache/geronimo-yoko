@@ -54,6 +54,7 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.IntStream;
 
 import static org.apache.yoko.orb.OB.Assert.ensure;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUnionDiscriminator;
@@ -1201,23 +1202,9 @@ final public class InputStream extends InputStreamWithOffsets {
             throw newMarshalError(MinorReadFloatArrayOverflow);
 
         if (swap_)
-            for (int i = offset; i < offset + length; i++) {
-                int v = (readBuffer.readByte() & 0xff)
-                      | ((readBuffer.readByte() << 8) & 0xff00)
-                      | ((readBuffer.readByte() << 16) & 0xff0000)
-                      | (readBuffer.readByte() << 24);
-
-                value[i] = Float.intBitsToFloat(v);
-            }
+            IntStream.range(offset, offset + length).forEach(i -> value[i] = Float.intBitsToFloat(readBuffer.readInt_LE()));
         else
-            for (int i = offset; i < offset + length; i++) {
-                int v = (readBuffer.readByte() << 24)
-                      | ((readBuffer.readByte() << 16) & 0xff0000)
-                      | ((readBuffer.readByte() << 8) & 0xff00)
-                      | (readBuffer.readByte() & 0xff);
-
-                value[i] = Float.intBitsToFloat(v);
-            }
+            IntStream.range(offset, offset + length).forEach(i -> value[i] = Float.intBitsToFloat(readBuffer.readInt()));
     }
 
     public void read_double_array(double[] value, int offset, int length) {
@@ -1591,16 +1578,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (readBuffer.available() < 4) throw newMarshalError(MinorReadLongOverflow);
 
-        if (swap_)
-            return (readBuffer.readByte() & 0xff)
-                    | ((readBuffer.readByte() << 8) & 0xff00)
-                    | ((readBuffer.readByte() << 16) & 0xff0000)
-                    | (readBuffer.readByte() << 24);
-        else
-            return (readBuffer.readByte() << 24)
-                    | ((readBuffer.readByte() << 16) & 0xff0000)
-                    | ((readBuffer.readByte() << 8) & 0xff00)
-                    | (readBuffer.readByte() & 0xff);
+        return swap_ ? readBuffer.readInt_LE() : readBuffer.readInt();
     }
 
     public void _OB_beginValue() {

@@ -76,13 +76,27 @@ public final class ReadBuffer extends Buffer<ReadBuffer>{
         return (char) ((core.data[position++] & 0xff) | (core.data[position++] << 8));
     }
 
+    public int readInt() {
+        return (core.data[position++] << 24)
+                | ((core.data[position++] << 16) & 0xff0000)
+                | ((core.data[position++] << 8) & 0xff00)
+                | (core.data[position++] & 0xff);
+    }
+
+    public int readInt_LE() {
+        return (core.data[position++] & 0xff)
+                | ((core.data[position++] << 8) & 0xff00)
+                | ((core.data[position++] << 16) & 0xff0000)
+                | (core.data[position++] << 24);
+    }
+
     public String remainingBytesToAscii() {
         return HexConverter.octetsToAscii(core.data, available());
     }
 
     @Override
-    void dumpData(StringBuilder dump) {
-        core.dumpTo(dump);
+    StringBuilder dumpData(StringBuilder dump) {
+        return core.dumpTo(dump);
     }
 
     public String dumpRemainingData() {
