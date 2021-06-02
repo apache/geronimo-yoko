@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.giop.MessageType;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.Buffer;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -41,14 +42,12 @@ import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
-import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.orb.OB.Connection.Access.READ;
 import static org.apache.yoko.orb.OB.Connection.Access.WRITE;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.STALE;
-import static org.apache.yoko.orb.OB.GIOPConnectionThreaded.MessageType.describeMessage;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
 import static org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit;
 import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
@@ -57,7 +56,6 @@ import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
 import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.DATA_IN_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
@@ -296,70 +294,6 @@ final class GIOPConnectionThreaded extends GIOPConnection {
         }
     }
 
-    public enum MessageType{
-        REQUEST(0, true),
-        REPLY(1, true),
-        CANCEL_REQUEST(2),
-        LOCATE_REQUEST(3),
-        LOCATE_REPLY(4),
-        CLOSE_CONNECTION(5),
-        MESSAGE_ERROR(6),
-        FRAGMENT(7),
-        UNKNOWN(-1);
-        final int id;
-        final boolean fragmentable;
-        MessageType(int id) { this(id, false); }
-        MessageType(int id, boolean fragmentable) { this.id = id; this.fragmentable = fragmentable; }
-
-        public static String describeMessage(ReadBuffer buffer) {
-            buffer.skipBytes(4);
-            byte major = buffer.readByte();
-            byte minor = buffer.readByte();
-            byte flags = buffer.readByte();
-            boolean fragmentToFollow = (major > 1 || minor > 0) && ((flags & 2) == 2);
-            boolean littleEndian = flags % 2 == 1;
-            MessageType type = valueOf(buffer.readByte());
-            int size = littleEndian ? buffer.readInt_LE() : buffer.readInt();
-            String reqId = "";
-            if (type.requestIdAlwaysAtIndex12(major, minor)) reqId = " REQUEST ID=" + (littleEndian ? buffer.readInt_LE() : buffer.readInt());
-            String frag = type.fragmentable ? " FRAGMENT TO FOLLOW=" + fragmentToFollow : "";
-            final String msg = "GIOP " + major + "." + minor + " " + type + " MESSAGE " + size + " octets" + reqId + frag;
-            return msg;
-        }
-
-        public boolean requestIdAlwaysAtIndex12(byte major, byte minor) {
-            switch (this) {
-                case REQUEST:
-                case REPLY:
-                case FRAGMENT:
-                    return minor > 1 || major > 1;
-                case CANCEL_REQUEST:
-                case LOCATE_REQUEST:
-                case LOCATE_REPLY:
-                    return true;
-                case CLOSE_CONNECTION:
-                case MESSAGE_ERROR:
-                case UNKNOWN:
-                    return false;
-            }
-            throw new Error("incomplete switch statement");
-        }
-
-        public static MessageType valueOf(int i) {
-            switch (i) {
-                case 0: return REQUEST;
-                case 1: return REPLY;
-                case 2: return CANCEL_REQUEST;
-                case 3: return LOCATE_REQUEST;
-                case 4: return LOCATE_REPLY;
-                case 5: return CLOSE_CONNECTION;
-                case 6: return MESSAGE_ERROR;
-                case 7: return FRAGMENT;
-                default: return UNKNOWN;
-            }
-        }
-    }
-
 
     // called from a receiver thread to perform a reception
     private void execReceive() {
@@ -403,8 +337,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 }
             }
 
-            if (DATA_IN_LOG.isLoggable(FINEST)) DATA_IN_LOG.finest("\nINCOMING " + describeMessage(writer.readFromStart()) + "\n" + writer.dumpAllData());
-            else if (DATA_IN_LOG.isLoggable(FINE)) DATA_IN_LOG.fine("\nINCOMING " + describeMessage(writer.readFromStart()));
+            MessageType.logIncomingGiopMessage(writer);
 
             gate.admit();
 
