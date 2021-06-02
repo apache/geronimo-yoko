@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.apache.yoko.giop.MessageType;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.io.WriteBuffer;
@@ -199,6 +200,7 @@ final public class Transport_impl extends LocalObject implements Transport {
 
         while (!readBuffer.isComplete()) {
             try {
+                MessageType.logOutgoingGiopMessage(readBuffer);
                 readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
@@ -218,6 +220,7 @@ final public class Transport_impl extends LocalObject implements Transport {
 
         while (!readBuffer.isComplete()) {
             try {
+                MessageType.logOutgoingGiopMessage(readBuffer);
                 readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 if (!block)
@@ -243,6 +246,7 @@ final public class Transport_impl extends LocalObject implements Transport {
 
         while (!readBuffer.isComplete()) {
             try {
+                MessageType.logOutgoingGiopMessage(readBuffer);
                 readBuffer.writeTo(out_);
             } catch (InterruptedIOException ex) {
                 return;
