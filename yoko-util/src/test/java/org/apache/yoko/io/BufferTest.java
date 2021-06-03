@@ -1,4 +1,4 @@
-package org.apache.yoko.orb.OCI;
+package org.apache.yoko.io;
 
 import org.apache.yoko.io.Buffer;
 import org.apache.yoko.io.ReadBuffer;
