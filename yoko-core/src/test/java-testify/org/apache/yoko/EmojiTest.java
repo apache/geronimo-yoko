@@ -19,7 +19,6 @@ package org.apache.yoko;
 import acme.Echo;
 import acme.EchoImpl;
 import org.junit.jupiter.api.Test;
-import testify.bus.Bus;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 
@@ -27,21 +26,17 @@ import java.rmi.RemoteException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@ConfigureServer(
-//        orb = @ConfigureOrb(args = {"-ORBnative_wcs", "UTF-8"} )
-)
+@ConfigureServer
 public class EmojiTest {
-
     @ClientStub(EchoImpl.class)
     public static Echo stub;
 
     @Test
-    public void sendEmoji(Bus bus) throws RemoteException {
+    public void sendEmoji() throws RemoteException {
         final char[] chars = Character.toChars(0x1f642);
         assert chars.length == 2;
         final String message = "Hello, world!" + chars[0] + chars[1];
         String reply = stub.echo(message);
         assertEquals(message, reply, "String should be transmitted and received correctly");
     }
-
 }
