@@ -16,9 +16,9 @@
  */
 package org.apache.yoko.giop;
 
-import org.apache.yoko.orb.OCI.Buffer;
-import org.apache.yoko.orb.OCI.ReadBuffer;
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.Buffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.io.WriteBuffer;
 
 import java.util.logging.Logger;
 

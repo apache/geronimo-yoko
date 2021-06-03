@@ -20,7 +20,7 @@ package org.apache.yoko.orb.DynamicAny;
 import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.TypeCode;

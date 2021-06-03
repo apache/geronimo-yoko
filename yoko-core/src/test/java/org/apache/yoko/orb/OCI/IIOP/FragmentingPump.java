@@ -16,6 +16,7 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
+import org.apache.yoko.util.Hex;
 import org.omg.CORBA.INTERNAL;
 
 import java.io.IOException;
@@ -23,7 +24,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-import static org.apache.yoko.orb.OB.IORUtil.dump_octets;
+import static org.apache.yoko.util.Hex.formatHexPara;
 import static org.apache.yoko.orb.OCI.IIOP.FragmentingPump.Flag.FRAGMENT_TO_FOLLOW;
 import static org.apache.yoko.orb.OCI.IIOP.FragmentingPump.Flag.LITTLE_ENDIAN;
 import static org.apache.yoko.orb.OCI.IIOP.FragmentingPump.MsgType.CLOSE_CONNECTION;
@@ -217,15 +218,15 @@ class FragmentingPump {
         if (isFragmentMsg) FRAGMENT.setType(hdr);
         System.out.println("About to write GIOP HEADER: " + format(hdr));
         out.write(hdr);
-        dump_octets(hdr, sb);
+        formatHexPara(hdr, sb);
         // we might need to write out the request id separately
         if (sendRequestId) {
             out.write(body, 0, MSG_ID_LEN);
-            dump_octets(body, 0, MSG_ID_LEN, sb);
+            formatHexPara(body, 0, MSG_ID_LEN, sb);
         }
         // now write the body
         out.write(body, off, len);
-        dump_octets(body, off, len, sb);
+        formatHexPara(body, off, len, sb);
         System.out.printf("  %08x%n", len);
         System.out.printf("Wrote out %s message of %d octets.%n", msgType(hdr), hdr.length + giopLen);
         System.out.println("### LEN = " + len);

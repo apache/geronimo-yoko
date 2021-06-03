@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.IOP;
 
+import org.apache.yoko.util.Assert;
+
 final public class CodecFactory_impl extends org.omg.CORBA.LocalObject
         implements org.omg.IOP.CodecFactory {
     private org.omg.IOP.Codec cdrCodec_; // Cached CDR Codec
@@ -30,7 +32,7 @@ final public class CodecFactory_impl extends org.omg.CORBA.LocalObject
 
     public org.omg.IOP.Codec create_codec(org.omg.IOP.Encoding encoding)
             throws org.omg.IOP.CodecFactoryPackage.UnknownEncoding {
-        org.apache.yoko.orb.OB.Assert.ensure(orbInstance_ != null);
+        Assert.ensure(orbInstance_ != null);
 
         // TODO: check major/minor version
         if (encoding.format != org.omg.IOP.ENCODING_CDR_ENCAPS.value)

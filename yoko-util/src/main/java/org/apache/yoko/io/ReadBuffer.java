@@ -14,14 +14,15 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.OCI;
+package org.apache.yoko.io;
 
-import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.util.HexConverter;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
+
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 public final class ReadBuffer extends Buffer<ReadBuffer> {
     ReadBuffer(Core core) { super(core); }
@@ -79,16 +80,14 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
     public String dumpRemainingData() {
         StringBuilder dump = new StringBuilder();
         dump.append(String.format("Core pos=0x%x Core len=0x%x Remaining core data=%n%n", position, core.length));
-        IORUtil.dump_octets(core.data, position, available(), dump);
-        return dump.toString();
+        return formatHexPara(core.data, position, available(), dump).toString();
     }
 
     public String dumpAllDataWithPosition() {
         StringBuilder sb = new StringBuilder();
-        IORUtil.dump_octets(core.data, 0, position, sb);
+        formatHexPara(core.data, 0, position, sb);
         sb.append(String.format("------------------ pos = 0x%08X -------------------%n", position));
-        IORUtil.dump_octets(core.data, position, available(), sb);
-        return sb.toString();
+        return formatHexPara(core.data, position, available(), sb).toString();
     }
 
     public ReadBuffer writeTo(OutputStream out) throws IOException {

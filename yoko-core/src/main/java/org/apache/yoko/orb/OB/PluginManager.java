@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.Assert;
 
 import java.util.logging.Level;
 

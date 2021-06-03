@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.IORDump;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
@@ -27,6 +27,7 @@ import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
+import org.apache.yoko.util.Hex;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -53,6 +54,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 final class ConFactory_impl extends LocalObject implements
         ConFactory {
@@ -107,7 +110,7 @@ final class ConFactory_impl extends LocalObject implements
         final int port = ((char)body.port);
         result.append("port: " + port + '\n');
         result.append("object_key: (" + body.object_key.length + ")\n");
-        IORUtil.dump_octets(body.object_key, 0, body.object_key.length, result);
+        formatHexPara(body.object_key, 0, body.object_key.length, result);
 
         //
         // Print IIOP 1.1 information (components)

@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBMessaging;
 
+import org.apache.yoko.util.Assert;
+
 public class Poller_impl implements org.omg.CORBA.Pollable,
         org.omg.Messaging.Poller {
     //
@@ -54,7 +56,7 @@ public class Poller_impl implements org.omg.CORBA.Pollable,
     // IDL:omg.org/CORBA/Pollable/is_ready:1.0
     //
     public boolean is_ready(int timeout) {
-        org.apache.yoko.orb.OB.Assert.ensure(orbInstance_ != null);
+        Assert.ensure(orbInstance_ != null);
 
         org.apache.yoko.orb.OB.OrbAsyncHandler handler = orbInstance_
                 .getAsyncHandler();
@@ -65,7 +67,7 @@ public class Poller_impl implements org.omg.CORBA.Pollable,
     // IDL:omg.org/CORBA/Pollable/create_pollable_set:1.0
     //
     public org.omg.CORBA.PollableSet create_pollable_set() {
-        org.apache.yoko.orb.OB.Assert.ensure(orbInstance_ != null);
+        Assert.ensure(orbInstance_ != null);
 
         return new org.apache.yoko.orb.OBCORBA.PollableSet_impl();
     }

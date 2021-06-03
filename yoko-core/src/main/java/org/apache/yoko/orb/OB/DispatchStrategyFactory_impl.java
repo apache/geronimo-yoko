@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OB;
  
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.LocalObject;
@@ -25,7 +26,7 @@ import java.util.Properties;
 import java.util.Vector;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.apache.yoko.util.MinorCodes.*;
 import static org.omg.CORBA.CompletionStatus.*;
 
 // ----------------------------------------------------------------------

@@ -33,9 +33,7 @@ import org.apache.yoko.orb.OB.RetryPolicy;
 import org.apache.yoko.orb.OB.RetryPolicyHelper;
 import org.apache.yoko.orb.OB.TimeoutPolicy;
 import org.apache.yoko.orb.OB.TimeoutPolicyHelper;
-import org.apache.yoko.orb.OB.MinorCodes;
-
-import ORBTest_Basic.*;
+import org.apache.yoko.util.MinorCodes;
 
 public class TestPolicyIntf extends test.common.TestBase {
     static void run(ORB orb) {

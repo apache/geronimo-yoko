@@ -18,8 +18,8 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.Acceptor;
-import org.apache.yoko.orb.OCI.ReadBuffer;
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.io.WriteBuffer;
 import org.apache.yoko.orb.OCI.SendReceiveMode;
 import org.apache.yoko.orb.OCI.Transport;
 import org.omg.CORBA.COMM_FAILURE;
@@ -35,12 +35,12 @@ import java.net.SocketException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorRecv;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorRecvZero;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSend;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSetSoTimeout;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSocket;
-import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
+import static org.apache.yoko.util.MinorCodes.MinorRecv;
+import static org.apache.yoko.util.MinorCodes.MinorRecvZero;
+import static org.apache.yoko.util.MinorCodes.MinorSend;
+import static org.apache.yoko.util.MinorCodes.MinorSetSoTimeout;
+import static org.apache.yoko.util.MinorCodes.MinorSocket;
+import static org.apache.yoko.util.MinorCodes.describeCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendReceive;
 

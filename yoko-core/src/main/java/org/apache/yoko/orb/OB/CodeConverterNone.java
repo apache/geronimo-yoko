@@ -18,14 +18,14 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.INV_OBJREF;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoWcharCodeSet;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorWcharCodeSetRequired;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInvObjref;
+import static org.apache.yoko.util.MinorCodes.MinorNoWcharCodeSet;
+import static org.apache.yoko.util.MinorCodes.MinorWcharCodeSetRequired;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.describeInvObjref;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class CodeConverterNone extends CodeConverterBase {

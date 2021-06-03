@@ -16,7 +16,7 @@
  */
 package org.apache.yoko;
 
-import org.apache.yoko.orb.OB.AssertionFailed;
+import org.apache.yoko.util.AssertionFailed;
 import org.apache.yoko.orb.OB.BootManager;
 import org.apache.yoko.orb.OB.BootManagerHelper;
 import org.apache.yoko.orb.OB.ObjectKey;

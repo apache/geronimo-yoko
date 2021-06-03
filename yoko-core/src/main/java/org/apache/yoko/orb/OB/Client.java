@@ -23,6 +23,7 @@ import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.rmi.util.ObjectUtil;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
 

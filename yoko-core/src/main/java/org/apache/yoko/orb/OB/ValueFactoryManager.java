@@ -19,6 +19,8 @@ package org.apache.yoko.orb.OB;
 
 import java.util.logging.Logger;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.util.cmsf.RepIds;
 
 public final class ValueFactoryManager {
@@ -85,9 +87,9 @@ public final class ValueFactoryManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         Assert.ensure(id != null && factory != null);
@@ -106,17 +108,17 @@ public final class ValueFactoryManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         Assert.ensure(id != null);
 
         if (factories_.remove(id) == null)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorValueFactoryError)
-                    + ": " + id, org.apache.yoko.orb.OB.MinorCodes.MinorValueFactoryError,
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorValueFactoryError)
+                    + ": " + id, MinorCodes.MinorValueFactoryError,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
@@ -127,9 +129,9 @@ public final class ValueFactoryManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         Assert.ensure(id != null);
@@ -145,9 +147,9 @@ public final class ValueFactoryManager {
         //
         if (destroy_)
         {
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                                               .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                                               org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                                               .describeInitialize(MinorCodes.MinorORBDestroyed),
+                                               MinorCodes.MinorORBDestroyed,
                                                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 

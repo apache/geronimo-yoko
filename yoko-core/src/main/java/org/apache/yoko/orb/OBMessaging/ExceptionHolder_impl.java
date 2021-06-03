@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OBMessaging;
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_CONTEXT;

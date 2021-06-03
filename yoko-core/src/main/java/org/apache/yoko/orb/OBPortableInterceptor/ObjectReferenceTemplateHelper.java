@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableInterceptor;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // IDL:orb.yoko.apache.org/OBPortableInterceptor/ObjectReferenceTemplate:1.0
 //
@@ -40,9 +42,9 @@ final public class ObjectReferenceTemplateHelper
 
 
         throw new org.omg.CORBA.BAD_OPERATION(
-            org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadOperation(org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch),
-            org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            MinorCodes
+                    .describeBadOperation(MinorCodes.MinorTypeMismatch),
+            MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
     private static org.omg.CORBA.TypeCode typeCode_;
@@ -71,9 +73,9 @@ final public class ObjectReferenceTemplateHelper
     read(org.omg.CORBA.portable.InputStream in)
     {
         if(!(in instanceof org.omg.CORBA_2_3.portable.InputStream)) {
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType, 
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                .describeBadParam(MinorCodes.MinorIncompatibleObjectType),
+                MinorCodes.MinorIncompatibleObjectType,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
         return (ObjectReferenceTemplate)((org.omg.CORBA_2_3.portable.InputStream)in).read_value(id());
@@ -83,9 +85,9 @@ final public class ObjectReferenceTemplateHelper
     write(org.omg.CORBA.portable.OutputStream out, ObjectReferenceTemplate val)
     {
         if(!(out instanceof org.omg.CORBA_2_3.portable.OutputStream)) {
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType, 
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                .describeBadParam(MinorCodes.MinorIncompatibleObjectType),
+                MinorCodes.MinorIncompatibleObjectType,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
         ((org.omg.CORBA_2_3.portable.OutputStream)out).write_value(val, id());

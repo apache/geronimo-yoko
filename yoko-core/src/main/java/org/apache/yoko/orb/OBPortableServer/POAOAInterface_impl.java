@@ -19,10 +19,10 @@ package org.apache.yoko.orb.OBPortableServer;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.BootManager_impl;
 import org.apache.yoko.orb.OB.LocationForward;
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.OAInterface;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectKey;

@@ -18,6 +18,8 @@
 package org.apache.yoko.orb.CORBA;
 
 import org.apache.yoko.orb.OB.Logger;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 
 //
 // This class must be public - see org.apache.yoko.orb.OB.MutliRequestSender
@@ -73,8 +75,8 @@ final public class Request extends org.omg.CORBA.Request {
 
     private void marshal() throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
+        Assert.ensure(downcallStub_ != null);
+        Assert.ensure(downcall_ != null);
 
         OutputStream out = downcallStub_.preMarshal(downcall_);
 
@@ -105,7 +107,7 @@ final public class Request extends org.omg.CORBA.Request {
                     out.write_string((String) ctxVec.elementAt(i));
             }
         } catch (org.omg.CORBA.Bounds ex) {
-            throw org.apache.yoko.orb.OB.Assert.fail(ex);
+            throw Assert.fail(ex);
         } catch (org.omg.CORBA.SystemException ex) {
             downcallStub_.marshalEx(downcall_, ex);
         }
@@ -115,14 +117,14 @@ final public class Request extends org.omg.CORBA.Request {
 
     private void unmarshal() throws org.apache.yoko.orb.OB.LocationForward,
             org.apache.yoko.orb.OB.FailureException {
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
+        Assert.ensure(downcallStub_ != null);
+        Assert.ensure(downcall_ != null);
 
         org.omg.CORBA.BooleanHolder uex = new org.omg.CORBA.BooleanHolder();
         InputStream in = downcallStub_.preUnmarshal(downcall_, uex);
 
         if (in == null) {
-            org.apache.yoko.orb.OB.Assert.ensure(!uex.value);
+            Assert.ensure(!uex.value);
             downcallStub_.postUnmarshal(downcall_);
             return;
         }
@@ -150,9 +152,9 @@ final public class Request extends org.omg.CORBA.Request {
                     }
                 }
             } catch (org.omg.CORBA.Bounds ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 downcallStub_.unmarshalEx(downcall_, ex);
             }
@@ -175,7 +177,7 @@ final public class Request extends org.omg.CORBA.Request {
                         }
                     }
                 } catch (org.omg.CORBA.Bounds ex) {
-                    throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                    throw Assert.fail(ex);
                 }
             } catch (org.omg.CORBA.SystemException ex) {
                 downcallStub_.unmarshalEx(downcall_, ex);
@@ -261,22 +263,22 @@ final public class Request extends org.omg.CORBA.Request {
         synchronized (stateMutex_) {
             if (state_ == RequestStateDone)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorRequestAlreadySent),
+                        MinorCodes.MinorRequestAlreadySent,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             else if (state_ != RequestStateUnsent)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorDuplicateSend),
+                        MinorCodes.MinorDuplicateSend,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             state_ = RequestStatePending;
         }
 
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
+        Assert.ensure(downcallStub_ == null);
+        Assert.ensure(downcall_ == null);
 
         try {
             RetryInfo info = new RetryInfo();
@@ -320,22 +322,22 @@ final public class Request extends org.omg.CORBA.Request {
         synchronized (stateMutex_) {
             if (state_ == RequestStateDone)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorRequestAlreadySent),
+                        MinorCodes.MinorRequestAlreadySent,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             else if (state_ != RequestStateUnsent)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorDuplicateSend),
+                        MinorCodes.MinorDuplicateSend,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             state_ = RequestStatePending;
         }
 
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
+        Assert.ensure(downcallStub_ == null);
+        Assert.ensure(downcall_ == null);
 
         try {
             RetryInfo info = new RetryInfo();
@@ -381,23 +383,23 @@ final public class Request extends org.omg.CORBA.Request {
         synchronized (stateMutex_) {
             if (state_ == RequestStateDone)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRequestAlreadySent,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorRequestAlreadySent),
+                        MinorCodes.MinorRequestAlreadySent,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             else if (state_ != RequestStateUnsent)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorDuplicateSend,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorDuplicateSend),
+                        MinorCodes.MinorDuplicateSend,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             state_ = RequestStatePending;
             pollable_ = true;
         }
 
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ == null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ == null);
+        Assert.ensure(downcallStub_ == null);
+        Assert.ensure(downcall_ == null);
 
         org.apache.yoko.orb.OB.ORBInstance orbInstance = delegate_
                 ._OB_ORBInstance();
@@ -454,27 +456,27 @@ final public class Request extends org.omg.CORBA.Request {
         synchronized (stateMutex_) {
             if (!pollable_)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorSynchronousRequest),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSynchronousRequest,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorSynchronousRequest),
+                        MinorCodes.MinorSynchronousRequest,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             switch (state_) {
             case RequestStateUnsent:
             case RequestStatePending:
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorRequestNotSent),
+                        MinorCodes.MinorRequestNotSent,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             case RequestStateSent:
                 break;
             case RequestStateReceiving:
             case RequestStateDone:
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorResponseAlreadyReceived),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorResponseAlreadyReceived,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorResponseAlreadyReceived),
+                        MinorCodes.MinorResponseAlreadyReceived,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             case RequestStateReceived:
                 multi.removeDeferredRequest(this);
@@ -497,15 +499,15 @@ final public class Request extends org.omg.CORBA.Request {
                 state_ = RequestStateDone;
                 return;
             } else {
-                org.apache.yoko.orb.OB.Assert
+                Assert
                         .ensure(state_ == RequestStateSent);
                 multi.removeDeferredRequest(this);
                 state_ = RequestStateReceiving;
             }
         }
 
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
+        Assert.ensure(downcallStub_ != null);
+        Assert.ensure(downcall_ != null);
 
         boolean send = false;
         try {
@@ -562,9 +564,9 @@ final public class Request extends org.omg.CORBA.Request {
         synchronized (stateMutex_) {
             if (!pollable_)
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorSynchronousRequest),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorSynchronousRequest,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorSynchronousRequest),
+                        MinorCodes.MinorSynchronousRequest,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             if (polling_)
                 return false; // poll_response in progress
@@ -573,9 +575,9 @@ final public class Request extends org.omg.CORBA.Request {
             case RequestStateUnsent:
             case RequestStatePending:
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorRequestNotSent),
+                        MinorCodes.MinorRequestNotSent,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             case RequestStateSent:
                 break;
@@ -585,17 +587,17 @@ final public class Request extends org.omg.CORBA.Request {
                 return true;
             case RequestStateDone:
                 throw new org.omg.CORBA.BAD_INV_ORDER(
-                        org.apache.yoko.orb.OB.MinorCodes
-                                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorResponseAlreadyReceived),
-                        org.apache.yoko.orb.OB.MinorCodes.MinorResponseAlreadyReceived,
+                        MinorCodes
+                                .describeBadInvOrder(MinorCodes.MinorResponseAlreadyReceived),
+                        MinorCodes.MinorResponseAlreadyReceived,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
             }
 
             polling_ = true;
         }
 
-        org.apache.yoko.orb.OB.Assert.ensure(downcallStub_ != null);
-        org.apache.yoko.orb.OB.Assert.ensure(downcall_ != null);
+        Assert.ensure(downcallStub_ != null);
+        Assert.ensure(downcall_ != null);
 
         boolean send = false;
         try {

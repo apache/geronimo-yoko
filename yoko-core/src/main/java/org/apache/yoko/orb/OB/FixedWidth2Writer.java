@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.WriteBuffer;
 
 final class FixedWidth2Writer extends CodeSetWriter {
     public void write_char(WriteBuffer writeBuffer, char v) {

@@ -1,16 +1,5 @@
 package org.apache.yoko.orb.cmsf;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
-import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv1;
-
-import java.io.IOException;
-import java.io.NotSerializableException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.INTERNAL;
@@ -21,6 +10,17 @@ import org.omg.PortableInterceptor.ForwardRequest;
 import org.omg.PortableInterceptor.InvalidSlot;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
+
+import java.io.IOException;
+import java.io.NotSerializableException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import static org.apache.yoko.util.MinorCodes.MinorInvalidServiceContextId;
+import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv1;
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 public final class CmsfServerInterceptor extends LocalObject implements ServerRequestInterceptor {
     private static final Logger LOGGER = Logger.getLogger(CmsfServerInterceptor.class.getName());
@@ -41,7 +41,7 @@ public final class CmsfServerInterceptor extends LocalObject implements ServerRe
             cmsf = CmsfVersion.readData(sc.context_data);
             if (LOGGER.isLoggable(Level.FINEST))
                 LOGGER.finest(String.format("Using custom marshal stream format version: %s, retrieved from bytes: %s",
-                    cmsf, IORUtil.dump_octets(sc.context_data)));
+                    cmsf, formatHexPara(sc.context_data)));
         } catch (BAD_PARAM e) {
             if (e.minor != MinorInvalidServiceContextId) {
                 throw e;

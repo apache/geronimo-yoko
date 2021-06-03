@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 
 //
 // This class is used to control the POA

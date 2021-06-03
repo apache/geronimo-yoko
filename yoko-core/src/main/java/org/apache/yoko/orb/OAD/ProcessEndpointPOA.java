@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OAD;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // IDL:orb.yoko.apache.org/OAD/ProcessEndpoint:1.0
 //
@@ -111,9 +113,9 @@ public abstract class ProcessEndpointPOA
         }
 
         throw new org.omg.CORBA.BAD_OPERATION(
-            org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadOperation(org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch),
-            org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            MinorCodes
+                    .describeBadOperation(MinorCodes.MinorTypeMismatch),
+            MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
     private org.omg.CORBA.portable.OutputStream

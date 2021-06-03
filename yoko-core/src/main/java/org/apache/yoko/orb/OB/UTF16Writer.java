@@ -17,8 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.WriteBuffer;
-import org.omg.CORBA.DATA_CONVERSION;
+import org.apache.yoko.io.WriteBuffer;
 
 final class UTF16Writer extends CodeSetWriter {
     private int Flags_ = 0;

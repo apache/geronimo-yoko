@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // IDL:orb.yoko.apache.org/OCI/ProfileId:1.0
 //
@@ -38,9 +40,9 @@ final public class ProfileIdHelper
         else
 
             throw new org.omg.CORBA.BAD_OPERATION(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadOperation(org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch),
-                org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                        .describeBadOperation(MinorCodes.MinorTypeMismatch),
+                MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
     private static org.omg.CORBA.TypeCode typeCode_;

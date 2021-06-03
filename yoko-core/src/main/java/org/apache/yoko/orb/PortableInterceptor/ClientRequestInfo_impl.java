@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
@@ -54,13 +54,13 @@ import org.omg.PortableInterceptor.USER_EXCEPTION;
 
 import java.util.List;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPolicyType;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidComponentId;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidPolicyType;
+import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 

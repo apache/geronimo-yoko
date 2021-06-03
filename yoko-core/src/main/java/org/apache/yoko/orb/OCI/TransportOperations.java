@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.io.WriteBuffer;
 import org.omg.CORBA.COMM_FAILURE;
 
 /**

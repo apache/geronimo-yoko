@@ -1,6 +1,6 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.apache.yoko.util.MinorCodes.*;
 
 import org.apache.yoko.util.Wrapper;
 import org.omg.CORBA.COMM_FAILURE;
@@ -9,8 +9,8 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
-import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
+import static org.apache.yoko.util.MinorCodes.MinorSetsockopt;
+import static org.apache.yoko.util.MinorCodes.describeCommFailure;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 

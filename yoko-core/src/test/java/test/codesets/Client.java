@@ -18,6 +18,8 @@
 package test.codesets;
 
 import java.util.Properties;
+
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.*;
 
 final public class Client {
@@ -31,18 +33,18 @@ final public class Client {
         }
 
         TestCodeSets p = TestCodeSetsHelper.narrow(obj);
-        org.apache.yoko.orb.OB.Assert.ensure(p != null);
+        Assert.ensure(p != null);
 
         {
             char wc, wcRet;
 
             wc = 'a';
             wcRet = p.testWChar(wc);
-            org.apache.yoko.orb.OB.Assert.ensure(wc == wcRet);
+            Assert.ensure(wc == wcRet);
 
             wc = (char) 0x1234;
             wcRet = p.testWChar(wc);
-            org.apache.yoko.orb.OB.Assert.ensure(wc == wcRet);
+            Assert.ensure(wc == wcRet);
         }
 
         {
@@ -50,7 +52,7 @@ final public class Client {
 
             ws = "Hello, World!";
             wsRet = p.testWString(ws);
-            org.apache.yoko.orb.OB.Assert.ensure(ws.equals(wsRet));
+            Assert.ensure(ws.equals(wsRet));
         }
 
         p.deactivate();

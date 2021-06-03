@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.Assert;
+
 final public class CoreTraceLevels {
 
     public CoreTraceLevels(Logger logger, java.util.Properties properties) {

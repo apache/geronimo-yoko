@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.Assert;
+
 public class OrbAsyncHandler {
     //
     // A message registered to be sent/received asynchronously

@@ -23,8 +23,8 @@
  import java.util.concurrent.ConcurrentMap;
 
  import static java.util.Arrays.copyOf;
- import static org.apache.yoko.orb.OB.MinorCodes.MinorServiceContextExists;
- import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
+ import static org.apache.yoko.util.MinorCodes.MinorServiceContextExists;
+ import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
  import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
  public final class MutableServiceContexts {

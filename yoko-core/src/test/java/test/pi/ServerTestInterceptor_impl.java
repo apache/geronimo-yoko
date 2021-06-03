@@ -17,6 +17,7 @@
 
 package test.pi;
 
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.*;
 import org.omg.PortableInterceptor.*;
 import test.pi.TestInterfacePackage.*;
@@ -281,7 +282,7 @@ final class ServerTestInterceptor_impl extends org.omg.CORBA.LocalObject
         } catch (org.omg.IOP.CodecFactoryPackage.UnknownEncoding ex) {
             TEST(false);
         }
-        org.apache.yoko.orb.OB.Assert.ensure(cdrCodec_ != null);
+        Assert.ensure(cdrCodec_ != null);
     }
 
     //

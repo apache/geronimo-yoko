@@ -16,6 +16,8 @@
  */
 package org.apache.yoko.orb.PortableServer;
 
+import org.apache.yoko.util.Assert;
+
 final class CurrentState {
     org.omg.PortableServer.POA poa;
 
@@ -72,9 +74,9 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         try {
             return state.poa.servant_to_reference(state.servant);
         } catch (org.omg.PortableServer.POAPackage.WrongPolicy ex) {
-            throw org.apache.yoko.orb.OB.Assert.fail(ex);
+            throw Assert.fail(ex);
         } catch (org.omg.PortableServer.POAPackage.ServantNotActive ex) {
-            throw org.apache.yoko.orb.OB.Assert.fail(ex);
+            throw Assert.fail(ex);
         }
     }
 
@@ -141,7 +143,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert.ensure(state != null);
+        Assert.ensure(state != null);
 
         return state.servant;
     }
@@ -150,7 +152,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert.ensure(state != null);
+        Assert.ensure(state != null);
 
         return state.cookie;
     }
@@ -159,7 +161,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert.ensure(state != null);
+        Assert.ensure(state != null);
 
         return state.oid;
     }
@@ -168,7 +170,7 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
         CurrentState state = (CurrentState) stateKey_.get(Thread
                 .currentThread());
 
-        org.apache.yoko.orb.OB.Assert.ensure(state != null);
+        Assert.ensure(state != null);
 
         return state.op;
     }

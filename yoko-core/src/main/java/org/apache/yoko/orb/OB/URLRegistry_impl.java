@@ -17,8 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.URLRegistry;
-import org.apache.yoko.orb.OB.URLScheme;
+import org.apache.yoko.util.MinorCodes;
 
 public class URLRegistry_impl extends org.omg.CORBA.LocalObject implements
         URLRegistry {
@@ -53,17 +52,17 @@ public class URLRegistry_impl extends org.omg.CORBA.LocalObject implements
 
         int colon = url.indexOf(':');
         if (colon <= 0)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeName),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeName,
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorBadSchemeName),
+                    MinorCodes.MinorBadSchemeName,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         String name = url.substring(0, colon).toLowerCase();
         URLScheme scheme = find_scheme(name);
         if (scheme == null)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeName),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeName,
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorBadSchemeName),
+                    MinorCodes.MinorBadSchemeName,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         String urlCopy = name + url.substring(colon);

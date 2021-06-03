@@ -19,6 +19,7 @@ package org.apache.yoko.orb.DynamicAny;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.TypeCode;
+import org.apache.yoko.util.Assert;
 
 final public class DynAnyFactory_impl extends org.omg.CORBA.LocalObject
         implements org.omg.DynamicAny.DynAnyFactory {
@@ -208,7 +209,7 @@ final public class DynAnyFactory_impl extends org.omg.CORBA.LocalObject
 
         case org.omg.CORBA.TCKind._tk_alias:
         default:
-            throw org.apache.yoko.orb.OB.Assert.fail("Unsupported type code");
+            throw Assert.fail("Unsupported type code");
         }
 
         return result;

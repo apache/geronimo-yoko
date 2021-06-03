@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.Assert;
+
 final class ThreadPool {
     private boolean destroy_ = false; // True if destroy was called
 

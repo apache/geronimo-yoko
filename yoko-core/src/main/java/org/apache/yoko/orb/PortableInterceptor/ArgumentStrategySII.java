@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 final class ArgumentStrategySII extends ArgumentStrategy {
     protected org.apache.yoko.orb.OB.ParameterDesc[] argDesc_;
 
@@ -59,10 +62,10 @@ final class ArgumentStrategySII extends ArgumentStrategy {
     org.omg.Dynamic.Parameter[] arguments() {
         if (!argsAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": arguments unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         int nargDesc = 0;
@@ -95,7 +98,7 @@ final class ArgumentStrategySII extends ArgumentStrategy {
                 break;
 
             default:
-                throw org.apache.yoko.orb.OB.Assert.fail();
+                throw Assert.fail();
             }
         }
 
@@ -108,10 +111,10 @@ final class ArgumentStrategySII extends ArgumentStrategy {
     org.omg.CORBA.TypeCode[] exceptions() {
         if (!exceptAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": exceptions unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         int nexceptionTC = 0;
@@ -130,10 +133,10 @@ final class ArgumentStrategySII extends ArgumentStrategy {
     org.omg.CORBA.Any result() {
         if (!resultAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": result unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         org.omg.CORBA.Any any = orb_.create_any();
@@ -148,6 +151,6 @@ final class ArgumentStrategySII extends ArgumentStrategy {
     // Set the result (server side only)
     //
     void setResult(org.omg.CORBA.Any any) {
-        throw org.apache.yoko.orb.OB.Assert.fail();
+        throw Assert.fail();
     }
 }

@@ -18,6 +18,7 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.OCI.ConnectorInfo;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.concurrent.WeakCountedCache;
 import org.omg.CORBA.INTERNAL;

@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+
 public class DirectServant extends org.omg.CORBA.portable.ServantObject {
     //
     // The POA
@@ -51,7 +53,7 @@ public class DirectServant extends org.omg.CORBA.portable.ServantObject {
         //
         // This object *must* have been deactivated already
         //
-        org.apache.yoko.orb.OB.Assert.ensure(deactivated_);
+        Assert.ensure(deactivated_);
 
         super.finalize();
     }

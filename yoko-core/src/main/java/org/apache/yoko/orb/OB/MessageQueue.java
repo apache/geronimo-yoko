@@ -19,12 +19,13 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.ProfileInfo;
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.SystemException;
 
 import java.util.Vector;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
+import static org.apache.yoko.util.Assert.ensure;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.GIOP.MsgType_1_1.LocateRequest;

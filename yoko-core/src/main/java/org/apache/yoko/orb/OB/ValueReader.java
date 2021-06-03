@@ -19,7 +19,8 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CustomMarshal;
@@ -49,9 +50,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection;
-import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
+import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueReader {

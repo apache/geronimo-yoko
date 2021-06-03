@@ -14,8 +14,8 @@ import org.omg.PortableInterceptor.ServerRequestInfo;
 
 import java.util.Set;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidComponentId;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidServiceContextId;
 
 /**
  * Created by nrichard on 23/03/16.

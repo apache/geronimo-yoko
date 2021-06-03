@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OB.CorbalocProtocol;
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.LocalObject;

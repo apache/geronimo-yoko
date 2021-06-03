@@ -28,7 +28,7 @@ import org.apache.yoko.orb.OAD.AlreadyLinked;
 import org.apache.yoko.orb.OAD.ProcessEndpoint;
 import org.apache.yoko.orb.OAD.ProcessEndpointManagerHolder;
 import org.apache.yoko.orb.OAD.ProcessEndpoint_impl;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.InitialServiceManager;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.Logger;
@@ -68,7 +68,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
+import static org.apache.yoko.util.Assert.ensure;
 import static org.omg.PortableServer.POAManagerPackage.State.INACTIVE;
 
 final public class POAManagerFactory_impl extends LocalObject implements POAManagerFactory {

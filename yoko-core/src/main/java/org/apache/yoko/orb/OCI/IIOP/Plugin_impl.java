@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.CorbalocURLScheme;
 import org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists;
 import org.apache.yoko.orb.OB.URLRegistry;
@@ -31,7 +31,7 @@ import org.apache.yoko.orb.OCI.FactoryAlreadyExists;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 
-import static org.apache.yoko.orb.OB.Assert.*;
+import static org.apache.yoko.util.Assert.*;
 
 public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Plugin {

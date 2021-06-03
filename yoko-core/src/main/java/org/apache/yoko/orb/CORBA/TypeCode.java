@@ -16,8 +16,8 @@
  */
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.Util;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.BAD_TYPECODE;

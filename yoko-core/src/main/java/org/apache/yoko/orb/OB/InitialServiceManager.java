@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 import java.util.logging.Logger;
 
 public final class InitialServiceManager {
@@ -117,9 +120,9 @@ public final class InitialServiceManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         String[] list = new String[services_.size()];
@@ -139,9 +142,9 @@ public final class InitialServiceManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_) {
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
@@ -235,9 +238,9 @@ public final class InitialServiceManager {
         //
         if (destroy_)
         {
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                                               .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                                               org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                                               .describeInitialize(MinorCodes.MinorORBDestroyed),
+                                               MinorCodes.MinorORBDestroyed,
                                                org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
@@ -268,9 +271,9 @@ public final class InitialServiceManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_) {
-            throw new org.omg.CORBA.INITIALIZE(org.apache.yoko.orb.OB.MinorCodes
-                    .describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed,
+            throw new org.omg.CORBA.INITIALIZE(MinorCodes
+                    .describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 

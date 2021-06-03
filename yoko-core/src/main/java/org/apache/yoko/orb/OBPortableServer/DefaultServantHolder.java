@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+
 class DefaultServantHolder {
     private boolean destroyed_;
 
@@ -56,7 +58,7 @@ class DefaultServantHolder {
             try {
                 return poaCurrent.get_object_id();
             } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex); // TODO:
+                throw Assert.fail(ex); // TODO:
                                                                     // Internal
                                                                     // error
             }

@@ -29,7 +29,7 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.util.MinorCodes;
 
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.CompletionStatus;
@@ -734,7 +734,7 @@ public abstract class NamingContextBase extends NamingContextExtPOA
     protected void validateName(NameComponent[] n) throws InvalidName {
         // perform various name validations
         if (n == null) {
-            throw new BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes.MinorObjectIsNull, CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(MinorCodes.MinorObjectIsNull, CompletionStatus.COMPLETED_NO);
         }
 
         // Valid name?

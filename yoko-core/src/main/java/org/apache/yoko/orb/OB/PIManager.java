@@ -22,6 +22,7 @@ import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.PortableInterceptor.ClientRequestInfo_impl;
 import org.apache.yoko.orb.PortableInterceptor.Current_impl;
 import org.apache.yoko.orb.PortableInterceptor.ServerRequestInfo_impl;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.InvalidPolicies;
 import org.omg.CORBA.NVList;

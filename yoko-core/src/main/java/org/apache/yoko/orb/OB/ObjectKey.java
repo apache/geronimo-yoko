@@ -31,11 +31,11 @@
 //
 
 package org.apache.yoko.orb.OB;
- 
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.IORUtil;
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 final public class ObjectKey {
     static final Logger logger = Logger.getLogger(ObjectKey.class.getName());
@@ -125,7 +125,7 @@ final public class ObjectKey {
 
         
         if (logger.isLoggable(Level.FINEST)) {
-            logger.finest("Created object key\n" + IORUtil.dump_octets(key)); 
+            logger.finest("Created object key\n" + formatHexPara(key));
         }
         return key;
     }
@@ -143,7 +143,7 @@ final public class ObjectKey {
         int end = key.length;
         
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine("Parsing object key\n" + IORUtil.dump_octets(key)); 
+            logger.fine("Parsing object key\n" + formatHexPara(key));
         }
 
         //
@@ -255,7 +255,7 @@ final public class ObjectKey {
             System.arraycopy(key, data, keyData.oid, 0, len);
 
             if (logger.isLoggable(Level.FINEST)) {
-                logger.finest("Parsed object id is\n" + IORUtil.dump_octets(keyData.oid)); 
+                logger.finest("Parsed object id is\n" + formatHexPara(keyData.oid));
             }
 
             return true;

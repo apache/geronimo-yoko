@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+
 //
 // There are several ways a request can be dispatched in Java:
 //
@@ -191,7 +193,7 @@ final class ServantDispatcher implements org.omg.CORBA.portable.ResponseHandler 
                 // The OutputStream returned by _invoke() should be
                 // the Upcall's OutputStream
                 //
-                org.apache.yoko.orb.OB.Assert.ensure(out == upcall_
+                Assert.ensure(out == upcall_
                         .output());
 
                 //
@@ -231,7 +233,7 @@ final class ServantDispatcher implements org.omg.CORBA.portable.ResponseHandler 
                 throw ex;
             }
         } else
-            throw org.apache.yoko.orb.OB.Assert.fail();
+            throw Assert.fail();
     }
 
     // ----------------------------------------------------------------------

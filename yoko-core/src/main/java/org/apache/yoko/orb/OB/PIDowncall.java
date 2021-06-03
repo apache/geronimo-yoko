@@ -21,6 +21,7 @@ import org.apache.yoko.orb.CORBA.Any;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.PortableInterceptor.ArgumentStrategy;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
@@ -31,8 +32,8 @@ import org.omg.CORBA.UserException;
 import org.omg.IOP.IOR;
 import org.omg.PortableInterceptor.ClientRequestInfo;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownUserException;
-import static org.apache.yoko.orb.OB.MinorCodes.describeUnknown;
+import static org.apache.yoko.util.MinorCodes.MinorUnknownUserException;
+import static org.apache.yoko.util.MinorCodes.describeUnknown;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 
 public abstract class PIDowncall extends Downcall {
