@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.DynamicAny;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.TypeCode;
@@ -29,8 +29,8 @@ import org.omg.DynamicAny.DynAnyFactoryPackage.InconsistentTypeCode;
 import java.util.HashMap;
 import java.util.Map;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadInvalidIndirection;
-import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
+import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final public class DynValueReader {

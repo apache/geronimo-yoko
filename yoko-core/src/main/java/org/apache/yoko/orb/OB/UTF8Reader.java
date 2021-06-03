@@ -17,12 +17,12 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Encoding;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorUTF8Overflow;
-import static org.apache.yoko.orb.OB.MinorCodes.describeDataConversion;
+import static org.apache.yoko.util.MinorCodes.MinorUTF8Encoding;
+import static org.apache.yoko.util.MinorCodes.MinorUTF8Overflow;
+import static org.apache.yoko.util.MinorCodes.describeDataConversion;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class UTF8Reader extends CodeSetReader {

@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // The MultiRequestSender class. ORB::send_multiple_requests() and all
 // related operations delegate to this class.
@@ -78,9 +80,9 @@ public class MultiRequestSender {
 
     public synchronized boolean pollNextResponse() {
         if (deferredRequests_.size() == 0)
-            throw new org.omg.CORBA.BAD_INV_ORDER(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent,
+            throw new org.omg.CORBA.BAD_INV_ORDER(MinorCodes
+                    .describeBadInvOrder(MinorCodes.MinorRequestNotSent),
+                    MinorCodes.MinorRequestNotSent,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         //
@@ -122,9 +124,9 @@ public class MultiRequestSender {
             return request;
         }
 
-        throw new org.omg.CORBA.BAD_INV_ORDER(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent),
-                org.apache.yoko.orb.OB.MinorCodes.MinorRequestNotSent,
+        throw new org.omg.CORBA.BAD_INV_ORDER(MinorCodes
+                .describeBadInvOrder(MinorCodes.MinorRequestNotSent),
+                MinorCodes.MinorRequestNotSent,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 }

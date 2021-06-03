@@ -15,14 +15,21 @@
  *  limitations under the License.
  */
 
-package org.apache.yoko.orb.OB;
+package org.apache.yoko.util;
 
-final public class Assert {
-    public static AssertionFailed fail() { throw new AssertionFailed(); }
-    public static AssertionFailed fail(String reason) { throw new AssertionFailed(reason); }
-    public static AssertionFailed fail(Throwable ex) { throw new AssertionFailed(ex); }
-    public static AssertionFailed fail(String reason, Throwable ex) { throw new AssertionFailed(reason, ex); }
-
-    public static void ensure(boolean b) { if (!b) fail(); }
-    public static void ensure(boolean b, String reason) { if (!b) fail(reason); }
+final public class AssertionFailed extends RuntimeException {
+    public AssertionFailed() {
+        super("Yoko encountered an internal error");
+    }
+    public AssertionFailed(String reason) {
+        super("Yoko encountered an internal error " + reason);
+    }
+    
+    public AssertionFailed(Throwable ex) {
+        super("Yoko encountered an internal error", ex);
+    }
+    
+    public AssertionFailed(String reason, Throwable ex) {
+        super("Yoko encountered an internal error " + reason, ex);
+    }
 }

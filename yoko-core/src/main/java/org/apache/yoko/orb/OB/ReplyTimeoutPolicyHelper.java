@@ -25,13 +25,13 @@ import org.omg.CORBA.ORB;
 import org.omg.CORBA.portable.InputStream;
 import org.omg.CORBA.portable.OutputStream;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadUnsupported;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorWriteUnsupported;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadOperation;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
-import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.MinorCodes.MinorIncompatibleObjectType;
+import static org.apache.yoko.util.MinorCodes.MinorReadUnsupported;
+import static org.apache.yoko.util.MinorCodes.MinorTypeMismatch;
+import static org.apache.yoko.util.MinorCodes.MinorWriteUnsupported;
+import static org.apache.yoko.util.MinorCodes.describeBadOperation;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ReplyTimeoutPolicyHelper {

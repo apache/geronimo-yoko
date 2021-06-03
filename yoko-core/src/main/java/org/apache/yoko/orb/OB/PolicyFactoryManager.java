@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.Assert;
+
 public final class PolicyFactoryManager {
     private boolean destroy_; // True if destroy() was called
 

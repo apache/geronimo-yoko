@@ -17,11 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorDestroyWouldBlock;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.apache.yoko.util.MinorCodes.MinorDestroyWouldBlock;
+import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.util.MinorCodes.MinorShutdownCalled;
+import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.util.MinorCodes.describeInitialize;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 import java.util.concurrent.CountDownLatch;
@@ -33,6 +33,8 @@ import java.util.concurrent.TimeoutException;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
 import org.apache.yoko.orb.PortableServer.Current_impl;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -153,13 +155,13 @@ public final class ORBControl {
         //
         if (state == State.DESTROYED)
             throw new org.omg.CORBA.INITIALIZE(
-                    org.apache.yoko.orb.OB.MinorCodes.describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    MinorCodes.describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         if (state == State.SERVER_SHUTDOWN || state == State.CLIENT_SHUTDOWN)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorShutdownCalled, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    MinorCodes.describeBadInvOrder(MinorCodes.MinorShutdownCalled),
+                    MinorCodes.MinorShutdownCalled, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         if (state == State.NOT_RUNNING) {
             //
@@ -387,8 +389,8 @@ public final class ORBControl {
         //
         if (state == State.DESTROYED)
             throw new org.omg.CORBA.INITIALIZE(
-                    org.apache.yoko.orb.OB.MinorCodes.describeInitialize(org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                    MinorCodes.describeInitialize(MinorCodes.MinorORBDestroyed),
+                    MinorCodes.MinorORBDestroyed, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         //
         // If the ORB client side is already shutdown, then we're done

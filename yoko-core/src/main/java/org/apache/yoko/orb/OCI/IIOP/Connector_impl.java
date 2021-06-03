@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.exceptions.Transients;
-import org.apache.yoko.orb.OB.MinorCodes;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;

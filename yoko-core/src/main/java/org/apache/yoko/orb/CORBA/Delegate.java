@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.ClientManager;
 import org.apache.yoko.orb.OB.CoreTraceLevels;
 import org.apache.yoko.orb.OB.DowncallStub;
@@ -66,10 +66,10 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicy;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInvPolicy;
+import static org.apache.yoko.util.MinorCodes.MinorDuplicatePolicyType;
+import static org.apache.yoko.util.MinorCodes.MinorNoPolicy;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
 import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
 import static org.apache.yoko.orb.logging.VerboseLogging.logged;
 import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;

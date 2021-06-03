@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // IDL:orb.yoko.apache.org/OCI/InvalidParam:1.0
 //
@@ -38,9 +40,9 @@ final public class InvalidParamHelper
         else
 
             throw new org.omg.CORBA.BAD_OPERATION(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadOperation(org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch),
-                org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                        .describeBadOperation(MinorCodes.MinorTypeMismatch),
+                MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
     private static org.omg.CORBA.TypeCode typeCode_;
@@ -74,9 +76,9 @@ final public class InvalidParamHelper
     {
         if(!id().equals(in.read_string())) {
             throw new org.omg.CORBA.MARSHAL(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeMarshal(org.apache.yoko.orb.OB.MinorCodes.MinorReadIDMismatch), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorReadIDMismatch, 
+                MinorCodes
+                    .describeMarshal(MinorCodes.MinorReadIDMismatch),
+                MinorCodes.MinorReadIDMismatch,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 

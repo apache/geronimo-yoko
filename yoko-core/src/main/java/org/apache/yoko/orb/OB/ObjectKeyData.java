@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import static org.apache.yoko.util.Hex.formatHexLine;
+
 //
 // The data contained in an object key
 //
@@ -55,7 +57,7 @@ final public class ObjectKeyData {
         }
         buf.append(':'); 
         if (oid != null) {
-            IORUtil.format_octets(oid, buf); 
+            formatHexLine(oid, buf);
         }
         return buf.toString(); 
     }

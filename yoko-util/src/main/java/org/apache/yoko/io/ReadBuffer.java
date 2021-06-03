@@ -14,41 +14,24 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.OCI;
+package org.apache.yoko.io;
 
-import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.util.HexConverter;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.io.OutputStream;
 
-public final class ReadBuffer extends Buffer<ReadBuffer>{
-    private final Core core;
+import static org.apache.yoko.util.Hex.formatHexPara;
 
-    ReadBuffer(Core core) { this.core = core; }
+public final class ReadBuffer extends Buffer<ReadBuffer> {
+    ReadBuffer(Core core) { super(core); }
 
-    @Override
-    public int length() {
-        return core.length;
-    }
+    public byte peekByte() { return core.data[position];    }
 
-    @Override
-    boolean dataEquals0(ReadBuffer that) {
-        return this.core.dataEquals(that.core);
-    }
+    public byte readByte() { return core.data[position++]; }
 
-    public byte peekByte() {
-        return core.data[position];
-    }
-
-    public byte readByte() {
-        return core.data[position++];
-    }
-
-    public char readByteAsChar() {
-        return (char) core.data[position++];
-    }
+    public char readByteAsChar() { return (char) core.data[position++]; }
 
     public void readBytes(byte[] buffer, int offset, int length) {
         if (available() < length) throw new IndexOutOfBoundsException();
@@ -94,24 +77,17 @@ public final class ReadBuffer extends Buffer<ReadBuffer>{
         return HexConverter.octetsToAscii(core.data, available());
     }
 
-    @Override
-    StringBuilder dumpData(StringBuilder dump) {
-        return core.dumpTo(dump);
-    }
-
     public String dumpRemainingData() {
         StringBuilder dump = new StringBuilder();
         dump.append(String.format("Core pos=0x%x Core len=0x%x Remaining core data=%n%n", position, core.length));
-        IORUtil.dump_octets(core.data, position, available(), dump);
-        return dump.toString();
+        return formatHexPara(core.data, position, available(), dump).toString();
     }
 
     public String dumpAllDataWithPosition() {
         StringBuilder sb = new StringBuilder();
-        IORUtil.dump_octets(core.data, 0, position, sb);
+        formatHexPara(core.data, 0, position, sb);
         sb.append(String.format("------------------ pos = 0x%08X -------------------%n", position));
-        IORUtil.dump_octets(core.data, position, available(), sb);
-        return sb.toString();
+        return formatHexPara(core.data, position, available(), sb).toString();
     }
 
     public ReadBuffer writeTo(OutputStream out) throws IOException {
@@ -142,8 +118,5 @@ public final class ReadBuffer extends Buffer<ReadBuffer>{
         return this;
     }
 
-    public ReadBuffer skipToEnd() {
-        position = core.length;
-        return this;
-    }
+    public ReadBuffer newReadBuffer() { return clone(); }
 }

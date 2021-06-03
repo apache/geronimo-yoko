@@ -18,7 +18,7 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.Downcall;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.Any;
@@ -38,11 +38,11 @@ import org.omg.PortableInterceptor.RequestInfo;
 
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidServiceContextId;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadInvOrder;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidServiceContextId;
+import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public class RequestInfo_impl extends LocalObject implements RequestInfo {

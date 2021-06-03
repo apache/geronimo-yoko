@@ -17,8 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OB.URLRegistry;
-import org.apache.yoko.orb.OB.URLScheme;
+import org.apache.yoko.util.MinorCodes;
 
 public class FileURLScheme_impl extends org.omg.CORBA.LocalObject implements
         URLScheme {
@@ -61,10 +60,10 @@ public class FileURLScheme_impl extends org.omg.CORBA.LocalObject implements
                 break;
 
         if (startIdx >= len)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorBadSchemeSpecificPart)
                     + ": no file name specified",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
+                    MinorCodes.MinorBadSchemeSpecificPart,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         String fileName;
@@ -83,9 +82,9 @@ public class FileURLScheme_impl extends org.omg.CORBA.LocalObject implements
 
             return registry_.parse_url(ref);
         } catch (java.io.IOException ex) {
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
-                    + ": file error", org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorBadSchemeSpecificPart)
+                    + ": file error", MinorCodes.MinorBadSchemeSpecificPart,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
     }

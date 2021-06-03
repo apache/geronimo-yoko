@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.util.MinorCodes;
+
 class URLUtil {
     // 
     // Remove URL escape sequences from a string
@@ -35,20 +37,20 @@ class URLUtil {
             //
             if (ch == '%') {
                 if (pos + 2 >= len)
-                    throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress)
+                    throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                            .describeBadParam(MinorCodes.MinorBadAddress)
                             + ": bad escape sequence length",
-                            org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress,
+                            MinorCodes.MinorBadAddress,
                             org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
                 int c1 = Character.digit(str.charAt(++pos), 16);
                 int c2 = Character.digit(str.charAt(++pos), 16);
 
                 if (c1 == -1 || c2 == -1)
-                    throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorOther)
+                    throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                            .describeBadParam(MinorCodes.MinorOther)
                             + ": escape sequence contains invalid characters",
-                            org.apache.yoko.orb.OB.MinorCodes.MinorOther,
+                            MinorCodes.MinorOther,
                             org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
                 ch = (char) ((c1 << 4) | c2);

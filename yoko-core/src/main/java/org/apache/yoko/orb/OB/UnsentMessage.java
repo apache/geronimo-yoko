@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
 
 public final class UnsentMessage {
     private final ReadBuffer readBuffer;

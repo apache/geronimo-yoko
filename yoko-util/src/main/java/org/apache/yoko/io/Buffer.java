@@ -14,10 +14,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.OCI;
+package org.apache.yoko.io;
 
-import org.apache.yoko.orb.OB.Assert;
-import org.apache.yoko.orb.OB.IORUtil;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.NO_MEMORY;
 
@@ -25,9 +24,10 @@ import java.util.Arrays;
 
 import static java.lang.Math.max;
 import static java.lang.Math.min;
-import static org.apache.yoko.orb.OB.Assert.ensure;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorAllocationFailure;
-import static org.apache.yoko.orb.OB.MinorCodes.describeNoMemory;
+import static org.apache.yoko.util.Exceptions.as;
+import static org.apache.yoko.util.Hex.formatHexPara;
+import static org.apache.yoko.util.MinorCodes.MinorAllocationFailure;
+import static org.apache.yoko.util.MinorCodes.describeNoMemory;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 
 /**
@@ -110,7 +110,7 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
         }
 
         StringBuilder dumpTo(StringBuilder dump) {
-            return IORUtil.dump_octets(data, 0, length, dump);
+            return formatHexPara(data, 0, length, dump);
         }
 
         @Override
@@ -119,47 +119,41 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
         }
     }
 
+    final Core core;
     int position = 0;
+
+    Buffer(Core core) { this.core = core; }
 
     public final boolean isComplete() { return position >= length(); }
     public final int getPosition() { return position; }
     public final int available() { return length() - position; }
-    public abstract int length();
+    public final int length() { return core.length; }
 
     public final T clone() {
         try {
             return (T)super.clone();
         } catch (CloneNotSupportedException e) {
-            throw new INTERNAL(e.getMessage());
+            throw as(INTERNAL::new, e, e.getMessage());
         }
     }
 
     public final boolean dataEquals(T that) {
-        if (this == that) return true;
-        if (that == null) return false;
-        return dataEquals0(that);
+        return this == that || that != null && this.core.dataEquals(that.core);
     }
 
-    abstract boolean dataEquals0(T that);
-
-    public final String dumpPosition() {
-        return String.format("position=0x%x", position);
-    }
-
-    public final String dumpAllData() {
-        return dumpData(new StringBuilder()).toString();
-    }
-
-    abstract StringBuilder dumpData(StringBuilder dump);
+    public final String dumpPosition() { return String.format("position=0x%x", position); }
+    public final String dumpAllData() { return dumpData(new StringBuilder()).toString(); }
+    final StringBuilder dumpData(StringBuilder dump) { return core.dumpTo(dump); }
 
     public final T setPosition(int p) { position = p; return (T)this; }
     public final T rewind(int n) { position -= n; return (T)this;}
+    public abstract ReadBuffer newReadBuffer();
 
     static byte[] copyOf(byte[] data, int length) {
         try {
             return Arrays.copyOf(data, length);
         } catch (OutOfMemoryError oom) {
-            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+            throw as(NO_MEMORY::new, oom, describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
     }
 
@@ -168,7 +162,7 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
             // allocate only multiples of 16 so we can pad without checking
             return new byte[(len + 0xFF) & ~0xFF];
         } catch (OutOfMemoryError oom) {
-            throw new NO_MEMORY(describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
+            throw as(NO_MEMORY::new, oom, describeNoMemory(MinorAllocationFailure), MinorAllocationFailure, COMPLETED_MAYBE);
         }
     }
 }

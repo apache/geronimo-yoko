@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 //
 // Mapping for ObjectId to a sequence of DirectStubImpl
 //
@@ -116,7 +119,7 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
         // If using UNIQUE_ID add the servant to the servantIdTable
         //
         if (servantIdTable_ != null) {
-            org.apache.yoko.orb.OB.Assert.ensure(!servantIdTable_
+            Assert.ensure(!servantIdTable_
                     .containsKey(servant));
             servantIdTable_.put(servant, oid.getObjectId());
         }
@@ -153,7 +156,7 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
         //
         if (servantIdTable_ != null) {
             org.omg.PortableServer.Servant servant = entry.getServant();
-            org.apache.yoko.orb.OB.Assert.ensure(servantIdTable_
+            Assert.ensure(servantIdTable_
                     .containsKey(servant));
             servantIdTable_.remove(servant);
         }
@@ -407,9 +410,9 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
             // OBJECT_NOT_EXIST exception
             //
             throw new org.omg.CORBA.OBJECT_NOT_EXIST(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeObjectNotExist(org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorCannotDispatch,
+                    MinorCodes
+                            .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
+                    MinorCodes.MinorCannotDispatch,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
         return servant;

@@ -17,7 +17,9 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
  
-import org.apache.yoko.orb.OBPortableServer.POAPolicies; 
+import org.apache.yoko.orb.OBPortableServer.POAPolicies;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 
 final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
         org.omg.PortableInterceptor.IORInfo {
@@ -83,10 +85,10 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
         }
 
         throw new org.omg.CORBA.INV_POLICY(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeInvPolicy(org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicyFactory)
+                MinorCodes
+                        .describeInvPolicy(MinorCodes.MinorNoPolicyFactory)
                         + ": " + type,
-                org.apache.yoko.orb.OB.MinorCodes.MinorNoPolicyFactory,
+                MinorCodes.MinorNoPolicyFactory,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
@@ -100,10 +102,10 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
                 .get(new Integer(id));
         if (profile == null)
             throw new org.omg.CORBA.BAD_PARAM(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidProfileId)
+                    MinorCodes
+                            .describeBadParam(MinorCodes.MinorInvalidProfileId)
                             + ": " + id,
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidProfileId,
+                    MinorCodes.MinorInvalidProfileId,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         profile.addElement(data);
@@ -134,7 +136,7 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
 
     public void _OB_adapterTemplate(
             org.omg.PortableInterceptor.ObjectReferenceTemplate adapterTemplate) {
-        org.apache.yoko.orb.OB.Assert.ensure(adapterTemplate_ == null);
+        Assert.ensure(adapterTemplate_ == null);
         adapterTemplate_ = adapterTemplate;
     }
 

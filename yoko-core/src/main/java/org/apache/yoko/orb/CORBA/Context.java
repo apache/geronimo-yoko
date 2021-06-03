@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.CORBA;
  
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.CORBA.CompletionStatus;
 
 final public class Context extends org.omg.CORBA.Context {
@@ -43,9 +45,9 @@ final public class Context extends org.omg.CORBA.Context {
     public org.omg.CORBA.Context create_child(String child_ctx_name) {
         if (child_ctx_name == null) {
             throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName),
+                MinorCodes.MinorInvalidName, CompletionStatus.COMPLETED_NO);
         }
 
         Context ctx = new Context(orb_, child_ctx_name);
@@ -57,9 +59,9 @@ final public class Context extends org.omg.CORBA.Context {
     public void set_one_value(String propname, org.omg.CORBA.Any propvalue) {
         if (propname == null) {
             throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidName, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidName),
+                MinorCodes.MinorInvalidName, CompletionStatus.COMPLETED_NO);
         }
         
         String s;
@@ -67,9 +69,9 @@ final public class Context extends org.omg.CORBA.Context {
             s = propvalue.extract_string();
         } catch (org.omg.CORBA.BAD_OPERATION ex) {
             throw new org.omg.CORBA.BAD_TYPECODE(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPropertyType),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPropertyType, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadTypecode(MinorCodes.MinorInvalidPropertyType),
+                MinorCodes.MinorInvalidPropertyType, CompletionStatus.COMPLETED_NO);
         }
 
         //
@@ -92,7 +94,7 @@ final public class Context extends org.omg.CORBA.Context {
             try {
                 nv = values.item(i);
             } catch (org.omg.CORBA.Bounds ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             }
 
             String s = null;
@@ -100,9 +102,9 @@ final public class Context extends org.omg.CORBA.Context {
                 s = nv.value().extract_string();
             } catch (org.omg.CORBA.SystemException ex) {
                 throw new org.omg.CORBA.BAD_TYPECODE(
-                    org.apache.yoko.orb.OB.MinorCodes
-                        .describeBadTypecode(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPropertyType),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPropertyType, CompletionStatus.COMPLETED_NO);
+                    MinorCodes
+                        .describeBadTypecode(MinorCodes.MinorInvalidPropertyType),
+                    MinorCodes.MinorInvalidPropertyType, CompletionStatus.COMPLETED_NO);
             }
 
             if (nv.flags() != 0) {
@@ -116,9 +118,9 @@ final public class Context extends org.omg.CORBA.Context {
     public void delete_values(String pattern) {
         if (pattern == null) {
             throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPattern),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPattern, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidPattern),
+                MinorCodes.MinorInvalidPattern, CompletionStatus.COMPLETED_NO);
         }
 
         //
@@ -157,9 +159,9 @@ final public class Context extends org.omg.CORBA.Context {
 
         if (!found) {
             throw new org.omg.CORBA.BAD_CONTEXT(
-               org.apache.yoko.orb.OB.MinorCodes
-                   .describeBadContext(org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch),
-               org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
+               MinorCodes
+                   .describeBadContext(MinorCodes.MinorNoPatternMatch),
+               MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
         }
     }
 
@@ -167,16 +169,16 @@ final public class Context extends org.omg.CORBA.Context {
             String pattern) {
         if (start_scope == null) {
             throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidScope),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidScope, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidScope),
+                MinorCodes.MinorInvalidScope, CompletionStatus.COMPLETED_NO);
         }
 
         if (pattern == null) {
             throw new org.omg.CORBA.BAD_PARAM(
-                org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPattern),
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPattern, CompletionStatus.COMPLETED_NO);
+                MinorCodes
+                    .describeBadParam(MinorCodes.MinorInvalidPattern),
+                MinorCodes.MinorInvalidPattern, CompletionStatus.COMPLETED_NO);
         }
 
         java.util.Vector seq = new java.util.Vector();
@@ -184,9 +186,9 @@ final public class Context extends org.omg.CORBA.Context {
 
         if (seq.isEmpty())
             throw new org.omg.CORBA.BAD_CONTEXT(
-               org.apache.yoko.orb.OB.MinorCodes
-                   .describeBadContext(org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch),
-               org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
+               MinorCodes
+                   .describeBadContext(MinorCodes.MinorNoPatternMatch),
+               MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
 
         NVList values = new NVList(orb_);
 
@@ -226,9 +228,9 @@ final public class Context extends org.omg.CORBA.Context {
         if (start_scope.length() != 0 && !start_scope.equals(name_)) {
             if (parent_ == null) {
                 throw new org.omg.CORBA.BAD_CONTEXT(
-                   org.apache.yoko.orb.OB.MinorCodes
-                       .describeBadContext(org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch),
-                   org.apache.yoko.orb.OB.MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
+                   MinorCodes
+                       .describeBadContext(MinorCodes.MinorNoPatternMatch),
+                   MinorCodes.MinorNoPatternMatch, CompletionStatus.COMPLETED_NO);
             }
 
             parent_._OB_getValues(start_scope, op_flags, pattern, seq);

@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBCORBA;
 
+import org.apache.yoko.util.Assert;
+
 public class PollableSet_impl extends org.omg.CORBA.LocalObject implements
         org.omg.CORBA.PollableSet {
     //
@@ -41,7 +43,7 @@ public class PollableSet_impl extends org.omg.CORBA.LocalObject implements
     // IDL:omg.org/CORBA/PollableSet/add_pollable:1.0
     //
     public void add_pollable(org.omg.CORBA.Pollable potential) {
-        org.apache.yoko.orb.OB.Assert.ensure(potential != null);
+        Assert.ensure(potential != null);
         pollableList_.addLast(potential);
     }
 
@@ -123,7 +125,7 @@ public class PollableSet_impl extends org.omg.CORBA.LocalObject implements
     //
     public void remove(org.omg.CORBA.Pollable potential)
             throws org.omg.CORBA.PollableSetPackage.UnknownPollable {
-        org.apache.yoko.orb.OB.Assert.ensure(potential != null);
+        Assert.ensure(potential != null);
 
         //
         // iterate the list, looking for a match

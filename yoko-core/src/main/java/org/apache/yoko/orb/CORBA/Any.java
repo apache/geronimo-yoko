@@ -16,10 +16,10 @@
  */
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.orb.OB.Assert;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.TypeCodeFactory;
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.DATA_CONVERSION;
@@ -34,16 +34,16 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorLocalObject;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNativeNotSupported;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoAlias;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNullValueNotAllowed;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadStringOverflow;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorReadWStringOverflow;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadOperation;
-import static org.apache.yoko.orb.OB.MinorCodes.describeDataConversion;
-import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.MinorCodes.MinorLocalObject;
+import static org.apache.yoko.util.MinorCodes.MinorNativeNotSupported;
+import static org.apache.yoko.util.MinorCodes.MinorNoAlias;
+import static org.apache.yoko.util.MinorCodes.MinorNullValueNotAllowed;
+import static org.apache.yoko.util.MinorCodes.MinorReadStringOverflow;
+import static org.apache.yoko.util.MinorCodes.MinorReadWStringOverflow;
+import static org.apache.yoko.util.MinorCodes.MinorTypeMismatch;
+import static org.apache.yoko.util.MinorCodes.describeBadOperation;
+import static org.apache.yoko.util.MinorCodes.describeDataConversion;
+import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
 import static org.omg.CORBA.TCKind._tk_TypeCode;

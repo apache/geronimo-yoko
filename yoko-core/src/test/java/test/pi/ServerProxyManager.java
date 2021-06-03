@@ -17,6 +17,7 @@
 
 package test.pi;
 
+import org.apache.yoko.util.Assert;
 import org.omg.PortableInterceptor.*;
 
 final class ServerProxyManager {
@@ -40,7 +41,7 @@ final class ServerProxyManager {
     }
 
     void setInterceptor(int which, ServerRequestInterceptor i) {
-        org.apache.yoko.orb.OB.Assert.ensure(which >= 0 && which < 3);
+        Assert.ensure(which >= 0 && which < 3);
         p_[which]._OB_changeInterceptor(i);
     }
 

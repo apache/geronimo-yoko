@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.OCI;
+package org.apache.yoko.io;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,19 +34,7 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
     private static final byte[] PADDING = new byte[1<<PADDING_POWER];
     static { Arrays.fill(PADDING, PAD_BYTE); }
 
-    private final Core core;
-
-    WriteBuffer(Core core) { this.core = core; }
-
-    @Override
-    public int length() {
-        return core.length;
-    }
-
-    @Override
-    boolean dataEquals0(WriteBuffer that) {
-        return this.core.dataEquals(that.core);
-    }
+    WriteBuffer(Core core) { super(core); }
 
     public boolean readFrom(InputStream in) throws IOException {
         try {
@@ -194,25 +182,16 @@ public final class WriteBuffer extends Buffer<WriteBuffer> {
         return shortfall > 0 && core.growBy(shortfall);
     }
 
-    public WriteBuffer padAlign(AlignmentBoundary boundary) {
-        return pad(boundary.gap(position));
-    }
+    public WriteBuffer padAlign(AlignmentBoundary boundary) { return pad(boundary.gap(position)); }
 
-    public WriteBuffer padAll() {
-        return pad(core.length);
-    }
+    public WriteBuffer padAll() { return pad(core.length); }
 
     public WriteBuffer trim() {
         core.length = position;
         return this;
     }
 
-    public ReadBuffer readFromStart() {
-        return new ReadBuffer(core);
-    }
+    public ReadBuffer readFromStart() { return new ReadBuffer(core); }
 
-    @Override
-    StringBuilder dumpData(StringBuilder dump) {
-        return core.dumpTo(dump);
-    }
+    public ReadBuffer newReadBuffer() { return readFromStart(); }
 }

@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.IMR;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // IDL:orb.yoko.apache.org/IMR/ActiveState:1.0
 //
@@ -34,9 +36,9 @@ final public class ActiveStateHelper
         if(any.type().equivalent(type()))
             return narrow(any.extract_Object());
         throw new org.omg.CORBA.BAD_OPERATION(
-            org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadOperation(org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch),
-            org.apache.yoko.orb.OB.MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            MinorCodes
+                    .describeBadOperation(MinorCodes.MinorTypeMismatch),
+            MinorCodes.MinorTypeMismatch, org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
     private static org.omg.CORBA.TypeCode typeCode_;
@@ -107,9 +109,9 @@ final public class ActiveStateHelper
                 return _ob_stub;
             }
 
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType), 
-                org.apache.yoko.orb.OB.MinorCodes.MinorIncompatibleObjectType, 
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                .describeBadParam(MinorCodes.MinorIncompatibleObjectType),
+                MinorCodes.MinorIncompatibleObjectType,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 

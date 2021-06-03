@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+
 //
 // Create a new system generated object id. This is used for SYSTEM_ID
 // POA. It is necessary to identify ObjectId as belonging to a
@@ -83,7 +85,7 @@ class SystemIdGenerationStrategy implements IdGenerationStrategy {
         oid[pos++] = (byte) (currId >>> 8);
         oid[pos++] = (byte) currId;
 
-        org.apache.yoko.orb.OB.Assert.ensure(pos == oid.length);
+        Assert.ensure(pos == oid.length);
 
         return oid;
     }

@@ -20,6 +20,7 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.CORBA.StubForObject;
 import org.apache.yoko.orb.CORBA.StubForRemote;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
@@ -28,8 +29,8 @@ import org.omg.IOP.IOR;
 
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorORBDestroyed;
-import static org.apache.yoko.orb.OB.MinorCodes.describeInitialize;
+import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.util.MinorCodes.describeInitialize;
 import static org.omg.CORBA.CompletionStatus.*;
 
 public final class ObjectFactory {

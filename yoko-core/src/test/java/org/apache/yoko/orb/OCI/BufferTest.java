@@ -1,5 +1,8 @@
 package org.apache.yoko.orb.OCI;
 
+import org.apache.yoko.io.Buffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.io.WriteBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

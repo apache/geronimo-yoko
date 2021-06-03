@@ -16,14 +16,13 @@
  */
 
 package org.apache.yoko.orb.OB;
- 
+
+import org.omg.CORBA.ORB;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.BootLocator;
-import org.apache.yoko.orb.OB.BootManager;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA.ORBPackage.InvalidName;
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
         BootManager {
@@ -55,7 +54,7 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
             throws org.apache.yoko.orb.OB.BootManagerPackage.AlreadyExists {
         ObjectIdHasher oid = new ObjectIdHasher(id);
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine("Adding binding under id " + IORUtil.dump_octets(id)); 
+            logger.fine("Adding binding under id " + formatHexPara(id));
         }
 
         //
@@ -73,7 +72,7 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
             throws org.apache.yoko.orb.OB.BootManagerPackage.NotFound {
         ObjectIdHasher oid = new ObjectIdHasher(id);
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine("Removing binding with id " + IORUtil.dump_octets(id)); 
+            logger.fine("Removing binding with id " + formatHexPara(id));
         }
 
         //
@@ -105,7 +104,7 @@ final public class BootManager_impl extends org.omg.CORBA.LocalObject implements
         ObjectIdHasher oid = new ObjectIdHasher(id);
         
         if (logger.isLoggable(Level.FINE)) {
-            logger.fine("Searching for binding with id " + IORUtil.dump_octets(id)); 
+            logger.fine("Searching for binding with id " + formatHexPara(id));
         }
         org.omg.CORBA.Object obj = (org.omg.CORBA.Object) bindings_.get(oid);
         if (obj == null && locator_ != null) {

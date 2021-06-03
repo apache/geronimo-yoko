@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.PortableServer;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 // This class must be public
 public final class Delegate implements org.omg.PortableServer.portable.Delegate {
     private org.omg.CORBA.ORB orb_;
@@ -69,7 +72,7 @@ public final class Delegate implements org.omg.PortableServer.portable.Delegate 
                 String[] all = self._all_interfaces(thePOA, oid);
                 obj = poaImpl.create_reference_with_id(oid, all[0]);
             } catch (org.omg.PortableServer.CurrentPackage.NoContext ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             }
         } else {
             try {
@@ -148,17 +151,17 @@ public final class Delegate implements org.omg.PortableServer.portable.Delegate 
                     .resolveInitialReferences("InterfaceRepository");
         } catch (org.omg.CORBA.ORBPackage.InvalidName ex) {
             throw new org.omg.CORBA.INTF_REPOS(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeIntfRepos(org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos,
+                    MinorCodes
+                            .describeIntfRepos(MinorCodes.MinorNoIntfRepos),
+                    MinorCodes.MinorNoIntfRepos,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 
         if (obj == null)
             throw new org.omg.CORBA.INTF_REPOS(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeIntfRepos(org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos,
+                    MinorCodes
+                            .describeIntfRepos(MinorCodes.MinorNoIntfRepos),
+                    MinorCodes.MinorNoIntfRepos,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         org.omg.CORBA.Repository repository = null;
@@ -168,9 +171,9 @@ public final class Delegate implements org.omg.PortableServer.portable.Delegate 
         } catch (org.omg.CORBA.BAD_PARAM ex) // narrow failed
         {
             throw new org.omg.CORBA.INTF_REPOS(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeIntfRepos(org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoIntfRepos,
+                    MinorCodes
+                            .describeIntfRepos(MinorCodes.MinorNoIntfRepos),
+                    MinorCodes.MinorNoIntfRepos,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
 

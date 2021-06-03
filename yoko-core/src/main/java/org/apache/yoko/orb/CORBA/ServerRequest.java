@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 public class ServerRequest extends org.omg.CORBA.ServerRequest {
     private org.omg.PortableServer.DynamicImplementation servant_;
 
@@ -45,9 +48,9 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
     public void arguments(org.omg.CORBA.NVList parameters) {
         if (arguments_ != null)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIArguments),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIArguments,
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidUseOfDSIArguments),
+                    MinorCodes.MinorInvalidUseOfDSIArguments,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         try {
@@ -61,7 +64,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
                         nv.value().read_value(in_, nv.value().type());
                 }
             } catch (org.omg.CORBA.Bounds ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             } catch (org.omg.CORBA.SystemException ex) {
                 delegate_._OB_unmarshalEx(servant_, up_, ex);
             }
@@ -84,9 +87,9 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
         if (arguments_ == null || ctx_ != null || result_ != null
                 || exception_ != null)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIContext),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIContext,
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidUseOfDSIContext),
+                    MinorCodes.MinorInvalidUseOfDSIContext,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         try {
@@ -114,9 +117,9 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
     public void set_result(org.omg.CORBA.Any value) {
         if (arguments_ == null || result_ != null || exception_ != null)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIResult),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidUseOfDSIResult,
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidUseOfDSIResult),
+                    MinorCodes.MinorInvalidUseOfDSIResult,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         result_ = value;
@@ -143,9 +146,9 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
         org.omg.CORBA.TypeCode origTC = TypeCode._OB_getOrigType(value.type());
         if (origTC.kind() != org.omg.CORBA.TCKind.tk_except)
             throw new org.omg.CORBA.BAD_PARAM(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorNoExceptionInAny),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoExceptionInAny,
+                    MinorCodes
+                            .describeBadParam(MinorCodes.MinorNoExceptionInAny),
+                    MinorCodes.MinorNoExceptionInAny,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         exception_ = value;
@@ -188,7 +191,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
             try {
                 id = tc.id();
             } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
-                throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                throw Assert.fail(ex);
             }
 
             if (org.apache.yoko.orb.OB.Util.isSystemException(id)) {
@@ -217,7 +220,7 @@ public class ServerRequest extends org.omg.CORBA.ServerRequest {
                             }
                         }
                     } catch (org.omg.CORBA.Bounds ex) {
-                        throw org.apache.yoko.orb.OB.Assert.fail(ex);
+                        throw Assert.fail(ex);
                     }
                 }
             } catch (org.omg.CORBA.SystemException ex) {

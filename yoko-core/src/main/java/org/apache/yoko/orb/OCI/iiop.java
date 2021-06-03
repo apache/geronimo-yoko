@@ -19,7 +19,7 @@ package org.apache.yoko.orb.OCI;
 
 import java.util.logging.Logger;
 
-import org.apache.yoko.orb.OB.AssertionFailed;
+import org.apache.yoko.util.AssertionFailed;
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
 import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
 import org.apache.yoko.osgi.ProviderLocator;

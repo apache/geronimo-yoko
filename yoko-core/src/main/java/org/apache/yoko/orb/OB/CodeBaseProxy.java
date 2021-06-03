@@ -27,8 +27,8 @@ import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidContextID;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidContextID;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public class CodeBaseProxy extends LocalObject implements CodeBase {

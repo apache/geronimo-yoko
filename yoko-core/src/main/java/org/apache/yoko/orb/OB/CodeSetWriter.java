@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.WriteBuffer;
 import org.omg.CORBA.DATA_CONVERSION;
 
 public abstract class CodeSetWriter {

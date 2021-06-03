@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // Strategy for RETAIN and USE_SERVANT_MANAGER or USE_DEFAULT_SERVANT
 //
@@ -215,9 +217,9 @@ class RetainStrategy extends ActiveObjectOnlyStrategy {
 
                         if (servant == null) {
                             throw new org.omg.CORBA.OBJ_ADAPTER(
-                                    org.apache.yoko.orb.OB.MinorCodes
-                                            .describeObjAdapter(org.apache.yoko.orb.OB.MinorCodes.MinorNoDefaultServant),
-                                    org.apache.yoko.orb.OB.MinorCodes.MinorNoDefaultServant,
+                                    MinorCodes
+                                            .describeObjAdapter(MinorCodes.MinorNoDefaultServant),
+                                    MinorCodes.MinorNoDefaultServant,
                                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
                         }
                         return servant;

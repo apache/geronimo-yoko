@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.Assert;
+
 import java.util.logging.Logger;
 
 final class POALocator {
@@ -89,7 +91,7 @@ final class POALocator {
     synchronized void add(org.omg.PortableServer.POA poa, String[] id) {
         POANameHasher idkey = new POANameHasher(id);
         logger.fine("Adding POA to locater using key " + idkey); 
-        org.apache.yoko.orb.OB.Assert.ensure(!poas_.containsKey(idkey));
+        Assert.ensure(!poas_.containsKey(idkey));
         poas_.put(idkey, poa);
     }
 
@@ -99,7 +101,7 @@ final class POALocator {
     synchronized void remove(String[] id) {
         POANameHasher idkey = new POANameHasher(id);
         logger.fine("Removing POA from locater using key " + idkey); 
-        org.apache.yoko.orb.OB.Assert.ensure(poas_.containsKey(idkey));
+        Assert.ensure(poas_.containsKey(idkey));
         poas_.remove(idkey);
     }
 }

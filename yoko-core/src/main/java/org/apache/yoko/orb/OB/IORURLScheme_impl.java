@@ -25,8 +25,8 @@ import org.omg.CORBA.MARSHAL;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart;
-import static org.apache.yoko.orb.OB.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.MinorBadSchemeSpecificPart;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public class IORURLScheme_impl extends LocalObject implements URLScheme {

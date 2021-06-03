@@ -16,6 +16,7 @@
  */
 
 package org.apache.yoko.orb.OB;
+
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.omg.CONV_FRAME.CodeSetComponentInfo;
 import org.omg.CONV_FRAME.CodeSetComponentInfoHelper;
@@ -75,26 +76,13 @@ import org.omg.IOP.TAG_SPKM_2_SEC_MECH;
 import org.omg.IOP.TAG_SSL_SEC_TRANS;
 import org.omg.IOP.TaggedComponent;
 
+import static org.apache.yoko.util.Hex.formatHexLine;
+import static org.apache.yoko.util.Hex.formatHexPara;
+
 public final class IORUtil {
-    public static void main(String...args) {
-        final byte[] ba = { 
-                0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
-                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
-                0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x26, 0x27, 0x28, 0x29, 0x2a, 0x2b, 0x2c, 0x2d, 0x2e, 0x2f
-                };
-        
-        System.out.println("----");
-        StringBuilder sb = new StringBuilder(200);
-        for (int i = 0; i < 0x10; i++) {
-            IORUtil.dump_octets(ba, i, 0x20, sb);
-            System.out.println(sb.toString());
-            System.out.println("----");
-            sb.setLength(0);
-        }
-    }
-    
     private static void describeCSISecMechList(TaggedComponent component, StringBuilder sb) {
         InputStream in = new InputStream(component.component_data);
+        boolean endianFlag = in.read_boolean();
         in._OB_readEndian();
         CompoundSecMechList info = CompoundSecMechListHelper.read(in);
         
@@ -117,8 +105,8 @@ public final class IORUtil {
                 sb.append("            as_context_mech:\n"); 
                 sb.append("                supports: "); describeTransportFlags(mech.as_context_mech.target_supports, sb); sb.append("\n"); 
                 sb.append("                requires: "); describeTransportFlags(mech.as_context_mech.target_requires, sb); sb.append("\n"); 
-                sb.append("                client_authentication_mech: "); format_octets(mech.as_context_mech.client_authentication_mech, sb); sb.append("\n"); 
-                sb.append("                target_name: "); format_octets(mech.as_context_mech.target_name, sb); sb.append("\n"); 
+                sb.append("                client_authentication_mech: "); formatHexLine(mech.as_context_mech.client_authentication_mech, sb); sb.append("\n");
+                sb.append("                target_name: "); formatHexLine(mech.as_context_mech.target_name, sb); sb.append("\n");
             }
             
             if (mech.sas_context_mech != null) {
@@ -128,11 +116,11 @@ public final class IORUtil {
                 sb.append("                privilege_authorities:\n");
                 for (ServiceConfiguration auth: mech.sas_context_mech.privilege_authorities) {
                     sb.append("                    syntax: " + auth.syntax + "\n"); 
-                    sb.append("                    name: "); format_octets(auth.name, sb); sb.append("\n"); 
+                    sb.append("                    name: "); formatHexLine(auth.name, sb); sb.append("\n");
                 }
                 sb.append("                supported_naming_mechanisms:\n");
                 for (byte[] namingMech: mech.sas_context_mech.supported_naming_mechanisms) {
-                    sb.append("                    "); format_octets(namingMech, sb); sb.append("\n"); 
+                    sb.append("                    "); formatHexLine(namingMech, sb); sb.append("\n");
                 }
                 sb.append("                supported_identity_type: "); describeIdentityToken(mech.sas_context_mech.supported_identity_types, sb); sb.append("\n");
             }
@@ -229,8 +217,8 @@ public final class IORUtil {
         sb.append("        SECIOP_SEC_TRANS component:\n"); 
         sb.append("            target_supports: "); describeTransportFlags(info.target_supports, sb); sb.append("\n"); 
         sb.append("            target_requires: "); describeTransportFlags(info.target_requires, sb); sb.append("\n"); 
-        sb.append("            mech_oid: "); format_octets(info.mech_oid, sb); sb.append("\n"); 
-        sb.append("            target_name: "); format_octets(info.target_name, sb); sb.append("\n"); 
+        sb.append("            mech_oid: "); formatHexLine(info.mech_oid, sb); sb.append("\n");
+        sb.append("            target_name: "); formatHexLine(info.target_name, sb); sb.append("\n");
         sb.append("            addresses:\n"); 
         for (TransportAddress address: info.addresses) {
             sb.append("                host_name: ").append(address.host_name).append("\n"); 
@@ -326,126 +314,8 @@ public final class IORUtil {
         sb.append("Component data: (");
         sb.append(component.component_data.length);
         sb.append(")\n");
-        dump_octets(component.component_data, 0,
+        formatHexPara(component.component_data, 0,
                 component.component_data.length, sb);
-    }
-
-    //
-    // Convert an octet buffer into human-friendly data dump
-    //
-    public static String dump_octets(byte[] oct) {
-        StringBuilder sb = new StringBuilder();
-        dump_octets(oct, 0, oct.length, sb); 
-        return sb.toString();
-    }
-     
-    public static void dump_octets(byte[] oct, StringBuilder sb) {
-         dump_octets(oct, 0, oct.length, sb); 
-    }
-
-    private static final char[] HEX_DIGIT = "0123456789abcdef".toCharArray();
-    private static final int PRINTABLE_CHAR_LOW = 31;
-    private static final int PRINTABLE_CHAR_HIGH = 127;
-    //
-    // Convert an octet buffer into human-friendly data dump
-    //
-    public static StringBuilder dump_octets(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
-        if (count <= 0) return sb;
-
-        int endIndex = offset + count;
-        int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
-        String indexFormat = "%0" + indexWidth + "X:  ";
-        String indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
-
-        sb.append(String.format(indexFormat, offset));
-
-        final StringBuilder ascii = new StringBuilder(18);
-        switch (offset % 0x10) {
-            case 0xf: sb.append("  ");  ascii.append(" ");
-            case 0xe: sb.append("  ");  ascii.append(" ");
-            case 0xd: sb.append("  ");  ascii.append(" ");
-            case 0xc: sb.append("   "); ascii.append(" ");
-            case 0xb: sb.append("  ");  ascii.append(" ");
-            case 0xa: sb.append("  ");  ascii.append(" ");
-            case 0x9: sb.append("  ");  ascii.append(" ");
-            case 0x8: sb.append("   "); ascii.append(" ");
-            case 0x7: sb.append("  ");  ascii.append(" ");
-            case 0x6: sb.append("  ");  ascii.append(" ");
-            case 0x5: sb.append("  ");  ascii.append(" ");
-            case 0x4: sb.append("   "); ascii.append(" ");
-            case 0x3: sb.append("  ");  ascii.append(" ");
-            case 0x2: sb.append("  ");  ascii.append(" ");
-            case 0x1: sb.append("  ");  ascii.append(" ");
-            case 0x0:
-        }
-        
-        ascii.append(" \"");
-
-        for (int i = offset; i < endIndex; i++) {
-            final int b = oct[i] & 0xff;
-
-            // build up the ascii string for the end of the line
-            ascii.append((PRINTABLE_CHAR_LOW < b && b < PRINTABLE_CHAR_HIGH)? (char)b : '.');
-
-            // print the high hex nybble and the low hex nybble
-            sb.append(HEX_DIGIT[b>>4]).append(HEX_DIGIT[b&0xf]);
-
-            if (i % 0x4 == (0x4 - 1)) {
-                // space the columns on every 4-byte boundary
-                sb.append(' ');
-                if (i % 0x10 == (0x10-1)) {
-                    // write the ascii interpretation on the end of every line
-                    sb.append(ascii).append("\"");
-                    ascii.setLength(0);
-                    ascii.append(" \"");
-                    // put in a separator line every 0x100 bytes
-                    if (i % 0x100 == (0x100 - 1)) sb.append("\n").append(indexSpaces).append("-----------------------------------");
-                    // add a newline and a new index if the dump continues onto the next line
-                    if (i + 1 < endIndex) sb.append("\n").append(String.format(indexFormat, i + 1));
-                }
-            }
-        }
-        
-        switch (endIndex % 0x10) {
-            case 0x1: sb.append("  ");
-            case 0x2: sb.append("  ");
-            case 0x3: sb.append("   ");
-            case 0x4: sb.append("  ");
-            case 0x5: sb.append("  ");
-            case 0x6: sb.append("  ");
-            case 0x7: sb.append("   ");
-            case 0x8: sb.append("  ");
-            case 0x9: sb.append("  ");
-            case 0xa: sb.append("  ");
-            case 0xb: sb.append("   ");
-            case 0xc: sb.append("  ");
-            case 0xd: sb.append("  ");
-            case 0xe: sb.append("  ");
-            case 0xf: sb.append("   ");
-            case 0x0: sb.append(ascii).append("\"");
-        }
-
-        return sb;
-    }
-
-    //
-    // Convert an octet buffer into a single-line readable data dump. 
-    //
-    public static void format_octets(byte[] oct, StringBuilder sb) {
-        format_octets(oct, 0, oct.length, sb); 
-    }
-
-    //
-    // Convert an octet buffer into a single-line readable data dump. 
-    //
-    public static void format_octets(byte[] oct, int offset, int count, StringBuilder sb) {
-        if (count <= 0) return;
-        sb.append('"');
-        for (int i = offset; i < offset + count; i++) {
-            int n = oct[i] & 0xff;
-            sb.append(n >= 32 && n <= 127 ? (char) n : '?');
-        }
-        sb.append('"');
     }
 
     //

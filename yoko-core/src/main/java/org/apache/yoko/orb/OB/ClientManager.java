@@ -27,6 +27,8 @@ import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.exceptions.Transients;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.BiDirPolicy.BidirectionalPolicy;

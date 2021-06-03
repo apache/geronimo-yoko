@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package org.apache.yoko.orb.OB;
+package org.apache.yoko.util;
 
 import org.apache.yoko.ApacheVMCID;
 import org.omg.CORBA.OMGVMCID;

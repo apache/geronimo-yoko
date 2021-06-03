@@ -1,6 +1,6 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
-import static org.apache.yoko.orb.OB.MinorCodes.*;
+import static org.apache.yoko.util.MinorCodes.*;
 
 import org.apache.yoko.util.Wrapper;
 import org.omg.CORBA.COMM_FAILURE;
@@ -9,8 +9,9 @@ import java.io.IOException;
 import java.net.SocketException;
 import java.net.UnknownHostException;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorSetsockopt;
-import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
+import static org.apache.yoko.util.MinorCodes.MinorSetsockopt;
+import static org.apache.yoko.util.MinorCodes.describeCommFailure;
+import static org.apache.yoko.util.Exceptions.as;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 enum Exceptions {;
@@ -19,12 +20,12 @@ enum Exceptions {;
 
     static COMM_FAILURE asCommFailure(IOException e, int minor) {
         String msg = String.format("%s: %s", describeCommFailure(minor), e.getMessage());
-        return (COMM_FAILURE) new COMM_FAILURE(msg, minor, COMPLETED_NO).initCause(e);
+        return as(COMM_FAILURE::new, e, msg, minor, COMPLETED_NO);
     }
 
     static COMM_FAILURE asCommFailure(Exception e, int minor, String message) {
         String msg = String.format("%s: %s: %s", describeCommFailure(minor), message, e.getMessage());
-        return (COMM_FAILURE) new COMM_FAILURE(msg, minor, COMPLETED_NO).initCause(e);
+        return as(COMM_FAILURE::new, e, msg, minor, COMPLETED_NO);
     }
 }
 
@@ -49,11 +50,12 @@ enum CommFailures implements Wrapper<Exception, COMM_FAILURE> {
         this.minor = minor;
         this.reason = reason;
     }
+
     CommFailures(int minor) { this(minor, null); }
 
     @Override
     public COMM_FAILURE wrap(Exception e) {
-        return (COMM_FAILURE) new  COMM_FAILURE(reason(e), minor, COMPLETED_NO).initCause(e);
+        return as(COMM_FAILURE::new, e, reason(e), minor, COMPLETED_NO);
     }
 
     private String reason(Exception e) {

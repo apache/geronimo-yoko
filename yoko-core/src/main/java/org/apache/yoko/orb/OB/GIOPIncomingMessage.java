@@ -19,8 +19,9 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.orb.OCI.ReadBuffer;
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.io.WriteBuffer;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.BooleanHolder;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.IMP_LIMIT;
@@ -41,16 +42,16 @@ import org.omg.IOP.TaggedProfileHelper;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-import static org.apache.yoko.orb.OB.Assert.ensure;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorFragment;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorMessageSizeLimit;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoGIOP;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorUnknownMessage;
-import static org.apache.yoko.orb.OB.MinorCodes.MinorVersion;
-import static org.apache.yoko.orb.OB.MinorCodes.describeCommFailure;
-import static org.apache.yoko.orb.OB.MinorCodes.describeImpLimit;
-import static org.apache.yoko.orb.OCI.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.MinorCodes.MinorFragment;
+import static org.apache.yoko.util.MinorCodes.MinorMessageSizeLimit;
+import static org.apache.yoko.util.MinorCodes.MinorNoGIOP;
+import static org.apache.yoko.util.MinorCodes.MinorUnknownMessage;
+import static org.apache.yoko.util.MinorCodes.MinorVersion;
+import static org.apache.yoko.util.MinorCodes.describeCommFailure;
+import static org.apache.yoko.util.MinorCodes.describeImpLimit;
+import static org.apache.yoko.io.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.io.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 

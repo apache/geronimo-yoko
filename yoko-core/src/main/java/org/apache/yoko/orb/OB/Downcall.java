@@ -24,6 +24,8 @@ import org.apache.yoko.orb.IOP.MutableServiceContexts;
 import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.CORBA.CompletionStatus;

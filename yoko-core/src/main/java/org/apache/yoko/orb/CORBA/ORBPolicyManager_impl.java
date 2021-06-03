@@ -23,7 +23,7 @@ import org.omg.CORBA.Policy;
 import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.SetOverrideType;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorDuplicatePolicyType;
+import static org.apache.yoko.util.MinorCodes.MinorDuplicatePolicyType;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final public class ORBPolicyManager_impl extends LocalObject implements PolicyManager {

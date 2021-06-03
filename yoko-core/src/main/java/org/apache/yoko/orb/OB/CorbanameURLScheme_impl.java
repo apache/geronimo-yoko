@@ -17,9 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorOther;
+import static org.apache.yoko.util.MinorCodes.MinorOther;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.CORBA.BAD_PARAM;
 
 public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
@@ -79,9 +81,9 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
         int addrEnd;
 
         if (addrStart == slash)
-            throw new org.omg.CORBA.BAD_PARAM(org.apache.yoko.orb.OB.MinorCodes
-                    .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress)
-                    + ": no protocol address", org.apache.yoko.orb.OB.MinorCodes.MinorBadAddress,
+            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
+                    .describeBadParam(MinorCodes.MinorBadAddress)
+                    + ": no protocol address", MinorCodes.MinorBadAddress,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         if (slash == -1 && fragmentStart == -1)
@@ -144,9 +146,9 @@ public class CorbanameURLScheme_impl extends org.omg.CORBA.LocalObject
             if (!parser.isValid())
                 throw new org.omg.CORBA.BAD_PARAM(
                         MinorCodes
-                                .describeBadParam(org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart)
+                                .describeBadParam(MinorCodes.MinorBadSchemeSpecificPart)
                                 + ": invalid stringified name \"" + fragment + "\"",
-                        org.apache.yoko.orb.OB.MinorCodes.MinorBadSchemeSpecificPart,
+                        MinorCodes.MinorBadSchemeSpecificPart,
                         org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
             String[] content = parser.getContents();

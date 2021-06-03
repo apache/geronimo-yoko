@@ -21,6 +21,7 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConFactoryRegistryHelper;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.HexConverter;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.ORB;
@@ -38,6 +39,8 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Properties;
+
+import static org.apache.yoko.util.Hex.formatHexPara;
 
 public class IORDump {
 
@@ -89,7 +92,7 @@ public class IORDump {
                 if (j >= factories.length) {
                     sb.append("unknown profile tag ").append(ior.profiles[i].tag).append('\n');
                     sb.append("profile_data: (").append(ior.profiles[i].profile_data.length ).append(")\n");
-                    IORUtil.dump_octets(ior.profiles[i].profile_data, sb);
+                    formatHexPara(ior.profiles[i].profile_data, sb);
                 }
             }
         }

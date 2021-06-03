@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.ReadBuffer;
+import org.apache.yoko.io.ReadBuffer;
 
 final class UTF16Reader extends CodeSetReader {
     private int Flags_ = 0;

@@ -17,6 +17,9 @@
 
 package org.apache.yoko.orb.PortableInterceptor;
 
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+
 final class ArgumentStrategyNull extends ArgumentStrategy {
     ArgumentStrategyNull(org.omg.CORBA.ORB orb) {
         super(orb);
@@ -28,17 +31,17 @@ final class ArgumentStrategyNull extends ArgumentStrategy {
     org.omg.Dynamic.Parameter[] arguments() {
         if (!argsAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": arguments unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         throw new org.omg.CORBA.NO_RESOURCES(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeNoResources(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding)
+                MinorCodes
+                        .describeNoResources(MinorCodes.MinorInvalidBinding)
                         + ": arguments unavailable",
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding,
+                MinorCodes.MinorInvalidBinding,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
@@ -48,17 +51,17 @@ final class ArgumentStrategyNull extends ArgumentStrategy {
     org.omg.CORBA.TypeCode[] exceptions() {
         if (!exceptAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": exceptions unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         throw new org.omg.CORBA.NO_RESOURCES(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeNoResources(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding)
+                MinorCodes
+                        .describeNoResources(MinorCodes.MinorInvalidBinding)
                         + ": exceptions unavailable",
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding,
+                MinorCodes.MinorInvalidBinding,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
@@ -68,17 +71,17 @@ final class ArgumentStrategyNull extends ArgumentStrategy {
     org.omg.CORBA.Any result() {
         if (!resultAvail_)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall)
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorInvalidPICall)
                             + ": result unavailable",
-                    org.apache.yoko.orb.OB.MinorCodes.MinorInvalidPICall,
+                    MinorCodes.MinorInvalidPICall,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         throw new org.omg.CORBA.NO_RESOURCES(
-                org.apache.yoko.orb.OB.MinorCodes
-                        .describeNoResources(org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding)
+                MinorCodes
+                        .describeNoResources(MinorCodes.MinorInvalidBinding)
                         + ": result unavailable",
-                org.apache.yoko.orb.OB.MinorCodes.MinorInvalidBinding,
+                MinorCodes.MinorInvalidBinding,
                 org.omg.CORBA.CompletionStatus.COMPLETED_NO);
     }
 
@@ -86,6 +89,6 @@ final class ArgumentStrategyNull extends ArgumentStrategy {
     // Set the result (server side only)
     //
     void setResult(org.omg.CORBA.Any any) {
-        throw org.apache.yoko.orb.OB.Assert.fail();
+        throw Assert.fail();
     }
 }

@@ -20,6 +20,8 @@ package org.apache.yoko.orb.OB;
 import org.apache.yoko.orb.OB.Connection.State;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.Transport;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 
 import java.util.concurrent.ExecutorService;
 
@@ -87,9 +89,9 @@ final class GIOPServerStarterThreaded extends GIOPServerStarter {
         } catch (OutOfMemoryError ex) {
             acceptor_.close();
             serverState = ServerState.CLOSED;
-            throw new org.omg.CORBA.IMP_LIMIT(org.apache.yoko.orb.OB.MinorCodes
-                    .describeImpLimit(org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorThreadLimit,
+            throw new org.omg.CORBA.IMP_LIMIT(MinorCodes
+                    .describeImpLimit(MinorCodes.MinorThreadLimit),
+                    MinorCodes.MinorThreadLimit,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
     }

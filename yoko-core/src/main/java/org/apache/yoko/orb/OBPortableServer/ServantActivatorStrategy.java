@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.util.MinorCodes;
+
 //
 // Strategy for ServantActivators
 //
@@ -39,9 +41,9 @@ class ServantActivatorStrategy implements ServantManagerStrategy {
         //
         if (servantActivator_ != null)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet,
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorServantManagerAlreadySet),
+                    MinorCodes.MinorServantManagerAlreadySet,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         try {
@@ -52,9 +54,9 @@ class ServantActivatorStrategy implements ServantManagerStrategy {
 
         if (servantActivator_ == null) {
             throw new org.omg.CORBA.OBJ_ADAPTER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeObjAdapter(org.apache.yoko.orb.OB.MinorCodes.MinorNoServantManager),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorNoServantManager,
+                    MinorCodes
+                            .describeObjAdapter(MinorCodes.MinorNoServantManager),
+                    MinorCodes.MinorNoServantManager,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
         }
     }
@@ -76,9 +78,9 @@ class ServantActivatorStrategy implements ServantManagerStrategy {
         //
         if (servantActivator_ == null)
             throw new org.omg.CORBA.BAD_INV_ORDER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeBadInvOrder(org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorServantManagerAlreadySet,
+                    MinorCodes
+                            .describeBadInvOrder(MinorCodes.MinorServantManagerAlreadySet),
+                    MinorCodes.MinorServantManagerAlreadySet,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         org.omg.PortableServer.Servant servant;
@@ -103,9 +105,9 @@ class ServantActivatorStrategy implements ServantManagerStrategy {
         //
         if (servant == null)
             throw new org.omg.CORBA.OBJ_ADAPTER(
-                    org.apache.yoko.orb.OB.MinorCodes
-                            .describeObjAdapter(org.apache.yoko.orb.OB.MinorCodes.MinorServantNotFound),
-                    org.apache.yoko.orb.OB.MinorCodes.MinorServantNotFound,
+                    MinorCodes
+                            .describeObjAdapter(MinorCodes.MinorServantNotFound),
+                    MinorCodes.MinorServantNotFound,
                     org.omg.CORBA.CompletionStatus.COMPLETED_NO);
 
         return servant;

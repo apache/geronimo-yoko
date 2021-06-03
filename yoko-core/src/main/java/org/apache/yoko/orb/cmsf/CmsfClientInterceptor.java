@@ -1,6 +1,6 @@
 package org.apache.yoko.orb.cmsf;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorInvalidComponentId;
+import static org.apache.yoko.util.MinorCodes.MinorInvalidComponentId;
 import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv1;
 import static org.apache.yoko.orb.cmsf.CmsfVersion.CMSFv2;
 

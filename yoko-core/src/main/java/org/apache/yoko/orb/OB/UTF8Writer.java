@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.WriteBuffer;
 
 final class UTF8Writer extends CodeSetWriter {
     // This actually encodes CESU-8, which differs from UTF-8 only in the encoding of surrogates

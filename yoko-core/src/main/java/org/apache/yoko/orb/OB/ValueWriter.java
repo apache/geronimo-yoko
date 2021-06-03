@@ -18,8 +18,9 @@ package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.orb.CORBA.DataOutputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.orb.OCI.WriteBuffer;
+import org.apache.yoko.io.WriteBuffer;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.CustomMarshal;
 import org.omg.CORBA.MARSHAL;
@@ -38,8 +39,8 @@ import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.IdentityHashMap;
 
-import static org.apache.yoko.orb.OB.MinorCodes.MinorNoValueFactory;
-import static org.apache.yoko.orb.OB.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
+import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_string;
 
