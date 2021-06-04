@@ -10,6 +10,17 @@ dependencies {
   testCompile project(":yoko-rmi-impl").sourceSets.test.output
 }
 
+// The tests are in transition to the testify framework,
+// Use folders to separate the new tests from the old.
+sourceSets {
+  test {
+    java {
+      srcDir "src/test/java-artifact" // test artifacts
+      srcDir "src/test/java-testify"  // tests using the new framework
+    }
+  }
+}
+
 jar {
   manifest {
     instruction 'Bundle-Description' , 'Apache Yoko Core'

@@ -16,32 +16,31 @@
  */
 package org.apache.yoko;
 
-import acme.Echo;
-import acme.EchoImpl;
+import acme.Processor;
+import acme.ProcessorImpl;
 import org.junit.jupiter.api.Test;
-import testify.bus.Bus;
+import org.omg.CORBA.NO_RESPONSE;
+import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 
 import java.rmi.RemoteException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static testify.expect.ExceptionExpectation.expect;
 
 @ConfigureServer(
-//        orb = @ConfigureOrb(args = {"-ORBnative_wcs", "UTF-8"} )
+        clientOrb = @ConfigureOrb(props = "yoko.orb.policy.request_timeout=1")
 )
-public class EmojiTest {
-
-    @ClientStub(EchoImpl.class)
-    public static Echo stub;
+public class TimeoutTest {
+    @ClientStub(ProcessorImpl.class)
+    public static Processor stub;
 
     @Test
-    public void sendEmoji(Bus bus) throws RemoteException {
-        final char[] chars = Character.toChars(0x1f642);
-        assert chars.length == 2;
-        final String message = "Hello, world!" + chars[0] + chars[1];
-        String reply = stub.echo(message);
-        assertEquals(message, reply, "String should be transmitted and received correctly");
+    public void testTimeout() {
+        expect(RemoteException.class)
+                .causedBy(NO_RESPONSE.class)
+                .rootCause(NO_RESPONSE.class)
+                .when(() -> stub.process(() -> Thread.sleep(1000)));
     }
 
 }
