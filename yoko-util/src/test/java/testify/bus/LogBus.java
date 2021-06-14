@@ -20,12 +20,7 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-// Although some of the methods here are fluent in design
-// (i.e. they return a Bus object suitable for method chaining)
-// the internal implementations are expected to return null.
-// The fluency is an affordance purely for the code calling
-// objects accessible outside the package.
-@SuppressWarnings("UnusedReturnValue")
+// Provide logging functionality. This interface should remain package-private.
 interface LogBus {
     String isLoggingEnabled(LogLevel level);
     Bus enableLogging(String... patterns);
