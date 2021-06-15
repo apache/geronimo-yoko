@@ -24,8 +24,8 @@ import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
-import static org.apache.yoko.orb.logging.VerboseLogging.DATA_IN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.DATA_OUT_LOG;
+import static org.apache.yoko.logging.VerboseLogging.DATA_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.DATA_OUT_LOG;
 import static org.omg.GIOP.MsgType_1_1._CancelRequest;
 import static org.omg.GIOP.MsgType_1_1._CloseConnection;
 import static org.omg.GIOP.MsgType_1_1._Fragment;

@@ -17,12 +17,11 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.orb.logging.VerboseLogging;
 import org.apache.yoko.rmi.util.ObjectUtil;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
-import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
+import static org.apache.yoko.logging.VerboseLogging.RETRY_LOG;
 
 /**
  * RetryInfo holds counters which track the number of retries and location forward replies

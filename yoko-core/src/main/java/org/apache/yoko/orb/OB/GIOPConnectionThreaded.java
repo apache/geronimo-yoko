@@ -55,9 +55,9 @@ import static org.apache.yoko.util.MinorCodes.describeCommFailure;
 import static org.apache.yoko.util.MinorCodes.describeImpLimit;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
 import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class GIOPConnectionThreaded extends GIOPConnection {

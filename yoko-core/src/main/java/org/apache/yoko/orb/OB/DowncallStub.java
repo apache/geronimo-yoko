@@ -76,7 +76,7 @@ import java.util.logging.Logger;
 
 import static org.apache.yoko.io.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
-import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
+import static org.apache.yoko.logging.VerboseLogging.RETRY_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 //

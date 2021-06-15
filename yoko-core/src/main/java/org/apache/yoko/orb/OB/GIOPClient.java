@@ -56,7 +56,7 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
 import static javax.rmi.CORBA.Util.createValueHandler;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 /**

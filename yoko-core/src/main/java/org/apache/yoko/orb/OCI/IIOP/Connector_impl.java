@@ -47,10 +47,10 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
 import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.logged;
-import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_OUT_LOG;
+import static org.apache.yoko.logging.VerboseLogging.logged;
+import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.util.HexConverter.octetsToAscii;
 
 final class Connector_impl extends org.omg.CORBA.LocalObject implements Connector {

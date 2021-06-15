@@ -26,7 +26,7 @@ import java.util.logging.Logger;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.CLOSED;
 import static org.apache.yoko.orb.OB.GIOPServerStarter.ServerState.HOLDING;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_IN_LOG;
 
 abstract class GIOPServerStarter {
     static final Logger logger = Logger.getLogger(GIOPServerStarter.class.getName());
