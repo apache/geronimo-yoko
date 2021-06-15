@@ -18,36 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.io.Externalizable;
-import java.io.IOException;
-import java.io.Serializable;
-import java.lang.reflect.Constructor;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.rmi.AccessException;
-import java.rmi.MarshalException;
-import java.rmi.NoSuchObjectException;
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.rmi.ServerError;
-import java.rmi.ServerException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import javax.rmi.PortableRemoteObject;
-import javax.rmi.CORBA.Stub;
-import javax.rmi.CORBA.Tie;
-import javax.rmi.CORBA.Util;
-import javax.rmi.CORBA.UtilDelegate;
-import javax.rmi.CORBA.ValueHandler;
-
-import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -64,6 +36,36 @@ import org.omg.CORBA.TRANSACTION_ROLLEDBACK;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.IDLEntity;
 import org.omg.CORBA.portable.UnknownException;
+
+import javax.rmi.CORBA.Stub;
+import javax.rmi.CORBA.Tie;
+import javax.rmi.CORBA.Util;
+import javax.rmi.CORBA.UtilDelegate;
+import javax.rmi.CORBA.ValueHandler;
+import javax.rmi.PortableRemoteObject;
+import java.io.Externalizable;
+import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.rmi.AccessException;
+import java.rmi.MarshalException;
+import java.rmi.NoSuchObjectException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.rmi.ServerError;
+import java.rmi.ServerException;
+import java.security.AccessController;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.Arrays;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
+import java.util.logging.Logger;
+
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINEST;
+import static org.apache.yoko.logging.VerboseLogging.CLASS_LOG;
 
 public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
@@ -87,12 +89,12 @@ public class UtilImpl implements UtilDelegate {
         }
 
         // We will try to find the extension class
-        // loader by ascending the loader hierarchy 
+        // loader by ascending the loader hierarchy
         // starting from whatever loader we found.
         for (ClassLoader l = candidateLoader; l != null; l = l.getParent()) {
             candidateLoader = l;
         }
-        
+
         BEST_GUESS_AT_EXTENSION_CLASS_LOADER = candidateLoader;
     }
 
@@ -187,7 +189,7 @@ public class UtilImpl implements UtilDelegate {
         result.detail = sysEx;
         return result;
     }
-    
+
     private static RemoteException createRemoteException(String className, String s) {
         RemoteException result;
         try {
@@ -208,7 +210,7 @@ public class UtilImpl implements UtilDelegate {
 
         if (rex.detail instanceof RemoteException)
             rex = (RemoteException) rex.detail;
-        
+
         SystemException sysEx;
 
         if (rex instanceof java.rmi.NoSuchObjectException) {
@@ -223,17 +225,17 @@ public class UtilImpl implements UtilDelegate {
         sysEx.initCause(rex);
         throw sysEx;
     }
-    
+
     private static SystemException createSystemException(RemoteException rex) {
         return createSystemException(rex, rex.getClass());
     }
-    
+
     /**
      * utility method to check for JTA exception types without linking to the JTA classes directly
      */
     private static SystemException createSystemException(RemoteException rex, Class<?> fromClass) {
         // Recurse up the parent chain,
-        // until we reach a known JTA type. 
+        // until we reach a known JTA type.
         switch(fromClass.getName()) {
             // Of course, we place some known elephants in Cairo.
             case "java.lang.Object":
@@ -539,89 +541,69 @@ public class UtilImpl implements UtilDelegate {
     }
 
     @SuppressWarnings("rawtypes")
-    public Class loadClass(String name, String codebase, ClassLoader loader)
-            throws ClassNotFoundException {
-        try {
-            return loadClass0(name, codebase, loader);
-        } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINER, "cannot load from " + codebase + " " +
-                    ex.getMessage(), ex);
-            throw ex;
+    public Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
+        if (CLASS_LOG.isLoggable(FINEST)) CLASS_LOG.finer(String.format("loadClass(\"%s\", \"%s\", %s)", name, codebase, loader));
+        return Arrays.stream(ClassLoadStrategy.values())
+                .sequential()
+                .map(strategy -> strategy.getAction(loader))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .map(action -> action.tryToLoad(name))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseThrow(() -> new ClassNotFoundException(name));
+    }
+
+    @FunctionalInterface
+    interface ClassLoadAction {
+        Class<?> loadClass(String name) throws ClassNotFoundException;
+        default Class<?> tryToLoad(String name) {
+            try {
+                Class<?> clazz = loadClass(name);
+                if (clazz != null) CLASS_LOG.fine(() -> "found " + name);
+                return clazz;
+            } catch (ClassNotFoundException ignored) {
+                return null;
+            }
         }
     }
 
-    static public Class<?> loadClass0(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
-
-        try {
-            return ProviderLocator.loadClass(name, null, loader);
-        } catch (ClassNotFoundException ignored) {
+    enum ClassLoadStrategy {
+        PROVIDER_LOADER(l -> Optional.of(n -> ProviderLocator.loadClass(n, null, l))),
+        STACK_LOADER(l -> Optional.ofNullable(getStackLoader()).map(sl -> sl::loadClass)),
+        THIS_LOADER(l -> Optional.ofNullable(l).map(gl -> gl::loadClass)),
+        /*
+          Deliberately removed two risky steps from the original algorithm that loaded code remotely:
+          1. Try to load the class from the provided codebase (if present) using a URLClassLoader
+          2. Try to load the class from the java.rmi.server.codebase system property value (if present) using the RMIClassLoader
+         */
+        GIVEN_LOADER(l -> Optional.ofNullable(l).map(gl -> gl::loadClass)),
+        CONTEXT_LOADER(l -> Optional.ofNullable(null == l ? getContextClassLoader() : null).map(ccl -> ccl::loadClass));
+        private final Function<ClassLoader, Optional<ClassLoadAction>> fun;
+        ClassLoadStrategy(Function<ClassLoader, Optional<ClassLoadAction>> fun) { this.fun = fun; }
+        final Optional<ClassLoadAction> getAction(ClassLoader givenLoader) {
+            Optional<ClassLoadAction> optionalAction = fun.apply(givenLoader);
+            CLASS_LOG.finest(() -> optionalAction.map(a -> "searching " + name() + "...").orElse("skipping " + name()));
+            return optionalAction;
         }
-
-        final ClassLoader stackLoader = getStackLoader();
-        if (stackLoader != null) {
-            try {
-                final Class<?> result = stackLoader.loadClass(name);
-                if (result != null) return result;
-            } catch (ClassNotFoundException ignored) {
-            }
-        }
-
-        // try loading using our loader, just in case we really were loaded
-        // using the same classloader the delegate is in.
-        ClassLoader thisLoader = Util.class.getClassLoader();
-        if (thisLoader != null) {
-            try {
-                final Class<?> result = thisLoader.loadClass(name);
-                if (result != null) return result;
-            } catch (ClassNotFoundException ignored) {
-            }
-        }
-
-        if (codebase != null && !"".equals(codebase) && !Boolean.getBoolean("java.rmi.server.useCodeBaseOnly")) {
-            logger.finer("trying RMIClassLoader");
-            try (URLClassLoader url_loader = new URLClassLoader(new URL[]{new URL(codebase)}, loader)) {
-                final Class<?> result = url_loader.loadClass(name);
-                if (result != null) return result;
-            } catch (ClassNotFoundException ex) {
-                logger.log(Level.FINER, "RMIClassLoader says " + ex.getMessage(), ex);
-            } catch (MalformedURLException ex) {
-                logger.log(Level.FINER, "RMIClassLoader says " + ex.getMessage(), ex);
-                logger.finer("FAILED class download " + name + " from " + codebase + " " + ex.getMessage());
-            } catch (RuntimeException ex) {
-                logger.log(Level.FINER, "FAILED class download " + name + " from " + codebase + " " + ex.getMessage(), ex);
-            } catch (IOException ignored) {
-            }
-        } else {
-            codebase = (String) AccessController.doPrivileged(new GetSystemPropertyAction("java.rmi.server.codebase"));
-            if (codebase != null) {
-                try {
-                    final Class<?> result = java.rmi.server.RMIClassLoader.loadClass(codebase, name);
-                    if (result != null) return result;
-                } catch (ClassNotFoundException | MalformedURLException ignored) {
-                }
-            }
-        }
-
-        if (loader == null) loader = getContextClassLoader();
-
-        try {
-            final Class<?> result = loader.loadClass(name);
-            if (result != null) return result;
-        } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINER, "LocalLoader says " + ex.getMessage(), ex);
-        }
-
-        throw new ClassNotFoundException(name);
     }
 
     private static ClassLoader getStackLoader() {
         // walk down the stack looking for the first class loader that is NOT
         //  - the system class loader (null)
         //  - the loader that loaded Util.class
-        final ClassLoader thisLoader = Util.class.getClassLoader();
+        final ClassLoader thisLoader = UtilImpl.class.getClassLoader();
+        CLASS_LOG.finest(() -> "Looking for stack loader other than loader of UtilImpl: " + thisLoader);
         for (Class<?> candidateContextClass : _secman.getClassContext()) {
             final ClassLoader candidateLoader = candidateContextClass.getClassLoader();
-            if (null != candidateLoader && thisLoader != candidateLoader) return candidateLoader;
+            if (candidateLoader == null) {
+                CLASS_LOG.finest(() -> "Ignoring system class " + candidateContextClass.getName());
+            } else if (thisLoader == candidateLoader) {
+                CLASS_LOG.finest(() -> "Ignoring yoko class " + candidateContextClass.getName());
+            } else {
+                CLASS_LOG.finer(() -> "Using " + candidateContextClass.getName() + "'s loader: " + candidateLoader);
+                return candidateLoader;
+            }
         }
         return null;
     }
@@ -699,7 +681,7 @@ public class UtilImpl implements UtilDelegate {
             targetClass = Util.loadClass(desc.type.getName(), stub
                     ._get_codebase(), loader);
         } catch (ClassNotFoundException ex) {
-            logger.log(Level.FINER, "copyRMIStub exception (current loader is: " + loader
+            logger.log(FINER, "copyRMIStub exception (current loader is: " + loader
                     + ") " + ex.getMessage(), ex);
             throw new RemoteException("Class not found", ex);
         }

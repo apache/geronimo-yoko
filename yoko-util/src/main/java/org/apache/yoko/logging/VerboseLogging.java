@@ -108,6 +108,15 @@ public enum VerboseLogging {
      */
     public static final Logger MARSHAL_LOG = Logger.getLogger("yoko.verbose.marshal");
 
+    /** Class loading logging: <pre>
+     * CONFIG:
+     * FINE:
+     * FINER:
+     * FINEST:
+     * </pre>
+     */
+    public static final Logger CLASS_LOG = Logger.getLogger("yoko.verbose.class");
+
     /**
      * Use this as a pass-through method for an exception when it is being processed without a new exception being created.
      * It will help to determine the code location where the processing happens by:&mdash;
