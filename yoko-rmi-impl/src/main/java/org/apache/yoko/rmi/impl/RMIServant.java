@@ -14,7 +14,7 @@
 *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *  See the License for the specific language governing permissions and
 *  limitations under the License.
-*/ 
+*/
 
 package org.apache.yoko.rmi.impl;
 
@@ -28,20 +28,25 @@ import org.omg.CORBA.portable.ResponseHandler;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.reflect.Proxy.newProxyInstance;
+import static java.security.AccessController.doPrivileged;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.logging.VerboseLogging.REQ_IN_LOG;
 
-public class RMIServant extends org.omg.PortableServer.Servant implements javax.rmi.CORBA.Tie {
+public class RMIServant extends org.omg.PortableServer.Servant implements javax.rmi.CORBA.Tie, InvocationHandler {
     RMIState _state;
     RemoteDescriptor _descriptor;
     byte[] _id;
+    private InvokeHandler proxyInvokeHandler;
 
     Class getJavaClass() {
         return _descriptor.type;
@@ -68,13 +73,14 @@ public class RMIServant extends org.omg.PortableServer.Servant implements javax.
     }
 
     /**
-         * this implements the sole missing method in
-         * org.omg.CORBA.portable.InvokeHandler
-         */
-    public org.omg.CORBA.portable.OutputStream _invoke(java.lang.String opName,
-            org.omg.CORBA.portable.InputStream _input,
-            org.omg.CORBA.portable.ResponseHandler response)
-            throws org.omg.CORBA.SystemException {
+      * this implements the sole missing method in
+      * org.omg.CORBA.portable.InvokeHandler
+     */
+    public OutputStream _invoke(String opName, InputStream _input, ResponseHandler response) throws SystemException {
+        return this.proxyInvokeHandler._invoke(opName, _input, response);
+    }
+
+    private OutputStream _invoke0(String opName, InputStream _input, ResponseHandler response) throws SystemException {
 
         MethodDescriptor method = _descriptor.getMethod(opName);
 
@@ -124,8 +130,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements javax.
     }
 
     /* package */
-    Object invoke_method(java.lang.reflect.Method m, Object[] args)
-    throws java.rmi.RemoteException, Throwable {
+    Object invoke_method(java.lang.reflect.Method m, Object[] args) throws Throwable {
 
         if (_target != null) {
             try {
@@ -192,6 +197,11 @@ public class RMIServant extends org.omg.PortableServer.Servant implements javax.
         }
 
         _target = target;
+        ClassLoader targetLoader = doPrivileged((PrivilegedAction<ClassLoader>) () -> _target.getClass().getClassLoader());
+        if (targetLoader != null && targetLoader != this.getClass().getClassLoader())
+            proxyInvokeHandler = (InvokeHandler) newProxyInstance(targetLoader, new Class<?>[]{InvokeHandler.class}, this);
+        else
+            proxyInvokeHandler = this::_invoke0;
     }
 
     Delegate getDelegate() {
@@ -199,6 +209,14 @@ public class RMIServant extends org.omg.PortableServer.Servant implements javax.
     }
 
     public org.omg.CORBA.Object thisObject() {
-            return _this_object();
+        return _this_object();
+    }
+
+    private static final Method INVOKE_HANDLER_METHOD = InvokeHandler.class.getMethods()[0];
+
+    @Override
+    public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        assert INVOKE_HANDLER_METHOD.equals(method);
+        return this._invoke0((String) args[0], (InputStream) args[1], (ResponseHandler) args[2]);
     }
 }
