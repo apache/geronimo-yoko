@@ -18,24 +18,29 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.lang.reflect.Method;
-import java.util.logging.Logger;
-import java.util.logging.Level;
-
 import org.omg.CORBA.OBJECT_NOT_EXIST;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.Delegate;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.InvokeHandler;
+import org.omg.CORBA.portable.OutputStream;
+import org.omg.CORBA.portable.ResponseHandler;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 
-public class RMIServant extends org.omg.PortableServer.Servant implements
-         javax.rmi.CORBA.Tie {
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-    static final Logger logger = Logger.getLogger(RMIServant.class.getName());
+import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
+import static java.util.logging.Level.FINEST;
+import static org.apache.yoko.logging.VerboseLogging.REQ_IN_LOG;
 
+public class RMIServant extends org.omg.PortableServer.Servant implements javax.rmi.CORBA.Tie {
     RMIState _state;
-
     RemoteDescriptor _descriptor;
-
     byte[] _id;
 
     Class getJavaClass() {
@@ -80,38 +85,37 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
 
         java.lang.reflect.Method m = method.getReflectedMethod();
 
-        logger.finer(debug_name(m) + ": invoking on " + _id);
+        if (REQ_IN_LOG.isLoggable(FINEST)) REQ_IN_LOG.finest(debug_name(m) + ": invoking on " + _id);
 
         try {
             Object[] args = method.readArguments(_input);
 
             Object result = invoke_method(m, args);
 
-            org.omg.CORBA.portable.OutputStream _out = response.createReply();
+            OutputStream _out = response.createReply();
 
             method.writeResult(_out, result);
-            logger.finer(debug_name(m) + ": returning normally");
+            if (REQ_IN_LOG.isLoggable(FINEST)) REQ_IN_LOG.finest(debug_name(m) + ": returning normally");
 
             return _out;
-        } catch (org.omg.CORBA.SystemException ex) {
-            logger.throwing(RMIServant.class.getName(), "_invoke", ex);
-            logger.warning(ex.getMessage());
+        } catch (SystemException ex) {
+            REQ_IN_LOG.throwing(RMIServant.class.getName(), "_invoke", ex);
+            REQ_IN_LOG.warning(ex.getMessage());
             throw ex;
 
         } catch (java.lang.reflect.UndeclaredThrowableException ex) {
-            logger.throwing(RMIServant.class.getName(), "_invoke", ex
-                    .getUndeclaredThrowable());
+            REQ_IN_LOG.throwing(RMIServant.class.getName(), "_invoke", ex.getUndeclaredThrowable());
             throw new org.omg.CORBA.portable.UnknownException(ex
                     .getUndeclaredThrowable());
         } catch (RuntimeException ex) {
-            logger.log(Level.FINER, debug_name(m) + ": RuntimeException " + ex.getMessage(), ex);
+            if (REQ_IN_LOG.isLoggable(FINER)) REQ_IN_LOG.log(FINER, debug_name(m) + ": RuntimeException " + ex.getMessage(), ex);
             return method.writeException(response, ex);
         } catch (java.rmi.RemoteException ex) {
-            logger.log(Level.FINER, debug_name(m) + ": RemoteException " + ex.getMessage(), ex);
+            if (REQ_IN_LOG.isLoggable(FINER)) REQ_IN_LOG.log(FINER, debug_name(m) + ": RemoteException " + ex.getMessage(), ex);
             // return method.writeException (response, ex);
             throw UtilImpl.mapRemoteException(ex);
         } catch (Throwable ex) {
-            logger.log(Level.FINER, debug_name(m) + ": Throwable " + ex.getMessage(), ex);
+            if (REQ_IN_LOG.isLoggable(FINER)) REQ_IN_LOG.log(FINER, debug_name(m) + ": Throwable " + ex.getMessage(), ex);
             return method.writeException(response, ex);
         } finally {
             // PortableRemoteObjectExt.popState();
@@ -125,9 +129,12 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
 
         if (_target != null) {
             try {
+                if (REQ_IN_LOG.isLoggable(FINE)) REQ_IN_LOG.fine("invoking method " + m + " on target " + _target);
+                if (REQ_IN_LOG.isLoggable(FINER)) REQ_IN_LOG.finer(" with args: " + Arrays.asList(args));
+                if (REQ_IN_LOG.isLoggable(FINEST)) REQ_IN_LOG.finest(" of arg types: " + Stream.of(args).map(o -> o == null ? null : o.getClass()).collect(Collectors.toList()));
                 return m.invoke(_target, args);
             } catch (java.lang.reflect.InvocationTargetException ex) {
-                logger.log(Level.FINER, "Error invoking local method", ex.getCause());
+                REQ_IN_LOG.log(FINER, "Error invoking local method", ex.getCause());
                 throw ex.getTargetException();
             }
         } else {
@@ -164,7 +171,7 @@ public class RMIServant extends org.omg.PortableServer.Servant implements
             poa.deactivate_object(id);
             _set_delegate(null);
         } catch (Throwable ex) {
-            logger.throwing("", "deactivate", ex);
+            REQ_IN_LOG.throwing("", "deactivate", ex);
             throw new RuntimeException("cannot deactivate: " + ex.getMessage(), ex);
         }
     }
