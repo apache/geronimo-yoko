@@ -20,7 +20,12 @@ import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.CORBA.ValueMember;
 
-class FVDValueDescriptor extends ValueDescriptor {
+import java.util.Optional;
+
+import static java.util.logging.Level.FINER;
+import static org.apache.yoko.logging.VerboseLogging.MARSHAL_LOG;
+
+final class FVDValueDescriptor extends ValueDescriptor {
     final FullValueDescription fvd;
     final String repid;
 
@@ -46,19 +51,27 @@ class FVDValueDescriptor extends ValueDescriptor {
 //            _is_externalizable = false;
 //        }
 
+        if (MARSHAL_LOG.isLoggable(FINER)) MARSHAL_LOG.finer("Computing field descriptors for " + fvd.name + " version " + fvd.version);
         ValueMember[] members = fvd.members;
         FieldDescriptor[] new_fields = new FieldDescriptor[members.length];
         for (int i = 0; i < members.length; i++) {
-            ValueMember valueMember = members[i];
-            new_fields[i] = findField(valueMember);
+            ValueMember vm = members[i];
+            FieldDescriptor fd = findField(vm);
+            new_fields[i] = fd;
+            if (MARSHAL_LOG.isLoggable(FINER)) MARSHAL_LOG.finer(String.format("\t%s -> %s", describe(vm), describe(fd)));
         }
-
         _fields = new_fields;
     }
 
-    private FieldDescriptor findField(ValueMember valueMember) {
-        FieldDescriptor result = null;
+    private static String describe(FieldDescriptor fd) {
+        return fd == null ? null : String.format("FieldDescriptor[%s in %s]", fd.java_name, Optional.of(fd.declaringClass).map(Class::getName).orElse(""));
+    }
 
+    private static String describe(ValueMember vm) {
+        return vm == null ? null : String.format("ValueMember[name=\"%s\", id=\"%s\"]", vm.name, vm.id);
+    }
+
+    private FieldDescriptor findField(ValueMember valueMember) {
         for (Class<?> c = type; c != null; c = c.getSuperclass()) {
             TypeDescriptor td = repo.getDescriptor(c);
             if (td instanceof ValueDescriptor) {
@@ -74,8 +87,12 @@ class FVDValueDescriptor extends ValueDescriptor {
                 }
             }
         }
+        // There was no matching field in the local implementation so look up a remote field descriptor.
 
-        return result;
+        String repId =  valueMember.id;
+
+
+        return null;
     }
 
     @Override
