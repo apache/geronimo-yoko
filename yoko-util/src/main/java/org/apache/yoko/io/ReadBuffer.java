@@ -86,7 +86,7 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
     public String dumpAllDataWithPosition() {
         StringBuilder sb = new StringBuilder();
         formatHexPara(core.data, 0, position, sb);
-        sb.append(String.format("------------------ pos = 0x%08X -------------------%n", position));
+        sb.append(String.format("%n       >>>>>>>>  pos: 0x%08X  <<<<<<<<%n", position));
         return formatHexPara(core.data, position, available(), sb).toString();
     }
 

@@ -91,6 +91,7 @@ public enum Hex {
         }
 
         switch (endIndex % 0x10) {
+            case 0x0: break;
             case 0x1: sb.append("  ");
             case 0x2: sb.append("  ");
             case 0x3: sb.append("   ");
@@ -105,8 +106,9 @@ public enum Hex {
             case 0xc: sb.append("  ");
             case 0xd: sb.append("  ");
             case 0xe: sb.append("  ");
-            case 0xf: sb.append("   ");
-            case 0x0: sb.append(ascii).append("\"");
+            case 0xf: sb.append("   ")
+                    .append(ascii)
+                    .append("\"");
         }
 
         return sb;
