@@ -35,6 +35,7 @@ import org.omg.CORBA.TRANSACTION_REQUIRED;
 import org.omg.CORBA.TRANSACTION_ROLLEDBACK;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA.portable.UnknownException;
 
 import javax.rmi.CORBA.Stub;
@@ -46,6 +47,8 @@ import javax.rmi.PortableRemoteObject;
 import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
 import java.rmi.AccessException;
 import java.rmi.MarshalException;
 import java.rmi.NoSuchObjectException;
@@ -58,6 +61,7 @@ import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -104,7 +108,7 @@ public class UtilImpl implements UtilDelegate {
                 final Class<?> c = Class.forName(className);
                 ClassLoader cl = getClassLoader(c);
                 if (cl != null) return cl;
-            } catch (Exception|NoClassDefFoundError swallowed) {
+            } catch (Exception|NoClassDefFoundError ignored) {
             }
         }
         return null;
@@ -113,10 +117,7 @@ public class UtilImpl implements UtilDelegate {
     /**
      * Translate a CORBA SystemException to the corresponding RemoteException
      */
-    public RemoteException mapSystemException(final SystemException theException) {
-
-        SystemException ex = theException;
-
+    public RemoteException mapSystemException(final SystemException ex) {
         if (ex instanceof UnknownException) {
             Throwable orig = ((UnknownException) ex).originalEx;
             if (orig instanceof Error) {
@@ -167,53 +168,94 @@ public class UtilImpl implements UtilDelegate {
         return createRemoteException(ex, exceptionMessage);
     }
 
+    private enum TransactionExceptions {
+        REQUIRED("jakarta.transaction.TransactionRequiredException", "javax.transaction.TransactionRequiredException"),
+        ROLLED_BACK("jakarta.transaction.TransactionRolledbackException", "javax.transaction.TransactionRolledbackException"),
+        INVALID("jakarta.transaction.InvalidTransactionException", "javax.transaction.InvalidTransactionException");
+
+        final List<String> remoteExceptionClassNames;
+
+        TransactionExceptions(String...classNames) {
+            this.remoteExceptionClassNames = Arrays.asList(classNames);
+        }
+
+        RemoteException create(String message, Throwable cause) {
+            return remoteExceptionClassNames
+                    .stream()
+                    .map(this::loadClass)
+                    .filter(Objects::nonNull)
+                    .map(this::getSingleStringConstructor)
+                    .filter(Objects::nonNull)
+                    .map(ctor -> invokeConstructor(ctor, message))
+                    .filter(Objects::nonNull)
+                    .peek(re -> re.detail = cause)
+                    .map(RemoteException.class::cast)
+                    .findFirst()
+                    .orElseGet(() -> new RemoteException(message, cause));
+        }
+
+        Class<? extends RemoteException> loadClass(String name) {
+            try {
+                Class<? extends RemoteException> clazz = Util.loadClass(name, null, null);
+                if (RemoteException.class.isAssignableFrom(clazz)) {
+                    return clazz;
+                }
+            } catch (ClassNotFoundException e) {
+            }
+            return null;
+        }
+
+        <T> Constructor<T> getSingleStringConstructor(Class<T> clazz) {
+            try {
+                return clazz.getConstructor(String.class);
+            } catch (NoSuchMethodException e) {
+                return null;
+            }
+        }
+
+        <T> T invokeConstructor(Constructor<T> ctor, String arg) {
+            try {
+                return ctor.newInstance(arg);
+            } catch (InstantiationException | InvocationTargetException | IllegalAccessException e) {
+                return null;
+            }
+        }
+    }
+
     private RemoteException createRemoteException(SystemException sysEx, String s) {
         RemoteException result;
         try {
             throw sysEx;
         } catch (BAD_PARAM|COMM_FAILURE|MARSHAL e) {
-            result = new MarshalException(s);
+            result = new MarshalException(s, e);
         } catch (INV_OBJREF|NO_IMPLEMENT|OBJECT_NOT_EXIST e) {
             result = new NoSuchObjectException(s);
         } catch(NO_PERMISSION e) {
-            result = new AccessException(s);
+            result = new AccessException(s, e);
+            result.initCause(e);
         } catch (TRANSACTION_REQUIRED e) {
-            result = createRemoteException("javax.transaction.TransactionRequiredException", s);
+            result = TransactionExceptions.REQUIRED.create(s, e);
         } catch (TRANSACTION_ROLLEDBACK e) {
-            result = createRemoteException("javax.transaction.TransactionRolledbackException", s);
+            result = TransactionExceptions.ROLLED_BACK.create(s, e);
         } catch (INVALID_TRANSACTION e) {
-            result = createRemoteException("javax.transaction.InvalidTransactionException", s);
-        } catch (SystemException catchAll) {
-            result = new RemoteException(s);
+            result = TransactionExceptions.INVALID.create(s, e);
+        } catch (SystemException e) { // catch-all
+            result = new RemoteException(s, e);
         }
         result.detail = sysEx;
         return result;
     }
 
-    private static RemoteException createRemoteException(String className, String s) {
-        RemoteException result;
-        try {
-            @SuppressWarnings("unchecked")
-            Class<? extends RemoteException> clazz =  Util.loadClass(className, null, null);
-            Constructor<? extends RemoteException> ctor = clazz.getConstructor(String.class);
-            result = ctor.newInstance(s);
-        } catch (Throwable t) {
-            result = new RemoteException(s);
-            result.addSuppressed(t);
-        }
-        return result;
-    }
-
     static SystemException mapRemoteException(RemoteException rex) {
-        if (rex.detail instanceof org.omg.CORBA.SystemException)
-            return (org.omg.CORBA.SystemException) rex.detail;
+        if (rex.detail instanceof SystemException)
+            return (SystemException) rex.detail;
 
         if (rex.detail instanceof RemoteException)
             rex = (RemoteException) rex.detail;
 
         SystemException sysEx;
 
-        if (rex instanceof java.rmi.NoSuchObjectException) {
+        if (rex instanceof NoSuchObjectException) {
             sysEx = new org.omg.CORBA.INV_OBJREF(rex.getMessage());
         } else if (rex instanceof java.rmi.AccessException) {
             sysEx = new org.omg.CORBA.NO_PERMISSION(rex.getMessage());
@@ -247,10 +289,13 @@ public class UtilImpl implements UtilDelegate {
             case "java.rmi.RemoteException":
                 return new UnknownException(rex);
             case "javax.transaction.InvalidTransactionException":
+            case "jakarta.transaction.InvalidTransactionException":
                 return new INVALID_TRANSACTION(rex.getMessage());
             case "javax.transaction.TransactionRolledbackException":
+            case "jakarta.transaction.TransactionRolledbackException":
                 return new TRANSACTION_ROLLEDBACK(rex.getMessage());
             case "javax.transaction.TransactionRequiredException":
+            case "jakarta.transaction.TransactionRequiredException":
                 return new TRANSACTION_REQUIRED(rex.getMessage());
         }
         return createSystemException(rex, fromClass.getSuperclass());
@@ -268,8 +313,8 @@ public class UtilImpl implements UtilDelegate {
      * @param obj The object/value to write
      * @throws org.omg.CORBA.MARSHAL if the value cannot be written
      */
-    public void writeAny(org.omg.CORBA.portable.OutputStream out, Object obj)
-            throws org.omg.CORBA.SystemException {
+    public void writeAny(OutputStream out, Object obj)
+            throws SystemException {
         //
         // In this implementation of RMI/IIOP we do not use type codes
         // beyond the implementation of this method, and it's
@@ -303,7 +348,7 @@ public class UtilImpl implements UtilDelegate {
             try {
                 corba_obj = (org.omg.CORBA.Object) PortableRemoteObject
                         .toStub(ro);
-            } catch (java.rmi.NoSuchObjectException ex) {
+            } catch (NoSuchObjectException ex) {
                 throw (org.omg.CORBA.MARSHAL) new org.omg.CORBA.MARSHAL(
                         "object not exported " + ro).initCause(ex);
             }
@@ -323,7 +368,7 @@ public class UtilImpl implements UtilDelegate {
     }
 
     public Object readAny(org.omg.CORBA.portable.InputStream in)
-            throws org.omg.CORBA.SystemException {
+            throws SystemException {
         Any any = in.read_any();
         TypeCode typecode = any.type();
 
@@ -346,8 +391,7 @@ public class UtilImpl implements UtilDelegate {
                 return any.extract_string();
 
             case TCKind._tk_objref:
-                org.omg.CORBA.Object ref = any.extract_Object();
-                return ref;
+                return any.extract_Object();
 
             case TCKind._tk_any:
                 return any.extract_any();
@@ -356,7 +400,7 @@ public class UtilImpl implements UtilDelegate {
                 String id = "<unknown>";
                 try {
                     id = typecode.id();
-                } catch (org.omg.CORBA.TypeCodePackage.BadKind ex) {
+                } catch (org.omg.CORBA.TypeCodePackage.BadKind ignored) {
                 }
 
                 throw new MARSHAL("cannot extract " + id + " ("
@@ -370,8 +414,7 @@ public class UtilImpl implements UtilDelegate {
      * This method accepts values of org.omg.CORBA.Object (including stubs), and
      * instances of java.rmi.Remote for objects that have already been exported.
      */
-    public void writeRemoteObject(org.omg.CORBA.portable.OutputStream out,
-            Object obj) throws org.omg.CORBA.SystemException {
+    public void writeRemoteObject(OutputStream out, Object obj) throws SystemException {
         org.omg.CORBA.Object objref = null;
 
         if (obj == null) {
@@ -383,33 +426,29 @@ public class UtilImpl implements UtilDelegate {
 
         } else if (obj instanceof Remote) {
             try {
-                objref = (javax.rmi.CORBA.Stub) PortableRemoteObject
-                        .toStub((java.rmi.Remote) obj);
+                objref = (javax.rmi.CORBA.Stub) PortableRemoteObject.toStub((java.rmi.Remote) obj);
 
-            } catch (java.rmi.NoSuchObjectException ex) {
+            } catch (NoSuchObjectException ex) {
             }
 
             if (objref == null) {
 
                 try {
                     PortableRemoteObject.exportObject((java.rmi.Remote) obj);
-                    objref = (javax.rmi.CORBA.Stub) PortableRemoteObject
-                            .toStub((java.rmi.Remote) obj);
+                    objref = (javax.rmi.CORBA.Stub) PortableRemoteObject.toStub((java.rmi.Remote) obj);
                 } catch (java.rmi.RemoteException ex) {
                     throw (MARSHAL) new MARSHAL("cannot convert Remote to Object").initCause(ex);
                 }
             }
 
         } else {
-            throw new MARSHAL(
-                    "object is neither Remote nor org.omg.CORBA.Object: "
-                            + obj.getClass().getName());
+            throw new MARSHAL("object is neither Remote nor org.omg.CORBA.Object: " + obj.getClass().getName());
         }
 
         out.write_Object(objref);
     }
 
-    public void writeAbstractObject(org.omg.CORBA.portable.OutputStream out, Object obj) {
+    public void writeAbstractObject(OutputStream out, Object obj) {
         logger.finer("writeAbstractObject.1 " + " out=" + out);
 
         if (obj instanceof org.omg.CORBA.Object || obj instanceof Serializable) {
@@ -420,17 +459,15 @@ public class UtilImpl implements UtilDelegate {
             org.omg.CORBA.Object objref = null;
 
             try {
-                objref = (org.omg.CORBA.Object) PortableRemoteObject
-                        .toStub((Remote) obj);
+                objref = (org.omg.CORBA.Object) PortableRemoteObject.toStub((Remote) obj);
 
-            } catch (java.rmi.NoSuchObjectException ex) {
+            } catch (NoSuchObjectException ignored) {
             }
 
             if (objref == null) {
                 try {
                     PortableRemoteObject.exportObject((Remote) obj);
-                    objref = (org.omg.CORBA.Object) PortableRemoteObject
-                            .toStub((Remote) obj);
+                    objref = (org.omg.CORBA.Object) PortableRemoteObject.toStub((Remote) obj);
                 } catch (RemoteException ex) {
                     throw (MARSHAL) new MARSHAL("unable to export object").initCause(ex);
                 }
@@ -445,7 +482,6 @@ public class UtilImpl implements UtilDelegate {
         out_.write_abstract_interface(obj);
     }
 
-    @SuppressWarnings("unchecked")
     protected java.util.Map<Remote, Tie> tie_map() {
         return RMIState.current().tie_map;
     }
@@ -472,7 +508,7 @@ public class UtilImpl implements UtilDelegate {
         return ValueHandlerImpl.get();
     }
 
-    public String getCodebase(@SuppressWarnings("rawtypes") Class clz) {
+    public String getCodebase(Class clz) {
         if (clz == null)
             return null;
 
@@ -502,14 +538,10 @@ public class UtilImpl implements UtilDelegate {
         try {
             // is the class loaded with the stateLoader?
             if (clz.equals(stateLoader.loadClass(clz.getName()))) {
-                java.net.URL codebaseURL = state.getCodeBase();
+                URL codebaseURL = state.getCodeBase();
 
                 if (codebaseURL != null) {
-                    logger.finer("class " + clz.getName() + " => "
-                            + codebaseURL);
-
-                    // System.out.println ("class "+clz.getName()+" =>
-                    // "+codebaseURL);
+                    logger.finer("class " + clz.getName() + " => " + codebaseURL);
                     return codebaseURL.toString();
                 }
             }
@@ -615,7 +647,7 @@ public class UtilImpl implements UtilDelegate {
             } else {
                 return stub._is_local();
             }
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             throw mapSystemException(ex);
         }
     }
@@ -635,8 +667,8 @@ public class UtilImpl implements UtilDelegate {
                     (uex.originalEx instanceof Error ? (Error) uex.originalEx
                             : new Error("[OTHER EXCEPTION] " + ex.getMessage())));
 
-        } else if (ex instanceof org.omg.CORBA.SystemException) {
-            return mapSystemException((org.omg.CORBA.SystemException) ex);
+        } else if (ex instanceof SystemException) {
+            return mapSystemException((SystemException) ex);
 
         } else if (ex instanceof RuntimeException) {
             throw (RuntimeException) ex;
@@ -690,8 +722,6 @@ public class UtilImpl implements UtilDelegate {
                 targetClass);
     }
 
-    static boolean copy_with_corba = false;
-
     /**
      * Copy a single object, maintaining internal reference integrity.
      * <p/>
@@ -734,7 +764,7 @@ public class UtilImpl implements UtilDelegate {
             return state.copy(obj);
         } catch (CopyRecursionException ex) {
             throw new MarshalException("unable to resolve recursion", ex);
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             throw mapSystemException(ex);
         }
 
@@ -801,13 +831,13 @@ public class UtilImpl implements UtilDelegate {
              * return objs;
              */
 
-        } catch (org.omg.CORBA.SystemException ex) {
+        } catch (SystemException ex) {
             throw mapSystemException(ex);
         }
     }
 
     public void unexportObject(Remote obj)
-            throws java.rmi.NoSuchObjectException {
+            throws NoSuchObjectException {
         if (obj == null)
             return;
 
