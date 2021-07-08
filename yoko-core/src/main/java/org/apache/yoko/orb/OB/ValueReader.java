@@ -955,7 +955,7 @@ public final class ValueReader {
         try {
             return valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
         } catch (RuntimeException ex) {
-            if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine("RuntimeException when reading GIOP stream: \n" + in_.dumpAllDataWithPosition());
+            if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.log(FINE, "Caught exception when reading GIOP stream: \n" + in_.dumpAllDataWithPosition(), ex);
             throw ex;
         }
 
