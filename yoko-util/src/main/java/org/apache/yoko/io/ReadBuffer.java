@@ -33,14 +33,17 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
 
     public char readByteAsChar() { return (char) core.data[position++]; }
 
-    public void readBytes(byte[] buffer, int offset, int length) {
+    public byte[] readBytes(byte[] buffer) { return readBytes(buffer, 0, buffer.length); }
+
+    public byte[] readBytes(byte[] buffer, int offset, int length) {
         if (available() < length) throw new IndexOutOfBoundsException();
         System.arraycopy(core.data, position, buffer, offset, length);
         position += length;
+        return buffer;
     }
 
-    public void readBytes(WriteBuffer buffer) {
-        buffer.writeBytes(core.data, position, available());
+    public WriteBuffer readBytes(WriteBuffer buffer) {
+        return buffer.writeBytes(core.data, position, available());
     }
 
     public byte[] copyRemainingBytes() {
@@ -55,9 +58,21 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
         return (char) ((core.data[position++] << 8) | (core.data[position++] & 0xff));
     }
 
-    public char readChar_LE() {
+    private char readChar_LE() {
         return (char) ((core.data[position++] & 0xff) | (core.data[position++] << 8));
     }
+
+    public char readChar(boolean littleEndian) { return littleEndian ? readChar_LE() : readChar(); }
+
+    public short readShort() {
+        return (short) ((core.data[position++] << 8) | (core.data[position++] & 0xff));
+    }
+
+    private short readShort_LE() {
+        return (short) ((core.data[position++] & 0xff) | (core.data[position++] << 8));
+    }
+
+    public short readShort(boolean littleEndian) { return littleEndian ? readShort_LE() : readShort(); }
 
     public int readInt() {
         return (core.data[position++] << 24)
@@ -72,6 +87,8 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
                 | ((core.data[position++] << 16) & 0xff0000)
                 | (core.data[position++] << 24);
     }
+
+    public int readInt(boolean littleEndian) { return littleEndian ? readInt_LE() : readInt(); }
 
     public String remainingBytesToAscii() {
         return HexConverter.octetsToAscii(core.data, available());
@@ -88,6 +105,10 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
         formatHexPara(core.data, 0, position, sb);
         sb.append(String.format("%n       >>>>>>>>  pos: 0x%08X  <<<<<<<<%n", position));
         return formatHexPara(core.data, position, available(), sb).toString();
+    }
+
+    public String dumpSomeData(String indent, int len) {
+        return formatHexPara(indent, core.data, position, len, new StringBuilder()).toString();
     }
 
     public ReadBuffer writeTo(OutputStream out) throws IOException {
