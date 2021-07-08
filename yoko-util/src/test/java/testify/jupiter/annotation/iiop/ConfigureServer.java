@@ -96,7 +96,7 @@ public @interface ConfigureServer {
     @interface ClientStub {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
-        /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
+        /** Specify which server should host the remote object. */
         ServerName serverName() default DEFAULT_SERVER;
     }
 
