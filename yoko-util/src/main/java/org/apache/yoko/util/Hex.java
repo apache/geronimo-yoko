@@ -31,14 +31,23 @@ public enum Hex {
         return formatHexPara(oct, 0, oct.length, sb);
     }
 
-    /* Convert an octet buffer into human-friendly data dump */
     public static StringBuilder formatHexPara(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
+        return formatHexPara("", oct, offset, count, sb);
+    }
+
+        /* Convert an octet buffer into a human-friendly data dump */
+    public static StringBuilder formatHexPara(String indent, final byte[] oct, final int offset, final int count, final StringBuilder sb) {
         if (count <= 0) return sb;
 
         int endIndex = offset + count;
-        int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
-        String indexFormat = "%0" + indexWidth + "X:  ";
-        String indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
+        // calculate the width of index needed for this dump
+        final String indexFormat;
+        final String indexSpaces;
+        {
+            int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
+            indexFormat = indent + "%0" + indexWidth + "X:  ";
+            indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
+        }
 
         sb.append(String.format(indexFormat, offset));
 
