@@ -49,13 +49,15 @@ public class TestLogger {
     private final List<LogSetting> settings;
     private final long epoch = System.currentTimeMillis();
     private final Queue<Thread> threads = new ConcurrentLinkedQueue<>();
+    /** The full list of per-thread logging journals to be merged chronologically before printing. */
     private final Queue<Journal> journals = new ConcurrentLinkedQueue<>();
+    /** Create a new journal for each thread to avoid forcing synchronization. */
     private final ThreadLocal<Journal> journalsByThread = ThreadLocal.withInitial(() -> {
         threads.add(Thread.currentThread());
         Journal result = new Journal();
         journals.add(result);
         return result;
-    });;
+    });
 
     TestLogger(List<Logging> annotations) {
         this.settings = unmodifiableList(annotations.stream()
@@ -114,6 +116,12 @@ public class TestLogger {
                 codeNames.get((long) rec.getThreadID()),
                 rec.getLoggerName(),
                 rec.getMessage());
+        Optional.ofNullable(rec.getThrown()).ifPresent(this::printThrowable);
+    }
+
+    private void printThrowable(Throwable t) {
+        out.printf("Exception was %s%n", t);
+        t.printStackTrace(out);
     }
 
     /** Get a handler with the logging level set for the specified annotation */
