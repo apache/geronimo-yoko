@@ -28,7 +28,7 @@ import static testify.jupiter.annotation.logging.TestLogger.getLogFinisher;
 class LoggingExtension implements BeforeTestExecutionCallback, AfterTestExecutionCallback {
     private static final Summoner<List<Logging>, TestLogger> SUMMONER = Summoner.forRepeatableAnnotation(Logging.class, TestLogger.class, TestLogger::new);
 
-    public void beforeTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).summon(); }
+    public void beforeTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).requestSteward(); }
 
-    public void afterTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).summon().ifPresent(getLogFinisher(ctx)); }
+    public void afterTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).requestSteward().ifPresent(getLogFinisher(ctx)); }
 }

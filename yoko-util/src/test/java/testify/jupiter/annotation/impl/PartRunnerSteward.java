@@ -42,6 +42,6 @@ public class PartRunnerSteward implements ExtensionContext.Store.CloseableResour
 
     public static PartRunner getPartRunner(ExtensionContext ctx) {
         // PartRunners are always one per test, so get one for the root context
-        return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new).partRunner;
+        return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new).partRunner;
     }
 }

@@ -189,7 +189,7 @@ class ServerSteward {
     }
 
     static ServerSteward getInstance(ExtensionContext ctx) {
-        return SUMMONER.forContext(ctx).summon().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
+        return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
     }
 
     public ORB getClientOrb(ExtensionContext ctx) {
