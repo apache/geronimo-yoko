@@ -17,7 +17,6 @@ import org.omg.CORBA.ORB;
 import testify.bus.Bus;
 import testify.jupiter.annotation.Summoner;
 import testify.jupiter.annotation.impl.AnnotationButler;
-import testify.jupiter.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 
 import java.lang.reflect.Field;
@@ -202,11 +201,11 @@ class ServerSteward {
     }
 
     public void beforeTestExecution(ExtensionContext ctx) {
-        if (config.separation() == INTER_PROCESS) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
+// TODO       if (config.separation() == INTER_PROCESS) serverComms.beginLogging(TestLogger.getLogStarter(ctx));
     }
 
     public void afterTestExecution(ExtensionContext ctx) {
-        if (config.separation() == INTER_PROCESS) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
+// TODO        if (config.separation() == INTER_PROCESS) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
     }
 
     private class ServerController implements ServerControl  {

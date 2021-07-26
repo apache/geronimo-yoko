@@ -19,29 +19,17 @@ package testify.jupiter.annotation.logging;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.BiConsumer;
-import java.util.function.BinaryOperator;
-import java.util.stream.Collector;
 
 /**
  * Generate code names (e.g. for threads) that are easy to distinguish
  * and that are named deterministically in encounter order.
  */
-class CodeNameGenerator {
+class CodeNaming<T> {
+    final Map<T, String> names = new HashMap<>();
     int index = 0;
     char[] chars = new char[3];
 
-    static <T> Collector<T, Map<T, String>, Map<T, String>> toCodeNameMap() {
-        CodeNameGenerator names = new CodeNameGenerator();
-        BiConsumer<Map<T, String>, T> acc = (m, t) -> m.put(t, names.getNext());
-        BinaryOperator<Map<T, String>> cmb = (m1, m2) -> {
-            m1.putAll(m2);
-            return m1;
-        };
-        return Collector.of(HashMap::new, acc, cmb);
-    }
-
-    String getNext() {
+    private String getNextName(T t) {
         //noinspection SpellCheckingInspection
         final String distinctChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
         try {
@@ -54,5 +42,10 @@ class CodeNameGenerator {
                 chars = new char[chars.length + 1];
             }
         }
+    }
+
+    synchronized String get(T t) {
+        // Synchronize to make sure some getNextName() results aren't discarded
+        return names.computeIfAbsent(t, this::getNextName);
     }
 }

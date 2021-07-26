@@ -29,6 +29,7 @@ import org.omg.CORBA.ORB;
 import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.jupiter.annotation.logging.LoggingExtension;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -45,7 +46,7 @@ import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatio
 import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
 import static testify.jupiter.annotation.iiop.ConfigureServer.ServerName.DEFAULT_SERVER;
 
-@ExtendWith(ServerExtension.class)
+@ExtendWith({ LoggingExtension.class, ServerExtension.class }) // ensure ordering in case logging is enabled
 @Target({ANNOTATION_TYPE, TYPE})
 @ConfigurePartRunner
 @Retention(RUNTIME)

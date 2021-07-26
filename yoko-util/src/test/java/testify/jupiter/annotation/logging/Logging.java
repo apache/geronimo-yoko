@@ -17,8 +17,6 @@
 package testify.jupiter.annotation.logging;
 
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.platform.commons.support.AnnotationSupport;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -31,8 +29,11 @@ import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 
 /**
- * When used on a class containing Junit 5 (Jupiter) tests,
- * this annotation will enable logging for the duration of the test.
+ * On a class containing Junit 5 (Jupiter) tests,
+ * this annotation will enable logging for all tests in that class.
+ *
+ * On a test method, it will add log settings for that test alone.
+ * These settings will be processed after the class log settings, if any.
  */
 @ExtendWith(LoggingExtension.class)
 @Target({TYPE, METHOD, ANNOTATION_TYPE})
@@ -53,30 +54,6 @@ public @interface Logging {
         ALL(Level.ALL);
         final Level level;
         LoggingLevel(Level level) { this.level = level; }
-    }
-
-    enum Suppression {
-        ALWAYS { public boolean isRequired(boolean ignored) { return true; }},
-        ON_FAILURE { public boolean isRequired(boolean testFailed) { return testFailed; }},
-        ON_SUCCESS { public boolean isRequired(boolean testFailed) { return !testFailed; }},
-        NEVER { public boolean isRequired(boolean ignored) { return false; }};
-
-        private static final Suppression DEFAULT = ON_SUCCESS;
-
-        static Suppression forContext(ExtensionContext ctx) {
-            return ctx.getElement()
-                    .flatMap(e -> AnnotationSupport.findAnnotation(e, Suppressed.class))
-                    .map(Suppressed::value)
-                    .orElse(DEFAULT);
-        }
-
-        public abstract boolean isRequired(boolean hasTestFailed);
-    }
-
-    @Target({TYPE, METHOD, ANNOTATION_TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Suppressed {
-        Suppression value();
     }
 
     @Target({TYPE, METHOD, ANNOTATION_TYPE})
