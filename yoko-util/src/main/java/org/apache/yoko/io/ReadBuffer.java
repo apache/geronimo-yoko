@@ -96,19 +96,23 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
 
     public String dumpRemainingData() {
         StringBuilder dump = new StringBuilder();
-        dump.append(String.format("Core pos=0x%x Core len=0x%x Remaining core data=%n%n", position, core.length));
+        dump.append(String.format("Read pos=0x%x Core len=0x%x Remaining core data=%n%n", position, core.length));
         return formatHexPara(core.data, position, available(), dump).toString();
     }
 
     public String dumpAllDataWithPosition() {
-        StringBuilder sb = new StringBuilder();
-        formatHexPara(core.data, 0, position, sb);
-        sb.append(String.format("%n       >>>>>>>>  pos: 0x%08X  <<<<<<<<%n", position));
-        return formatHexPara(core.data, position, available(), sb).toString();
+        return dumpAllDataWithPosition(new StringBuilder(), "pos").toString();
     }
 
-    public String dumpSomeData(String indent, int len) {
-        return formatHexPara(indent, core.data, position, len, new StringBuilder()).toString();
+    public StringBuilder dumpAllDataWithPosition(StringBuilder sb, String label) {
+        formatHexPara(core.data, 0, position, sb);
+        sb.append(String.format("%n       >>>>>>>> %4s: 0x%08X  <<<<<<<<%n", label, position));
+        formatHexPara(core.data, position, available(), sb);
+        return sb;
+    }
+
+    public void dumpSomeData(StringBuilder sb, String indent, int len) {
+        formatHexPara(indent, core.data, position, len, sb);
     }
 
     public ReadBuffer writeTo(OutputStream out) throws IOException {
@@ -134,8 +138,10 @@ public final class ReadBuffer extends Buffer<ReadBuffer> {
     }
 
     public ReadBuffer skipBytes(int n) {
-        if (position + n > core.length) throw new IndexOutOfBoundsException();
-        position = position + n;
+        int newPos = position + n;
+        if (newPos < 0) throw new IndexOutOfBoundsException(); // n can be negative!
+        if (newPos > core.length) throw new IndexOutOfBoundsException();
+        position = newPos;
         return this;
     }
 

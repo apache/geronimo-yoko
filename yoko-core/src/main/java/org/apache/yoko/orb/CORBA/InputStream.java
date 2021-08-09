@@ -1623,19 +1623,17 @@ final public class InputStream extends InputStreamWithOffsets {
         return readBuffer.dumpRemainingData();
     }
 
-    /**
-     * Return all the data in the buffer as a formatted string suitable for logging.
-     */
-    public String dumpAllData() {
-        return readBuffer.dumpAllData();
-    }
+    /** Return all the data in the buffer as a formatted string suitable for logging. */
+    public String dumpAllData() { return readBuffer.dumpAllData(); }
 
-    /**
-     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
-     */
-    public String dumpAllDataWithPosition() {
-        return readBuffer.dumpAllDataWithPosition();
-    }
+    /** Append all the data in the buffer as a formatted string suitable for logging. */
+    public StringBuilder dumpAllData(StringBuilder sb) { return readBuffer.dumpAllData(sb); }
+
+    /** Return all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
+    public String dumpAllDataWithPosition() { return readBuffer.dumpAllDataWithPosition(); }
+
+    /** Append all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
+    public StringBuilder dumpAllDataWithPosition(StringBuilder sb, String label) { return readBuffer.dumpAllDataWithPosition(sb, label); }
 
     private void checkChunk() {
         if (valueReader_ != null) {

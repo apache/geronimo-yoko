@@ -19,14 +19,19 @@ package org.apache.yoko.giop;
 import org.apache.yoko.io.Buffer;
 import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.io.WriteBuffer;
+import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.OCI.GiopVersion;
+import org.omg.CORBA.MARSHAL;
 
 import java.util.Arrays;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 import static java.util.logging.Level.FINE;
+import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINEST;
+import static org.apache.yoko.giop.MessageType.StringField.OPERATION;
+import static org.apache.yoko.io.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
 import static org.apache.yoko.logging.VerboseLogging.DATA_IN_LOG;
 import static org.apache.yoko.logging.VerboseLogging.DATA_OUT_LOG;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
@@ -42,51 +47,85 @@ import static org.omg.GIOP.MsgType_1_1._Request;
 
 public enum MessageType {
     REQUEST(_Request) {
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return describeReqId(rb, littleEndian);
-            // TODO: parse request header
-        }
-    },
-    REPLY(_Reply){
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return describeReqId(rb, littleEndian);
-            // TODO: parse reply header
-        }
-    },
-    CANCEL_REQUEST(_CancelRequest){
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return describeReqId(rb, littleEndian);
-        }
-    },
-    LOCATE_REQUEST(_LocateRequest){
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return describeReqId(rb, littleEndian) + EOL + getTarget(rb, version, littleEndian);
-        }
-        String getTarget(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
             switch (version) {
                 case GIOP1_0:
                 case GIOP1_1:
-                    // print out IOP::ObjectKey
-                    return String.format("OBJECT KEY: %n%s", describeOctetSeq("\t\t", rb, littleEndian));
-                case GIOP1_2:
-                    // print out TargetAddress
-                    short discriminator = rb.readShort(littleEndian);
-                    switch (discriminator) {
-                        case 0: return "KEY ADDR: \n" + describeOctetSeq("\t\t", rb, littleEndian);
-                        case 1: return String.format("PROFILE ADDR: %n%s", describeTaggedProfile("\t\t", rb, littleEndian));
-                        case 2: return String.format("REFERENCE ADDR: INDEX = %d%n%s", rb.readInt(littleEndian), describeIor("\t\t", rb, littleEndian));
-                        default: return "error: TargetAddress has unknown discriminator " + discriminator;
-                    }
+                    describeServiceContextList(sb, in);
+                    describeReqId(sb, in);
+                    describeResponseExpected(sb, in);
+                    // alignment of object key automatically skips 3 octets here
+                    describeObjectKey(sb, in);
+                    OPERATION.describeString(sb,"\t", in);
+                    describePrincipal(sb, in);
+                    return;
+                default:
+                    describeReqId(sb, in);
+                    describeResponseFlags(sb, in);
+                    in._OB_skip(3); // explicitly skip 3 octets (reserved in GIOP 1.2)
+                    describeTargetAddress(sb, in);
+                    OPERATION.describeString(sb, "\t", in);
+                    describeServiceContextList(sb, in);
+                    // in GIOP 1.2 the request body is aligned on an 8-octet boundary
+                    in.skipAlign(EIGHT_BYTE_BOUNDARY);
             }
-            return "unknown GIOP version " + version;
+        }
+        void describeResponseExpected(StringBuilder sb, InputStream in) { sb.append(String.format("%n\tRESPONSE EXPECTED = %b", in.read_boolean())); }
+        void describeResponseFlags(StringBuilder sb, InputStream in) { sb.append(String.format("%n\tRESPONSE FLAGS = 0x%02x", in.read_octet())); }
+        void describePrincipal(StringBuilder sb, InputStream in) {
+            sb.append(String.format("%n\tREQUESTING PRINCIPAL:"));
+            describeOctetSeq(sb, "\t\t", in);
+        }
+    },
+    REPLY(_Reply) {
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
+            switch (version) {
+                case GIOP1_0:
+                case GIOP1_1:
+                    describeServiceContextList(sb, in);
+                    describeReqId(sb, in);
+                    describeReplyStatus(sb, in);
+                    return;
+                default:
+                    describeReqId(sb, in);
+                    describeReplyStatus(sb, in);
+                    describeServiceContextList(sb, in);
+                    // in GIOP 1.2 the reply body is aligned on an 8-octet boundary
+                    in.skipAlign(EIGHT_BYTE_BOUNDARY);
+            }
+        }
+
+        void describeReplyStatus(StringBuilder sb, InputStream in) {
+            ReplyStatus status = ReplyStatus.valueOf(in.read_long());
+            sb.append(String.format("%n\tREPLY STATUS = %s", status));
+        }
+    },
+    CANCEL_REQUEST(_CancelRequest){
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
+            describeReqId(sb, in);
+        }
+    },
+    LOCATE_REQUEST(_LocateRequest){
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
+            switch (version) {
+                case GIOP1_0:
+                case GIOP1_1:
+                    describeReqId(sb, in);
+                    describeObjectKey(sb, in);
+                    return;
+                default:
+                    describeReqId(sb, in);
+                    describeTargetAddress(sb, in);
+            }
         }
     },
     LOCATE_REPLY(_LocateReply){
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return String.format("%s%n\t%s", describeReqId(rb, littleEndian), getLocateStatus(rb, littleEndian));
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
+            describeReqId(sb, in);
+            sb.append(String.format("%n\t%s", getLocateStatus(in)));
         }
-        String getLocateStatus(ReadBuffer rb, boolean littleEndian) {
-            int locStat = rb.readInt(littleEndian);
+        String getLocateStatus(InputStream in) {
+            int locStat = in.read_long();
             switch (locStat) {
                 case 0: return "LOCATE STATUS = UNKNOWN_OBJECT";
                 case 2: return "LOCATE STATUS = OBJECT_FORWARD";
@@ -100,8 +139,8 @@ public enum MessageType {
     CLOSE_CONNECTION(_CloseConnection),
     MESSAGE_ERROR(_MessageError),
     FRAGMENT(_Fragment) {
-        String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) {
-            return version == GIOP1_2 ? describeReqId(rb, littleEndian) : "";
+        void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {
+            if (version == GIOP1_2) describeReqId(sb, in);
         }
     },
     UNKNOWN;
@@ -120,7 +159,6 @@ public enum MessageType {
 
     MessageType() { this(-1); }
 
-
     public static void logIncomingGiopMessage(WriteBuffer buffer) {
         logGiopMessage(buffer, DATA_IN_LOG, "\nIN COMING ");
     }
@@ -130,67 +168,166 @@ public enum MessageType {
     }
 
     private static void logGiopMessage(Buffer<?> buffer, Logger logger, String direction) {
-        if (logger.isLoggable(FINEST)) logger.finest(direction + describeMessage(buffer) + "\n" + buffer.dumpAllData());
-        else if (logger.isLoggable(FINE)) logger.fine(direction + describeMessage(buffer));
-    }
-
-    private static String describeMessage(Buffer<?> buffer) {
-        try {
-            ReadBuffer rb = buffer.newReadBuffer();
-            rb.skipBytes(4);
-            byte major = rb.readByte();
-            byte minor = rb.readByte();
-            GiopVersion version = GiopVersion.get(major, minor);
-            byte flags = rb.readByte();
-            boolean littleEndian = (flags & LITTLE_ENDIAN_FLAG) == LITTLE_ENDIAN_FLAG;
-            MessageType type = valueOf(rb.readByte());
-            final int size = rb.readInt(littleEndian);
-            return type.describeGiopHeader(major, minor, version, flags, size) + type.describeHeader(rb, version, littleEndian);
-        } catch (Throwable t) {
-            return "describeMessage() failed with " + t + EOL + Arrays.stream(t.getStackTrace()).map(e -> "\t" + e).collect(Collectors.joining(EOL));
+        if (! logger.isLoggable(FINE)) return;
+        final boolean includeMessageHeader;
+        final boolean includeMessageOctets;
+        final Level level;
+        if (logger.isLoggable(FINEST)) {
+            includeMessageHeader = true;
+            includeMessageOctets = true;
+            level = FINEST;
+        } else if (logger.isLoggable(FINER)) {
+            includeMessageHeader = false;
+            includeMessageOctets = true;
+            level = FINER;
+        } else {
+            includeMessageHeader = false;
+            includeMessageOctets = false;
+            level = FINE;
         }
+        logger.log(level, describeGiopMessage(buffer, includeMessageHeader, includeMessageOctets));
     }
 
-    private String describeGiopHeader(byte major, byte minor, GiopVersion version, byte flags, int size) {
-        String result = String.format("GIOP %d.%d %s MESSAGE%n\tSIZE=%d", major, minor, this, size);
-        if (fragmentable && version != GIOP1_0)
-            result += String.format("%n\tFRAGMENT_TO_FOLLOW = %s", ((flags & FRAG_FLAG) == FRAG_FLAG));
-        return result;
-    }
-
-    String describeHeader(ReadBuffer rb, GiopVersion version, boolean littleEndian) { return ""; }
-
-    private static String describeOctetSeq(String indent, ReadBuffer rb, boolean littleEndian) {
-        int len = rb.readInt(littleEndian);
-        if (len > rb.available()) return indent + "error reading octet sequence of length " + len + " when only " + rb.available() + " bytes are available in the buffer";
-        return rb.dumpSomeData(indent, len);
-    }
-
-    private static String describeTaggedProfile(String indent, ReadBuffer rb, boolean littleEndian) {
-        return String.format("%n%sID = 0x%08x%n%s", indent, rb.readInt(littleEndian), describeOctetSeq(indent, rb, littleEndian));
-    }
-
-    private static String describeTaggedProfileSeq(String indent, ReadBuffer rb, boolean littleEndian) {
-        int len = rb.readInt(littleEndian);
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < len; i++) sb
-                .append(indent)
-                .append("TAGGED PROFILE ")
-                .append(i+1)
-                .append(" OF ")
-                .append(len)
-                .append(EOL)
-                .append(describeTaggedProfile(indent + "\t", rb, littleEndian));
+    private static String describeGiopMessage(Buffer<?> buffer, boolean includeMessageHeader, boolean includeMessageOctets) {
+        final StringBuilder sb = new StringBuilder();
+        try {
+            final InputStream in = new InputStream(buffer.newReadBuffer());
+            in._OB_skip(4); // skip GIOP magic header
+            byte major = in.read_octet();
+            byte minor = in.read_octet();
+            GiopVersion version = GiopVersion.get(major, minor);
+            byte flags = in.read_octet();
+            in._OB_swap((flags & LITTLE_ENDIAN_FLAG) == LITTLE_ENDIAN_FLAG);
+            MessageType type = valueOf(in.read_octet());
+            final int size = in.read_long();
+            type.describeGiopHeader(sb, major, minor, version, flags, size);
+            if (includeMessageHeader) type.describeHeader(sb, in, version);
+            else in._OB_skip(in.available()); // wind to the end to prevent mis-labelling the body
+            if (includeMessageOctets) dumpHex(sb, in);
+        } catch (Throwable t) {
+            sb.append(EOL).append("describeMessage() failed with ").append(t);
+            Arrays.stream(t.getStackTrace()).map(e -> EOL + "\t" + e).forEach(sb::append);
+        }
         return sb.toString();
     }
 
-    private static String describeIor(String indent, ReadBuffer rb, boolean littleEndian) {
-        // struct IOR { string type_id; TaggedProfileSeq profiles; }
-        return String.format("%sTYPE ID:%n%s%n%s", indent, describeOctetSeq(indent + "\t", rb, littleEndian), describeTaggedProfileSeq(indent, rb, littleEndian));
+    private void describeGiopHeader(StringBuilder sb, byte major, byte minor, GiopVersion version, byte flags, int size) {
+        sb.append(String.format("GIOP %d.%d %s MESSAGE%n\tSIZE = %d", major, minor, this, size));
+        if (fragmentable && version != GIOP1_0)
+            sb.append(String.format("%n\tFRAGMENT_TO_FOLLOW = %s", ((flags & FRAG_FLAG) == FRAG_FLAG)));
     }
 
-    private static String describeReqId(ReadBuffer rb, boolean littleEndian) {
-        return String.format("%n\tREQUEST ID = %d", rb.readInt(littleEndian));
+    void describeHeader(StringBuilder sb, InputStream in, GiopVersion version) {}
+
+    private static void dumpHex(StringBuilder sb, InputStream in) {
+        sb.append(EOL);
+        if (in.available() == 0) in.dumpAllData(sb); // there is no body, just print the hex
+        else in.dumpAllDataWithPosition(sb, "body"); // print the hex showing where the body starts
+    }
+
+    private static void describeObjectKey(StringBuilder sb, InputStream in) {
+        sb.append(String.format("%n\tOBJECT KEY:"));
+        describeOctetSeq(sb, "\t\t", in);
+    }
+
+    private static void describeTargetAddress(StringBuilder sb, InputStream in) {
+        short disposition = in.read_short();
+        switch (disposition) {
+            case 0:
+                sb.append(String.format("%n\tKEY ADDRESS:"));
+                describeOctetSeq(sb,"\t\t", in);
+                return;
+            case 1:
+                sb.append(String.format("%n\tPROFILE ADDRESS:"));
+                describeTaggedProfile(sb,"\t\t", in);
+                return;
+            case 2:
+                sb.append(String.format("%n\tREFERENCE ADDRESS: INDEX = %d", in.read_long()));
+                describeIor(sb,"\t\t", in);
+                return;
+            default:
+                sb.append(String.format("%n\tERROR: TargetAddress has unknown disposition 0x%04x", disposition));
+        }
+    }
+
+    private static void describeServiceContextList(StringBuilder sb, InputStream in) {
+        int len = in.read_long();
+        for (int i = 1; i <= len; i++) {
+            sb.append(EOL).append("\t").append("SERVICE CONTEXT ").append(i).append(" OF ").append(len);
+            describeServiceContext(sb, in);
+        }
+    }
+
+    private static void describeServiceContext(StringBuilder sb, InputStream in) {
+        sb.append(" TAG = ");
+        describeServiceContextId(sb, in.read_long());
+        describeOctetSeq(sb, "\t\t", in);
+    }
+
+    private static void describeServiceContextId(StringBuilder sb, int tag) {
+        sb.append(String.format("0x%08x (%s)", tag, ServiceContextTag.valueOf(tag)));
+    }
+
+    private static void describeOctetSeq(StringBuilder sb, String indent, InputStream in) {
+        int len = in.read_long();
+        sb.append(String.format(" [0x%08x octets]", len));
+        if (len == 0) return;
+        sb.append(EOL);
+        if (len > in.available()) {
+            sb.append(indent).append("ERROR reading octet sequence of length ").append(len);
+            sb.append(" when only ").append(in.available()).append(" bytes are available in the buffer");
+            return;
+        }
+        try {
+            // dump length and data as hex
+            in.getBuffer().dumpSomeData(sb, indent, len);
+        } finally {
+            // wind past the data
+            in._OB_skip(len);
+        }
+    }
+
+    private static void describeTaggedProfile(StringBuilder sb, String indent, InputStream in) {
+        sb.append(String.format("%n%sID = 0x%08x", indent, in.read_long()));
+        describeOctetSeq(sb, indent, in);
+    }
+
+    private static void describeTaggedProfileSeq(StringBuilder sb, String indent, InputStream in) {
+        int len = in.read_long();
+        for (int i = 1; i <= len; i++) {
+            sb.append(indent);
+            sb.append("TAGGED PROFILE ");
+            sb.append(i);
+            sb.append(" OF ");
+            sb.append(len);
+            sb.append(EOL);
+            describeTaggedProfile(sb, indent + "\t", in);
+        }
+    }
+
+    private static void describeIor(StringBuilder sb, String indent, InputStream in) {
+        // struct IOR { string type_id; TaggedProfileSeq profiles; }
+        sb.append(String.format("%n%sTYPE ID:", indent));
+        describeOctetSeq(sb,indent + "\t", in);
+        describeTaggedProfileSeq(sb, indent, in);
+    }
+
+    private static void describeReqId(StringBuilder sb, InputStream in) {
+        sb.append(String.format("%n\tREQUEST ID = %d", in.read_long()));
+    }
+
+    enum StringField {
+        OPERATION;
+        private void describeString(StringBuilder sb, String indent, InputStream in) {
+            int start = in.getBuffer().getPosition();
+            try {
+                String value = in.read_string();
+                sb.append(String.format("%n%s%s = %s", indent, this, value));
+            } catch (MARSHAL m) {
+                int pos = in.getBuffer().getPosition();
+                sb.append(String.format("%n%s%s: error reading string at 0x%h, failed at 0x%h%n", indent, this, start, pos));
+            }
+        }
     }
 
     public static MessageType valueOf(int i) {

@@ -142,8 +142,8 @@ public abstract class Buffer<T extends Buffer> implements Cloneable {
     }
 
     public final String dumpPosition() { return String.format("position=0x%x", position); }
-    public final String dumpAllData() { return dumpData(new StringBuilder()).toString(); }
-    final StringBuilder dumpData(StringBuilder dump) { return core.dumpTo(dump); }
+    public final String dumpAllData() { return dumpAllData(new StringBuilder()).toString(); }
+    public final StringBuilder dumpAllData(StringBuilder dump) { return core.dumpTo(dump); }
 
     public final T setPosition(int p) { position = p; return (T)this; }
     public final T rewind(int n) { position -= n; return (T)this;}

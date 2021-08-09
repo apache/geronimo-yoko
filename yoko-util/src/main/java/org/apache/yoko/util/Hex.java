@@ -45,8 +45,9 @@ public enum Hex {
         final String indexSpaces;
         {
             int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
-            indexFormat = indent + "%0" + indexWidth + "X:  ";
-            indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
+            String unindentedIndexFormat = "%0" + indexWidth + "X:  ";
+            indexFormat = indent + unindentedIndexFormat;
+            indexSpaces = indent + String.format(unindentedIndexFormat, 0).replaceAll(".", " ");
         }
 
         sb.append(String.format(indexFormat, offset));
