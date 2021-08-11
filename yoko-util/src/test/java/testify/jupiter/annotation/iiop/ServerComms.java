@@ -18,7 +18,6 @@ package testify.jupiter.annotation.iiop;
 
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
-import org.junit.jupiter.api.Assumptions;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.COMM_FAILURE;
@@ -412,7 +411,7 @@ final class ServerComms implements Serializable {
         assertServerSide();
         final String requestId = getNextRequestId();
         try {
-            bus.log("Invoking " + requestId);
+            bus.log("Invoking " + requestId + " " + parameter);
             consumer.accept(parameter);
             // on successful completion, send back a null
             bus.put(Result.RESULT, null);

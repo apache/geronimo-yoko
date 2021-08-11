@@ -1,3 +1,22 @@
+sourceSets {
+  artifact.compileClasspath += main.output.classesDirs
+  v0.compileClasspath += main.output + artifact.output
+  v1.compileClasspath += main.output + artifact.output + v0.output
+  v2.compileClasspath += main.output + artifact.output + v0.output
+  test.java.srcDir "src/test/java-testify"  // new framework tests, segregated during transition
+  test.compileClasspath += artifact.output
+}
+
+testClasses.dependsOn v0Classes, v1Classes, v2Classes
+
+configurations {
+  artifactImplementation.extendsFrom compile
+  artifactImplementation.extendsFrom testLib
+  v0Implementation.extendsFrom artifactImplementation
+  v1Implementation.extendsFrom artifactImplementation
+  v2Implementation.extendsFrom artifactImplementation
+}
+
 dependencies {
   // depend on the Yoko spec jars
   spec project(':yoko-rmi-spec')
@@ -5,20 +24,12 @@ dependencies {
   // compile against Yoko implementation
   compile project(":yoko-rmi-impl")
 
-  // use shared test utilities
-  testCompile project(":yoko-util").sourceSets.test.output
-  testCompile project(":yoko-rmi-impl").sourceSets.test.output
-}
+  artifactImplementation sourceSets.main.output
 
-// The tests are in transition to the testify framework,
-// Use folders to separate the new tests from the old.
-sourceSets {
-  test {
-    java {
-      srcDir "src/test/java-artifact" // test artifacts
-      srcDir "src/test/java-testify"  // tests using the new framework
-    }
-  }
+  // use shared test utilities
+  testLib project(":yoko-util").sourceSets.test.output
+  testLib project(":yoko-rmi-impl").sourceSets.test.output
+  testImplementation sourceSets.artifact.output
 }
 
 jar {
@@ -31,4 +42,22 @@ jar {
 
 test {
   exclude '**/Abstract*'
+  // Set up the class paths for acme.Loader
+  systemProperty "acme.loader.v1.path", (sourceSets.v0.output.classesDirs + sourceSets.v1.output.classesDirs).join(File.pathSeparator)
+  systemProperty "acme.loader.v2.path", (sourceSets.v0.output.classesDirs + sourceSets.v2.output.classesDirs).join(File.pathSeparator)
+}
+
+task debug() {
+  doLast {
+    sourceSets.each { srcSet ->
+      println "["+srcSet.name+"]"
+      print "-->Source directories: "+srcSet.allJava.srcDirs+"\n"
+      print "-->Output directories: "+srcSet.output.classesDirs.files+"\n"
+      print "-->Compile classpath:\n"
+      srcSet.compileClasspath.files.each {
+        print "  "+it.path+"\n"
+      }
+      println ""
+    }
+  }
 }

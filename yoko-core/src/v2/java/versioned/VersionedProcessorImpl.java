@@ -10,28 +10,22 @@
  *     IBM Corporation - initial API and implementation
  * =============================================================================
  */
-package acme;
+package versioned;
 
-import org.apache.yoko.rmi.api.RemoteOnewayException;
 import testify.bus.Bus;
 
 import java.rmi.RemoteException;
 
-public class ProcessorImpl implements Processor {
-    final Bus bus;
-
-    public ProcessorImpl(Bus bus) {this.bus = bus;}
+/**
+ * This class provides no new function.
+ * It allows a test to load the processor from a child loader
+ * thereby providing an invocation context for any remote method calls.
+ */
+public class VersionedProcessorImpl extends acme.ProcessorImpl implements VersionedProcessor {
+    public VersionedProcessorImpl(Bus bus) { super(bus); }
 
     @Override
-    public void process(Processable p) throws RemoteException {
-        try {
-            bus.log("ProcessorImpl processing '" + p + "'");
-            p.process();
-            bus.log("ProcessorImpl processing succeeded");
-        } catch (Error | RuntimeException | RemoteException e) {
-            throw e;
-        } catch (Throwable t) {
-            throw new RemoteException("Processing failed", t);
-        }
+    public String getVersion() throws RemoteException {
+        return "v2";
     }
 }

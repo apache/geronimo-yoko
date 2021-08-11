@@ -36,7 +36,12 @@ import java.util.stream.Stream;
 import static testify.bus.LogLevel.DEFAULT;
 import static testify.util.ObjectUtil.getNextObjectLabel;
 
-// Provide logging functionality. This interface should remain package-private.
+// Although some of the methods here are fluent in design
+// (i.e. they return a Bus object suitable for method chaining)
+// the internal implementations are expected to return null.
+// The fluency is an affordance purely for the code calling
+// objects accessible outside the package.
+@SuppressWarnings("UnusedReturnValue")
 class LogBusImpl implements LogBus {
     private final static DateTimeFormatter TIMESTAMP_FORMAT = DateTimeFormatter.ISO_OFFSET_DATE_TIME;
     private final static DateTimeFormatter TIMER_FORMAT = DateTimeFormatter.ofPattern("mm:ss.SSS");

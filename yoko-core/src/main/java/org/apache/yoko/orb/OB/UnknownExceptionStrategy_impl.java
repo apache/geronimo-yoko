@@ -17,7 +17,7 @@
 
 package org.apache.yoko.orb.OB;
 
-import org.apache.yoko.orb.logging.VerboseLogging;
+import org.apache.yoko.logging.VerboseLogging;
 
 /**
  * An UnknownExceptionStrategy will be called by the ORB when a servant raises an unexpected exception

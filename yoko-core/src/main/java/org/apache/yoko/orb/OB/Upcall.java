@@ -1,10 +1,10 @@
 /*
  *  Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
@@ -17,11 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.io.Buffer;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POA_impl;
-import org.apache.yoko.io.Buffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
@@ -36,18 +36,13 @@ import org.omg.CORBA.SystemException;
 import org.omg.CORBA.UserException;
 import org.omg.CORBA.portable.UnknownException;
 import org.omg.IOP.IOR;
-import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.IOP.UnknownExceptionInfo;
 import org.omg.PortableServer.Servant;
-import org.omg.SendingContext.CodeBase;
-import org.omg.SendingContext.CodeBaseHelper;
 
-import javax.rmi.CORBA.ValueHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static org.apache.yoko.orb.OB.CodeSetDatabase.getConverter;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
 
 public class Upcall {
@@ -183,23 +178,7 @@ public class Upcall {
 
     // initialize internal service contexts
     private void initServiceContexts() {
-        if (codeBaseSC_ == null) {
-            // get the ValueHandler singleton
-            ValueHandler valueHandler = javax.rmi.CORBA.Util.createValueHandler();
-
-            CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
-
-
-            try (OutputStream outCBC = new OutputStream()) {
-                outCBC._OB_writeEndian();
-                CodeBaseHelper.write(outCBC, codeBase);
-
-                codeBaseSC_ = new ServiceContext();
-                codeBaseSC_.context_id = SendingContextRunTime.value;
-
-                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
-            }
-        }
+        if (codeBaseSC_ == null) codeBaseSC_ = SendingContextRuntimes.SENDING_CONTEXT_RUNTIME;
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
         // here because the list of policies can change from one invocation to
         // the next. Instead, we need to get the policies and build the
@@ -333,11 +312,11 @@ public class Upcall {
         // In this case do nothing.
         try {
             if (dispatchStrategy_ != null) {
-                logger.fine("Dispatching request " + reqId_ + " with dispatch strategy " + dispatchStrategy_.getClass().getName()); 
+                logger.fine("Dispatching request " + reqId_ + " with dispatch strategy " + dispatchStrategy_.getClass().getName());
                 dispatchStrategy_.dispatch(dispatchRequest_);
             }
         } catch (SystemException ex) {
-            logger.log(Level.FINE, "Exception received dispatching request", ex); 
+            logger.log(Level.FINE, "Exception received dispatching request", ex);
             setSystemException(ex);
         }
     }

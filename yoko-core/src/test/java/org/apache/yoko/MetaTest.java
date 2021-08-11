@@ -8,16 +8,13 @@ import javax.rmi.CORBA.ValueHandler;
 import junit.framework.TestCase;
 
 import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 import org.omg.SendingContext.CodeBase;
 
-import test.fvd.Marshalling;
 
 public class MetaTest extends TestCase {
 
-    public static void testMetaForClassWithASelfReference() throws Exception {
+    public void testMetaForClassWithASelfReference() {
         ValueHandler vh = Util.createValueHandler();
         CodeBase codebase = (CodeBase)vh.getRunTimeCodeBase();
         String dataClassRepid = vh.getRMIRepositoryID(Data.class);
@@ -26,7 +23,6 @@ public class MetaTest extends TestCase {
     }
 
     public void testMetaForClassWithTwoSelfReferences() {
-        Marshalling.DEFAULT_VERSION.select();
         ValueHandler vh = Util.createValueHandler();
         CodeBase codebase = (CodeBase)vh.getRunTimeCodeBase();
         String dataClassRepid = vh.getRMIRepositoryID(X.class);

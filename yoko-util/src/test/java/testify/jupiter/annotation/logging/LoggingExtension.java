@@ -16,19 +16,29 @@
  */
 package testify.jupiter.annotation.logging;
 
+import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
+import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeTestExecutionCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import testify.jupiter.annotation.Summoner;
+import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
+import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 
-import java.util.List;
-
-import static testify.jupiter.annotation.logging.TestLogger.getLogFinisher;
-
-class LoggingExtension implements BeforeTestExecutionCallback, AfterTestExecutionCallback {
-    private static final Summoner<List<Logging>, TestLogger> SUMMONER = Summoner.forRepeatableAnnotation(Logging.class, TestLogger.class, TestLogger::new);
-
-    public void beforeTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).summon(); }
-
-    public void afterTestExecution(ExtensionContext ctx) { SUMMONER.forContext(ctx).summon().ifPresent(getLogFinisher(ctx)); }
+public final class LoggingExtension extends TestLogger implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler {
+    public void beforeAll(ExtensionContext ctx) {
+        registerLogHandler();
+        this.before(ctx);
+        ctx.getStore(Namespace.create(this)).put(this, this); // ensure close() gets called
+    }
+    public void beforeTestExecution(ExtensionContext ctx) { this.before(ctx); }
+    public void afterTestExecution(ExtensionContext ctx) { this.after(ctx); }
+    public void afterAll(ExtensionContext ctx) { this.after(ctx); }
+    public void handleTestExecutionException(ExtensionContext ctx, Throwable throwable) throws Throwable {
+        this.somethingWentWrong(throwable);
+        throw throwable; // rethrow or tests won't fail
+    }
+    public void close() throws Throwable {
+        deregisterLogHandler();
+    }
 }

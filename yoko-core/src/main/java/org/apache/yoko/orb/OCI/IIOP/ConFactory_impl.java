@@ -27,7 +27,6 @@ import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
-import org.apache.yoko.util.Hex;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -64,7 +63,7 @@ final class ConFactory_impl extends LocalObject implements
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
 
     private final boolean keepAlive_; // The keepalive flag
-    
+
     private final ORB orb_; // The ORB
 
     private final ConFactoryInfo_impl info_; // ConFactory info
@@ -134,7 +133,7 @@ final class ConFactory_impl extends LocalObject implements
         if (logger.isLoggable(Level.FINEST)) {
             logger.finest("Creating connection for ior: " + IORDump.PrintObjref(orb_, ior));
         }
-        
+
         //
         // Check whether policies are satisfied
         //

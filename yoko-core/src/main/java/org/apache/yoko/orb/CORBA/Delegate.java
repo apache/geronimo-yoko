@@ -70,9 +70,9 @@ import static org.apache.yoko.util.MinorCodes.MinorDuplicatePolicyType;
 import static org.apache.yoko.util.MinorCodes.MinorNoPolicy;
 import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
-import static org.apache.yoko.orb.logging.VerboseLogging.RETRY_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.logged;
-import static org.apache.yoko.orb.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.logging.VerboseLogging.RETRY_LOG;
+import static org.apache.yoko.logging.VerboseLogging.logged;
+import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {

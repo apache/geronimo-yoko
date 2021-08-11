@@ -18,19 +18,14 @@
 
 package org.omg.SendingContext;
 
-public interface CodeBaseOperations extends
-		org.omg.SendingContext.RunTimeOperations {
-	public java.lang.String implementation(java.lang.String id);
+import org.omg.CORBA.Repository;
+import org.omg.CORBA.ValueDefPackage.FullValueDescription;
 
-	public java.lang.String[] implementations(java.lang.String[] ids);
-
-	public java.lang.String[] bases(java.lang.String id);
-
-	public org.omg.CORBA.Repository get_ir();
-
-	public org.omg.CORBA.ValueDefPackage.FullValueDescription meta(
-			java.lang.String id);
-
-	public org.omg.CORBA.ValueDefPackage.FullValueDescription[] metas(
-			java.lang.String id);
+public interface CodeBaseOperations extends RunTimeOperations {
+	String implementation(String id);
+	String[] implementations(String[] ids);
+	String[] bases(String id);
+	Repository get_ir();
+	FullValueDescription meta(String id);
+	FullValueDescription[] metas(String id);
 }

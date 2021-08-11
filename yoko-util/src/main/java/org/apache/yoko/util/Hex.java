@@ -31,14 +31,24 @@ public enum Hex {
         return formatHexPara(oct, 0, oct.length, sb);
     }
 
-    /* Convert an octet buffer into human-friendly data dump */
     public static StringBuilder formatHexPara(final byte[] oct, final int offset, final int count, final StringBuilder sb) {
+        return formatHexPara("", oct, offset, count, sb);
+    }
+
+        /* Convert an octet buffer into a human-friendly data dump */
+    public static StringBuilder formatHexPara(String indent, final byte[] oct, final int offset, final int count, final StringBuilder sb) {
         if (count <= 0) return sb;
 
         int endIndex = offset + count;
-        int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
-        String indexFormat = "%0" + indexWidth + "X:  ";
-        String indexSpaces = String.format(indexFormat, 0).replaceAll(".", " ");
+        // calculate the width of index needed for this dump
+        final String indexFormat;
+        final String indexSpaces;
+        {
+            int indexWidth = Math.max(4, Integer.toHexString(endIndex).length());
+            String unindentedIndexFormat = "%0" + indexWidth + "X:  ";
+            indexFormat = indent + unindentedIndexFormat;
+            indexSpaces = indent + String.format(unindentedIndexFormat, 0).replaceAll(".", " ");
+        }
 
         sb.append(String.format(indexFormat, offset));
 
@@ -91,6 +101,7 @@ public enum Hex {
         }
 
         switch (endIndex % 0x10) {
+            case 0x0: break;
             case 0x1: sb.append("  ");
             case 0x2: sb.append("  ");
             case 0x3: sb.append("   ");
@@ -105,8 +116,9 @@ public enum Hex {
             case 0xc: sb.append("  ");
             case 0xd: sb.append("  ");
             case 0xe: sb.append("  ");
-            case 0xf: sb.append("   ");
-            case 0x0: sb.append(ascii).append("\"");
+            case 0xf: sb.append("   ")
+                    .append(ascii)
+                    .append("\"");
         }
 
         return sb;

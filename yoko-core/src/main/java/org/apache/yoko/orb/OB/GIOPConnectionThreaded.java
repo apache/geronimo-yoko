@@ -18,12 +18,12 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.giop.MessageType;
-import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.io.Buffer;
-import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.io.ReadBuffer;
-import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.io.WriteBuffer;
+import org.apache.yoko.orb.CORBA.OutputStream;
+import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.orb.OCI.Transport;
 import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.rmi.util.ObjectUtil;
 import org.apache.yoko.util.Assert;
@@ -43,21 +43,22 @@ import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
+import static org.apache.yoko.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.CONN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.apache.yoko.orb.OB.Connection.Access.READ;
 import static org.apache.yoko.orb.OB.Connection.Access.WRITE;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSED;
 import static org.apache.yoko.orb.OB.Connection.State.CLOSING;
 import static org.apache.yoko.orb.OB.Connection.State.ERROR;
 import static org.apache.yoko.orb.OB.Connection.State.STALE;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
+import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
 import static org.apache.yoko.util.MinorCodes.MinorSend;
 import static org.apache.yoko.util.MinorCodes.MinorThreadLimit;
 import static org.apache.yoko.util.MinorCodes.describeCommFailure;
 import static org.apache.yoko.util.MinorCodes.describeImpLimit;
-import static org.apache.yoko.orb.OCI.SendReceiveMode.ReceiveOnly;
-import static org.apache.yoko.orb.OCI.SendReceiveMode.SendOnly;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_IN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final class GIOPConnectionThreaded extends GIOPConnection {
@@ -484,7 +485,7 @@ final class GIOPConnectionThreaded extends GIOPConnection {
                 }
 
                 // a message should be sent by now so we have to mark it as sent for the GIOPClient
-                if (!(msgSentMarked || nextDown == null || nextDown.operation().equals("_locate"))) {
+                if (!(msgSentMarked || nextDown == null || nextDown.getVersion() == GIOP1_0)) {
                     msgSentMarked = true;
                     markRequestSent();
                     if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(format("Sent message blocking=%s msgcount=%d size=%d", block, msgcount++, readBuffer.length()));
@@ -515,15 +516,6 @@ final class GIOPConnectionThreaded extends GIOPConnection {
 
                     // now move to the pending pile
                     Downcall dummy = messageQueue_.moveFirstUnsentToPending();
-
-                    // update the message sent property
-                    if (!msgSentMarked && dummy != null) {
-                        if (dummy.responseExpected() && dummy.operation().equals("_locate")) {
-                            msgSentMarked = true;
-                            markRequestSent();
-                            if (REQ_OUT_LOG.isLoggable(FINE)) REQ_OUT_LOG.fine(format("Sent message blocking=%s msgcount=%d size=%d", block, msgcount++, readBuffer.length()));
-                        }
-                    }
                 }
             }
         }

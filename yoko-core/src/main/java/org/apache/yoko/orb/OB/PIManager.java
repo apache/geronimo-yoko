@@ -58,9 +58,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static java.util.logging.Level.CONFIG;
 import static org.apache.yoko.orb.OB.PIManager.Interceptors.describe;
-import static org.apache.yoko.orb.logging.VerboseLogging.IOR_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.REQ_IN_LOG;
-import static org.apache.yoko.orb.logging.VerboseLogging.REQ_OUT_LOG;
+import static org.apache.yoko.logging.VerboseLogging.IOR_LOG;
+import static org.apache.yoko.logging.VerboseLogging.REQ_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.apache.yoko.util.CollectionExtras.allOf;
 import static org.apache.yoko.util.CollectionExtras.filterByType;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;

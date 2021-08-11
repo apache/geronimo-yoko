@@ -16,7 +16,6 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.util.Hex;
 import org.omg.CORBA.INTERNAL;
 
 import java.io.IOException;

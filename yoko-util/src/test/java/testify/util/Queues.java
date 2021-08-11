@@ -27,6 +27,15 @@ import java.util.stream.Stream;
 public enum Queues {
     ;
 
+    public static <T> Stream<T> drain(Queue<T> q) {
+        return Streams.stream( action -> {
+            T t = q.poll();
+            if (t == null) return false;
+            action.accept(t);
+            return true;
+        });
+    }
+
     /** Drain the supplied queues in the ordering specified, assuming the ordering may change after each poll operation. */
     public static <T, Q extends Queue<T>> Stream<T> drainInOrder(Collection<Q> queues, Comparator<Q> ordering) {
         PriorityQueue<Q> pq = new PriorityQueue<>(ordering);

@@ -207,5 +207,3 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         }
     }
 }
-
-

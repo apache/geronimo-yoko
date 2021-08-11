@@ -206,13 +206,13 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
 
     private static final Summoner<ConfigureOrb, OrbSteward> SUMMONER = Summoner.forAnnotation(ConfigureOrb.class, OrbSteward.class, OrbSteward::new);
     static ORB getOrb(ExtensionContext ctx) {
-        return SUMMONER.forContext(ctx).summon()
+        return SUMMONER.forContext(ctx).requestSteward()
                 .map(steward -> steward.getOrbInstance(ctx))
                 .orElseThrow(Error::new); // error in framework, not calling code
     }
 
     static ORB getOrb(ExtensionContext ctx, ConfigureOrb config) {
-        return SUMMONER.forContext(ctx).summon(config).getOrbInstance(ctx);
+        return SUMMONER.forContext(ctx).requireSteward(config).getOrbInstance(ctx);
     }
 
 }

@@ -32,13 +32,6 @@ def getGitHash(length) {
 def testProjects = "osgi util rmi-impl core test".split(" ").collect{s->project(":yoko-" + s)}
 def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core jdk-supplement".split(" ").collect{s->project(":yoko-" + s)}
 
-/* Configuration for all projects (including this parent) */
-allprojects  {
-  apply plugin: 'maven-publish'
-  group = 'org.apache.yoko'
-  version = '1.5.0.' + getGitHash(10)
-}
-
 /* Standard configuration for each subproject */
 subprojects {
   apply plugin: 'java'
@@ -58,6 +51,9 @@ subprojects {
     // declare a new configuration to use for spec API jars
     spec.transitive = true
     compile.extendsFrom spec
+    // declare a test library configuration
+    testLib
+    testImplementation.extendsFrom testLib
   }
 
   sourceSets.main.compileClasspath += configurations.provided
@@ -67,11 +63,11 @@ subprojects {
 configure(testProjects) {
   // standardise the test deps here
   dependencies {
-    testImplementation 'junit:junit:4.12'
-    testImplementation 'org.mockito:mockito-core:2.22.0'
-    testImplementation "org.hamcrest:hamcrest:2.1"
-    testImplementation "org.junit.jupiter:junit-jupiter:5.5.1"
-    testImplementation "org.junit.platform:junit-platform-runner:1.6.2"
+    testLib 'junit:junit:4.12'
+    testLib 'org.mockito:mockito-core:2.22.0'
+    testLib "org.hamcrest:hamcrest:2.1"
+    testLib "org.junit.jupiter:junit-jupiter:5.5.1"
+    testLib "org.junit.platform:junit-platform-runner:1.6.2"
     testRuntime "org.junit.jupiter:junit-jupiter-engine:5.5.1"
     testRuntime "org.junit.vintage:junit-vintage-engine:5.5.1"
   }
@@ -104,7 +100,7 @@ configure(testProjects) {
     doFirst {workingDir.mkdirs()}
     testLogging {
       // set options for log level LIFECYCLE
-      events "skipped", "failed" //, "passed", "standardOut"
+      events "skipped", "failed", "passed", "standardOut"
       showExceptions true
       exceptionFormat "full"
       showCauses true
@@ -112,7 +108,7 @@ configure(testProjects) {
 
       // set options for log level DEBUG and INFO
       debug {
-        events "skipped", "failed"//, "started", "passed", "standardOut", "standardError"
+        events "skipped", "failed", "started", "passed", "standardOut", "standardError"
         exceptionFormat "full"
       }
       info.events = debug.events
@@ -144,6 +140,9 @@ configure(testProjects) {
 /* Standard configuration for subprojects with shippable outputs */
 configure(shipProjects) {
   apply plugin: 'osgi'
+  apply plugin: 'maven-publish'
+  group = 'org.apache.yoko'
+  version = '1.5.0.' + getGitHash(10)
   publishing {
     publications {
       maven(MavenPublication) {

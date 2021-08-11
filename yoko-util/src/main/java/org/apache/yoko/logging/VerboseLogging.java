@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko.orb.logging;
+package org.apache.yoko.logging;
 
 import org.apache.yoko.util.Factory;
 import org.apache.yoko.util.Wrapper;
@@ -107,6 +107,15 @@ public enum VerboseLogging {
      * </pre>
      */
     public static final Logger MARSHAL_LOG = Logger.getLogger("yoko.verbose.marshal");
+
+    /** Class loading logging: <pre>
+     * CONFIG:
+     * FINE:
+     * FINER:
+     * FINEST:
+     * </pre>
+     */
+    public static final Logger CLASS_LOG = Logger.getLogger("yoko.verbose.class");
 
     /**
      * Use this as a pass-through method for an exception when it is being processed without a new exception being created.

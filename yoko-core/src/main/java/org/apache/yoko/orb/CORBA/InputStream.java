@@ -795,7 +795,7 @@ final public class InputStream extends InputStreamWithOffsets {
                     if (readBuffer.available() < wcLen) throw new MARSHAL(MinorReadWCharOverflow, COMPLETED_NO);
 
                     // read the character off in proper endian format
-                    value = swap_ ? readBuffer.readChar_LE() : readBuffer.readChar();
+                    value = readBuffer.readChar(swap_);
 
                     break;
                 }
@@ -1014,7 +1014,7 @@ final public class InputStream extends InputStreamWithOffsets {
                         // format for GIOP 1.2/1.3
                         // REVISIT: GIOP 1.4 changes these rules
                         //
-                        char c = swap_ ? readBuffer.readChar_LE() : readBuffer.readChar();
+                        char c = readBuffer.readChar(swap_);
 
                         if (wCharConversionRequired_)
                             c = converter.convert(c);
@@ -1578,7 +1578,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (readBuffer.available() < 4) throw newMarshalError(MinorReadLongOverflow);
 
-        return swap_ ? readBuffer.readInt_LE() : readBuffer.readInt();
+        return readBuffer.readInt(swap_);
     }
 
     public void _OB_beginValue() {
@@ -1623,19 +1623,17 @@ final public class InputStream extends InputStreamWithOffsets {
         return readBuffer.dumpRemainingData();
     }
 
-    /**
-     * Return all the data in the buffer as a formatted string suitable for logging.
-     */
-    public String dumpAllData() {
-        return readBuffer.dumpAllData();
-    }
+    /** Return all the data in the buffer as a formatted string suitable for logging. */
+    public String dumpAllData() { return readBuffer.dumpAllData(); }
 
-    /**
-     * Return all the data in the buffer, with the position marked, as a formatted string suitable for logging.
-     */
-    public String dumpAllDataWithPosition() {
-        return readBuffer.dumpAllDataWithPosition();
-    }
+    /** Append all the data in the buffer as a formatted string suitable for logging. */
+    public StringBuilder dumpAllData(StringBuilder sb) { return readBuffer.dumpAllData(sb); }
+
+    /** Return all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
+    public String dumpAllDataWithPosition() { return readBuffer.dumpAllDataWithPosition(); }
+
+    /** Append all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
+    public StringBuilder dumpAllDataWithPosition(StringBuilder sb, String label) { return readBuffer.dumpAllDataWithPosition(sb, label); }
 
     private void checkChunk() {
         if (valueReader_ != null) {

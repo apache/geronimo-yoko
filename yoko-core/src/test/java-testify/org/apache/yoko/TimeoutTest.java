@@ -40,7 +40,7 @@ public class TimeoutTest {
         expect(RemoteException.class)
                 .causedBy(NO_RESPONSE.class)
                 .rootCause(NO_RESPONSE.class)
-                .when(() -> stub.process(() -> Thread.sleep(1000)));
+                .when(() -> stub.performRemotely(() -> Thread.sleep(1000)));
     }
 
 }

@@ -17,425 +17,292 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
+import org.apache.yoko.orb.OCI.AccFactoryRegistry;
+import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.Cache;
 import org.apache.yoko.util.concurrent.WeakCountedCache;
 import org.omg.CORBA.INTERNAL;
+import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.PolicyManager;
 import org.omg.CORBA.PolicyManagerHelper;
+import org.omg.IOP.CodecFactory;
 
+import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
-import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class ORBInstance {
-    private boolean destroy_; // True if destroy() was called
+    private final Cache<ConnectorInfo, GIOPConnection> outboundConnectionCache = new WeakCountedCache<>(GIOPConnection::destroy, 0, 100);
 
-    private static final Cache.Cleaner<GIOPConnection> CLEANER = new Cache.Cleaner<GIOPConnection>() {
-        @Override
-        public void clean(GIOPConnection conn) {
-            conn.destroy();
-        }
-    };
+    private final ORB orb;
 
-    private final Cache<ConnectorInfo, GIOPConnection> outboundConnectionCache = new WeakCountedCache<>(CLEANER, 0, 100);
+    private final int nativeCodeSet;
+    private final int nativeWcharCodeSet;
+    private final int defaultWcharCodeSet;
 
-    private org.omg.CORBA.ORB orb_;
+    private final String orbId;
+    private final String serverID;
+    private final String serverInstanceID;
 
-    //
-    // The native codesets
-    //
-    private int nativeCs_;
-
-    private int nativeWcs_;
-
-    //
-    // The default wchar codeset (should be 0 according to specification)
-    //
-    private int defaultWcs_;
-
-    //
-    // The ORB id
-    //
-    private String orbId_;
-
-    //
-    // The Server id
-    //
-    private String serverId_;
-
-    //
-    // The Server instance-id
-    //
-    private String serverInstance_;
-
-    private ObjectFactory objectFactory_;
-
-    private ClientManager clientManager_;
-
-    private PolicyFactoryManager policyFactoryManager_;
-
-    private PIManager interceptorManager_;
-
-    private InitialServiceManager initServiceManager_;
-
-    private ValueFactoryManager valueFactoryManager_;
-
-    private org.omg.IOP.CodecFactory codecFactory_;
-
-    private org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory_;
-
-    private MultiRequestSender multiRequestSender_;
-
-    private java.util.Properties properties_;
-
-    private DispatchStrategyFactory dispatchStrategyFactory_;
-
-    private BootManager bootManager_;
-
-    private Logger logger_;
-
-    private CoreTraceLevels coreTraceLevels_;
-
-    private RecursiveMutex orbSyncMutex_ = new RecursiveMutex();
-
-    private ExecutorService serverExecutor_;
-    private Phaser serverPhaser = new Phaser(1);
-
-    private ExecutorService clientExecutor_;
-    private Phaser clientPhaser = new Phaser(1);
-
-    private org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry_;
-
-    private org.apache.yoko.orb.OCI.AccFactoryRegistry accFactoryRegistry_;
-
-    private UnknownExceptionStrategy unknownExceptionStrategy_;
-
-    private URLRegistry urlRegistry_;
-
-    private boolean useTypeCodeCache_;
-
-    private boolean extendedWchar_;
-
-    //
-    // the async message handler
-    //
-    OrbAsyncHandler asyncHandler_ = null;
-
-    // ----------------------------------------------------------------------
-    // ORBInstance private and protected member implementations
-    // ----------------------------------------------------------------------
+    private ObjectFactory objectFactory;
+    private ClientManager clientManager;
+    private PolicyFactoryManager policyFactoryManager;
+    private PIManager interceptorManager;
+    private InitialServiceManager initServiceManager;
+    private ValueFactoryManager valueFactoryManager;
+    private CodecFactory codecFactory;
+    private POAManagerFactory pmFactory;
+    private MultiRequestSender multiRequestSender;
+    private final Properties properties;
+    private DispatchStrategyFactory dispatchStrategyFactory;
+    private BootManager bootManager;
+    private final Logger logger;
+    private final CoreTraceLevels coreTraceLevels;
+    private final RecursiveMutex orbSyncMutex = new RecursiveMutex();
+    private final ExecutorService serverExecutor;
+    private final Phaser serverPhaser = new Phaser(1);
+    private final ExecutorService clientExecutor;
+    private final Phaser clientPhaser = new Phaser(1);
+    private ConFactoryRegistry conFactoryRegistry;
+    private AccFactoryRegistry accFactoryRegistry;
+    private UnknownExceptionStrategy unknownExceptionStrategy;
+    private final URLRegistry urlRegistry;
+    private final boolean useTypeCodeCache;
+    private final boolean extendedWchar;
+    private OrbAsyncHandler asyncHandler;
+    private final AtomicBoolean destroyCalled = new AtomicBoolean(); // True if destroy() was called
 
     protected void finalize() throws Throwable {
-        Assert.ensure(destroy_);
-
+        Assert.ensure(destroyCalled.get());
         super.finalize();
     }
 
-    // ----------------------------------------------------------------------
-    // ORBInstance package member implementations
-    // ----------------------------------------------------------------------
+    public ORBInstance(ORB orb, String orbId, String serverID,
+                       String serverInstance, ObjectFactory objectFactory,
+                       ClientManager clientManager,
+                       PolicyFactoryManager policyFactoryManager, PIManager piManager,
+                       InitialServiceManager initServiceManager,
+                       ValueFactoryManager valueFactoryManager,
+                       CodecFactory codecFactory,
+                       POAManagerFactory pmFactory,
+                       MultiRequestSender multiRequestSender,
+                       Properties properties,
+                       DispatchStrategyFactory dispatchStrategyFactory,
+                       BootManager bootManager, Logger logger,
+                       CoreTraceLevels coreTraceLevels,
+                       ConFactoryRegistry conFactoryRegistry,
+                       AccFactoryRegistry accFactoryRegistry,
+                       UnknownExceptionStrategy unknownExceptionStrategy,
+                       URLRegistry urlRegistry, int nativeCs, int nativeWcs, int defaultWcs) {
+        this.orb = orb;
+        this.orbId = orbId;
+        this.serverID = serverID;
+        serverInstanceID = serverInstance;
+        this.objectFactory = objectFactory;
+        this.clientManager = clientManager;
+        this.policyFactoryManager = policyFactoryManager;
+        interceptorManager = piManager;
+        this.initServiceManager = initServiceManager;
+        this.valueFactoryManager = valueFactoryManager;
+        this.codecFactory = codecFactory;
+        this.pmFactory = pmFactory;
+        this.multiRequestSender = multiRequestSender;
+        this.properties = properties;
+        this.dispatchStrategyFactory = dispatchStrategyFactory;
+        this.bootManager = bootManager;
+        this.logger = logger;
+        this.coreTraceLevels = coreTraceLevels;
+        this.conFactoryRegistry = conFactoryRegistry;
+        this.accFactoryRegistry = accFactoryRegistry;
+        this.unknownExceptionStrategy = unknownExceptionStrategy;
+        this.urlRegistry = urlRegistry;
+        nativeCodeSet = nativeCs;
+        nativeWcharCodeSet = nativeWcs;
+        defaultWcharCodeSet = defaultWcs;
 
-    // ----------------------------------------------------------------------
-    // ORBInstance public member implementations
-    // ----------------------------------------------------------------------
-
-    public ORBInstance(org.omg.CORBA.ORB orb, String orbId, String serverId,
-            String serverInstance, ObjectFactory objectFactory,
-            ClientManager clientManager,
-            PolicyFactoryManager policyFactoryManager, PIManager piManager,
-            InitialServiceManager initServiceManager,
-            ValueFactoryManager valueFactoryManager,
-            org.omg.IOP.CodecFactory codecFactory,
-            org.apache.yoko.orb.OBPortableServer.POAManagerFactory pmFactory,
-            MultiRequestSender multiRequestSender,
-            java.util.Properties properties,
-            DispatchStrategyFactory dispatchStrategyFactory,
-            BootManager bootManager, Logger logger,
-            CoreTraceLevels coreTraceLevels,
-            org.apache.yoko.orb.OCI.ConFactoryRegistry conFactoryRegistry,
-            org.apache.yoko.orb.OCI.AccFactoryRegistry accFactoryRegistry,
-            UnknownExceptionStrategy unknownExceptionStrategy,
-            URLRegistry urlRegistry, int nativeCs, int nativeWcs, int defaultWcs) {
-        orb_ = orb;
-        orbId_ = orbId;
-        serverId_ = serverId;
-        serverInstance_ = serverInstance;
-        objectFactory_ = objectFactory;
-        clientManager_ = clientManager;
-        policyFactoryManager_ = policyFactoryManager;
-        interceptorManager_ = piManager;
-        initServiceManager_ = initServiceManager;
-        valueFactoryManager_ = valueFactoryManager;
-        codecFactory_ = codecFactory;
-        pmFactory_ = pmFactory;
-        multiRequestSender_ = multiRequestSender;
-        properties_ = properties;
-        dispatchStrategyFactory_ = dispatchStrategyFactory;
-        bootManager_ = bootManager;
-        logger_ = logger;
-        coreTraceLevels_ = coreTraceLevels;
-        conFactoryRegistry_ = conFactoryRegistry;
-        accFactoryRegistry_ = accFactoryRegistry;
-        unknownExceptionStrategy_ = unknownExceptionStrategy;
-        urlRegistry_ = urlRegistry;
-        nativeCs_ = nativeCs;
-        nativeWcs_ = nativeWcs;
-        defaultWcs_ = defaultWcs;
-
-        //
         // Create the server and client executors
         // TODO why are these separate?
-        //
-        clientExecutor_ = Executors.newCachedThreadPool(
-                new ThreadFactory() {
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread result = new Thread(r);
-                        result.setDaemon(true);
-                        return result;
-                    }
+        clientExecutor = Executors.newCachedThreadPool(
+                r -> {
+                    Thread result = new Thread(r);
+                    result.setDaemon(true);
+                    return result;
                 }
         );
-        serverExecutor_ = Executors.newCachedThreadPool(
-                new ThreadFactory() {
-                    @Override
-                    public Thread newThread(Runnable r) {
-                        Thread result = new Thread(r);
-                        result.setDaemon(true);
-                        return result;
-                    }
+        serverExecutor = Executors.newCachedThreadPool(
+                r -> {
+                    Thread result = new Thread(r);
+                    result.setDaemon(true);
+                    return result;
                 }
         );
 
-        //
         // Use the TypeCode cache?
-        //
-        String tcc = properties_.getProperty("yoko.orb.use_type_code_cache");
-        if (tcc != null && tcc.equals("false"))
-            useTypeCodeCache_ = false;
-        else
-            useTypeCodeCache_ = true;
+        String tcc = this.properties.getProperty("yoko.orb.use_type_code_cache");
+        useTypeCodeCache = tcc == null || !tcc.equals("false");
 
-        //
         // Support wchar/wstring for IIOP 1.0?
-        //
-        String extWchar = properties_.getProperty("yoko.orb.extended_wchar");
-        if (extWchar != null && extWchar.equals("true"))
-            extendedWchar_ = true;
-        else
-            extendedWchar_ = false;
+        String extWchar = this.properties.getProperty("yoko.orb.extended_wchar");
+        extendedWchar = extWchar != null && extWchar.equals("true");
 
-        //
         // get the number of AMI worker threads
-        //
-        String amiWorkersStr = properties_.getProperty("yoko.orb.ami_workers");
-        int amiWorkers = 1;
-        if (amiWorkersStr != null) {
-            amiWorkers = Integer.parseInt(amiWorkersStr);
-            if (amiWorkers <= 0)
-                amiWorkers = 1;
-        }
+        String amiWorkersStr = this.properties.getProperty("yoko.orb.ami_workers");
+        int amiWorkers = amiWorkersStr == null ? 1 : Math.max(1, Integer.parseInt(amiWorkersStr));
 
-        //
-        // the Asynchonous message handler
-        //
-        asyncHandler_ = new OrbAsyncHandler(amiWorkers);
+        asyncHandler = new OrbAsyncHandler(amiWorkers);
     }
 
     public void destroy() {
-        Assert.ensure(!destroy_); // May only be destroyed once
-        destroy_ = true;
+        boolean firstCallToDestroy = destroyCalled.compareAndSet(false, true);
+        Assert.ensure(firstCallToDestroy); // May only be destroyed once
 
-        //
         // Destroy the POAManagerFactory
-        //
-        pmFactory_.destroy();
-        pmFactory_ = null;
+        pmFactory.destroy();
+        pmFactory = null;
 
-        //
         // Destroy the Initial Service manager
-        //
-        initServiceManager_.destroy();
-        initServiceManager_ = null;
+        initServiceManager.destroy();
+        initServiceManager = null;
 
-        //
         // Destroy the Object factory
-        //
-        objectFactory_.destroy();
-        objectFactory_ = null;
+        objectFactory.destroy();
+        objectFactory = null;
 
-        //
-        // Destroy the ClientManager
-        //
         // ORBControl destroys the ClientManager
-        // clientManager_.destroy();
-        clientManager_ = null;
+        clientManager = null;
 
-        //
         // Destroy the PolicyFactoryManager
-        //
-        policyFactoryManager_.destroy();
-        policyFactoryManager_ = null;
+        policyFactoryManager.destroy();
+        policyFactoryManager = null;
 
-        //
         // Destroy the PortableInterceptor manager
-        //
-        interceptorManager_.destroy();
-        interceptorManager_ = null;
+        interceptorManager.destroy();
+        interceptorManager = null;
 
-        //
         // Destroy the ValueFactory manager
-        //
-        valueFactoryManager_.destroy();
-        valueFactoryManager_ = null;
+        valueFactoryManager.destroy();
+        valueFactoryManager = null;
 
-        //
         // Destroy the CodecFactory
-        //
-        // codecFactory_.destroy(); // No destroy operation defined
-        codecFactory_ = null;
+        codecFactory = null;
 
-        //
         // Destroy the MultiRequestSender factory
-        //
-        // multiRequestSender_.destroy(); // No destroy operation defined
-        multiRequestSender_ = null;
+        multiRequestSender = null;
 
-        //
         // Properties are not destroyed -- they are indestructible
-        //
-        // properties_.destroy(); // No destroy operation defined
-        // properties_ = null;
 
-        //
         // Destroy the dispatch strategy factory
-        //
         // NOTE: destruction is taken care of in ORBControl
-        //
-        // ((DispatchStrategyFactory_impl)dispatchStrategyFactory_).
-        // _OB_destroy();
-        dispatchStrategyFactory_ = null;
+        dispatchStrategyFactory = null;
 
-        //
         // Destroy the BootManager
-        //
-        // bootManager_.destroy(); // No destroy operation defined
-        bootManager_ = null;
+        bootManager = null;
 
-        //
         // Logger is not destroyed -- it is indestructible
-        //
-        // logger_.destroy();
-        // logger_ = null;
 
-        //
         // CoreTraceLevels is not destroyed -- it is indestructible
-        //
-        // coreTraceLevels_.destroy();
-        // coreTraceLevels_ = null;
 
         // Client and server executors shut down in the ORBControl
         
-        conFactoryRegistry_ = null;
-        accFactoryRegistry_ = null;
-        unknownExceptionStrategy_ = null;
-        asyncHandler_.shutdown();
-        asyncHandler_ = null;
+        conFactoryRegistry = null;
+        accFactoryRegistry = null;
+        unknownExceptionStrategy = null;
+        asyncHandler.shutdown();
+        asyncHandler = null;
     }
 
-    //
-    // IMPORTANT: Only use this when required by the Java mapping
-    //
-    public org.omg.CORBA.ORB getORB() {
-        return orb_;
+    public ORB getORB() {
+        return orb;
     }
 
     public int getNativeCs() {
-        return nativeCs_;
+        return nativeCodeSet;
     }
 
     public int getNativeWcs() {
-        return nativeWcs_;
+        return nativeWcharCodeSet;
     }
 
     public int getDefaultWcs() {
-        return defaultWcs_;
+        return defaultWcharCodeSet;
     }
 
     public ObjectFactory getObjectFactory() {
-        return objectFactory_;
+        return objectFactory;
     }
 
     public ClientManager getClientManager() {
-        return clientManager_;
+        return clientManager;
     }
 
     public PolicyFactoryManager getPolicyFactoryManager() {
-        return policyFactoryManager_;
+        return policyFactoryManager;
     }
 
     public PolicyManager getPolicyManager() {
         try {
-            return PolicyManagerHelper.narrow(orb_.resolve_initial_references("ORBPolicyManager"));
+            return PolicyManagerHelper.narrow(orb.resolve_initial_references("ORBPolicyManager"));
         } catch (InvalidName invalidName) {
             throw new INTERNAL("Could not find PolicyManager");
         }
     }
 
     public PIManager getPIManager() {
-        return interceptorManager_;
+        return interceptorManager;
     }
 
     public InitialServiceManager getInitialServiceManager() {
-        return initServiceManager_;
+        return initServiceManager;
     }
 
     public ValueFactoryManager getValueFactoryManager() {
-        return valueFactoryManager_;
+        return valueFactoryManager;
     }
 
-    public org.omg.IOP.CodecFactory getCodecFactory() {
-        return codecFactory_;
+    public CodecFactory getCodecFactory() {
+        return codecFactory;
     }
 
-    public org.apache.yoko.orb.OBPortableServer.POAManagerFactory getPOAManagerFactory() {
-        return pmFactory_;
+    public POAManagerFactory getPOAManagerFactory() {
+        return pmFactory;
     }
 
     public MultiRequestSender getMultiRequestSender() {
-        return multiRequestSender_;
+        return multiRequestSender;
     }
 
-    public java.util.Properties getProperties() {
-        return properties_;
+    public Properties getProperties() {
+        return properties;
     }
 
     public DispatchStrategyFactory getDispatchStrategyFactory() {
-        return dispatchStrategyFactory_;
+        return dispatchStrategyFactory;
     }
 
     public BootManager getBootManager() {
-        return bootManager_;
+        return bootManager;
     }
 
     public Logger getLogger() {
-        return logger_;
+        return logger;
     }
 
     public CoreTraceLevels getCoreTraceLevels() {
-        return coreTraceLevels_;
+        return coreTraceLevels;
     }
 
     public RecursiveMutex getORBSyncMutex() {
-        return orbSyncMutex_;
+        return orbSyncMutex;
     }
 
     public ExecutorService getServerExecutor() {
-        return serverExecutor_;
+        return serverExecutor;
     }
 
     public Phaser getServerPhaser() {
@@ -443,58 +310,57 @@ public final class ORBInstance {
     }
     
     public ExecutorService getClientExecutor() {
-        return clientExecutor_;
+        return clientExecutor;
     }
     
     public Phaser getClientPhaser() {
         return clientPhaser;
     }
 
-    public org.apache.yoko.orb.OCI.ConFactoryRegistry getConFactoryRegistry() {
-        return conFactoryRegistry_;
+    public ConFactoryRegistry getConFactoryRegistry() {
+        return conFactoryRegistry;
     }
 
-    public org.apache.yoko.orb.OCI.AccFactoryRegistry getAccFactoryRegistry() {
-        return accFactoryRegistry_;
+    public AccFactoryRegistry getAccFactoryRegistry() {
+        return accFactoryRegistry;
     }
 
     public UnknownExceptionStrategy getUnknownExceptionStrategy() {
-        return unknownExceptionStrategy_;
+        return unknownExceptionStrategy;
     }
 
-    public UnknownExceptionStrategy setUnknownExceptionStrategy(
-            UnknownExceptionStrategy strategy) {
-        UnknownExceptionStrategy result = unknownExceptionStrategy_;
-        unknownExceptionStrategy_ = strategy;
+    public UnknownExceptionStrategy setUnknownExceptionStrategy(UnknownExceptionStrategy strategy) {
+        UnknownExceptionStrategy result = unknownExceptionStrategy;
+        unknownExceptionStrategy = strategy;
         return result;
     }
 
     public URLRegistry getURLRegistry() {
-        return urlRegistry_;
+        return urlRegistry;
     }
 
     public String getOrbId() {
-        return orbId_;
+        return orbId;
     }
 
     public String getServerId() {
-        return serverId_;
+        return serverID;
     }
 
     public String getServerInstance() {
-        return serverInstance_;
+        return serverInstanceID;
     }
 
     public boolean useTypeCodeCache() {
-        return useTypeCodeCache_;
+        return useTypeCodeCache;
     }
 
     public boolean extendedWchar() {
-        return extendedWchar_;
+        return extendedWchar;
     }
 
     public OrbAsyncHandler getAsyncHandler() {
-        return asyncHandler_;
+        return asyncHandler;
     }
 
     public Cache<ConnectorInfo, GIOPConnection> getOutboundConnectionCache() {return outboundConnectionCache;}

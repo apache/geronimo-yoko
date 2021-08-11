@@ -17,11 +17,11 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.io.Buffer;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.CORBA.OutputStreamHolder;
 import org.apache.yoko.orb.IOP.ServiceContexts;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.io.Buffer;
 import org.apache.yoko.orb.OCI.Connector;
 import org.apache.yoko.orb.OCI.ConnectorInfo;
 import org.apache.yoko.orb.OCI.GiopVersion;
@@ -42,21 +42,16 @@ import org.omg.CORBA.Policy;
 import org.omg.CORBA.SystemException;
 import org.omg.IOP.CodeSets;
 import org.omg.IOP.IOR;
-import org.omg.IOP.SendingContextRunTime;
 import org.omg.IOP.ServiceContext;
 import org.omg.PortableServer.POAManager;
-import org.omg.SendingContext.CodeBase;
-import org.omg.SendingContext.CodeBaseHelper;
 
-import javax.rmi.CORBA.ValueHandler;
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINEST;
-import static javax.rmi.CORBA.Util.createValueHandler;
+import static org.apache.yoko.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
-import static org.apache.yoko.orb.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 /**
@@ -236,21 +231,7 @@ final class GIOPClient extends Client {
                 codeSetSC_.context_data = outCSC.copyWrittenBytes();
             }
         }
-        if (codeBaseSC_ == null) {
-
-            ValueHandler valueHandler = createValueHandler();
-            CodeBase codeBase = CodeBaseHelper.narrow(valueHandler.getRunTimeCodeBase());
-
-
-            try (OutputStream outCBC = new OutputStream()) {
-                outCBC._OB_writeEndian();
-                CodeBaseHelper.write(outCBC, codeBase);
-
-                codeBaseSC_ = new ServiceContext();
-                codeBaseSC_.context_id = SendingContextRunTime.value;
-                codeBaseSC_.context_data = outCBC.copyWrittenBytes();
-            }
-        }
+        if (codeBaseSC_ == null) codeBaseSC_ = SendingContextRuntimes.SENDING_CONTEXT_RUNTIME;
         // NOTE: We don't initialize the INVOCATION_POLICIES service context
         // here because the list of policies can change from one invocation to
         // the next. Instead, we need to get the policies and build the
