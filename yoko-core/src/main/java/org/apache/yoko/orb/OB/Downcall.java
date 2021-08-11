@@ -575,6 +575,8 @@ public class Downcall {
         }
     }
 
+    GiopVersion getVersion() { return GiopVersion.get(profileInfo_.major, profileInfo_.minor); }
+
     @Override
     public String toString() {
         return String.format("%s[ reqId_=%d op_=%s state=%s]", this.getClass().getSimpleName(), reqId_, op_, state);
