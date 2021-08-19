@@ -16,6 +16,8 @@
  */
 package testify.streams;
 
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Spliterator;
@@ -56,6 +58,10 @@ public interface BiStream<K, V> {
         return action -> this.tryAdvance((k, v) -> action.accept(k, mapper.apply(v)));
     }
 
+    default <V2> BiStream<K, V2> mapValues(BiFunction<K,V,V2> mapper) {
+        return action -> this.tryAdvance((k, v) -> action.accept(k, mapper.apply(k, v)));
+    }
+
     default <V2 extends V> BiStream<K, V2> narrowValues(Class<V2> valueClass) {
         return this.filterValues(valueClass::isInstance).mapValues(valueClass::cast);
     }
@@ -90,14 +96,37 @@ public interface BiStream<K, V> {
         return result;
     }
 
-    static <K, V> BiStream<K, V> of(Map<K, V> map) {
-        final Spliterator<Entry<K,V>> split = map.entrySet().spliterator();
+    default <R> R collect(BiCollector<K,V,R> collector) { return collect(collector.supplier(), collector.accumulator()); }
+
+    static <K,V> BiStream<K,V> of(Map<K,V> map) {
+        Spliterator<Entry<K,V>> split = map.entrySet().spliterator();
         return action -> split.tryAdvance(e -> action.accept(e.getKey(), e.getValue()));
     }
 
-    @SafeVarargs
-    static <K,V> BiStream<K, V> ofValues(Function<V, K> keyFunction, V... values) {
-        final Spliterator<V> spliterator = Stream.of(values).spliterator();
+    static <K,V> BiStream<K,V> of(Function<V,K> keyFunction, V[] values) { return of(keyFunction, Stream.of(values)); }
+    static <K,V> BiStream<K,V> of(Function<V,K> keyFunction, Stream<V> values) {
+        Spliterator<V> spliterator = values.spliterator();
         return action -> spliterator.tryAdvance(v -> action.accept(keyFunction.apply(v), v));
+    }
+
+    static <K extends Enum<K>,V> BiStream<K,V> of(Class<K> enumClass, Function<K,V> valueFunction) { return of(enumClass.getEnumConstants(), valueFunction); }
+    static <K,V> BiStream<K,V> of(K[] keys, Function<K,V> valueFunction) { return of(Stream.of(keys), valueFunction); }
+    static <K,V> BiStream<K,V> of(Stream<K> keys, Function<K,V> valueFunction) {
+        Spliterator<K> spliterator = keys.spliterator();
+        return action -> spliterator.tryAdvance(k -> action.accept(k, valueFunction.apply(k)));
+    }
+
+    interface BiCollector<K,V,R> {
+        Supplier<R> supplier();
+        Function<R, BiConsumer<K, V>> accumulator();
+        static <K,V,R> BiCollector<K,V,R> of(Supplier<R> supplier, Function<R, BiConsumer<K, V>> accumulator) {
+            return new BiCollector<K,V,R>() {
+                public Supplier<R> supplier() { return supplier; }
+                public Function<R,BiConsumer<K,V>> accumulator() { return accumulator; }
+            };
+        }
+        static <K,V,M extends Map<K,V>> BiCollector<K,V,M> toMap(Supplier<M> supplier) { return BiCollector.of(supplier, m -> m::put); }
+        static <K,V> BiCollector<K,V,HashMap<K,V>> toHashMap() { return BiCollector.toMap(HashMap::new); }
+        static <K extends Enum<K>,V> BiCollector<K,V, EnumMap<K,V>> toEnumMap(Class<K> enumClass) { return BiCollector.toMap(() -> new EnumMap<>(enumClass)); }
     }
 }

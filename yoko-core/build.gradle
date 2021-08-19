@@ -10,8 +10,7 @@ sourceSets {
 testClasses.dependsOn v0Classes, v1Classes, v2Classes
 
 configurations {
-  artifactImplementation.extendsFrom compile
-  artifactImplementation.extendsFrom testLib
+  artifactImplementation.extendsFrom compile, testLib
   v0Implementation.extendsFrom artifactImplementation
   v1Implementation.extendsFrom artifactImplementation
   v2Implementation.extendsFrom artifactImplementation

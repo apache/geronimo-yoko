@@ -14,21 +14,20 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util.function;
+package testify.util;
 
-import org.opentest4j.AssertionFailedError;
+import org.omg.CosNaming.NameComponent;
 
-@FunctionalInterface
-public interface RawSupplier<T> extends java.util.function.Supplier<T> {
-    T getRaw() throws Exception;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-    default T get() {
-        try {
-            return getRaw();
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new AssertionFailedError("", e);
-        }
+public enum Names {
+    ;
+
+    public static NameComponent[] toCosName(String...parts) {
+        return Stream.of(parts)
+                .map(s -> new NameComponent(s, ""))
+                .collect(Collectors.toList())
+                .toArray(new NameComponent[0]);
     }
 }

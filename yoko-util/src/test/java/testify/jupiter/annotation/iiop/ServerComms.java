@@ -139,7 +139,6 @@ final class ServerComms implements Serializable {
         final String host;
         private ServerInstance() {
             this.orb = ORB.init(args, props);
-            this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus);
             try {
                 POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
                 POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
@@ -161,7 +160,7 @@ final class ServerComms implements Serializable {
                         rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
                 };
                 childPoa = rootPoa.create_POA(serverName.toString(), pm, policies);
-
+                this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus, POA.class, childPoa);
             } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
                 throw Throw.andThrowAgain(e);
             }

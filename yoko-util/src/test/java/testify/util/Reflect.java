@@ -23,14 +23,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyMap;
 import static java.util.stream.Collectors.toList;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 
 public enum Reflect {
     ;
@@ -55,17 +54,6 @@ public enum Reflect {
             String name = getMatchingTypeName(type, pattern);
             return Class.forName(name);
         }  catch (ClassNotFoundException e) {
-            throw (Error) new NoClassDefFoundError(e.getMessage()).initCause(e);
-        }
-    }
-
-    public static Constructor<?> getMatchingConstructor(String expectedTypeName, Class<?>... allowedConstructorParameterTypes) {
-        Class<?> expectedType;
-        try {
-            expectedType = Class.forName(expectedTypeName);
-            assertTrue(isPublic(expectedType), () -> expectedType.getName() + " must be public.");
-            return getConstructor(expectedType, Sets.of(allowedConstructorParameterTypes));
-        } catch (ClassNotFoundException e) {
             throw (Error) new NoClassDefFoundError(e.getMessage()).initCause(e);
         }
     }

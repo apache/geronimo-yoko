@@ -38,7 +38,9 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.platform.commons.support.AnnotationSupport.*;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedFields;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
 
@@ -93,13 +95,12 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                             matcher));
             return this;
         }
-        public Spec<A> assertParameterTypes(Class<?>... paramTypes) {
-            Set<Class<?>> allowedParamTypes = new HashSet<>(asList(paramTypes));
+        public Spec<A> assertParameterTypes(Set<Class<?>> types) {
             assertions = assertions.andThen(member -> {
                 if (!!!(member instanceof Method)) return;
                 Method method = (Method)member;
                 for (Class<?> paramType: method.getParameterTypes()) {
-                    if (allowedParamTypes.contains(paramType)) continue;
+                    if (types.contains(paramType)) continue;
                     fail(annoName + " does not support parameters of type " + paramType.getSimpleName() + " on method " + method);
                 }
             });
