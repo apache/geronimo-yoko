@@ -14,21 +14,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util.function;
+package javax.transaction;
 
-import org.opentest4j.AssertionFailedError;
+import java.rmi.RemoteException;
 
-@FunctionalInterface
-public interface RawSupplier<T> extends java.util.function.Supplier<T> {
-    T getRaw() throws Exception;
-
-    default T get() {
-        try {
-            return getRaw();
-        } catch (RuntimeException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new AssertionFailedError("", e);
-        }
-    }
+public class TransactionRequiredException extends RemoteException {
+    public TransactionRequiredException() { super(); }
+    public TransactionRequiredException(String s) { super(s); }
 }

@@ -26,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.omg.CORBA.ORB;
+import org.omg.PortableServer.POA;
 import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
@@ -35,16 +36,21 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.rmi.Remote;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.FIELD;
 import static java.lang.annotation.ElementType.METHOD;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
 import static testify.jupiter.annotation.iiop.ConfigureServer.ServerName.DEFAULT_SERVER;
+import static testify.jupiter.annotation.iiop.OrbSteward.getActivatedRootPoa;
 
 @ExtendWith({ LoggingExtension.class, ServerExtension.class }) // ensure ordering in case logging is enabled
 @Target({ANNOTATION_TYPE, TYPE})
@@ -90,7 +96,7 @@ public @interface ConfigureServer {
     @interface ClientStub {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
-        /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
+        /** Specify which server should host the remote object. */
         ServerName serverName() default DEFAULT_SERVER;
     }
 
@@ -136,9 +142,12 @@ class ServerExtension implements
 
     enum ParamType {
         BUS(Bus.class),
-        CLIENT_ORB(ORB.class);
+        CLIENT_ORB(ORB.class),
+        ROOT_POA(POA.class);
 
+        static final Set<Class<?>> SUPPORTED_TYPES = unmodifiableSet(Stream.of(values()).map(pt -> pt.type).collect(toSet()));
         final Class<?> type;
+
         ParamType(Class<?> type) { this.type = type; }
 
         static Optional<ParamType> forClass(Class<?> type) {
@@ -160,7 +169,6 @@ class ServerExtension implements
     @Override
     public void beforeEach(ExtensionContext ctx) throws Exception { ServerSteward.getInstance(ctx).beforeEach(ctx); }
 
-
     @Override
     public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) {
         return ParamType.forClass(pCtx.getParameter().getType()).isPresent();
@@ -173,9 +181,11 @@ class ServerExtension implements
         return ParamType
                 .forClass(pCtx.getParameter().getType())
                 .map(t -> {
+                    ServerSteward steward = ServerSteward.getInstance(ctx);
                     switch (t) {
-                        case BUS: return ServerSteward.getInstance(ctx).getBus(ctx);
-                        case CLIENT_ORB: return ServerSteward.getInstance(ctx).getClientOrb(ctx);
+                        case BUS: return steward.getBus(ctx);
+                        case CLIENT_ORB: return steward.getClientOrb(ctx);
+                        case ROOT_POA: return getActivatedRootPoa(steward.getClientOrb(ctx));
                         default: throw new AssertionFailedError("Unknown parameter type: " + t);
                     }
                 })

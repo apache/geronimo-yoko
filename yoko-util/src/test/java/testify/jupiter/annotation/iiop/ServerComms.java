@@ -139,7 +139,6 @@ final class ServerComms implements Serializable {
         final String host;
         private ServerInstance() {
             this.orb = ORB.init(args, props);
-            this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus);
             try {
                 POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
                 POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
@@ -161,7 +160,7 @@ final class ServerComms implements Serializable {
                         rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
                 };
                 childPoa = rootPoa.create_POA(serverName.toString(), pm, policies);
-
+                this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus, POA.class, childPoa);
             } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
                 throw Throw.andThrowAgain(e);
             }
@@ -400,11 +399,15 @@ final class ServerComms implements Serializable {
         assertClientSide();
         final String requestId = getNextRequestId();
         bus.log("Waiting for completion of " + requestId);
-        String info = bus.get(requestId);
-        bus.log(requestId + ": " + info);
-        final ServerSideException result = bus.get(Result.RESULT);
-        if (result == null) return;
-        throw wrapper.apply(result.resolve());
+        try {
+            String info = bus.get(requestId);
+            bus.log(requestId + ": " + info);
+            final ServerSideException result = bus.get(Result.RESULT);
+            if (result == null) return;
+            throw result.resolve();
+        } catch (Throwable t) {
+            throw wrapper.apply(t);
+        }
     }
 
     private <T> void completeRequest(String prefix, Consumer<T> consumer, T parameter) {
