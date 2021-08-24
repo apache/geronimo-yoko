@@ -399,15 +399,11 @@ final class ServerComms implements Serializable {
         assertClientSide();
         final String requestId = getNextRequestId();
         bus.log("Waiting for completion of " + requestId);
-        try {
-            String info = bus.get(requestId);
-            bus.log(requestId + ": " + info);
-            final ServerSideException result = bus.get(Result.RESULT);
-            if (result == null) return;
-            throw result.resolve();
-        } catch (Throwable t) {
-            throw wrapper.apply(t);
-        }
+        String info = bus.get(requestId);
+        bus.log(requestId + ": " + info);
+        final ServerSideException result = bus.get(Result.RESULT);
+        if (result == null) return;
+        throw wrapper.apply(result.resolve());
     }
 
     private <T> void completeRequest(String prefix, Consumer<T> consumer, T parameter) {
@@ -444,6 +440,7 @@ final class ServerComms implements Serializable {
             return sw.toString();
         }
 
+        /** To be overridden if specialised behaviour is required, such as returning or throwing a different exception */
         ServerSideException resolve() { return this; }
     }
 
