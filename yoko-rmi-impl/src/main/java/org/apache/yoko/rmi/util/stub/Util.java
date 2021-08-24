@@ -1,33 +1,38 @@
-/**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/ 
-
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 package org.apache.yoko.rmi.util.stub;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URL;
-import java.security.AccessController;
+import java.net.URLConnection;
+import java.net.URLStreamHandler;
 import java.security.CodeSource;
+import java.security.Permissions;
 import java.security.PrivilegedAction;
-import java.security.SecureClassLoader;
+import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 
-class Util {
+import static java.lang.Thread.currentThread;
+import static java.security.AccessController.doPrivileged;
+import static java.util.Objects.requireNonNull;
 
+class Util {
     static String getPackageName(Class clazz) {
         String class_name = clazz.getName();
         int idx = class_name.lastIndexOf('.');
@@ -38,96 +43,68 @@ class Util {
         }
     }
 
-    static String getClassName(Class clazz) {
-        String class_name = clazz.getName();
-        int idx = class_name.lastIndexOf('.');
-        if (idx == -1) {
-            return class_name;
-        } else {
-            return class_name.substring(idx + 1);
+    private enum DefineClass {
+        ;
+        private static final URL STUB_SOURCE_URL;
+        static {
+            try {
+                STUB_SOURCE_URL = new URL(null, "yoko:stub", new URLStreamHandler() {protected URLConnection openConnection(URL u) { return null; }});
+            } catch (MalformedURLException unexpected) {
+                throw new Error(unexpected);
+            }
         }
-    }
+        private static final Certificate[] NO_CERTS = new Certificate[0];
 
-    static private java.lang.reflect.Method defineClassMethod;
-    static {
-        try {
-            // get the method object
-            defineClassMethod = (SecureClassLoader.class).getDeclaredMethod(
-                    "defineClass", new Class[] { String.class, byte[].class,
-                            Integer.TYPE, Integer.TYPE, CodeSource.class });
-
-        } catch (Error ex) {
-            throw ex;
-        } catch (RuntimeException ex) {
-            throw ex;
-        } catch (Throwable ex) {
-            throw new Error("unexpected exception: " + ex.getMessage(), ex);
+        private static Method defineClass;
+        static {
+            try {
+                // get the method object
+                Class clc = ClassLoader.class;
+                defineClass = clc.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class, ProtectionDomain.class );
+                doPrivileged((PrivilegedAction<Void>) () -> { defineClass.setAccessible(true); return null; } );
+            } catch (RuntimeException ex) {
+                throw ex;
+            } catch (Exception ex) {
+                throw new Error("unexpected exception: " + ex.getMessage(), ex);
+            }
         }
-    }
 
-    static Class defineClass(final ClassLoader loader, String className,
-            byte[] data, int off, int len) {
-
-        final Object[] args = new Object[5];
-        try {
-            args[0] = className;
-            args[1] = data;
-            args[2] = new Integer(off);
-            args[3] = new Integer(len);
-            args[4] = new CodeSource(new URL("file:stub"), new Certificate[0]);
-        } catch (java.net.MalformedURLException ex) {
-            throw new Error(ex.getMessage(), ex);
+        private static ProtectionDomain getProtectionDomain(ClassLoader loader) {
+            return new ProtectionDomain(new CodeSource(STUB_SOURCE_URL, NO_CERTS), new Permissions(), loader, null);
         }
-        return (Class) AccessController.doPrivileged(new PrivilegedAction() {
-            public Object run() {
 
-                ClassLoader the_loader = (loader == null ? (SecureClassLoader) Thread
-                        .currentThread().getContextClassLoader()
-                        : (SecureClassLoader) loader);
-
-                // make it accessible
-                defineClassMethod.setAccessible(true);
-
+        private static PrivilegedAction<Class> invoker(ClassLoader loader, String className, byte[] data) {
+            return () -> {
                 try {
-                    return defineClassMethod.invoke(the_loader, args);
-                } catch (IllegalAccessException ex) {
-                    throw new Error("internal error", ex);
-                } catch (IllegalArgumentException ex) {
+                    return (Class) defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
+                } catch (IllegalAccessException|IllegalArgumentException ex) {
                     throw new Error("internal error", ex);
                 } catch (InvocationTargetException ex) {
-                    Throwable th = ex.getTargetException();
-
-                    if (th instanceof Error) {
-                        throw (Error) th;
-                    } else if (th instanceof RuntimeException) {
-                        throw (RuntimeException) th;
-                    } else {
+                    try {
+                        throw ex.getTargetException();
+                    } catch (Error|RuntimeException e) {
+                        throw e;
+                    } catch (Throwable e) {
                         throw new Error("unexpected exception: " + ex.getMessage(), ex);
                     }
                 }
-            }
-        });
+            };
+        }
     }
 
-    static String methodFieldName(int i) {
-        return "__method$" + i;
+    static Class defineClass(final ClassLoader loader, String className, byte[] data) {
+        return loader == null ?
+                defineClass(requireNonNull(currentThread().getContextClassLoader()), className, data) :
+                doPrivileged(DefineClass.invoker(loader, className, data));
     }
 
-    static String handlerFieldName() {
-        return "__handler";
-    }
+    static String methodFieldName(int i) { return "__method$" + i; }
 
-    static String initializerFieldName() {
-        return "__initializer";
-    }
+    static String handlerFieldName() { return "__handler"; }
 
-    static String handlerDataFieldName() {
-        return "__data";
-    }
+    static String initializerFieldName() { return "__initializer"; }
 
     static String getSuperMethodName(String name) {
-        return "__super_" + name + "$"
-                + Integer.toHexString(name.hashCode() & 0xffff);
+        return String.format("__super_%s$%s", name, Integer.toHexString(name.hashCode() & 0xffff));
     }
-
 }
