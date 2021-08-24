@@ -46,9 +46,9 @@ import java.rmi.RemoteException;
 import java.util.EnumMap;
 import java.util.Map;
 
-import static org.apache.yoko.RemoteAndSystemExceptionTest.TransactionExceptionType.INVALID;
-import static org.apache.yoko.RemoteAndSystemExceptionTest.TransactionExceptionType.REQUIRED;
-import static org.apache.yoko.RemoteAndSystemExceptionTest.TransactionExceptionType.ROLLBACK;
+import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.INVALID;
+import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.REQUIRED;
+import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.ROLLBACK;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -61,7 +61,7 @@ import static testify.util.Names.toCosName;
         separation = Separation.INTER_ORB,
         serverOrb = @ConfigureOrb(nameService = READ_WRITE)
 )
-public class RemoteAndSystemExceptionTest {
+public class RemoteTransactionExceptionTest {
     public enum TransactionExceptionType {
         INVALID(INVALID_TRANSACTION.class, "InvalidTransactionException"),
         REQUIRED(TRANSACTION_REQUIRED.class, "TransactionRequiredException"),
@@ -111,8 +111,8 @@ public class RemoteAndSystemExceptionTest {
     @BeforeAll
     public static void initClient(ORB orb, Bus bus) throws Exception {
         nameServiceClient = NamingContextHelper.narrow(orb.string_to_object(nsUrl));
-        stubs.computeIfAbsent(Loader.V1, RemoteAndSystemExceptionTest::getStub);
-        stubs.computeIfAbsent(Loader.V2, RemoteAndSystemExceptionTest::getStub);
+        stubs.computeIfAbsent(Loader.V1, RemoteTransactionExceptionTest::getStub);
+        stubs.computeIfAbsent(Loader.V2, RemoteTransactionExceptionTest::getStub);
     }
 
     private static Processor getStub(Loader l) {
