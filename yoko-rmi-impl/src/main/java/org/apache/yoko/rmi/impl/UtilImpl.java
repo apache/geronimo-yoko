@@ -179,19 +179,18 @@ public class UtilImpl implements UtilDelegate {
             this.remoteExceptionClassNames = Arrays.asList(classNames);
         }
 
-        RemoteException create(String message, Throwable cause) {
+        RemoteException create(String message) {
             return remoteExceptionClassNames
                     .stream()
                     .map(this::loadClass)
                     .filter(Objects::nonNull)
                     .map(this::getSingleStringConstructor)
                     .filter(Objects::nonNull)
-                    .map(ctor -> invokeConstructor(ctor, message))
+                    .map(cons -> invokeConstructor(cons, message))
                     .filter(Objects::nonNull)
-                    .peek(re -> re.detail = cause)
                     .map(RemoteException.class::cast)
                     .findFirst()
-                    .orElseGet(() -> new RemoteException(message, cause));
+                    .orElseGet(() -> new RemoteException(message));
         }
 
         Class<? extends RemoteException> loadClass(String name) {
@@ -227,20 +226,19 @@ public class UtilImpl implements UtilDelegate {
         try {
             throw sysEx;
         } catch (BAD_PARAM|COMM_FAILURE|MARSHAL e) {
-            result = new MarshalException(s, e);
+            result = new MarshalException(s);
         } catch (INV_OBJREF|NO_IMPLEMENT|OBJECT_NOT_EXIST e) {
             result = new NoSuchObjectException(s);
         } catch(NO_PERMISSION e) {
-            result = new AccessException(s, e);
-            result.initCause(e);
+            result = new AccessException(s);
         } catch (TRANSACTION_REQUIRED e) {
-            result = TransactionExceptions.REQUIRED.create(s, e);
+            result = TransactionExceptions.REQUIRED.create(s);
         } catch (TRANSACTION_ROLLEDBACK e) {
-            result = TransactionExceptions.ROLLED_BACK.create(s, e);
+            result = TransactionExceptions.ROLLED_BACK.create(s);
         } catch (INVALID_TRANSACTION e) {
-            result = TransactionExceptions.INVALID.create(s, e);
+            result = TransactionExceptions.INVALID.create(s);
         } catch (SystemException e) { // catch-all
-            result = new RemoteException(s, e);
+            result = new RemoteException(s);
         }
         result.detail = sysEx;
         return result;
