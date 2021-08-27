@@ -34,7 +34,7 @@ import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.Separation;
 import testify.jupiter.annotation.logging.Logging;
 
@@ -62,8 +62,8 @@ public class FullValueDescriptorTest {
     private static final NameComponent[] PROCESSOR_BIND_NAME = {new NameComponent("VersionedProcessor", "")};
     private static final Constructor<? extends Processor> TARGET_CONSTRUCTOR = SERVER_LOADER.getConstructor("versioned.VersionedProcessorImpl", Bus.class);
 
-    @NameServiceUrl
-    public static String nsUrl;
+    @NameServiceStub
+    public static NamingContext nameService;
 
     private static Processor stub;
 
@@ -90,8 +90,7 @@ public class FullValueDescriptorTest {
 
     @BeforeAll
     public static void initClient(ORB orb, Bus bus) throws Exception {
-        NamingContext nc = NamingContextHelper.narrow(orb.string_to_object(nsUrl));
-        Object obj = nc.resolve(PROCESSOR_BIND_NAME);
+        Object obj = nameService.resolve(PROCESSOR_BIND_NAME);
         // Narrow using the more specialized interface from the client loader.
         // This should allow the correct class loader context when unmarshalling the return value.
         stub = (Processor)PortableRemoteObject.narrow(obj, CLIENT_LOADER.loadClass("versioned.VersionedProcessor"));

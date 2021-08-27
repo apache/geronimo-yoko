@@ -34,7 +34,7 @@ import testify.bus.Bus;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.Separation;
 import testify.util.Maps;
 
@@ -45,6 +45,7 @@ import java.lang.reflect.Constructor;
 import java.rmi.RemoteException;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.stream.Stream;
 
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.INVALID;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.REQUIRED;
@@ -83,9 +84,8 @@ public class RemoteTransactionExceptionTest {
     }
 
     private static final String BIND_NAME = "Processor";
-    @NameServiceUrl
-    public static String nsUrl;
-    private static NamingContext nameServiceClient;
+    @NameServiceStub
+    public static NamingContext nameServiceClient;
     private static final EnumMap<Loader,Processor> stubs = new EnumMap<>(Loader.class);
 
     @BeforeServer
@@ -109,20 +109,18 @@ public class RemoteTransactionExceptionTest {
     }
 
     @BeforeAll
-    public static void initClient(ORB orb, Bus bus) throws Exception {
-        nameServiceClient = NamingContextHelper.narrow(orb.string_to_object(nsUrl));
-        stubs.computeIfAbsent(Loader.V1, RemoteTransactionExceptionTest::getStub);
-        stubs.computeIfAbsent(Loader.V2, RemoteTransactionExceptionTest::getStub);
-    }
-
-    private static Processor getStub(Loader l) {
-        Class<? extends Processor> stubInterface = l.loadClass("versioned.VersionedProcessor");
-        try {
-            Object resolved = nameServiceClient.resolve(toCosName(BIND_NAME));
-            return (Processor)PortableRemoteObject.narrow(resolved, stubInterface);
-        } catch (Exception e) {
-            throw new AssertionFailedError("Could not retrieve stub", e);
-        }
+    public static void initClient() throws Exception {
+        // populate the stubs enum map
+        Stream.of(Loader.values())
+                .forEach(key -> stubs.computeIfAbsent(key, l -> {
+                    Class<? extends Processor> stubInterface = l.loadClass("versioned.VersionedProcessor");
+                    try {
+                        Object resolved = nameServiceClient.resolve(toCosName(BIND_NAME));
+                        return (Processor)PortableRemoteObject.narrow(resolved, stubInterface);
+                    } catch (Exception e) {
+                        throw new AssertionFailedError("Could not retrieve stub", e);
+                    }
+                }));
     }
 
     @Test
