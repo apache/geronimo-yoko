@@ -53,6 +53,7 @@ import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.Assert.fail;
 
+// TODO: integrate more tightly with newer features of the testify framework.
 @ConfigureServer
 public class InsTest {
     private static String iorFromServer;

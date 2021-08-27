@@ -64,6 +64,9 @@ public @interface ConfigureOrb {
     @Target({ANNOTATION_TYPE, TYPE})
     @Retention(RUNTIME)
     @interface UseWithOrb {
+        // TODO: maybe set the initializer classes in the ORB config
+        // TODO: use enums to identify ORBs
+        // TODO: configure differently for @ConfigureServer
         String value() default ".*";
     }
 }
