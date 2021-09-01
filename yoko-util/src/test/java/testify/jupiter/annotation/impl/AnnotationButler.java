@@ -25,15 +25,14 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
-import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
-import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -106,18 +105,12 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
             });
             return this;
         }
-        public Spec<A> assertFieldTypes(Class<?>... fieldTypes) {
-            Set<Class<?>> allowedFieldTypes = new HashSet<>(asList(fieldTypes));
+        public Spec<A> assertFieldTypes(Class<?>... allowedTypes) {
             assertions = assertions.andThen(member -> {
                 if (!!!(member instanceof Field)) return;
                 Field field = (Field)member;
                 Class<?> fieldType = field.getType();
-                if (allowedFieldTypes.contains(fieldType)) return;
-                for (Class<?> c = fieldType; c != null; c = c.getSuperclass()) {
-                    if (allowedFieldTypes.contains(c)) return;
-                    for (Class<?> iface: c.getInterfaces())
-                        if (allowedFieldTypes.contains(iface)) return;
-                }
+                if (Stream.of(allowedTypes).anyMatch(allowed -> allowed.isAssignableFrom(fieldType))) return;
                 fail(annoName + " does not support the declared type " + fieldType.getSimpleName() + " of field " + field);
             });
             return this;
