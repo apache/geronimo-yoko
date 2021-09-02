@@ -49,13 +49,16 @@ import java.lang.reflect.Constructor;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINEST;
 
-@ConfigureServer(
-        separation = Separation.INTER_ORB,
-        serverOrb = @ConfigureOrb(nameService = READ_WRITE)
-)
+@ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 @Tracing
 @Logging(value = "yoko.verbose.data", level = FINEST)
 public class FullValueDescriptorTest {
+    @ConfigureServer(
+            separation = Separation.COLLOCATED,
+            serverOrb = @ConfigureOrb(nameService = READ_WRITE)
+    )
+    public static class FullValueDescriptorLocalTest extends FullValueDescriptorTest{ }
+
     private static final Loader CLIENT_LOADER = Loader.V1;
     private static final Loader SERVER_LOADER = Loader.V2;
     private static final Constructor<? extends Widget> PAYLOAD_CONSTRUCTOR = CLIENT_LOADER.getConstructor("versioned.SmallWidget");
