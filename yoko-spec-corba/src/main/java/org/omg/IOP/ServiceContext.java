@@ -41,4 +41,9 @@ final public class ServiceContext implements org.omg.CORBA.portable.IDLEntity
 
     public int context_id;
     public byte[] context_data;
+
+    @Override
+    public String toString() {
+        return String.format("%08x", context_id);
+    }
 }
