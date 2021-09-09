@@ -37,6 +37,8 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.logging.Logger;
 
+import static org.apache.yoko.orb.OB.SendingContextRuntimes.LOCAL_CODE_BASE;
+
 final public class CollocatedServer extends Server implements UpcallReturn {
     private static final Logger logger = Logger.getLogger(CollocatedServer.class.getName());
     //
@@ -225,6 +227,8 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 return true;
             }
 
+            final InputStream in = new InputStream(out.getBufferReader());
+            in.__setSendingContextRuntime(LOCAL_CODE_BASE);
             if (down.responseExpected()) {
                 //
                 // Put the Downcall in the call map
@@ -237,7 +241,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setPending();
 
                 up = oaInterface_.createUpcall(this, profileInfo, null, reqId,
-                        op, new InputStream(out.getBufferReader()), requestContexts);
+                        op, in, requestContexts);
             } else {
                 //
                 // This is a oneway call, and if there was no exception so
@@ -246,7 +250,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
                 down.setNoException(null);
 
                 up = oaInterface_.createUpcall(null, profileInfo, null, reqId,
-                        op, new InputStream(out.getBufferReader()), requestContexts);
+                        op, in, requestContexts);
             }
         }
 
@@ -327,6 +331,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         if (down == null) return ; // Might be null if the request timed out
         OutputStream out = upcall.output();
         InputStream in = new InputStream(out.getBufferReader());
+        in.__setSendingContextRuntime(LOCAL_CODE_BASE);
         down.setNoException(in);
         callMap_.remove(down.requestId());
     }
@@ -348,6 +353,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         if (down == null) return;
         OutputStream out = upcall.output();
         InputStream in = new InputStream(out.getBufferReader());
+        in.__setSendingContextRuntime(LOCAL_CODE_BASE);
         down.setUserException(in);
         callMap_.remove(down.requestId());
     }
@@ -394,11 +400,7 @@ final public class CollocatedServer extends Server implements UpcallReturn {
         }
     }
 
-    /**
-     * no need to send code set and code base service contexts to ourselves
-     * @return
-     */
     public boolean replySent() {
-        return true;
+        return false;
     }
 }

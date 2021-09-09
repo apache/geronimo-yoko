@@ -113,6 +113,16 @@ public @interface ConfigureServer {
     }
 
     /**
+     * Annotate a static field in a test to inject the name service stub
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    @interface NameServiceStub {
+        /** A literal string to match the server name. Not a regular expression since the remote object can exist on only one server. */
+        ServerName serverName() default DEFAULT_SERVER;
+    }
+
+    /**
      * Annotate a static field in a test to inject the name service URL
      */
     @Target({ANNOTATION_TYPE, FIELD})
@@ -184,8 +194,8 @@ class ServerExtension implements
                     ServerSteward steward = ServerSteward.getInstance(ctx);
                     switch (t) {
                         case BUS: return steward.getBus(ctx);
-                        case CLIENT_ORB: return steward.getClientOrb(ctx);
-                        case ROOT_POA: return getActivatedRootPoa(steward.getClientOrb(ctx));
+                        case CLIENT_ORB: return steward.getClientOrb();
+                        case ROOT_POA: return getActivatedRootPoa(steward.getClientOrb());
                         default: throw new AssertionFailedError("Unknown parameter type: " + t);
                     }
                 })

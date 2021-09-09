@@ -16,9 +16,6 @@
  */
 package testify.util;
 
-import org.apache.yoko.orb.OB.OptionFilter.Option;
-import org.opentest4j.AssertionFailedError;
-
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.fail;

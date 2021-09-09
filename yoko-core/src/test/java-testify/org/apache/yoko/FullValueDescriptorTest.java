@@ -34,7 +34,7 @@ import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
+import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.Separation;
 import testify.jupiter.annotation.logging.Logging;
 
@@ -49,21 +49,24 @@ import java.lang.reflect.Constructor;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
 import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINEST;
 
-@ConfigureServer(
-        separation = Separation.INTER_ORB,
-        serverOrb = @ConfigureOrb(nameService = READ_WRITE)
-)
+@ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 @Tracing
 @Logging(value = "yoko.verbose.data", level = FINEST)
 public class FullValueDescriptorTest {
+    @ConfigureServer(
+            separation = Separation.COLLOCATED,
+            serverOrb = @ConfigureOrb(nameService = READ_WRITE)
+    )
+    public static class FullValueDescriptorLocalTest extends FullValueDescriptorTest{ }
+
     private static final Loader CLIENT_LOADER = Loader.V1;
     private static final Loader SERVER_LOADER = Loader.V2;
     private static final Constructor<? extends Widget> PAYLOAD_CONSTRUCTOR = CLIENT_LOADER.getConstructor("versioned.SmallWidget");
     private static final NameComponent[] PROCESSOR_BIND_NAME = {new NameComponent("VersionedProcessor", "")};
     private static final Constructor<? extends Processor> TARGET_CONSTRUCTOR = SERVER_LOADER.getConstructor("versioned.VersionedProcessorImpl", Bus.class);
 
-    @NameServiceUrl
-    public static String nsUrl;
+    @NameServiceStub
+    public static NamingContext nameService;
 
     private static Processor stub;
 
@@ -90,8 +93,7 @@ public class FullValueDescriptorTest {
 
     @BeforeAll
     public static void initClient(ORB orb, Bus bus) throws Exception {
-        NamingContext nc = NamingContextHelper.narrow(orb.string_to_object(nsUrl));
-        Object obj = nc.resolve(PROCESSOR_BIND_NAME);
+        Object obj = nameService.resolve(PROCESSOR_BIND_NAME);
         // Narrow using the more specialized interface from the client loader.
         // This should allow the correct class loader context when unmarshalling the return value.
         stub = (Processor)PortableRemoteObject.narrow(obj, CLIENT_LOADER.loadClass("versioned.VersionedProcessor"));

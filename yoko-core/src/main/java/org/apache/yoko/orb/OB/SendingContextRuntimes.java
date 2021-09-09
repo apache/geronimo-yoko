@@ -22,17 +22,15 @@ import org.omg.IOP.ServiceContext;
 import org.omg.SendingContext.CodeBase;
 import org.omg.SendingContext.CodeBaseHelper;
 
-import javax.rmi.CORBA.ValueHandler;
-
 import static javax.rmi.CORBA.Util.createValueHandler;
 
 public enum SendingContextRuntimes {
     ;
+    public static final CodeBase LOCAL_CODE_BASE = (CodeBase) createValueHandler().getRunTimeCodeBase();
     // TODO we should really generate a new object ref for each connection
-    public static ServiceContext SENDING_CONTEXT_RUNTIME;
+    public static final ServiceContext SENDING_CONTEXT_RUNTIME;
     static {
-        ValueHandler valueHandler = createValueHandler();
-        CodeBase codeBase = (CodeBase) valueHandler.getRunTimeCodeBase();
+        CodeBase codeBase = LOCAL_CODE_BASE;
         try (OutputStream outCBC = new OutputStream()) {
             outCBC._OB_writeEndian();
             CodeBaseHelper.write(outCBC, codeBase);

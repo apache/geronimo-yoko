@@ -31,12 +31,8 @@ import org.omg.IIOP.ProfileBody_1_1Helper;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 import org.omg.IOP.TaggedProfile;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAHelper;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.util.Lists;
-import testify.util.Sets;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -46,25 +42,29 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
+import static java.util.stream.Collectors.toList;
+import static org.apache.yoko.orb.OCI.IIOP.EndpointHandlingTest.ConnectionHelperImpl.PORT_MAP;
+import static org.hamcrest.CoreMatchers.allOf;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.hasKey;
 
+
+/**
+ * Set up specific endpoints and tests IORs and listeners are created correctly.
+ */
 @ConfigureOrb(props = {
-        "yoko.orb.oa.endpoint=iiop --host aaa --port 1111, iiop --host bbb --port 2222, iiop --no-profile --host ccc --port 3333"
+        "yoko.orb.oa.endpoint=" +
+                "iiop --host host1 --port 1024, " +
+                "iiop --host host2 --port 2048, " +
+                "iiop --no-profile --host host3 --port 4096"
 })
 public class EndpointHandlingTest {
     @UseWithOrb
     public static final class ConnectionHelperImpl extends DefaultConnectionHelper implements ConnectionHelper {
-        private ORB orb;
-        @Override
-        public void init(ORB orb, String params) {
-            this.orb = orb;
-
-        }
+        static final Map<Integer, Integer> PORT_MAP = new TreeMap<>();
 
         @Override
         public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException {
@@ -87,39 +87,37 @@ public class EndpointHandlingTest {
         public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException, ConnectException {
             return createServerSocket(port, backlog);
         }
-
     }
 
-    private static final Map<Integer, Integer> PORT_MAP = new TreeMap<>();
-
-    private static POA poa;
-    private static Echo impl;
-    private static RMIServant servant;
     private static org.omg.CORBA.Object stub;
 
     @BeforeAll
     public static void setup(ORB orb) throws Exception {
-        poa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
-        impl = s -> s;
-        servant = ServantFactory.getServant(impl, orb);
+        Echo impl = s -> s;
+        RMIServant servant = ServantFactory.getServant(impl, orb);
         stub = servant._this_object(orb);
     }
 
+    /**
+     * Create an IOR and check it has only two ports.
+     * (The -no-profile endpoint should not be included.)
+     */
     @Test
     public void testTwoIiopEndpoints(ORB orb) throws Exception {
-        String str = orb.object_to_string(stub);
-        System.out.println(str);
+        System.out.println(orb.object_to_string(stub));
         IOR ior = object_to_ior(stub, orb);
-        int expectedPort1 = PORT_MAP.get(1111);
-        int expectedPort2 = PORT_MAP.get(2222);
-        assertThat(getPorts(ior), is(Lists.of(expectedPort1, expectedPort2)));
+        assertThat(getPorts(ior), contains(PORT_MAP.get(1024), PORT_MAP.get(2048)));
     }
 
+    /**
+     * Check that all the specified endpoints are started
+     */
     @Test
     public void testThreeListeners() {
         // There's actually an additional listener created when we use ServantFactory.getServant()
         // TODO: fix PortableRemoteObject.exportObject() so that it doesn't create an ORB, then remove/refactor ServantFactory
-        assertThat(PORT_MAP.keySet(), equalTo(Sets.of(0000, 1111, 2222, 3333)));
+        System.out.println(PORT_MAP);
+        assertThat(PORT_MAP, allOf(hasKey(1024), hasKey(2048), hasKey(4096)));
     }
 
     public static IOR object_to_ior(org.omg.CORBA.Object object, ORB orb) throws Exception {
@@ -134,7 +132,7 @@ public class EndpointHandlingTest {
         return Stream.of(ior.profiles)
                 .map(EndpointHandlingTest::parseProfileBody_1_1)
                 .map(pb -> 0xffff & pb.port)
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
     static ProfileBody_1_1 parseProfileBody_1_1(TaggedProfile tp) {

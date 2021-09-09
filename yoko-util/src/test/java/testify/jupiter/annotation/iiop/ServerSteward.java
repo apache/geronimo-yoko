@@ -18,8 +18,11 @@ package testify.jupiter.annotation.iiop;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.omg.CORBA.ORB;
+import org.omg.CosNaming.NamingContext;
+import org.omg.CosNaming.NamingContextHelper;
 import testify.bus.Bus;
 import testify.jupiter.annotation.Summoner;
+import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
 import testify.jupiter.annotation.iiop.ServerExtension.ParamType;
 import testify.jupiter.annotation.impl.AnnotationButler;
 import testify.parts.PartRunner;
@@ -48,6 +51,7 @@ import static testify.util.Reflect.setStaticField;
 class ServerSteward {
     private static final Summoner<ConfigureServer, ServerSteward> SUMMONER = Summoner.forAnnotation(ConfigureServer.class, ServerSteward.class, ServerSteward::new);
     private final List<Field> controlFields;
+    private final List<Field> nameServiceFields;
     private final List<Field> nameServiceUrlFields;
     private final List<Field> corbanameUrlFields;
     private final List<Field> clientStubFields;
@@ -67,6 +71,17 @@ class ServerSteward {
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(ServerControl.class)
+                .filter(anno -> anno.serverName().equals(config.serverName()))
+                .recruit()
+                .findFields(testClass);
+        this.nameServiceFields = AnnotationButler.forClass(NameServiceStub.class)
+                .requireTestAnnotation(ConfigureServer.class,
+                        "the test server must have its name service configured",
+                        cfg -> cfg.serverOrb().nameService(),
+                        anyOf(is(READ_ONLY), is(READ_WRITE)))
+                .assertPublic()
+                .assertStatic()
+                .assertFieldTypes(NamingContext.class)
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
@@ -157,12 +172,18 @@ class ServerSteward {
         this.controlFields.forEach(f -> setStaticField(f, serverControl));
     }
 
-    private void injectNameServiceURL() {
-        nameServiceUrlFields.forEach(f -> setStaticField(f, serverComms.getNameServiceUrl()));
+    private void injectNameService() {
+        final String url = serverComms.getNameServiceUrl();
+        nameServiceUrlFields.forEach(f -> setStaticField(f, url));
+        if (nameServiceFields.isEmpty()) return;
+        final ORB clientOrb = getClientOrb();
+        org.omg.CORBA.Object o = clientOrb.string_to_object(url);
+        NamingContext ctx = NamingContextHelper.narrow(o);
+        nameServiceFields.forEach(f -> setStaticField(f, ctx));
     }
 
-    private void instantiateServerObjects(ExtensionContext ctx) {
-        ORB clientOrb = getClientOrb(ctx);
+    private void instantiateServerObjects() {
+        ORB clientOrb = getClientOrb();
         corbanameUrlFields.forEach(f -> {
             String url = serverComms.instantiate(f);
             setStaticField(f, url);
@@ -196,10 +217,10 @@ class ServerSteward {
         return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new); // if no ServerSteward can be found, this is an error in the framework
     }
 
-    public ORB getClientOrb(ExtensionContext ctx) {
-        return config.separation() == COLLOCATED ? serverComms.getServerOrb().orElseThrow(Error::new) : OrbSteward.getOrb(ctx, config.clientOrb());
+    public ORB getClientOrb() {
+        // TODO: make the client ORB a field that is initialized early
+        return config.separation() == COLLOCATED ? serverComms.getServerOrb().orElseThrow(Error::new) : OrbSteward.getOrb(context, config.clientOrb());
     }
-
 
     public void beforeEach(ExtensionContext ctx) {
         serverControl.ensureStarted();
@@ -220,8 +241,8 @@ class ServerSteward {
             assertFalse(started, "Server should be stopped when ServerControl.start() is invoked");
             serverComms.control(ServerComms.ServerOp.START_SERVER);
             started = true;
-            injectNameServiceURL();
-            instantiateServerObjects(context);
+            injectNameService();
+            instantiateServerObjects();
             beforeServer(context);
         }
 

@@ -74,4 +74,9 @@ public final class ServiceContexts implements Iterable<ServiceContext> {
     public ServiceContext get(int id) {return mutableContexts.get(id);}
 
     public ServiceContext[] toArray() { return contexts.toArray(EMPTY_SERVICE_CONTEXT_ARRAY); }
+
+    @Override
+    public String toString() {
+        return "ServiceContexts" + contexts;
+    }
 }
