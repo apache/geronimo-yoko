@@ -20,7 +20,8 @@ import acme.Loader;
 import acme.Processor;
 import acme.Widget;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Object;
 import org.omg.CosNaming.NameComponent;
@@ -57,11 +58,13 @@ public class FullValueDescriptorTest {
             separation = Separation.COLLOCATED,
             serverOrb = @ConfigureOrb(nameService = READ_WRITE)
     )
-    public static class FullValueDescriptorLocalTest extends FullValueDescriptorTest{ }
+    public static class Collocated extends FullValueDescriptorTest{
+        public void testSerializingAValue() {} // re-declare to disable the test
+    }
 
     private static final Loader CLIENT_LOADER = Loader.V1;
     private static final Loader SERVER_LOADER = Loader.V2;
-    private static final Constructor<? extends Widget> PAYLOAD_CONSTRUCTOR = CLIENT_LOADER.getConstructor("versioned.SmallWidget");
+
     private static final NameComponent[] PROCESSOR_BIND_NAME = {new NameComponent("VersionedProcessor", "")};
     private static final Constructor<? extends Processor> TARGET_CONSTRUCTOR = SERVER_LOADER.getConstructor("versioned.VersionedProcessorImpl", Bus.class);
 
@@ -69,6 +72,7 @@ public class FullValueDescriptorTest {
     public static NamingContext nameService;
 
     private static Processor stub;
+
 
     @BeforeServer
     public static void initServer(ORB orb, Bus bus) throws Exception {
@@ -100,34 +104,38 @@ public class FullValueDescriptorTest {
         bus.log("Narrowed stub");
     }
 
-    @Test
-    public void testMarshallingAnAbstract() throws Exception {
+    @ParameterizedTest(name = "Marshal a {0} as a abstract")
+    @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
+    public void testMarshallingAnAbstract(String widgetClassName) throws Exception {
         // Set the thread context class loader so that the return value can be unmarshalled
-        Widget payload = PAYLOAD_CONSTRUCTOR.newInstance();
+        Widget payload = CLIENT_LOADER.newInstance(widgetClassName);
         Widget returned = stub.processAbstract(Widget::validateAndReplace, payload);
         returned.validateAndReplace();
     }
 
-    @Test
-    public void testMarshallingAnAny() throws Exception {
+    @ParameterizedTest(name = "Marshal a {0} as an any")
+    @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
+    public void testMarshallingAnAny(String widgetClassName) throws Exception {
         // Set the thread context class loader so that the return value can be unmarshalled
-        Widget payload = PAYLOAD_CONSTRUCTOR.newInstance();
+        Widget payload = CLIENT_LOADER.newInstance(widgetClassName);
         Widget returned = stub.processAny(Widget::validateAndReplace, payload);
         returned.validateAndReplace();
     }
 
-    @Test
-    public void testMarshallingAValue() throws Exception {
+    @ParameterizedTest(name = "Marshal a {0} as a value")
+    @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
+    public void testMarshallingAValue(String widgetClassName) throws Exception {
         // Set the thread context class loader so that the return value can be unmarshalled
-        Widget payload = PAYLOAD_CONSTRUCTOR.newInstance();
+        Widget payload = CLIENT_LOADER.newInstance(widgetClassName);
         Widget returned = stub.processValue(Widget::validateAndReplace, payload);
         returned.validateAndReplace();
     }
 
-    @Test
-    public void testSerializingAValue() throws Exception {
+    @ParameterizedTest(name = "Serialize and deserialize a {0}")
+    @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
+    public void testSerializingAValue(String widgetClassName) throws Exception {
         // test that the validateAndReplace() methods work correctly when using normal serialization
-        Widget w1 = PAYLOAD_CONSTRUCTOR.newInstance();
+        Widget w1 = CLIENT_LOADER.newInstance(widgetClassName);
         Widget w2 = SERVER_LOADER.deserializeFromBytes(serializeToBytes(w1));
         w2 = w2.validateAndReplace();
         w1 = CLIENT_LOADER.deserializeFromBytes(serializeToBytes(w2));
