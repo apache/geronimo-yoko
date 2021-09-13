@@ -2,7 +2,6 @@ package acme;
 
 import org.apache.yoko.util.AssertionFailed;
 import testify.io.EasyCloseable;
-import testify.util.Throw;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -22,6 +21,7 @@ import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyString;
 import static org.hamcrest.Matchers.not;
+import static testify.util.Throw.invokeWithImpunity;
 
 /**
  * A simplified mechanism (with a lot of debug) for loading classes from the specialised test class paths.
@@ -90,7 +90,11 @@ public enum Loader {
     }
 
     public <T> Constructor<T> getConstructor(String className, Class<?>...paramTypes) {
-        return (Constructor<T>) Throw.invokeWithImpunity(loadClass(className)::getConstructor, paramTypes);
+        return (Constructor<T>) invokeWithImpunity(loadClass(className)::getConstructor, paramTypes);
+    }
+
+    public <T> T newInstance(String className) {
+        return (T) invokeWithImpunity(getConstructor(className)::newInstance);
     }
 
     public EasyCloseable setAsThreadContextClassLoader() {
