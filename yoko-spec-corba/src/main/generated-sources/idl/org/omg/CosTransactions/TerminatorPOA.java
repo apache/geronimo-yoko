@@ -17,8 +17,8 @@ public abstract class TerminatorPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("commit", new java.lang.Integer (0));
-    _methods.put ("rollback", new java.lang.Integer (1));
+    _methods.put ("commit", 0);
+    _methods.put ("rollback", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

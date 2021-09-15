@@ -248,7 +248,7 @@ public class RMIStubHandler implements StubHandler, java.io.Serializable {
             classNameField.set(ste, className);
             methodNameField.set(ste, methodName);
             fileNameField.set(ste, "--- RMI/IIOP INVOCATION ---");
-            lineNumberField.set(ste, new Integer(-2000));
+            lineNumberField.set(ste, Integer.valueOf(-2000));
         } catch (IllegalAccessException e) {
         } catch (NullPointerException e) {
         }

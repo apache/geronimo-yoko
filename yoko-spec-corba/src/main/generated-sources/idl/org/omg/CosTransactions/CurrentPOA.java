@@ -19,17 +19,17 @@ public abstract class CurrentPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("begin", new java.lang.Integer (0));
-    _methods.put ("commit", new java.lang.Integer (1));
-    _methods.put ("rollback", new java.lang.Integer (2));
-    _methods.put ("rollback_only", new java.lang.Integer (3));
-    _methods.put ("get_status", new java.lang.Integer (4));
-    _methods.put ("get_transaction_name", new java.lang.Integer (5));
-    _methods.put ("set_timeout", new java.lang.Integer (6));
-    _methods.put ("get_timeout", new java.lang.Integer (7));
-    _methods.put ("get_control", new java.lang.Integer (8));
-    _methods.put ("suspend", new java.lang.Integer (9));
-    _methods.put ("resume", new java.lang.Integer (10));
+    _methods.put ("begin", 0);
+    _methods.put ("commit", 1);
+    _methods.put ("rollback", 2);
+    _methods.put ("rollback_only", 3);
+    _methods.put ("get_status", 4);
+    _methods.put ("get_transaction_name", 5);
+    _methods.put ("set_timeout", 6);
+    _methods.put ("get_timeout", 7);
+    _methods.put ("get_control", 8);
+    _methods.put ("suspend", 9);
+    _methods.put ("resume", 10);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

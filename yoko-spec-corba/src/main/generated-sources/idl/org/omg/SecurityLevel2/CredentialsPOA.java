@@ -19,24 +19,24 @@ public abstract class CredentialsPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("copy", new java.lang.Integer (0));
-    _methods.put ("destroy", new java.lang.Integer (1));
-    _methods.put ("_get_credentials_type", new java.lang.Integer (2));
-    _methods.put ("_get_authentication_state", new java.lang.Integer (3));
-    _methods.put ("_get_mechanism", new java.lang.Integer (4));
-    _methods.put ("_get_accepting_options_supported", new java.lang.Integer (5));
-    _methods.put ("_set_accepting_options_supported", new java.lang.Integer (6));
-    _methods.put ("_get_accepting_options_required", new java.lang.Integer (7));
-    _methods.put ("_set_accepting_options_required", new java.lang.Integer (8));
-    _methods.put ("_get_invocation_options_supported", new java.lang.Integer (9));
-    _methods.put ("_set_invocation_options_supported", new java.lang.Integer (10));
-    _methods.put ("_get_invocation_options_required", new java.lang.Integer (11));
-    _methods.put ("_set_invocation_options_required", new java.lang.Integer (12));
-    _methods.put ("get_security_feature", new java.lang.Integer (13));
-    _methods.put ("set_attributes", new java.lang.Integer (14));
-    _methods.put ("get_attributes", new java.lang.Integer (15));
-    _methods.put ("is_valid", new java.lang.Integer (16));
-    _methods.put ("refresh", new java.lang.Integer (17));
+    _methods.put ("copy", 0);
+    _methods.put ("destroy", 1);
+    _methods.put ("_get_credentials_type", 2);
+    _methods.put ("_get_authentication_state", 3);
+    _methods.put ("_get_mechanism", 4);
+    _methods.put ("_get_accepting_options_supported", 5);
+    _methods.put ("_set_accepting_options_supported", 6);
+    _methods.put ("_get_accepting_options_required", 7);
+    _methods.put ("_set_accepting_options_required", 8);
+    _methods.put ("_get_invocation_options_supported", 9);
+    _methods.put ("_set_invocation_options_supported", 10);
+    _methods.put ("_get_invocation_options_required", 11);
+    _methods.put ("_set_invocation_options_required", 12);
+    _methods.put ("get_security_feature", 13);
+    _methods.put ("set_attributes", 14);
+    _methods.put ("get_attributes", 15);
+    _methods.put ("is_valid", 16);
+    _methods.put ("refresh", 17);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

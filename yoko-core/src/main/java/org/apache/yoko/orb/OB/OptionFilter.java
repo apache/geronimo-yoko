@@ -63,7 +63,7 @@ public final class OptionFilter {
     // Add option string and the number of arguments for this option
     //
     public void add(String option, int nrOfArgs) {
-        argTable_.put(option, new Integer(nrOfArgs));
+        argTable_.put(option, nrOfArgs);
     }
 
     //

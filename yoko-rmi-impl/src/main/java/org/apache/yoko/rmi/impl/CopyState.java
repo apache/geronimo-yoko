@@ -154,7 +154,7 @@ public final class CopyState {
 
         public void write(int val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Byte((byte) val));
+            enqueue(Byte.valueOf((byte) val));
         }
 
         public void write(byte[] val) throws java.io.IOException {
@@ -179,42 +179,42 @@ public final class CopyState {
 
         public void writeBoolean(boolean val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Boolean(val));
+            enqueue(Boolean.valueOf(val));
         }
 
         public void writeByte(int val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Byte((byte) val));
+            enqueue(Byte.valueOf((byte) val));
         }
 
         public void writeShort(int val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Short((short) val));
+            enqueue(Short.valueOf((short) val));
         }
 
         public void writeChar(int val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Character((char) val));
+            enqueue(Character.valueOf((char) val));
         }
 
         public void writeInt(int val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Integer(val));
+            enqueue(Integer.valueOf(val));
         }
 
         public void writeLong(long val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Long(val));
+            enqueue(Long.valueOf(val));
         }
 
         public void writeFloat(float val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Float(val));
+            enqueue(Float.valueOf(val));
         }
 
         public void writeDouble(double val) throws java.io.IOException {
             beforeWriteData();
-            enqueue(new Double(val));
+            enqueue(Double.valueOf(val));
         }
 
         public void writeBytes(java.lang.String val) throws java.io.IOException {

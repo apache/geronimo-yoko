@@ -275,7 +275,7 @@ class ObjectArrayDescriptor extends ArrayDescriptor<Object[]> {
                         logger.finer("Array item " + i + " is null"); 
                     }
                 } catch (IndirectionException ex) {
-                    arr[i] = offsetMap.get(new Integer(ex.offset));
+                    arr[i] = offsetMap.get(ex.offset);
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }
@@ -354,7 +354,7 @@ class RemoteArrayDescriptor extends ArrayDescriptor<Object[]> {
                 try {
                     arr[i] = reader.readRemoteObject(elementType);
                 } catch (IndirectionException ex) {
-                    arr[i] = offsetMap.get(new Integer(ex.offset));
+                    arr[i] = offsetMap.get(ex.offset);
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }
@@ -432,7 +432,7 @@ class ValueArrayDescriptor extends ArrayDescriptor<Object[]> {
             try {
                 arr[i] = _in.read_value(elementType);
             } catch (IndirectionException ex) {
-                arr[i] = offsetMap.get(new Integer(ex.offset));
+                arr[i] = offsetMap.get(ex.offset);
             }
         }
 
@@ -507,7 +507,7 @@ class AbstractObjectArrayDescriptor extends ArrayDescriptor<Object[]> {
                 try {
                     arr[i] = reader.readAbstractObject();
                 } catch (IndirectionException ex) {
-                    arr[i] = offsetMap.get(new Integer(ex.offset));
+                    arr[i] = offsetMap.get(ex.offset);
                     // reader.addValueBox (ex.offset, new ArrayBox (i, arr));
                 }
             }

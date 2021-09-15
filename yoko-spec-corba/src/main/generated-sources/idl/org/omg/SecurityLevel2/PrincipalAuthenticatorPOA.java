@@ -19,9 +19,9 @@ public abstract class PrincipalAuthenticatorPOA extends org.omg.PortableServer.S
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("get_supported_authen_methods", new java.lang.Integer (0));
-    _methods.put ("authenticate", new java.lang.Integer (1));
-    _methods.put ("continue_authentication", new java.lang.Integer (2));
+    _methods.put ("get_supported_authen_methods", 0);
+    _methods.put ("authenticate", 1);
+    _methods.put ("continue_authentication", 2);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

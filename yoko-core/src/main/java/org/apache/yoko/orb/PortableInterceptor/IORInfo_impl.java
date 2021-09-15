@@ -63,7 +63,7 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
         // Add an entry to the component table for each acceptor
         //
         for (int i = 0; i < acceptors.length; ++i)
-            table_.put(new Integer(acceptors[i].tag()), new java.util.Vector());
+            table_.put(acceptors[i].tag(), new java.util.Vector());
     }
 
     // ------------------------------------------------------------------
@@ -99,7 +99,7 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
     public void add_ior_component_to_profile(org.omg.IOP.TaggedComponent data,
             int id) {
         java.util.Vector profile = (java.util.Vector) table_
-                .get(new Integer(id));
+                .get(id);
         if (profile == null)
             throw new org.omg.CORBA.BAD_PARAM(
                     MinorCodes
@@ -158,8 +158,7 @@ final public class IORInfo_impl extends org.omg.CORBA.LocalObject implements
             // may have to append components specific to this acceptor's
             // profile tag.
             //
-            Integer ikey = new Integer(acceptors_[i].tag());
-            java.util.Vector components = (java.util.Vector) table_.get(ikey);
+            java.util.Vector components = (java.util.Vector) table_.get(acceptors_[i].tag());
             if (!components.isEmpty()) {
                 int len = all_.size() + components.size();
                 profileInfo.components = new org.omg.IOP.TaggedComponent[len];

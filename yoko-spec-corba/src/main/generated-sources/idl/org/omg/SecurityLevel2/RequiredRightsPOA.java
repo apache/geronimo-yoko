@@ -19,8 +19,8 @@ public abstract class RequiredRightsPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("get_required_rights", new java.lang.Integer (0));
-    _methods.put ("set_required_rights", new java.lang.Integer (1));
+    _methods.put ("get_required_rights", 0);
+    _methods.put ("set_required_rights", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

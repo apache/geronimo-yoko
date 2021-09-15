@@ -24,7 +24,7 @@ final class ShortDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Short(in.read_short());
+        return Short.valueOf(in.read_short());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

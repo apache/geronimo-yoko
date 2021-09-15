@@ -17,8 +17,8 @@ public abstract class TransactionFactoryPOA extends org.omg.PortableServer.Serva
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("create", new java.lang.Integer (0));
-    _methods.put ("recreate", new java.lang.Integer (1));
+    _methods.put ("create", 0);
+    _methods.put ("recreate", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

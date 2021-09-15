@@ -622,8 +622,7 @@ class BooleanFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Boolean value = new Boolean(reader.readBoolean());
-        map.put(java_name, value);
+        map.put(java_name, Boolean.valueOf(reader.readBoolean()));
     }
 
     /**
@@ -694,8 +693,7 @@ class ByteFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Byte value = new Byte(reader.readByte());
-        map.put(java_name, value);
+        map.put(java_name, Byte.valueOf(reader.readByte()));
     }
 
     /**
@@ -766,8 +764,7 @@ class ShortFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Short value = new Short(reader.readShort());
-        map.put(java_name, value);
+        map.put(java_name, Short.valueOf(reader.readShort()));
     }
 
     /**
@@ -842,8 +839,7 @@ class CharFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Character value = new Character(reader.readChar());
-        map.put(java_name, value);
+        map.put(java_name, Character.valueOf(reader.readChar()));
     }
 
     /**
@@ -915,8 +911,7 @@ class IntFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Integer value = new Integer(reader.readInt());
-        map.put(java_name, value);
+        map.put(java_name, Integer.valueOf(reader.readInt()));
     }
 
     /**
@@ -988,8 +983,7 @@ class LongFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Long value = new Long(reader.readLong());
-        map.put(java_name, value);
+        map.put(java_name, Long.valueOf(reader.readLong()));
     }
 
     /**
@@ -1060,7 +1054,7 @@ class FloatFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Float value = new Float(reader.readFloat());
+        Float value = Float.valueOf(reader.readFloat());
         map.put(java_name, value);
     }
 
@@ -1132,7 +1126,7 @@ class DoubleFieldDescriptor extends FieldDescriptor {
      * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
-        Double value = new Double(reader.readDouble());
+        Double value = Double.valueOf(reader.readDouble());
         map.put(java_name, value);
     }
 

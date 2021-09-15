@@ -26,20 +26,20 @@ public abstract class NamingContextExtPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("to_string", new java.lang.Integer (0));
-    _methods.put ("to_name", new java.lang.Integer (1));
-    _methods.put ("to_url", new java.lang.Integer (2));
-    _methods.put ("resolve_str", new java.lang.Integer (3));
-    _methods.put ("bind", new java.lang.Integer (4));
-    _methods.put ("bind_context", new java.lang.Integer (5));
-    _methods.put ("rebind", new java.lang.Integer (6));
-    _methods.put ("rebind_context", new java.lang.Integer (7));
-    _methods.put ("resolve", new java.lang.Integer (8));
-    _methods.put ("unbind", new java.lang.Integer (9));
-    _methods.put ("list", new java.lang.Integer (10));
-    _methods.put ("new_context", new java.lang.Integer (11));
-    _methods.put ("bind_new_context", new java.lang.Integer (12));
-    _methods.put ("destroy", new java.lang.Integer (13));
+    _methods.put ("to_string", 0);
+    _methods.put ("to_name", 1);
+    _methods.put ("to_url", 2);
+    _methods.put ("resolve_str", 3);
+    _methods.put ("bind", 4);
+    _methods.put ("bind_context", 5);
+    _methods.put ("rebind", 6);
+    _methods.put ("rebind_context", 7);
+    _methods.put ("resolve", 8);
+    _methods.put ("unbind", 9);
+    _methods.put ("list", 10);
+    _methods.put ("new_context", 11);
+    _methods.put ("bind_new_context", 12);
+    _methods.put ("destroy", 13);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

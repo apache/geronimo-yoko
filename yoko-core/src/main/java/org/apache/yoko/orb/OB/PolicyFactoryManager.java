@@ -59,7 +59,7 @@ public final class PolicyFactoryManager {
         java.util.Hashtable table = (internal) ? policyFactoryTableInternal_
                 : policyFactoryTableExternal_;
 
-        Integer itype = new Integer(type);
+        Integer itype = Integer.valueOf(type);
         if (table.containsKey(itype))
             throw new org.omg.CORBA.BAD_PARAM();
         table.put(itype, factory);
@@ -68,7 +68,7 @@ public final class PolicyFactoryManager {
     public org.omg.CORBA.Policy createPolicy(int type, org.omg.CORBA.Any any)
             throws org.omg.CORBA.PolicyError {
         java.lang.Object factory;
-        Integer itype = new Integer(type);
+        Integer itype = Integer.valueOf(type);
 
         if ((factory = policyFactoryTableInternal_.get(itype)) != null)
             return ((org.omg.PortableInterceptor.PolicyFactory) factory)
@@ -128,7 +128,7 @@ public final class PolicyFactoryManager {
      *         unknown types.
      */
     public boolean isPolicyRegistered(int type) {
-        Integer itype = new Integer(type);
+        Integer itype = Integer.valueOf(type);
 
         return policyFactoryTableInternal_.containsKey(itype) || policyFactoryTableExternal_.containsKey(itype);
     }

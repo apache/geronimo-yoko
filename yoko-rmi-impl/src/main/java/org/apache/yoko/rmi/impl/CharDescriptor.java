@@ -25,7 +25,7 @@ final class CharDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Character(in.read_wchar());
+        return Character.valueOf(in.read_wchar());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

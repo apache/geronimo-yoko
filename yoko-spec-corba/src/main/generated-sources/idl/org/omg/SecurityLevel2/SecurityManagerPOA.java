@@ -19,15 +19,15 @@ public abstract class SecurityManagerPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("_get_supported_mechanisms", new java.lang.Integer (0));
-    _methods.put ("_get_own_credentials", new java.lang.Integer (1));
-    _methods.put ("_get_required_rights_object", new java.lang.Integer (2));
-    _methods.put ("_get_principal_authenticator", new java.lang.Integer (3));
-    _methods.put ("_get_access_decision", new java.lang.Integer (4));
-    _methods.put ("_get_audit_decision", new java.lang.Integer (5));
-    _methods.put ("get_target_credentials", new java.lang.Integer (6));
-    _methods.put ("remove_own_credentials", new java.lang.Integer (7));
-    _methods.put ("get_security_policy", new java.lang.Integer (8));
+    _methods.put ("_get_supported_mechanisms", 0);
+    _methods.put ("_get_own_credentials", 1);
+    _methods.put ("_get_required_rights_object", 2);
+    _methods.put ("_get_principal_authenticator", 3);
+    _methods.put ("_get_access_decision", 4);
+    _methods.put ("_get_audit_decision", 5);
+    _methods.put ("get_target_credentials", 6);
+    _methods.put ("remove_own_credentials", 7);
+    _methods.put ("get_security_policy", 8);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,
