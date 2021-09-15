@@ -93,15 +93,6 @@ final class ThreadPool {
                 } catch (InterruptedException ex) {
                 }
             }
-
-            //
-            // Destroy the group
-            //
-            try {
-                group_.destroy();
-            } catch (IllegalThreadStateException ex) {
-                throw Assert.fail(ex);
-            }
         }
     }
 
