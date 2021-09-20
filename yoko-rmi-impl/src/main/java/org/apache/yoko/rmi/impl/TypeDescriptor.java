@@ -266,9 +266,8 @@ abstract class TypeDescriptor extends ModelElement {
         if (old != null) {
             pw.print("^" + old);
         } else {
-            Integer key = new Integer(System.identityHashCode(val));
             pw.println(type.getName() + "@"
-                    + Integer.toHexString(key.intValue()));
+                    + Integer.toHexString(System.identityHashCode(val)));
         }
     }
 

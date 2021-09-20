@@ -24,7 +24,7 @@ final class FloatDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Float(in.read_float());
+        return Float.valueOf(in.read_float());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

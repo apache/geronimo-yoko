@@ -24,7 +24,7 @@ final class DoubleDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Double(in.read_double());
+        return Double.valueOf(in.read_double());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

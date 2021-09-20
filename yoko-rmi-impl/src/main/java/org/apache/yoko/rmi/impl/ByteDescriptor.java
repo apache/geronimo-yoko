@@ -24,7 +24,7 @@ final class ByteDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Byte(in.read_octet());
+        return Byte.valueOf(in.read_octet());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

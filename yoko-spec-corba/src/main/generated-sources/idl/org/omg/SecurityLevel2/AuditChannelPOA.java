@@ -19,8 +19,8 @@ public abstract class AuditChannelPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("audit_write", new java.lang.Integer (0));
-    _methods.put ("_get_audit_channel_id", new java.lang.Integer (1));
+    _methods.put ("audit_write", 0);
+    _methods.put ("_get_audit_channel_id", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

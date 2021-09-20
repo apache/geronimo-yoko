@@ -25,7 +25,7 @@ final class LongDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Long(in.read_longlong());
+        return Long.valueOf(in.read_longlong());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

@@ -82,7 +82,7 @@ final class DynEnum_impl extends DynAny_impl implements
         if (destroyed_)
             throw new org.omg.CORBA.OBJECT_NOT_EXIST();
 
-        return new Any(orbInstance_, type_, new Integer(value_));
+        return new Any(orbInstance_, type_, Integer.valueOf(value_));
     }
 
     public synchronized org.omg.CORBA.Any to_any(DynValueWriter dynValueWriter) {

@@ -19,8 +19,8 @@ public abstract class SynchronizationPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("before_completion", new java.lang.Integer (0));
-    _methods.put ("after_completion", new java.lang.Integer (1));
+    _methods.put ("before_completion", 0);
+    _methods.put ("after_completion", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

@@ -47,20 +47,20 @@ final class DynBasic_impl extends DynAny_impl {
         case org.omg.CORBA.TCKind._tk_ushort:
         case org.omg.CORBA.TCKind._tk_long:
         case org.omg.CORBA.TCKind._tk_ulong:
-            any_ = new Any(orbInstance_, type, new Integer(0));
+            any_ = new Any(orbInstance_, type, Integer.valueOf(0));
             break;
 
         case org.omg.CORBA.TCKind._tk_longlong:
         case org.omg.CORBA.TCKind._tk_ulonglong:
-            any_ = new Any(orbInstance_, type, new Long(0));
+            any_ = new Any(orbInstance_, type, Long.valueOf(0L));
             break;
 
         case org.omg.CORBA.TCKind._tk_float:
-            any_ = new Any(orbInstance_, type, new Float(0));
+            any_ = new Any(orbInstance_, type, Float.valueOf(0F));
             break;
 
         case org.omg.CORBA.TCKind._tk_double:
-            any_ = new Any(orbInstance_, type, new Double(0));
+            any_ = new Any(orbInstance_, type, Double.valueOf(0D));
             break;
 
         case org.omg.CORBA.TCKind._tk_boolean:
@@ -69,11 +69,11 @@ final class DynBasic_impl extends DynAny_impl {
 
         case org.omg.CORBA.TCKind._tk_char:
         case org.omg.CORBA.TCKind._tk_wchar:
-            any_ = new Any(orbInstance_, type, new Character((char) 0));
+            any_ = new Any(orbInstance_, type, Character.valueOf((char) 0));
             break;
 
         case org.omg.CORBA.TCKind._tk_octet:
-            any_ = new Any(orbInstance_, type, new Byte((byte) 0));
+            any_ = new Any(orbInstance_, type, Byte.valueOf((byte) 0));
             break;
 
         case org.omg.CORBA.TCKind._tk_any:

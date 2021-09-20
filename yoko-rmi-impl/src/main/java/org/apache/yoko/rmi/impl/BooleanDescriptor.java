@@ -25,7 +25,7 @@ final class BooleanDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Boolean(in.read_boolean());
+        return Boolean.valueOf(in.read_boolean());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

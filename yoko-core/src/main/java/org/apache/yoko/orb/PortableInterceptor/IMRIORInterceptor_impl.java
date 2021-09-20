@@ -135,7 +135,7 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
         String id = info.manager_id();
         String[] name = primary.adapter_name();
 
-        java.util.Vector poas = (java.util.Vector) poas_.get(new Integer(id));
+        java.util.Vector poas = (java.util.Vector) poas_.get(Integer.valueOf(id));
         if (poas != null) {
             //
             // Add poa to exiting entry
@@ -149,7 +149,7 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
             //
             poas = new java.util.Vector();
             poas.addElement(name);
-            poas_.put(new Integer(id), poas);
+            poas_.put(Integer.valueOf(id), poas);
         }
     }
 
@@ -259,7 +259,7 @@ final public class IMRIORInterceptor_impl extends org.omg.CORBA.LocalObject
         //
         // Inform the IMR of the POA status update
         //
-        java.util.Vector poas = (java.util.Vector) poas_.get(new Integer(id));
+        java.util.Vector poas = (java.util.Vector) poas_.get(Integer.valueOf(id));
         if (poas != null && poas.size() != 0) {
             try {
                 String[][] poaArray = new String[poas.size()][];

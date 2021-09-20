@@ -26,9 +26,9 @@ public abstract class BindingIteratorPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("next_one", new java.lang.Integer (0));
-    _methods.put ("next_n", new java.lang.Integer (1));
-    _methods.put ("destroy", new java.lang.Integer (2));
+    _methods.put ("next_one", 0);
+    _methods.put ("next_n", 1);
+    _methods.put ("destroy", 2);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

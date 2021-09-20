@@ -26,16 +26,16 @@ public abstract class NamingContextPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("bind", new java.lang.Integer (0));
-    _methods.put ("bind_context", new java.lang.Integer (1));
-    _methods.put ("rebind", new java.lang.Integer (2));
-    _methods.put ("rebind_context", new java.lang.Integer (3));
-    _methods.put ("resolve", new java.lang.Integer (4));
-    _methods.put ("unbind", new java.lang.Integer (5));
-    _methods.put ("list", new java.lang.Integer (6));
-    _methods.put ("new_context", new java.lang.Integer (7));
-    _methods.put ("bind_new_context", new java.lang.Integer (8));
-    _methods.put ("destroy", new java.lang.Integer (9));
+    _methods.put ("bind", 0);
+    _methods.put ("bind_context", 1);
+    _methods.put ("rebind", 2);
+    _methods.put ("rebind_context", 3);
+    _methods.put ("resolve", 4);
+    _methods.put ("unbind", 5);
+    _methods.put ("list", 6);
+    _methods.put ("new_context", 7);
+    _methods.put ("bind_new_context", 8);
+    _methods.put ("destroy", 9);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

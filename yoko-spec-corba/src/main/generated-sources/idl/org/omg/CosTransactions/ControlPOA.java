@@ -17,8 +17,8 @@ public abstract class ControlPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("get_terminator", new java.lang.Integer (0));
-    _methods.put ("get_coordinator", new java.lang.Integer (1));
+    _methods.put ("get_terminator", 0);
+    _methods.put ("get_coordinator", 1);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

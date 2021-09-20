@@ -17,11 +17,11 @@ public abstract class ResourcePOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("prepare", new java.lang.Integer (0));
-    _methods.put ("rollback", new java.lang.Integer (1));
-    _methods.put ("commit", new java.lang.Integer (2));
-    _methods.put ("commit_one_phase", new java.lang.Integer (3));
-    _methods.put ("forget", new java.lang.Integer (4));
+    _methods.put ("prepare", 0);
+    _methods.put ("rollback", 1);
+    _methods.put ("commit", 2);
+    _methods.put ("commit_one_phase", 3);
+    _methods.put ("forget", 4);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

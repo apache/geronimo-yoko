@@ -19,7 +19,7 @@ public abstract class CurrentPOA extends org.omg.PortableServer.Servant
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("get_attributes", new java.lang.Integer (0));
+    _methods.put ("get_attributes", 0);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,

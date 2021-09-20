@@ -24,7 +24,7 @@ final class IntegerDescriptor extends SimpleDescriptor {
     }
 
     public Object read(org.omg.CORBA.portable.InputStream in) {
-        return new Integer(in.read_long());
+        return Integer.valueOf(in.read_long());
     }
 
     public void write(org.omg.CORBA.portable.OutputStream out, Object val) {

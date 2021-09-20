@@ -17,10 +17,10 @@ public abstract class TransactionPolicyPOA extends org.omg.PortableServer.Servan
   private static java.util.Hashtable _methods = new java.util.Hashtable ();
   static
   {
-    _methods.put ("_get_tpv", new java.lang.Integer (0));
-    _methods.put ("_get_policy_type", new java.lang.Integer (1));
-    _methods.put ("copy", new java.lang.Integer (2));
-    _methods.put ("destroy", new java.lang.Integer (3));
+    _methods.put ("_get_tpv", 0);
+    _methods.put ("_get_policy_type", 1);
+    _methods.put ("copy", 2);
+    _methods.put ("destroy", 3);
   }
 
   public org.omg.CORBA.portable.OutputStream _invoke (String $method,
