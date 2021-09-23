@@ -22,41 +22,37 @@ import java.security.AccessController;
 
 import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.PrivilegedActions;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
+import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public class PortableRemoteObjectExt {
+    private static final class DelegateHolder {
+        private static final PortableRemoteObjectExtDelegate delegate;
 
-    private static PortableRemoteObjectExtDelegate delegate;
-
-    private static void init() {
-        if (delegate != null)
-            return;
-
-        try {
-            delegate = (PortableRemoteObjectExtDelegate) ProviderLocator.getService("org.apache.yoko.rmi.PortableRemoteObjectExtClass", PortableRemoteObjectExt.class, Thread.currentThread().getContextClassLoader());
-        } catch (Exception ex) {
-            throw new RuntimeException("internal problem: " + ex.getMessage(), ex);
-        }
-
-        if (delegate == null) {
-            String name = (String)AccessController.doPrivileged(new GetSystemPropertyAction(
-                    "org.apache.yoko.rmi.PortableRemoteObjectExtClass",
-                    "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
-
+        static {
+            Object d = null;
+            final ClassLoader contextCl = doPrivileged(GET_CONTEXT_CLASS_LOADER);
             try {
-                delegate = (PortableRemoteObjectExtDelegate)ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, Thread.currentThread().getContextClassLoader()).newInstance();
-            } catch (InstantiationException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
-            } catch (IllegalAccessException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
-            } catch (ClassNotFoundException ex) {
-                throw new RuntimeException(ex.getMessage(), ex);
+                d = ProviderLocator.getService("org.apache.yoko.rmi.PortableRemoteObjectExtClass", PortableRemoteObjectExt.class, contextCl);
+                if (null == d) {
+                    String name = doPrivileged(getSysProp("org.apache.yoko.rmi.PortableRemoteObjectExtClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
+
+                    d = doPrivileged(getNoArgConstructor(ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, contextCl))).newInstance();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("internal problem: " + e.getMessage(), e);
+            } finally {
+                delegate = (PortableRemoteObjectExtDelegate)d;
             }
         }
     }
 
     /** Return the currently active state for this thread */
     public static PortableRemoteObjectState getState() {
-        init();
-        return delegate.getCurrentState();
+        return DelegateHolder.delegate.getCurrentState();
     }
 }

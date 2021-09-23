@@ -16,6 +16,7 @@
  */
 package org.apache.yoko.util;
 
+import java.lang.reflect.Constructor;
 import java.security.PrivilegedAction;
 import java.util.Collections;
 import java.util.Map;
@@ -23,19 +24,28 @@ import java.util.Properties;
 
 public enum PrivilegedActions {
     ;
-    public static final PrivilegedAction<Properties> GET_SYSPROPS = new PrivilegedAction<Properties>() { public Properties run() { return System.getProperties(); } };
-    public static final PrivilegedAction<Map<Object, Object>> GET_SYSPROPS_OR_EMPTY_MAP = new PrivilegedAction<Map<Object, Object>>() {
-        public Map<Object, Object> run() {
-            try {
-                return System.getProperties();
-            } catch (SecurityException swallowed) {
-                return Collections.EMPTY_MAP;
-            }
+    public static final PrivilegedAction<Properties> GET_SYSPROPS = System::getProperties;
+    public static final PrivilegedAction<Map<Object, Object>> GET_SYSPROPS_OR_EMPTY_MAP = () -> {
+        try {
+            return System.getProperties();
+        } catch (SecurityException swallowed) {
+            return Collections.EMPTY_MAP;
         }
     };
 
-    public static final PrivilegedAction<String> getSysProp(final String key) { return new PrivilegedAction<String>() {public String run() { return System.getProperty(key); }}; }
-    public static final PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return new PrivilegedAction<String>() {public String run() { return System.getProperty(key, defaultValue); }}; }
+    public static final PrivilegedAction<ClassLoader> GET_CONTEXT_CLASS_LOADER = () -> Thread.currentThread().getContextClassLoader();
 
+    public static final PrivilegedAction<String> getSysProp(final String key) { return () -> System.getProperty(key); }
 
+    public static final PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return () -> System.getProperty(key, defaultValue); }
+
+    public static final <T> PrivilegedAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
+        return () -> {
+            try {
+                return type.getDeclaredConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new RuntimeException("Unexpected exception: " + e.getMessage(), e);
+            }
+        };
+    }
 }

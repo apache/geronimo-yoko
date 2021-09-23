@@ -23,25 +23,32 @@ import org.omg.CORBA.ORB;
 import java.security.AccessController;
 import java.util.WeakHashMap;
 
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.GET_SYSPROPS;
+
 public final class PortableRemoteObjectExtImpl implements PortableRemoteObjectExtDelegate {
     private enum Holder {
         ;
-        private static final ORB DEFAULT_ORB = ORB.init(new String[0], AccessController.doPrivileged(PrivilegedActions.GET_SYSPROPS));
+        private static final ORB DEFAULT_ORB = ORB.init(new String[0], doPrivileged(GET_SYSPROPS));
     }
 
     private static int nextId = 0;
     private static final WeakHashMap<ClassLoader, RMIState> statePerLoader = new WeakHashMap<>();
-    private static final RMIState nullLoaderRMIState = new RMIState(Holder.DEFAULT_ORB, "rmi" + nextId++);
+    private static final RMIState nullLoaderRMIState = createRmiState();
+
+    private static RMIState createRmiState() {
+        return new RMIState(Holder.DEFAULT_ORB, "rmi" + nextId++);
+    }
 
     public RMIState getCurrentState() {
-        ClassLoader loader = Thread.currentThread().getContextClassLoader();
+        ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
         if (null == loader) return nullLoaderRMIState;
         synchronized (statePerLoader) {
             RMIState result = statePerLoader.get(loader);
-            if (result == null) {
-                result = new RMIState(Holder.DEFAULT_ORB, "rmi" + nextId++);
-                statePerLoader.put(loader, result);
-            }
+            if (null != result) return result;
+            result = createRmiState();
+            statePerLoader.put(loader, result);
             return result;
         }
     }
