@@ -17,6 +17,7 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.rmi.util.SerialFilterHelper;
+import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
@@ -36,6 +37,7 @@ import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
+import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -44,6 +46,9 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 public class ValueHandlerImpl implements ValueHandler {
     private static final Logger logger = Logger.getLogger(ValueHandlerImpl.class.getName());
@@ -198,7 +203,7 @@ public class ValueHandlerImpl implements ValueHandler {
             case "IDL":
                 final String className = parts[1];
                 if (logger.isLoggable(Level.FINER)) logger.finer("getClassFromRepositoryID =>> " + className);
-                ClassLoader loader = RMIState.current().getClassLoader();
+                ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
                 return loader.loadClass(className);
             default:
                 if (logger.isLoggable(Level.FINER)) logger.finer("getClassFromRepositoryID =>> " + null);

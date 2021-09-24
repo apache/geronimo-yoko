@@ -18,39 +18,49 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.util.HashMap;
-import java.util.IdentityHashMap;
-import java.util.Map;
-import java.util.logging.Logger;
-import java.util.logging.Level;
+import org.apache.yoko.rmi.api.PortableRemoteObjectExt;
+import org.apache.yoko.rmi.api.PortableRemoteObjectState;
+import org.apache.yoko.rmi.util.NoDeleteSynchronizedMap;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.portable.Delegate;
+import org.omg.CORBA.portable.ObjectImpl;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
 
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.URL;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.util.IdentityHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import org.apache.yoko.rmi.api.PortableRemoteObjectExt;
-import org.apache.yoko.rmi.api.PortableRemoteObjectState;
-import org.apache.yoko.rmi.util.NoDeleteSynchronizedMap;
-import org.omg.CORBA.BAD_INV_ORDER;
-import org.omg.CORBA.Policy;
-import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
-import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
-import org.omg.PortableServer.POAPackage.InvalidPolicy;
+import static java.security.AccessController.doPrivileged;
+import static java.util.Collections.synchronizedMap;
+import static org.apache.yoko.util.Exceptions.as;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 
 public class RMIState implements PortableRemoteObjectState {
     static final Logger logger = Logger.getLogger(RMIState.class.getName());
 
     private boolean isShutdown;
 
-    final private org.omg.CORBA.ORB _orb;
+    final private ORB _orb;
 
     private String _name;
 
@@ -62,24 +72,22 @@ public class RMIState implements PortableRemoteObjectState {
 	return poa;
     }
 
-    RMIState(org.omg.CORBA.ORB orb, String name) {
-        if (orb == null) {
-            throw new NullPointerException("ORB is null");
-        }
+    RMIState(ORB orb, String name) {
+        Objects.requireNonNull(orb, "ORB is null");
         
         try {
             POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
-	    poa = rootPoa.create_POA(name, null, new Policy[0]);
-	    poa.the_POAManager().activate();
-	} catch (AdapterAlreadyExists e) {
-        logger.log(Level.WARNING, "Adapter already exists", e);
-	} catch (InvalidPolicy e) {
-        logger.log(Level.WARNING, "Invalid policy", e);
-	} catch (InvalidName e) {
-        logger.log(Level.WARNING, "Invalid name", e);
-	} catch (AdapterInactive e) {
-        logger.log(Level.WARNING, "Adapter inactive", e);
-	}
+            poa = rootPoa.create_POA(name, null, new Policy[0]);
+            poa.the_POAManager().activate();
+        } catch (AdapterAlreadyExists e) {
+            logger.log(Level.WARNING, "Adapter already exists", e);
+        } catch (InvalidPolicy e) {
+            logger.log(Level.WARNING, "Invalid policy", e);
+        } catch (InvalidName e) {
+            logger.log(Level.WARNING, "Invalid name", e);
+        } catch (AdapterInactive e) {
+            logger.log(Level.WARNING, "Adapter inactive", e);
+        }
 
         _orb = orb;
         _name = name;
@@ -87,8 +95,7 @@ public class RMIState implements PortableRemoteObjectState {
 
     void checkShutDown() {
         if (isShutdown) {
-            BAD_INV_ORDER ex = new BAD_INV_ORDER(
-                    "RMIState has already been shut down");
+            BAD_INV_ORDER ex = new BAD_INV_ORDER("RMIState has already been shut down");
             logger.fine("RMIState has already been shut down " + ex);
             throw ex;
         }
@@ -96,37 +103,28 @@ public class RMIState implements PortableRemoteObjectState {
 
     public void shutdown() {
         logger.finer("RMIState shutdown requested; name = " + _name);
-
         checkShutDown();
-
         isShutdown = true;
     }
 
-    public org.omg.CORBA.ORB getORB() {
+    public ORB getORB() {
         return _orb;
     }
 
-
-    org.omg.CORBA.portable.Delegate createDelegate(RMIServant servant) {
+    Delegate createDelegate(RMIServant servant) {
         checkShutDown();
 
         byte[] id = servant._id;
         RemoteDescriptor desc = servant._descriptor;
-
-        String repid = desc.getRepositoryID();
-        
-        org.omg.CORBA.portable.ObjectImpl ref;
-        org.omg.PortableServer.POA poa;
-
+        final String repid = desc.getRepositoryID();
+        final POA poa = getPOA();
         try {
-            poa = getPOA();
-            ref = (org.omg.CORBA.portable.ObjectImpl) poa
-                    .create_reference_with_id(id, repid);
-        } catch (org.omg.CORBA.BAD_PARAM ex) {
-            throw (InternalError)new InternalError("wrong policy: " + ex.getMessage()).initCause(ex);
+            final ObjectImpl ref = (ObjectImpl) poa.create_reference_with_id(id, repid);
+            return ref._get_delegate();
+        } catch (BAD_PARAM ex) {
+            throw as(InternalError::new, ex, "wrong policy: " + ex.getMessage());
         }
 
-        return ref._get_delegate();
     }
 
     static RMIState current() {
@@ -138,18 +136,17 @@ public class RMIState implements PortableRemoteObjectState {
         return loader;
     }
 
-    //
-    // data for use in PortableRemoteObjectImpl
-    //
+    /**
+     * data for use in PortableRemoteObjectImpl
+     */
+    final Map<Class<?>, Constructor<? extends Stub>> stub_map = new NoDeleteSynchronizedMap<>();
 
-    Map<Class<?>, Constructor<? extends Stub>> stub_map = new NoDeleteSynchronizedMap<>();
+    /**
+     * data for use in UtilImpl
+     */
+    final Map<Remote, Tie> tie_map = synchronizedMap(new IdentityHashMap<Remote, Tie>());
 
-    //
-    // data for use in UtilImpl
-    //
-    Map<Remote, Tie> tie_map = java.util.Collections.synchronizedMap(new IdentityHashMap<Remote, Tie>());
-
-    private Map<Class<?>, StaticStubEntry> static_stub_map = new NoDeleteSynchronizedMap<>();
+    private Map<Class<?>, Optional<Constructor<? extends Stub>>> static_stub_map = new NoDeleteSynchronizedMap<>();
 
     private URL _codebase;
 
@@ -161,147 +158,65 @@ public class RMIState implements PortableRemoteObjectState {
         return _codebase;
     }
 
-    void clearState() {
-        stub_map = null;
-        tie_map = null;
-
-        static_stub_map = null;
-    }
-
-    static class StaticStubEntry {
-        Constructor<? extends Stub> stub_constructor;
-    }
-
-    /**
-     * Method getStaticStub.
-     * 
-     * @param codebase
-     * @param type
-     * @return Stub
-     */
-    public Stub getStaticStub1(String codebase, Class type) {
-        return null;
-    }
-
     public Stub getStaticStub(String codebase, Class type) {
-
-        StaticStubEntry ent = static_stub_map.get(type);
-        if (ent == null) {
-            ent = new StaticStubEntry();
-
-            Constructor<? extends Stub> cons = findConstructor(codebase, getNewStubClassName(type));
-
-            if (cons != null
-                    && !javax.rmi.CORBA.Stub.class.isAssignableFrom(cons
-                            .getDeclaringClass())) {
-                logger.fine("class " + cons.getDeclaringClass()
-                        + " is not a javax.rmi.CORBA.Stub");
-                cons = null;
-            }
-
-            if (cons == null) {
-                cons = findConstructor(codebase, getOldStubClassName(type));
-            }
-
-            if (cons != null
-                    && !javax.rmi.CORBA.Stub.class.isAssignableFrom(cons
-                            .getDeclaringClass())) {
-                logger.fine("class " + cons.getDeclaringClass()
-                        + " is not a javax.rmi.CORBA.Stub");
-                cons = null;
-            }
-
-            ent.stub_constructor = cons;
-
-            static_stub_map.put(type, ent);
+        Optional<Constructor<? extends Stub>> entry = static_stub_map.get(type);
+        if (null == entry) {
+            String stubClassName = getStubClassName(type);
+            Constructor<? extends Stub> cons = getStubConstructor(codebase, stubClassName);
+            if (cons == null) cons = getStubConstructor(codebase, getOldStubClassName(stubClassName));
+            entry = Optional.ofNullable(cons);
+            static_stub_map.put(type, entry);
         }
+        return entry.map(this::createStub).orElse(null);
+    }
 
-        if (ent.stub_constructor == null) {
-            return null;
-        }
-
+    private Stub createStub(Constructor<? extends Stub> constructor) {
         try {
-            return (Stub) ent.stub_constructor
-                    .newInstance(PortableRemoteObjectImpl.NO_ARG);
+            return constructor.newInstance();
         } catch (ClassCastException ex) {
-            logger.log(Level.FINE, "loaded class "
-                    + ent.stub_constructor.getDeclaringClass()
-                    + " is not a proper stub", ex);
-        } catch (IllegalAccessException ex) {
-            logger.log(Level.FINE, "cannot instantiate stub class for " + type + " :: "
-                    + ex.getMessage(), ex);
-        } catch (InstantiationException ex) {
-            logger.log(Level.FINE, "cannot instantiate stub class for " + type + " :: "
-                    + ex.getMessage(), ex);
-        } catch (InvocationTargetException ex) {
-            logger.log(Level.FINE, "cannot instantiate stub class for " + type + " :: "
-                    + ex.getCause(), ex.getCause());
+            logger.log(Level.FINE, "loaded class " + constructor.getDeclaringClass() + " is not a proper stub", ex);
+        } catch (IllegalAccessException | InstantiationException | InvocationTargetException ex) {
+            logger.log(Level.FINE, "cannot instantiate stub class for " + constructor.getDeclaringClass() + " :: " + ex.getMessage(), ex);
         }
-
         return null;
     }
 
-    private <S extends Stub> Constructor<S> findConstructor(String codebase, String stubName) {
-        try {
-            Class<S> stubClass = (Class<S>) Util.loadClass(stubName, codebase, getClassLoader());
-            return stubClass.getConstructor();
+    private Constructor<? extends Stub> getStubConstructor(String codebase, String stubClassName) {
+        Constructor<? extends Stub> cons = findConstructor(codebase, stubClassName);
+        if (cons == null || Stub.class.isAssignableFrom(cons.getDeclaringClass())) return cons;
+        logger.fine("class " + cons.getDeclaringClass() + " is not a javax.rmi.CORBA.Stub");
+        return null;
+    }
 
-        } catch (NoSuchMethodException ex) {
-            logger.log(Level.WARNING, "stub class " + stubName + " has no default constructor", ex);
+    private Constructor<? extends Stub> findConstructor(String codebase, String stubName) {
+        try {
+            Class<? extends Stub> stubClass = (Class<? extends Stub>) Util.loadClass(stubName, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            return doPrivileged(getNoArgConstructor(stubClass));
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINE, "failed to load remote class " + stubName + " from " + codebase, ex);
+        } catch (NoSuchMethodError ex) {
+            logger.log(Level.WARNING, "stub class " + stubName + " has no default constructor", ex);
         }
         return null;
     }
 
-    String getNewStubClassName(Class<?> c) {
+    private String getStubClassName(Class<?> c) {
         String cname = c.getName();
-
-        String pkgname = null;
         int idx = cname.lastIndexOf('.');
-
-        if (idx == -1) {
-            pkgname = "org.omg.stub";
-        } else {
-            pkgname = "org.omg.stub." + cname.substring(0, idx);
-        }
-
-        String cplain = cname.substring(idx + 1);
-
-        return pkgname + "." + "_" + cplain + "_Stub";
+        if (idx == -1) return String.format("org.omg.stub._%s_Stub", cname);
+        return String.format("org.omg.stub.%s_%s_Stub", cname.substring(0, idx + 1), cname.substring(idx + 1));
     }
 
-    String getOldStubClassName(Class c) {
-
-        String cname = c.getName();
-
-        //String pkgname = null;
-        int idx = cname.lastIndexOf('.');
-
-        if (idx == -1) {
-            return "_" + cname + "_Stub";
-        } else {
-            return cname.substring(0, idx + 1) + "_" + cname.substring(idx + 1)
-                    + "_Stub";
-        }
+    private String getOldStubClassName(String stubClassName) {
+        return stubClassName.substring("org.omg.stub.".length());
     }
 
     public void exportObject(Remote remote) throws RemoteException {
-        //PortableRemoteObjectExt.pushState(this);
-        try {
-            PortableRemoteObject.exportObject(remote);
-        } finally {
-            //PortableRemoteObjectExt.popState();
-        }
+        PortableRemoteObject.exportObject(remote);
     }
 
     public void unexportObject(Remote remote) throws RemoteException {
-        //PortableRemoteObjectExt.pushState(this);
-        try {
-            PortableRemoteObject.unexportObject(remote);
-        } finally {
-            //PortableRemoteObjectExt.popState();
-        }
+        PortableRemoteObject.unexportObject(remote);
     }
 
     public String getName() {

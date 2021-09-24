@@ -19,7 +19,6 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -48,7 +47,6 @@ import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.net.URL;
 import java.rmi.AccessException;
 import java.rmi.MarshalException;
 import java.rmi.NoSuchObjectException;
@@ -56,10 +54,6 @@ import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.ServerError;
 import java.rmi.ServerException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -67,9 +61,12 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.logging.Logger;
 
+import static java.security.AccessController.doPrivileged;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.logging.VerboseLogging.CLASS_LOG;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.action;
 
 public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
@@ -77,11 +74,11 @@ public class UtilImpl implements UtilDelegate {
     // Note: this field must be declared before the static intializer that calls Util.loadClass
     // since that method will call loadClass0 which uses this field... if it is below the static
     // initializer the _secman field will be null
-    private static final SecMan _secman = getSecMan();
+    private static final SecMan _secman = doPrivileged(action(SecMan::new));
 
     private static final ClassLoader BEST_GUESS_AT_EXTENSION_CLASS_LOADER;
     static {
-        ClassLoader candidateLoader = getClassLoader(UtilImpl.class);
+        ClassLoader candidateLoader = doPrivileged(action(UtilImpl.class::getClassLoader));
 
         if (candidateLoader == null) {
             // looks like this class was loaded by the boot class loader
@@ -106,7 +103,7 @@ public class UtilImpl implements UtilDelegate {
         for (String className : classNames) {
             try {
                 final Class<?> c = Class.forName(className);
-                ClassLoader cl = getClassLoader(c);
+                ClassLoader cl = doPrivileged(action(c::getClassLoader));
                 if (cl != null) return cl;
             } catch (Exception|NoClassDefFoundError ignored) {
             }
@@ -507,47 +504,9 @@ public class UtilImpl implements UtilDelegate {
     }
 
     public String getCodebase(Class clz) {
-        if (clz == null)
-            return null;
-
-        if (clz.isArray())
-            return getCodebase(clz.getComponentType());
-
-        if (clz.isPrimitive())
-            return null;
-
-        ClassLoader theLoader = clz.getClassLoader();
-
-        // ignore system classes
-        if (theLoader == null)
-            return null;
-
-        // ignore J2SE base class loader
-        if (theLoader == (Object.class).getClassLoader())
-            return null;
-
-        // ignore standard extensions
-        if (theLoader == BEST_GUESS_AT_EXTENSION_CLASS_LOADER)
-            return null;
-
-        RMIState state = RMIState.current();
-        ClassLoader stateLoader = state.getClassLoader();
-
-        try {
-            // is the class loaded with the stateLoader?
-            if (clz.equals(stateLoader.loadClass(clz.getName()))) {
-                URL codebaseURL = state.getCodeBase();
-
-                if (codebaseURL != null) {
-                    logger.finer("class " + clz.getName() + " => " + codebaseURL);
-                    return codebaseURL.toString();
-                }
-            }
-        } catch (ClassNotFoundException ex) {
-            // ignore
-        }
-
-        return AccessController.doPrivileged(new GetSystemPropertyAction("java.rmi.server.codebase"));
+        // Specifically disable the ability to specify a remote codebase using "java.rmi.server.codebase"
+        // system property, because it's an *EVIL* vector for security holes
+        return null;
     }
 
     static class SecMan extends java.rmi.RMISecurityManager {
@@ -555,19 +514,6 @@ public class UtilImpl implements UtilDelegate {
         public Class[] getClassContext() {
             return super.getClassContext();
         }
-    }
-
-    private static SecMan getSecMan() {
-        try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<SecMan>() {
-                public SecMan run() {
-                    return new SecMan();
-                }
-            });
-        } catch (PrivilegedActionException e) {
-            throw new RuntimeException(e);
-        }
-
     }
 
     @SuppressWarnings("rawtypes")
@@ -608,7 +554,7 @@ public class UtilImpl implements UtilDelegate {
           2. Try to load the class from the java.rmi.server.codebase system property value (if present) using the RMIClassLoader
          */
         GIVEN_LOADER(l -> Optional.ofNullable(l).map(gl -> gl::loadClass)),
-        CONTEXT_LOADER(l -> Optional.ofNullable(null == l ? getContextClassLoader() : null).map(ccl -> ccl::loadClass));
+        CONTEXT_LOADER(l -> Optional.ofNullable(null == l ? doPrivileged(GET_CONTEXT_CLASS_LOADER) : null).map(ccl -> ccl::loadClass));
         private final Function<ClassLoader, Optional<ClassLoadAction>> fun;
         ClassLoadStrategy(Function<ClassLoader, Optional<ClassLoadAction>> fun) { this.fun = fun; }
         final Optional<ClassLoadAction> getAction(ClassLoader givenLoader) {
@@ -676,30 +622,10 @@ public class UtilImpl implements UtilDelegate {
         }
     }
 
-    static ClassLoader getContextClassLoader() {
-        return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-            public ClassLoader run() {
-                return Thread.currentThread().getContextClassLoader();
-            }
-        });
-    }
-
-    static ClassLoader getClassLoader(final Class<?> clz) {
-        if (System.getSecurityManager() == null) {
-            return clz.getClassLoader();
-        } else {
-            return AccessController.doPrivileged(new PrivilegedAction<ClassLoader>() {
-                public ClassLoader run() {
-                    return clz.getClassLoader();
-                }
-            });
-        }
-    }
-
     static Object copyRMIStub(RMIStub stub) throws RemoteException {
-        ClassLoader loader = getContextClassLoader();
+        ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
 
-        if (getClassLoader(stub._descriptor.type) == loader) {
+        if (doPrivileged(action(stub._descriptor.type::getClassLoader)) == loader) {
             return stub;
         }
 
