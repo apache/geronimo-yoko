@@ -16,6 +16,7 @@
  */
 package org.apache.yoko.util;
 
+import java.rmi.RemoteException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -30,25 +31,27 @@ public enum Exceptions {
 
     public static <EXC extends Throwable> EXC as(Supplier<EXC> constructor, Throwable cause) {
         EXC exc = constructor.get();
-        exc.initCause(cause);
-        return exc;
+        return withCause(exc, cause);
     }
 
     public static <EXC extends Throwable, ARG> EXC as(Function<ARG, EXC> constructor, Throwable cause, ARG arg) {
         EXC exc = constructor.apply(arg);
-        exc.initCause(cause);
-        return exc;
+        return withCause(exc, cause);
     }
 
     public static <EXC extends Throwable, ARG1, ARG2> EXC as(BiFunction<ARG1, ARG2, EXC> constructor, Throwable cause, ARG1 arg1, ARG2 arg2) {
         EXC exc = constructor.apply(arg1, arg2);
-        exc.initCause(cause);
-        return exc;
+        return withCause(exc, cause);
     }
 
     public static <EXC extends Throwable, ARG1, ARG2, ARG3> EXC as(TriFunction<ARG1, ARG2, ARG3, EXC> constructor, Throwable cause, ARG1 arg1, ARG2 arg2, ARG3 arg3) {
         EXC exc = constructor.apply(arg1, arg2, arg3);
-        exc.initCause(cause);
+        return withCause(exc, cause);
+    }
+
+    private static <EXC extends Throwable> EXC withCause(EXC exc, Throwable cause) {
+        if (exc instanceof RemoteException) ((RemoteException)exc).detail = cause;
+        else exc.initCause(cause);
         return exc;
     }
 }
