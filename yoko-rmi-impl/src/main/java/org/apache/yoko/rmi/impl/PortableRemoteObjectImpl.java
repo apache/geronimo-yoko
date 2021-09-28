@@ -22,7 +22,6 @@ import org.apache.yoko.rmi.util.ClientUtil;
 import org.apache.yoko.rmi.util.stub.MethodRef;
 import org.apache.yoko.rmi.util.stub.StubClass;
 import org.apache.yoko.rmi.util.stub.StubInitializer;
-import org.apache.yoko.rmispec.util.UtilLoader;
 import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
@@ -52,6 +51,7 @@ import static java.security.AccessController.doPrivileged;
 import static javax.rmi.CORBA.Util.getTie;
 import static javax.rmi.CORBA.Util.registerTarget;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
@@ -438,7 +438,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         if (initializer == null) {
             String factory = doPrivileged(getSysProp("org.apache.yoko.rmi.RMIStubInitializerClass", defaultInitializer));
             try {
-                final Class<?> type = UtilLoader.loadServiceClass(factory, "org.apache.yoko.rmi.RMIStubInitializerClass");
+                final Class<?> type = loadServiceClass(factory, "org.apache.yoko.rmi.RMIStubInitializerClass");
                 initializer = (StubInitializer)(doPrivileged(PrivilegedActions.getNoArgConstructor(type)).newInstance());
             } catch (Exception e) {
                 throw as(INITIALIZE::new, e,"Can not create RMIStubInitializer: " + factory);

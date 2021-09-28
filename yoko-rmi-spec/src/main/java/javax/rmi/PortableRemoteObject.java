@@ -17,32 +17,33 @@
 
 package javax.rmi;
 
+import org.apache.yoko.rmispec.util.UtilLoader;
+import org.omg.CORBA.INITIALIZE;
+
+import javax.rmi.CORBA.PortableRemoteObjectDelegate;
+import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.rmi.NoSuchObjectException;
-import java.security.AccessController;
-import javax.rmi.CORBA.PortableRemoteObjectDelegate;
-import javax.rmi.CORBA.Util;
-import javax.rmi.CORBA.UtilDelegate;
+import java.security.PrivilegedAction;
 
-import org.apache.yoko.rmispec.util.GetSystemPropertyAction;
-import org.apache.yoko.rmispec.util.UtilLoader;
+import static java.security.AccessController.doPrivileged;
 
 public class PortableRemoteObject {
-    private static PortableRemoteObjectDelegate delegate = null;
+    // Initialize delegate
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.PortableRemoteObjectImpl";
-    private static final String DELEGATEKEY = "javax.rmi.CORBA.PortableRemoteObjectClass";
+    private static final String DELEGATE_KEY = "javax.rmi.CORBA.PortableRemoteObjectClass";
+    private static final PortableRemoteObjectDelegate delegate = getDelegate();
 
-    static {
-        // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
+    private static PortableRemoteObjectDelegate getDelegate() {
+        PortableRemoteObjectDelegate d;
+        String delegateName = doPrivileged((PrivilegedAction<String>)() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
         try {
-        	delegate = (PortableRemoteObjectDelegate)UtilLoader.loadServiceClass(delegateName, DELEGATEKEY).newInstance();
+            Class<? extends PortableRemoteObjectDelegate> delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATE_KEY);
+            d = delegateClass.newInstance();
         } catch (Throwable e) {
-           org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create PortableRemoteObject delegate: "+delegateName);
-           ex.initCause(e); 
-           throw ex; 
+            throw (INITIALIZE) new INITIALIZE("Can not create PortableRemoteObject delegate: " + delegateName).initCause(e);
         }
+        return d;
     }
 
     protected PortableRemoteObject() throws RemoteException {

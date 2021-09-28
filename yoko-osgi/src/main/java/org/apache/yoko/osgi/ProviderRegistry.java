@@ -16,8 +16,6 @@
  */
 package org.apache.yoko.osgi;
 
-import java.util.List;
-
 /**
  * The implementation of the factory registry used to store
  * the bundle registrations.
@@ -32,7 +30,7 @@ public interface ProviderRegistry {
      *         if this is not registered or the indicated class can't be
      *         loaded.
      */
-    public Class<?> locate(String factoryId);
+    Class<?> locate(String factoryId);
     
     /**
      * Locate and instantiate an instance of a service provider
@@ -45,18 +43,7 @@ public interface ProviderRegistry {
      * @exception Exception Any classloading or other exceptions thrown during
      *                      the process of creating this service instance.
      */
-    public Object getService(String providerId) throws Exception;
-
-    /**
-     * Locate all services that match a given provider id and create instances.
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the instances corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located or created
-     */
-    public List<Object> getServices(String providerId);
+    Object getService(String providerId) throws Exception;
 
 
     /**
@@ -70,19 +57,5 @@ public interface ProviderRegistry {
      * @exception Exception Any classloading or other exceptions thrown during
      *                      the process of loading this service provider class.
      */
-    public Class<?> getServiceClass(String providerId) throws ClassNotFoundException;
-
-
-    /**
-     * Locate all services that match a given provider id and return the implementation
-     * classes
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the classes corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located.
-     */
-    public List<Class<?>> getServiceClasses(String providerId);
-
+    <T> Class<T> getServiceClass(String providerId) throws ClassNotFoundException;
 }

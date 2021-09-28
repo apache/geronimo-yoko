@@ -17,40 +17,39 @@
 
 package javax.rmi.CORBA;
 
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.rmi.NoSuchObjectException;
-import java.security.AccessController;
+import org.apache.yoko.rmispec.util.UtilLoader;
+import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.InputStream;
 import org.omg.CORBA.portable.OutputStream;
 
-import org.apache.yoko.rmispec.util.GetSystemPropertyAction;
-import org.apache.yoko.rmispec.util.UtilLoader;
+import java.rmi.NoSuchObjectException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
+import java.security.PrivilegedAction;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
 public class Util {
-    private static UtilDelegate delegate = null;
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.UtilImpl";
-    private static final String DELEGATEKEY = "javax.rmi.CORBA.UtilClass";
+    private static final String DELEGATE_KEY = "javax.rmi.CORBA.UtilClass";
+    private static final UtilDelegate delegate = getDelegate();
+
+    private static UtilDelegate getDelegate() {
+        String delegateName = doPrivileged((PrivilegedAction<String>)() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
+        try {
+            // this is a bit recursive, but this will use the full default search order for locating this.
+            Class<? extends UtilDelegate> delegateClass = loadServiceClass(delegateName, DELEGATE_KEY);
+            return delegateClass.newInstance();
+        } catch (Throwable e) {
+            throw (INITIALIZE) new INITIALIZE("Can not create Util delegate: "+delegateName).initCause(e);
+        }
+    }
 
     // To hide the default constructor we should implement empty private constructor
     private Util() {}
-
-    static {
-        // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
-        try {
-
-            // this is a little bit recursive, but this will use the full default search order for locating
-            // this.
-        	delegate = (UtilDelegate)UtilLoader.loadServiceClass(delegateName, DELEGATEKEY).newInstance();
-        } catch (Throwable e) {
-            org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create Util delegate: "+delegateName);
-            ex.initCause(e); 
-            throw ex; 
-        }
-    }
 
     public static Object copyObject(Object o, ORB orb) throws RemoteException {
         return delegate.copyObject(o, orb);
@@ -77,14 +76,11 @@ public class Util {
     }
 
     public static Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
-        if (delegate != null) {
-            return delegate.loadClass(name, codebase, loader);
-        }
+        return null == delegate ?
+                // If there is no delegate yet, use the default implementation search order
+                UtilLoader.loadClass(name, loader) :
+                delegate.loadClass(name, codebase, loader);
 
-        // Things get a little recursive here.  We still need to use the full defined search order for loading
-        // classes even when attempting to load the UtilDelegate itself.  So, we're going to use the default
-        // implementation for the bootstrapping.
-        return UtilLoader.loadClass(name, codebase, loader);
     }
 
     public static RemoteException mapSystemException(SystemException e) {
