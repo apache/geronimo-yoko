@@ -67,7 +67,7 @@ public enum ProviderLocator {;
      * @exception ClassNotFoundException
      *                   Thrown if the class cannot be located.
      */
-    static public Class<?> loadClass(String className, Class<?> contextClass) throws ClassNotFoundException {
+    static public <T> Class<T> loadClass(String className, Class<?> contextClass) throws ClassNotFoundException {
         return loadClass(className, contextClass, Thread.currentThread().getContextClassLoader());
     }
 
@@ -77,7 +77,7 @@ public enum ProviderLocator {;
      *
      * Note: this method is <em>unprivileged</em>: the onus is on the caller to sanitize input and assert privilege
      */
-    static public Class<?> loadClass(String className, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
+    static public <T> Class<T> loadClass(String className, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // First check the registered service providers for this class
         Class cls = locate(className);
         if (cls != null) {
@@ -87,7 +87,7 @@ public enum ProviderLocator {;
         // Load from the explicit class loader if there is one
         if (loader != null) {
             try {
-                return Class.forName(className, false, loader);
+                return (Class<T>) Class.forName(className, false, loader);
             } catch (ClassNotFoundException e) {
                 if (contextClass == null)
                     throw e;
@@ -97,7 +97,7 @@ public enum ProviderLocator {;
         // Load from either the context class loader, if provided,
         // or the system class loader (i.e. null)
         loader = contextClass == null ? null : contextClass.getClassLoader();
-        return Class.forName(className, false, loader);
+        return (Class<T>) Class.forName(className, false, loader);
 
     }
 
@@ -162,7 +162,7 @@ public enum ProviderLocator {;
      * @exception Exception Thrown for any classloading exceptions thrown
      *                      trying to load the class.
      */
-    static public Class<?> getServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
+    static public <T> Class<T> getServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // if we are working in an OSGi environment, then process the service
         // registry first.  Ideally, we would do this last, but because of boot delegation
         // issues with some API implementations, we must try the OSGi version first
@@ -173,7 +173,7 @@ public enum ProviderLocator {;
             // safe now.
 
             // If we've located stuff in the registry, then return it
-            Class<?> cls = ((ProviderRegistry)registry).getServiceClass(iface);
+            Class<T> cls = ((ProviderRegistry)registry).getServiceClass(iface);
             if (cls != null) {
                 return cls;
             }
@@ -227,7 +227,7 @@ public enum ProviderLocator {;
      * @return The mapped provider class, if found.  Returns null if
      *         no mapping is located.
      */
-    static private Class<?> locateServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
+    static private <T> Class<T> locateServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // search first with the loader class path
         String name = locateServiceClassName(iface, loader);
         if (name == null && contextClass != null) {

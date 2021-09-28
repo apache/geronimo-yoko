@@ -19,11 +19,9 @@ package org.apache.yoko.osgi.locator;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.osgi.ProviderRegistry;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -152,54 +150,6 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
         }
         // no match to return
         return null;
-    }
-
-    /**
-     * Locate all services that match a given provider getServiceId and create instances.
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the instances corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located or created
-     */
-    public List<Object> getServices(String providerId) {
-        List<Object> instances = new ArrayList<>();
-        // this returns null for nothing found
-        for (ServiceProvider sp: serviceProviders.getProviders(providerId)) {
-            try {
-                instances.add(sp.getServiceInstance());
-            } catch (Exception e) {
-                // just swallow this and proceed to the next.  The exception has
-                // already been logged.
-            }
-        }
-        return instances;
-    }
-
-    /**
-     * Locate all services that match a given provider id and return the implementation
-     * classes
-     *
-     * @param providerId The target provider identifier.
-     *
-     * @return A List containing the classes corresponding to the
-     *         provider identifier.  Returns an empty list if no
-     *         matching classes can be located.
-     */
-    public List<Class<?>> getServiceClasses(String providerId) {
-        List<Class<?>> classes = new ArrayList<>();
-        // this returns null for nothing found
-        for (ServiceProvider sp : serviceProviders.getProviders(providerId)) {
-            try {
-                classes.add(sp.getServiceClass());
-            } catch (Exception e) {
-                log.log(Level.WARNING, "Failed to create instance of service from " + sp, e);
-                // just swallow this and proceed to the next.  The exception has
-                // already been logged.
-            }
-        }
-        return classes;
     }
 
     /**

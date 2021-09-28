@@ -17,38 +17,40 @@
 
 package javax.rmi.CORBA;
 
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA_2_3.portable.ObjectImpl;
+
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.rmi.RemoteException;
-import java.security.AccessController;
+import java.security.PrivilegedAction;
 
-import org.apache.yoko.rmispec.util.GetSystemPropertyAction;
-import org.apache.yoko.rmispec.util.UtilLoader;
-import org.omg.CORBA.ORB;
-import org.omg.CORBA_2_3.portable.ObjectImpl;
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
 public abstract class Stub extends ObjectImpl implements Serializable {
     static final long serialVersionUID = 1087775603798577179L;
 
-    private transient StubDelegate delegate = null;
     private static final String defaultDelegate = "org.apache.yoko.rmi.impl.StubImpl";
-    private static final String DELEGATEKEY = "javax.rmi.CORBA.StubClass";
+    private static final String DELEGATE_KEY = "javax.rmi.CORBA.StubClass";
     // the class we use to create delegates.  This is loaded once,
-    private static Class delegateClass = null;
 
-    static {
-        // Initialize delegate
-        String delegateName = (String)AccessController.doPrivileged(new GetSystemPropertyAction(DELEGATEKEY, defaultDelegate));
+    // Initialize delegate
+    private static final Class<? extends StubDelegate> delegateClass = getDelegateClass();
+
+    private static Class<? extends StubDelegate> getDelegateClass() {
+        String delegateName = doPrivileged((PrivilegedAction<String>)() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
         try {
-        	delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATEKEY);
+            return loadServiceClass(delegateName, DELEGATE_KEY);
         } catch (Exception e) {
-            org.omg.CORBA.INITIALIZE ex = new org.omg.CORBA.INITIALIZE("Can not create Stub delegate: " + delegateName);
-            ex.initCause(e); 
-            throw ex; 
+            throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate: " + delegateName).initCause(e);
         }
     }
+
+    private transient StubDelegate delegate = null;
 
     public Stub() {
         super();
@@ -94,10 +96,9 @@ public abstract class Stub extends ObjectImpl implements Serializable {
     private void initializeDelegate() {
         if (delegate == null) {
             try {
-                delegate = (StubDelegate)delegateClass.newInstance();
+                delegate = delegateClass.newInstance();
             } catch (Exception e) {
-                throw (org.omg.CORBA.INITIALIZE)new org.omg.CORBA.INITIALIZE(
-                    "Can not create Stub delegate: " + delegateClass.getName()).initCause(e);
+                throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate: " + delegateClass.getName()).initCause(e);
             }
         }
     }
