@@ -21,6 +21,7 @@ import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.PrivilegedActions;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CustomMarshal;
@@ -49,14 +50,24 @@ import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
 
+import static java.lang.Boolean.getBoolean;
+import static java.security.AccessController.doPrivileged;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.logging.VerboseLogging.MARSHAL_LOG;
+import static org.apache.yoko.orb.OB.ValueReader.SettingsHolder.IGNORE_INVALID_VALUE_TAG;
 import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueReader {
+
+    enum SettingsHolder {
+        ;
+        static final boolean IGNORE_INVALID_VALUE_TAG = doPrivileged(action(() -> getBoolean("org.apache.yoko.ignoreInvalidValueTag")));
+    }
+
     /** Chunk data */
     private static class ChunkState {
         boolean chunked;
@@ -1054,7 +1065,7 @@ public final class ValueReader {
             result = read(strategy);
         } catch (MARSHAL marshalex) {
             MARSHAL_LOG.severe(String.format("MARSHAL \"%s\", 4 bytes before ", marshalex.getMessage(), (in_.dumpPosition())));
-            if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
+            if (IGNORE_INVALID_VALUE_TAG) {
                 result = read(strategy);
             } else {
                 throw marshalex;
