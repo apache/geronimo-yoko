@@ -1309,65 +1309,6 @@ public class ORB_impl extends ORBSingleton {
     // Additional Yoko specific functions
     // ------------------------------------------------------------------
 
-    public static ORB init(String[] args, Properties props, Logger logger) {
-        return init(new StringSeqHolder(args), props, logger);
-    }
-
-    public static ORB init(StringSeqHolder args, Properties props, Logger logger) {
-        final String propName = "org.omg.CORBA.ORBClass";
-        String orbClassName = null;
-
-        ORB_impl orb;
-
-        try {
-            orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
-            if (orb == null) {
-                if (props != null) orbClassName = props.getProperty(propName);
-
-                try {
-                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
-                } catch (SecurityException ignored) {}
-
-                if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-                orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
-            }
-        } catch (Throwable ex) {
-            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: " + orbClassName + '\n' + ex.getMessage()).initCause(ex);
-        }
-
-        orb.setParameters(args, props, logger);
-
-        return orb;
-    }
-
-    public static ORB init(Applet app, Properties props, Logger logger) {
-        final String propName = "org.omg.CORBA.ORBClass";
-        String orbClassName = null;
-        ORB_impl orb;
-
-        try {
-            orb = (ORB_impl) ProviderLocator.getService(propName, ORB_impl.class, Thread.currentThread().getContextClassLoader());
-            if (orb == null) {
-
-                if (props != null) orbClassName = props.getProperty(propName);
-
-                try {
-                    if (orbClassName == null) orbClassName = doPrivileged(PrivilegedActions.getSysProp(propName));
-                } catch (SecurityException ignored) {}
-
-                if (orbClassName == null) orbClassName = "org.apache.yoko.orb.CORBA.ORB";
-                orb = (ORB_impl) ProviderLocator.loadClass(orbClassName, ORB_impl.class, Thread.currentThread().getContextClassLoader()).newInstance();
-            }
-        } catch (Throwable ex) {
-            throw (INITIALIZE)new INITIALIZE("Invalid ORB class: " + orbClassName + '\n' + ex.getMessage()).initCause(ex);
-        }
-
-        String[] args = parseAppletParams(app);
-        orb.setParameters(new StringSeqHolder(args), props, logger);
-
-        return orb;
-    }
-
     static public String[] ParseArgs(String[] args, Properties properties, Logger logger) {
         if (logger == null) logger = new Logger_impl();
 
