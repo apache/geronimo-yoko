@@ -21,7 +21,6 @@ import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.util.Assert;
-import org.apache.yoko.util.PrivilegedActions;
 import org.apache.yoko.util.cmsf.RepIds;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.CustomMarshal;
@@ -58,6 +57,7 @@ import static org.apache.yoko.orb.OB.ValueReader.SettingsHolder.IGNORE_INVALID_V
 import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
@@ -1033,7 +1033,7 @@ public final class ValueReader {
             return arrayInstance.getClass();
         } else {
             try {
-                return javax.rmi.CORBA.Util.loadClass(name, codebase, Util.getContextClassLoader());
+                return javax.rmi.CORBA.Util.loadClass(name, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
             } catch (ClassNotFoundException ex) {
                 // this will be sorted out later
                 return null;

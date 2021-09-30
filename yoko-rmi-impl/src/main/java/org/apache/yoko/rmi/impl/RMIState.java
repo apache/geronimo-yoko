@@ -132,11 +132,6 @@ public class RMIState implements PortableRemoteObjectState {
         return (RMIState) PortableRemoteObjectExt.getState();
     }
 
-    public ClassLoader getClassLoader() {
-        ClassLoader loader  = Thread.currentThread().getContextClassLoader();
-        return loader;
-    }
-
     /**
      * data for use in PortableRemoteObjectImpl
      */

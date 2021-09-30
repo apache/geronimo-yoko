@@ -71,9 +71,10 @@ import java.io.PrintStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.logging.Logger;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 public final class Util {
     static final Logger logger = Logger.getLogger(Util.class.getName());
@@ -368,7 +369,7 @@ public final class Util {
             Class exClass = ex.getClass();
             String helper = exClass.getName() + "Helper";
             // get the appropriate class for the loading.
-            Class c = ProviderLocator.loadClass(helper, exClass, Thread.currentThread().getContextClassLoader());
+            Class c = ProviderLocator.loadClass(helper, exClass, doPrivileged(GET_CONTEXT_CLASS_LOADER));
             final Class[] paramTypes = { Any.class, exClass };
             Method m = c.getMethod("insert", paramTypes);
             final Object[] args = { any, ex };
@@ -378,16 +379,6 @@ public final class Util {
             throw Assert.fail(ex);
         }
         return any;
-    }
-
-    static ClassLoader getContextClassLoader () {
-        if (System.getSecurityManager() == null) return Thread.currentThread().getContextClassLoader ();
-        return AccessController.doPrivileged(
-                new PrivilegedAction<ClassLoader>() {
-                    public ClassLoader run() {
-                        return Thread.currentThread ().getContextClassLoader ();
-                    }
-                });
     }
 
     public static CodeBase getSendingContextRuntime(ORBInstance orbInstance_, ServiceContexts contexts) {

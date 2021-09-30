@@ -57,21 +57,6 @@ public enum ProviderLocator {;
     }
 
     /**
-     * Utility class for locating a class with OSGi registry
-     * support.  Uses the thread context classloader as part of
-     * the search order.
-     *
-     * @param className The name of the target class.
-     *
-     * @return The loaded class.
-     * @exception ClassNotFoundException
-     *                   Thrown if the class cannot be located.
-     */
-    static public <T> Class<T> loadClass(String className, Class<?> contextClass) throws ClassNotFoundException {
-        return loadClass(className, contextClass, Thread.currentThread().getContextClassLoader());
-    }
-
-    /**
      * Standardized utility method for performing class lookups
      * with support for OSGi registry lookups.
      *

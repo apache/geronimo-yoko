@@ -21,6 +21,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+
 /**
  * Holds Yoko version information.
  */
@@ -47,26 +50,21 @@ public final class Version {
      *         <code>"[version unknown]"</code> if the pom.properties cannot
      *         be loaded by the current thread's classloader
      */
-    private static String readVersionFromMavenPom(String groupId,
-            String artifactId) {
-        ClassLoader cl = Thread.currentThread().getContextClassLoader();
+    private static String readVersionFromMavenPom(String groupId, String artifactId) {
+        ClassLoader cl = doPrivileged(GET_CONTEXT_CLASS_LOADER);
         Properties props = new Properties();
 
         String propFileName = "META-INF/maven/" + groupId + "/" + artifactId
                 + "/pom.properties";
         InputStream a = cl.getResourceAsStream(propFileName);
-        if (a == null)
-            return UNKNOWN;
+        if (a == null) return UNKNOWN;
         try {
             props.load(a);
         } catch (IOException e) {
             return UNKNOWN;
         }
         final String version = props.getProperty("version");
-        if (version == null) {
-            return UNKNOWN;
-        }
-        return version;
+        return (null == version) ? UNKNOWN : version;
     }
 
     public static void main(String[] args) {

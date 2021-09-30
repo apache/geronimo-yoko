@@ -28,9 +28,9 @@ import java.security.PrivilegedAction;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 
-import static java.lang.Thread.currentThread;
 import static java.security.AccessController.doPrivileged;
 import static java.util.Objects.requireNonNull;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 class Util {
     static String getPackageName(Class clazz) {
@@ -94,7 +94,7 @@ class Util {
 
     static Class defineClass(final ClassLoader loader, String className, byte[] data) {
         return loader == null ?
-                defineClass(requireNonNull(currentThread().getContextClassLoader()), className, data) :
+                defineClass(requireNonNull(doPrivileged(GET_CONTEXT_CLASS_LOADER)), className, data) :
                 doPrivileged(DefineClass.invoker(loader, className, data));
     }
 
