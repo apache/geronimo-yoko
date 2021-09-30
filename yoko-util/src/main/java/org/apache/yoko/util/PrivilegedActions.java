@@ -17,13 +17,16 @@
 package org.apache.yoko.util;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Supplier;
 
+import static java.lang.Thread.currentThread;
 import static org.apache.yoko.util.Exceptions.as;
 
 public enum PrivilegedActions {
@@ -37,20 +40,18 @@ public enum PrivilegedActions {
         }
     };
 
-    public static final PrivilegedAction<ClassLoader> GET_CONTEXT_CLASS_LOADER = () -> Thread.currentThread().getContextClassLoader();
+    public static final PrivilegedAction<ClassLoader> GET_CONTEXT_CLASS_LOADER = currentThread()::getContextClassLoader;
 
     public static final PrivilegedAction<String> getSysProp(final String key) { return () -> System.getProperty(key); }
 
     public static final PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return () -> System.getProperty(key, defaultValue); }
 
-    public static final <T> PrivilegedAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
-        return () -> {
-            try {
-                return type.getDeclaredConstructor();
-            } catch (NoSuchMethodException e) {
-                throw as(NoSuchMethodError::new, e, e.getMessage());
-            }
-        };
+    public static final <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
+        return type::getDeclaredConstructor;
+    }
+
+    public static final <T> PrivilegedExceptionAction<T> getNoArgInstance(Class<T> type) {
+        return () -> type.getDeclaredConstructor().newInstance();
     }
 
     public static final PrivilegedAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {

@@ -22,7 +22,6 @@ import org.apache.yoko.rmi.util.ClientUtil;
 import org.apache.yoko.rmi.util.stub.MethodRef;
 import org.apache.yoko.rmi.util.stub.StubClass;
 import org.apache.yoko.rmi.util.stub.StubInitializer;
-import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.INITIALIZE;
@@ -51,12 +50,14 @@ import static java.security.AccessController.doPrivileged;
 import static javax.rmi.CORBA.Util.getTie;
 import static javax.rmi.CORBA.Util.registerTarget;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.InitializerHolder.RMI_STUB_INITIALIZER;
 import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.apache.yoko.util.PrivilegedActions.getDeclaredMethod;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 
@@ -423,10 +424,22 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         javax.rmi.CORBA.Util.unexportObject(obj);
     }
 
-    // the factory object used for creating stub initializers
-    static private StubInitializer initializer = null;
-    // the default stub handler, which is ours without overrides.
-    private static final String defaultInitializer = "org.apache.yoko.rmi.impl.RMIStubInitializer";
+    enum InitializerHolder {
+        ;
+        static final StubInitializer RMI_STUB_INITIALIZER = findRmiStubInitializer();
+
+        private static final String rmiStubInitializerKey ="org.apache.yoko.rmi.RMIStubInitializerClass";
+
+        private static StubInitializer findRmiStubInitializer() {
+            String factory = doPrivileged(getSysProp(rmiStubInitializerKey, RMIStubInitializer.class.getName()));
+            try {
+                final Class<? extends StubInitializer> type = loadServiceClass(factory, rmiStubInitializerKey);
+                return doPrivileged(getNoArgInstance(type));
+            } catch (Exception e) {
+                throw as(INITIALIZE::new, e,"Can not create RMIStubInitializer: " + factory);
+            }
+        }
+    }
 
     /**
      * Get the RMI stub handler initializer to use for RMI invocation
@@ -435,15 +448,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
      * @return The class used to create StubHandler instances.
      */
     private static StubInitializer getRMIStubInitializer() {
-        if (initializer == null) {
-            String factory = doPrivileged(getSysProp("org.apache.yoko.rmi.RMIStubInitializerClass", defaultInitializer));
-            try {
-                final Class<?> type = loadServiceClass(factory, "org.apache.yoko.rmi.RMIStubInitializerClass");
-                initializer = (StubInitializer)(doPrivileged(PrivilegedActions.getNoArgConstructor(type)).newInstance());
-            } catch (Exception e) {
-                throw as(INITIALIZE::new, e,"Can not create RMIStubInitializer: " + factory);
-            }
-        }
-        return initializer;
+        return RMI_STUB_INITIALIZER;
     }
 }

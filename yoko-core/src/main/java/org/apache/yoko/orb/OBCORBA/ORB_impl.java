@@ -32,7 +32,6 @@ import org.apache.yoko.orb.DynamicAny.DynAnyFactory_impl;
 import org.apache.yoko.orb.IOP.CodecFactory_impl;
 import org.apache.yoko.orb.Messaging.RebindPolicy_impl;
 import org.apache.yoko.orb.Messaging.SyncScopePolicy_impl;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.BootManager_impl;
 import org.apache.yoko.orb.OB.CONNECTION_REUSE_POLICY_ID;
 import org.apache.yoko.orb.OB.CONNECT_TIMEOUT_POLICY_ID;
@@ -62,7 +61,6 @@ import org.apache.yoko.orb.OB.Logger;
 import org.apache.yoko.orb.OB.Logger_impl;
 import org.apache.yoko.orb.OB.MessageRoutingIORInterceptor_impl;
 import org.apache.yoko.orb.OB.MessageRoutingUtil;
-import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.MultiRequestSender;
 import org.apache.yoko.orb.OB.ORBControl;
 import org.apache.yoko.orb.OB.ORBInstance;
@@ -116,7 +114,8 @@ import org.apache.yoko.orb.yasf.YasfClientInterceptor;
 import org.apache.yoko.orb.yasf.YasfIORInterceptor;
 import org.apache.yoko.orb.yasf.YasfServerInterceptor;
 import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.util.PrivilegedActions;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.util.concurrent.AutoLock;
 import org.apache.yoko.util.concurrent.AutoReadWriteLock;
 import org.omg.BiDirPolicy.BIDIRECTIONAL_POLICY_TYPE;
@@ -133,7 +132,6 @@ import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.NVList;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.OperationDef;
 import org.omg.CORBA.OperationDefHelper;
@@ -193,6 +191,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.security.PrivilegedActionException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
@@ -205,7 +204,9 @@ import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OB.CodeSetInfo.ISO_LATIN_1;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.GET_SYSPROPS_OR_EMPTY_MAP;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 
 // This class must be public and not final
 public class ORB_impl extends ORBSingleton {
@@ -776,17 +777,15 @@ public class ORB_impl extends ORBSingleton {
                 if (!initializers.containsKey(className)) {
                     try {
                         // get the appropriate class for the loading.
-                        ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                        final Class<?> initClass = ProviderLocator.loadClass(className, getClass(), loader);
-                        initializers.put(className, (ORBInitializer) initClass.newInstance());
+                        ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
+                        final Class<? extends ORBInitializer> initClass = ProviderLocator.loadClass(className, getClass(), loader);
+                        initializers.put(className, doPrivileged(getNoArgInstance(initClass)));
                     }
                     // Exceptions have to be ignored here
-                    catch (ClassNotFoundException ex) {
-                        logger.log(Level.WARNING, "ORB.init: initializer class " + className + " not found", ex);
-                    } catch (InstantiationException ex) {
-                        logger.log(Level.WARNING, "ORB.init: error occurred while instantiating initializer class " + className, ex);
-                    } catch (IllegalAccessException ex) {
-                        logger.log(Level.WARNING, "ORB.init: cannot access initializer class " + className, ex);
+                    catch (ClassNotFoundException e) {
+                        logger.log(Level.WARNING, "ORB.init: initializer class " + className + " not found", e);
+                    } catch (PrivilegedActionException e) {
+                        logger.log(Level.WARNING, "ORB.init: error occurred while instantiating initializer class " + className, e);
                     }
                 }
             }

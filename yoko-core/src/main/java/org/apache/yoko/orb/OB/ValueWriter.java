@@ -16,9 +16,9 @@
  */
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.io.WriteBuffer;
 import org.apache.yoko.orb.CORBA.DataOutputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.io.WriteBuffer;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.cmsf.RepIds;
@@ -35,12 +35,16 @@ import org.omg.CORBA.portable.ValueBase;
 
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
+import java.security.PrivilegedActionException;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.IdentityHashMap;
 
+import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_string;
 
@@ -159,9 +163,7 @@ final public class ValueWriter {
     }
 
     private BoxedValueHelper getHelper(Serializable value, TypeCode type) {
-        BoxedValueHelper result = null;
-
-        Class<?> helperClass = null;
+        Class<? extends BoxedValueHelper> helperClass = null;
         final Class<?> valueClass = value.getClass();
 
         //Short-cuts
@@ -177,9 +179,8 @@ final public class ValueWriter {
         try {
             String name = value.getClass().getName() + "Helper";
             // get the appropriate class for the loading.
-            Class<?> c = ProviderLocator.loadClass(name, value.getClass(), Thread.currentThread().getContextClassLoader());
-            if (BoxedValueHelper.class.isAssignableFrom(c)) helperClass = c;
-        } catch (ClassNotFoundException ignored) {
+            helperClass = ProviderLocator.loadClass(name, value.getClass(), doPrivileged(GET_CONTEXT_CLASS_LOADER));
+        } catch (ClassNotFoundException | ClassCastException ignored) {
         }
 
         //
@@ -201,12 +202,12 @@ final public class ValueWriter {
         //
         if (helperClass != null) {
             try {
-                result = (BoxedValueHelper)helperClass.newInstance();
-            } catch (ClassCastException | IllegalAccessException | InstantiationException ignored) {
+                return doPrivileged(getNoArgInstance(helperClass));
+            } catch (PrivilegedActionException ignored) {
             }
         }
 
-        return result;
+        return null;
     }
 
     private BoxedValueHelper fastPathStringBoxHelper(TypeCode type) {
