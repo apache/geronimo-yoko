@@ -28,23 +28,25 @@ import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
 public class Util {
-    private static final String defaultDelegate = "org.apache.yoko.rmi.impl.UtilImpl";
+    private static final String DEFAULT_DELEGATE = "org.apache.yoko.rmi.impl.UtilImpl";
     private static final String DELEGATE_KEY = "javax.rmi.CORBA.UtilClass";
-    private static final UtilDelegate delegate = getDelegate();
+    private static final UtilDelegate DELEGATE;
 
-    private static UtilDelegate getDelegate() {
-        String delegateName = doPrivileged((PrivilegedAction<String>)() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
+    static {
+        String delegateName = doPriv(() -> System.getProperty(DELEGATE_KEY, DEFAULT_DELEGATE));
         try {
             // this is a bit recursive, but this will use the full default search order for locating this.
             Class<? extends UtilDelegate> delegateClass = loadServiceClass(delegateName, DELEGATE_KEY);
-            return delegateClass.newInstance();
+            DELEGATE = doPrivEx(delegateClass::getConstructor).newInstance();
         } catch (Throwable e) {
-            throw (INITIALIZE) new INITIALIZE("Can not create Util delegate: "+delegateName).initCause(e);
+            throw (INITIALIZE)(new INITIALIZE("Can not create Util delegate: "+delegateName).initCause(e));
         }
     }
 
@@ -52,66 +54,69 @@ public class Util {
     private Util() {}
 
     public static Object copyObject(Object o, ORB orb) throws RemoteException {
-        return delegate.copyObject(o, orb);
+        return DELEGATE.copyObject(o, orb);
     }
 
     public static Object[] copyObjects(Object[] objs, ORB orb) throws RemoteException {
-        return delegate.copyObjects(objs, orb);
+        return DELEGATE.copyObjects(objs, orb);
     }
 
     public static ValueHandler createValueHandler() {
-        return delegate.createValueHandler();
+        return DELEGATE.createValueHandler();
     }
 
     public static String getCodebase(Class clz) {
-        return delegate.getCodebase(clz);
+        return DELEGATE.getCodebase(clz);
     }
 
     public static Tie getTie(Remote t) {
-        return delegate.getTie(t);
+        return DELEGATE.getTie(t);
     }
 
     public static boolean isLocal(Stub s) throws RemoteException {
-        return delegate.isLocal(s);
+        return DELEGATE.isLocal(s);
     }
 
     public static Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
-        return null == delegate ?
+        return null == DELEGATE ?
                 // If there is no delegate yet, use the default implementation search order
                 UtilLoader.loadClass(name, loader) :
-                delegate.loadClass(name, codebase, loader);
+                DELEGATE.loadClass(name, codebase, loader);
 
     }
 
     public static RemoteException mapSystemException(SystemException e) {
-        return delegate.mapSystemException(e);
+        return DELEGATE.mapSystemException(e);
     }
 
     public static Object readAny(InputStream is) {
-        return delegate.readAny(is);
+        return DELEGATE.readAny(is);
     }
 
     public static void registerTarget(Tie tie, Remote target) {
-        delegate.registerTarget(tie, target);
+        DELEGATE.registerTarget(tie, target);
     }
 
     public static void unexportObject(Remote t) throws NoSuchObjectException {
-        delegate.unexportObject(t);
+        DELEGATE.unexportObject(t);
     }
 
     public static RemoteException wrapException(Throwable e) {
-        return delegate.wrapException(e);
+        return DELEGATE.wrapException(e);
     }
 
     public static void writeAbstractObject(OutputStream os, Object o) {
-        delegate.writeAbstractObject(os, o);
+        DELEGATE.writeAbstractObject(os, o);
     }
 
     public static void writeAny(OutputStream os, Object o) {
-        delegate.writeAny(os, o);
+        DELEGATE.writeAny(os, o);
     }
 
     public static void writeRemoteObject(OutputStream os, Object o) {
-        delegate.writeRemoteObject(os, o);
+        DELEGATE.writeRemoteObject(os, o);
     }
+
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
+    private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }

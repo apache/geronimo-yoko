@@ -18,13 +18,6 @@
 
 package org.apache.yoko.rmi.impl;
 
-import java.lang.reflect.Field;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.logging.Logger;
-
-import org.omg.CORBA.ORB;
-
 /**
  * This class is the interface for instances of POAStub. When a client
  * calls a remote method, this is translated to a call to the invoke() method in
@@ -44,7 +37,7 @@ public interface StubHandler {
      * @return The method return value (if any).
      * @exception Throwable
      */
-    public Object invoke(RMIStub stub, MethodDescriptor method, Object[] args) throws Throwable;
+    Object invoke(RMIStub stub, MethodDescriptor method, Object[] args) throws Throwable;
     
     /**
      * Handle a writeReplace operation on a Stub. 
@@ -53,6 +46,6 @@ public interface StubHandler {
      * 
      * @return The replacement object for serialization.
      */
-    public Object stubWriteReplace(RMIStub stub);
+    Object stubWriteReplace(RMIStub stub);
 }
 

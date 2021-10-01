@@ -43,6 +43,7 @@ import java.lang.reflect.Method;
 import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.security.PrivilegedActionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -51,6 +52,7 @@ import static javax.rmi.CORBA.Util.getTie;
 import static javax.rmi.CORBA.Util.registerTarget;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.InitializerHolder.RMI_STUB_INITIALIZER;
+import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.StubInvokeMethodHolder.STUB_INVOKE_METHOD;
 import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
@@ -68,6 +70,30 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         // Initialize the stub handler factory when first loaded to ensure we have
         // class loading visibility to the factory.
         getRMIStubInitializer();
+    }
+
+    enum StubInvokeMethodHolder {
+        ;
+        static final Method STUB_INVOKE_METHOD;
+        static {
+            try {
+                STUB_INVOKE_METHOD = doPrivileged(getDeclaredMethod(StubHandler.class, "invoke", RMIStub.class, MethodDescriptor.class, Object[].class));
+            } catch (PrivilegedActionException ex) {
+                throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), e -> new Error(e));
+            }
+        }
+    }
+
+    enum StubWriteReplaceMethodHolder {
+        ;
+        static final Method STUB_WRITE_REPLACE_METHOD;
+        static {
+            try {
+                STUB_WRITE_REPLACE_METHOD = doPrivileged(getDeclaredMethod(RMIStub.class, "writeReplace"));
+            } catch (PrivilegedActionException ex) {
+                throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), e -> new Error(e));
+            }
+        }
     }
 
     public void connect(Remote target, Remote source) throws RemoteException {
@@ -231,16 +257,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         }
     }
 
-    private static final Method stub_write_replace;
-
-    static {
-        try {
-            stub_write_replace = doPrivileged(getDeclaredMethod(RMIStub.class, "writeReplace"));
-        } catch (Throwable ex) {
-            throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), Error::new);
-        }
-    }
-
     static Constructor<? extends Stub> getRMIStubClassConstructor(RMIState state, Class<?> type) {
         LOGGER.fine("Requesting stub constructor of class " + type.getName());
         @SuppressWarnings("unchecked")
@@ -271,7 +287,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             LOGGER.finer("Method ----> " + m);
             methods[i] = new MethodRef(m);
         }
-        methods[mdesc.length] = new MethodRef(stub_write_replace);
+        methods[mdesc.length] = new MethodRef(StubWriteReplaceMethodHolder.STUB_WRITE_REPLACE_METHOD);
 
 
         Class<? extends Stub> stubClass = null;
@@ -298,7 +314,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
                     descriptors,
 
                     /* the handler method */
-                    getPOAStubInvokeMethod(),
+                    STUB_INVOKE_METHOD,
 
                     /* package name (use superclass') */
                     getPackageName(type),
@@ -328,7 +344,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
                     descriptors,
 
                     /* the handler method */
-                    getPOAStubInvokeMethod(),
+                    STUB_INVOKE_METHOD,
 
                     /* package name (use superclass') */
                     getPackageName(type),
@@ -360,20 +376,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         }
     }
 
-    private static Method poa_stub_invoke_method;
-
-    static Method getPOAStubInvokeMethod() {
-        if (poa_stub_invoke_method == null) {
-            // get the interface method used to invoke the stub handler
-            poa_stub_invoke_method = doPrivileged(getDeclaredMethod(StubHandler.class, "invoke",
-                    RMIStub.class, MethodDescriptor.class, Object[].class));
-        }
-
-        return poa_stub_invoke_method;
-    }
-
-    public Remote toStub(Remote value)
-            throws NoSuchObjectException {
+    public Remote toStub(Remote value) throws NoSuchObjectException {
         if (value instanceof Stub)
             return value;
 

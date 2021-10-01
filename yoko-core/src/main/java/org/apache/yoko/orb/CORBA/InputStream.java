@@ -17,7 +17,9 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.util.Assert;
+import org.apache.yoko.io.AlignmentBoundary;
+import org.apache.yoko.io.Buffer;
+import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetReader;
@@ -25,11 +27,9 @@ import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
 import org.apache.yoko.orb.OB.TypeCodeCache;
 import org.apache.yoko.orb.OB.ValueReader;
-import org.apache.yoko.io.AlignmentBoundary;
-import org.apache.yoko.io.Buffer;
-import org.apache.yoko.io.ReadBuffer;
 import org.apache.yoko.orb.OCI.GiopVersion;
 import org.apache.yoko.rmi.impl.InputStreamWithOffsets;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.BAD_TYPECODE;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.MARSHAL;
@@ -48,14 +48,28 @@ import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.math.BigDecimal;
-import java.security.AccessController;
 import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Hashtable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
 
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.io.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
+import static org.apache.yoko.io.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
+import static org.apache.yoko.io.AlignmentBoundary.TWO_BYTE_BOUNDARY;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createAbstractInterfaceTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createAliasTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createEnumTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createFixedTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createInterfaceTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createLocalInterfaceTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createNativeTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
+import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.apache.yoko.util.Assert.ensure;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidUnionDiscriminator;
 import static org.apache.yoko.util.MinorCodes.MinorLoadStub;
@@ -86,21 +100,8 @@ import static org.apache.yoko.util.MinorCodes.MinorReadWStringOverflow;
 import static org.apache.yoko.util.MinorCodes.MinorReadWStringZeroLength;
 import static org.apache.yoko.util.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createAbstractInterfaceTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createAliasTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createEnumTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createFixedTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createInterfaceTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createLocalInterfaceTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createNativeTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createStringTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
-import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
-import static org.apache.yoko.io.AlignmentBoundary.EIGHT_BYTE_BOUNDARY;
-import static org.apache.yoko.io.AlignmentBoundary.FOUR_BYTE_BOUNDARY;
-import static org.apache.yoko.io.AlignmentBoundary.TWO_BYTE_BOUNDARY;
-import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
+import static org.apache.yoko.util.PrivilegedActions.getMethod;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
 import static org.omg.CORBA.TCKind._tk_TypeCode;
@@ -154,14 +155,14 @@ final public class InputStream extends InputStreamWithOffsets {
 
     //
     // Handles all OBV marshaling
-    // 
+    //
     private ValueReader valueReader_;
 
     private TypeCodeCache cache_;
 
     //
     // Character conversion properties
-    // 
+    //
     private CodeConverters codeConverters_;
 
     private boolean charReaderRequired_;
@@ -245,8 +246,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_objref : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -272,8 +273,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_except : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -315,8 +316,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_union : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -402,8 +403,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_enum : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -468,8 +469,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_alias : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -495,8 +496,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_value : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -544,8 +545,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_value_box : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -570,8 +571,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_abstract_interface : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -599,8 +600,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case _tk_native : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -625,8 +626,8 @@ final public class InputStream extends InputStreamWithOffsets {
                 case TCKind._tk_local_interface : {
                     int length = read_ulong(); // encapsulation length
                     // save this position after the read, since we might be on a chunk boundary.
-                    // however, we do an explicit check for the chunk boundary before doing the 
-                    // read. 
+                    // however, we do an explicit check for the chunk boundary before doing the
+                    // read.
                     checkChunk();
                     int typePos = readBuffer.getPosition();
                     boolean swap = swap_;
@@ -1251,13 +1252,13 @@ final public class InputStream extends InputStreamWithOffsets {
 
         if (obj == null) return null;
 
-        // OK, we have two possibilities here.  The usual possibility is we're asked to load 
-        // an object using a specified Stub class.  We just create an instance of the stub class, 
-        // attach the object as a delegate, and we're done. 
-        // 
+        // OK, we have two possibilities here.  The usual possibility is we're asked to load
+        // an object using a specified Stub class.  We just create an instance of the stub class,
+        // attach the object as a delegate, and we're done.
+        //
         // The second possibility is a request for an instance of an interface.  This will require
-        // us to locate a stub class using the defined Stub search orders.  After that, the process 
-        // is largely the same. 
+        // us to locate a stub class using the defined Stub search orders.  After that, the process
+        // is largely the same.
         org.omg.CORBA.portable.ObjectImpl impl = (org.omg.CORBA.portable.ObjectImpl) obj;
 
         if (org.omg.CORBA.portable.ObjectImpl.class.isAssignableFrom(expectedType)) {
@@ -1269,15 +1270,9 @@ final public class InputStream extends InputStreamWithOffsets {
         try {
             if (IDLEntity.class.isAssignableFrom(expectedType)) {
                 final Class<?> helperClass = Util.loadClass(expectedType.getName() + "Helper", codebase, expectedType.getClassLoader());
-                final Method helperNarrow = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                    @Override
-                    public Method run() throws NoSuchMethodException {
-                        return helperClass.getMethod("narrow", org.omg.CORBA.Object.class);
-                    }
-                });
+                final Method helperNarrow = doPrivileged(getMethod(helperClass,"narrow", Object.class));
                 return (org.omg.CORBA.Object) helperNarrow.invoke(null, impl);
             }
-
             return createStub(getRMIStubClass(codebase, expectedType), impl._get_delegate());
         } catch (IllegalAccessException | ClassNotFoundException | ClassCastException | PrivilegedActionException | InvocationTargetException ex) {
             logger.log(Level.FINE, "Exception creating object stub", ex);
@@ -1292,10 +1287,10 @@ final public class InputStream extends InputStreamWithOffsets {
         @SuppressWarnings("unchecked")
         Class<? extends ObjectImpl> clz = (Class<? extends ObjectImpl>) stubClass;
         try {
-            org.omg.CORBA.portable.ObjectImpl stub = clz.newInstance();
+            org.omg.CORBA.portable.ObjectImpl stub = doPrivileged(getNoArgInstance(clz));
             stub._set_delegate(delegate);
             return stub;
-        } catch (IllegalAccessException | InstantiationException ex) {
+        } catch (PrivilegedActionException ex) {
             logger.log(Level.FINE, "Exception creating object stub", ex);
             MARSHAL m = new MARSHAL("Unable to create stub for class " + clz.getName(), MinorLoadStub, COMPLETED_NO);
             m.initCause(ex);

@@ -125,7 +125,7 @@ public enum ProviderLocator {;
             // TODO: this should have a doPrivileged() around it
             // BUT because locateServiceClass tries to load any service described in one loader
             // from another loader as well, a doPrivileged() block here would expose a HUGE security hole
-            return cls.newInstance();
+            return cls.getConstructor().newInstance();
         }
         // a provider was not found
         return null;

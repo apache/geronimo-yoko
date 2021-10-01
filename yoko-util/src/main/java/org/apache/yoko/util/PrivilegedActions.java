@@ -17,7 +17,6 @@
 package org.apache.yoko.util;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
@@ -27,7 +26,6 @@ import java.util.Properties;
 import java.util.function.Supplier;
 
 import static java.lang.Thread.currentThread;
-import static org.apache.yoko.util.Exceptions.as;
 
 public enum PrivilegedActions {
     ;
@@ -54,24 +52,12 @@ public enum PrivilegedActions {
         return () -> type.getDeclaredConstructor().newInstance();
     }
 
-    public static final PrivilegedAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {
-        return () -> {
-            try {
-                return type.getMethod(name, parameterTypes);
-            } catch (NoSuchMethodException e) {
-                throw as(NoSuchMethodError::new, e, e.getMessage());
-            }
-        };
+    public static final PrivilegedExceptionAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {
+        return () -> type.getMethod(name, parameterTypes);
     }
 
-    public static final PrivilegedAction<Method> getDeclaredMethod(Class<?> type, String name, Class<?>...parameterTypes) {
-        return () -> {
-            try {
-                return type.getDeclaredMethod(name, parameterTypes);
-            } catch (NoSuchMethodException e) {
-                throw as(NoSuchMethodError::new, e, e.getMessage());
-            }
-        };
+    public static final PrivilegedExceptionAction<Method> getDeclaredMethod(Class<?> type, String name, Class<?>...parameterTypes) {
+        return () -> type.getDeclaredMethod(name, parameterTypes);
     }
 
     public static final <T> PrivilegedAction<T> action(Supplier<T> supplier) { return supplier::get; }

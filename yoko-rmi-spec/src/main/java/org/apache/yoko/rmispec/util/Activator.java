@@ -12,8 +12,10 @@ public final class Activator extends AbstractBundleActivator {
         }
 
         @Override
-        public Object newInstance(Class cls) throws InstantiationException, IllegalAccessException {
-            return cls.newInstance();
+        public Object newInstance(Class cls) throws IllegalAccessException {
+            // no Info objects are passed to the activator's parent constructor
+            // so no service instances can be requested
+            throw new IllegalAccessException("Cannot instantiate class " + cls);
         }
     }
 
