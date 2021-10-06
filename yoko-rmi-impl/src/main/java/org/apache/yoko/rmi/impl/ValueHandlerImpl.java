@@ -17,7 +17,6 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.rmi.util.SerialFilterHelper;
-import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.MARSHAL;
@@ -37,7 +36,6 @@ import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
-import java.security.AccessController;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -57,7 +55,7 @@ public class ValueHandlerImpl implements ValueHandler {
     private final Map<InputStream, Map<Integer, Serializable>> streamMap = new HashMap<>();
     private final TypeRepository repo;
     private RunTimeCodeBaseImpl codeBase;
-    private int depth = 0;
+    private final ThreadLocal<IntegerHolder> localDepth = ThreadLocal.withInitial(IntegerHolder::new);
 
     private ValueHandlerImpl() {
         this.repo = TypeRepository.get();
@@ -67,6 +65,8 @@ public class ValueHandlerImpl implements ValueHandler {
         ;
         static final ValueHandlerImpl value = new ValueHandlerImpl();
     }
+
+    private class IntegerHolder { int value=0; }
 
     public static ValueHandlerImpl get() {
         return HandlerHolder.value;
@@ -95,15 +95,16 @@ public class ValueHandlerImpl implements ValueHandler {
     }
 
     public Serializable readValue(InputStream in, int offset, Class clz, String repid, RunTime codebase) {
+        final IntegerHolder depthHolder = localDepth.get();
         try {
-            depth++;
-            SerialFilterHelper.checkInput(clz, depth, in);
+            depthHolder.value++;
+            SerialFilterHelper.checkInput(clz, depthHolder.value, in);
             return readValue0(in, offset, clz, repid, codebase);
         } catch (Error | RuntimeException ex) {
             logger.log(Level.FINE, "Exception reading value of type " + repid, ex); 
             throw ex;
         } finally {
-            depth--;
+            depthHolder.value--;
         }
     }
 

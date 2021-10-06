@@ -48,12 +48,7 @@ public enum SerialFilterHelper {
             filterAdapter = new JavaIoFilterAdapter();
         } catch (Throwable t1) {
             try {
-                filterAdapter = doPrivileged(new PrivilegedExceptionAction<FilterAdapter>() {
-                    @Override
-                    public FilterAdapter run() {
-                        return new SunMiscFilterAdapter();
-                    }
-                });
+                filterAdapter = doPrivileged((PrivilegedExceptionAction<FilterAdapter>)SunMiscFilterAdapter::new);
             } catch (Throwable t2) {
                 filterAdapter = new NullFilterAdapter();
             }
@@ -61,7 +56,7 @@ public enum SerialFilterHelper {
         HELPER = filterAdapter;
     }
 
-    public static final void checkInput(Class<?> serialClass, long arrayLength, long depth, long position) {
+    public static void checkInput(Class<?> serialClass, long arrayLength, long depth, long position) {
         try {
             HELPER.checkInput(serialClass, arrayLength, depth, position);
         } catch (InvalidClassException ice) {
@@ -71,9 +66,12 @@ public enum SerialFilterHelper {
 
     private static long position(InputStream in) { return (in instanceof InputStreamWithOffsets) ? ((InputStreamWithOffsets) in).position() : 0; }
 
-    public static final void checkArrayInput(Class<?> type, long arraylength, InputStream in) { checkInput(type, arraylength, 1, position(in)); }
+    public static void checkArrayInput(Class<?> type, long arraylength, InputStream in) {
+        // depth previously checked for this object from ValueHandlerImpl.readValue0
+        checkInput(type, arraylength, 1, position(in));
+    }
 
-    public static final void checkInput(Class<?> type, long depth, InputStream in) { checkInput(type, -1, depth, position(in)); }
+    public static void checkInput(Class<?> type, long depth, InputStream in) { checkInput(type, -1, depth, position(in)); }
 
     private abstract static class FilterAdapter {
         {
@@ -123,6 +121,7 @@ public enum SerialFilterHelper {
         }
 
         abstract STATUS checkInput(INFO info);
+        @SuppressWarnings("SameParameterValue")
         abstract INFO makeInfo(Class<?> serialClass, long arrayLength, long depth, long references, long streamBytes);
 
     }
