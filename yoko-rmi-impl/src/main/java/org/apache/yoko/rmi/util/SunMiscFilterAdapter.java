@@ -34,12 +34,7 @@ final class SunMiscFilterAdapter extends BaseFilterAdapter<ObjectInputFilter, In
 
     @Override
     Status checkInput(final Info info) {
-        return doPrivileged(new PrivilegedAction<Status>() {
-            @Override
-            public Status run() {
-                return filter.checkInput(info);
-            }
-        });
+        return doPrivileged((PrivilegedAction<Status>) () -> filter.checkInput(info));
     }
 
     @Override
