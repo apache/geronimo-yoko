@@ -21,10 +21,8 @@ package org.apache.yoko.rmi.impl;
 import org.apache.yoko.rmi.util.ClientUtil;
 import org.apache.yoko.rmi.util.stub.MethodRef;
 import org.apache.yoko.rmi.util.stub.StubClass;
-import org.apache.yoko.rmi.util.stub.StubInitializer;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
-import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.portable.Delegate;
 import org.omg.CORBA.portable.IDLEntity;
 import org.omg.CORBA.portable.ObjectImpl;
@@ -51,38 +49,16 @@ import static java.security.AccessController.doPrivileged;
 import static javax.rmi.CORBA.Util.getTie;
 import static javax.rmi.CORBA.Util.registerTarget;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
-import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.InitializerHolder.RMI_STUB_INITIALIZER;
-import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.StubInvokeMethodHolder.STUB_INVOKE_METHOD;
-import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.apache.yoko.util.PrivilegedActions.getDeclaredMethod;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 
 public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
     static final Logger LOGGER = Logger.getLogger(PortableRemoteObjectImpl.class.getName());
-
-    static {
-        // Initialize the stub handler factory when first loaded to ensure we have
-        // class loading visibility to the factory.
-        getRMIStubInitializer();
-    }
-
-    enum StubInvokeMethodHolder {
-        ;
-        static final Method STUB_INVOKE_METHOD;
-        static {
-            try {
-                STUB_INVOKE_METHOD = doPrivileged(getDeclaredMethod(StubHandler.class, "invoke", RMIStub.class, MethodDescriptor.class, Object[].class));
-            } catch (PrivilegedActionException ex) {
-                throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), e -> new Error(e));
-            }
-        }
-    }
 
     enum StubWriteReplaceMethodHolder {
         ;
@@ -293,65 +269,9 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         Class<? extends Stub> stubClass = null;
 
         try {
-            /* Construct class! */
-            stubClass = StubClass.make(
-                    /* the class loader to use */
-                    doPrivileged(action(type::getClassLoader)),
-
-                    /* the bean developer's bean class */
-                    RMIStub.class,
-
-                    /* interfaces */
-                    new Class[] { type },
-
-                    /* the methods */
-                    methods,
-
-                    /* contains only ejbCreate */
-                    null,
-
-                    /* our data objects */
-                    descriptors,
-
-                    /* the handler method */
-                    STUB_INVOKE_METHOD,
-
-                    /* package name (use superclass') */
-                    getPackageName(type),
-
-                    /* provider of handlers */
-                    getRMIStubInitializer()
-            );
+            stubClass = StubClass.make(type, descriptors, methods, doPrivileged(action(type::getClassLoader)));
         } catch (NoClassDefFoundError ex) {
-            /* Construct class! */
-            stubClass = StubClass.make(
-                    /* the class loader to use */
-                    doPrivileged(GET_CONTEXT_CLASS_LOADER),
-
-                    /* the bean developer's bean class */
-                    RMIStub.class,
-
-                    /* interfaces */
-                    new Class[] { type },
-
-                    /* the methods */
-                    methods,
-
-                    /* contains only ejbCreate */
-                    null,
-
-                    /* our data objects */
-                    descriptors,
-
-                    /* the handler method */
-                    STUB_INVOKE_METHOD,
-
-                    /* package name (use superclass') */
-                    getPackageName(type),
-
-                    /* provider of handlers */
-                    getRMIStubInitializer()
-            );
+            stubClass = StubClass.make(type, descriptors, methods, doPrivileged(GET_CONTEXT_CLASS_LOADER));
         }
 
         if (stubClass != null) {
@@ -364,16 +284,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         }
 
         return cons;
-    }
-
-    static String getPackageName(Class clazz) {
-        String class_name = clazz.getName();
-        int idx = class_name.lastIndexOf('.');
-        if (idx == -1) {
-            return null;
-        } else {
-            return class_name.substring(0, idx);
-        }
     }
 
     public Remote toStub(Remote value) throws NoSuchObjectException {
@@ -427,30 +337,4 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         javax.rmi.CORBA.Util.unexportObject(obj);
     }
 
-    enum InitializerHolder {
-        ;
-        static final StubInitializer RMI_STUB_INITIALIZER = findRmiStubInitializer();
-
-        private static final String rmiStubInitializerKey ="org.apache.yoko.rmi.RMIStubInitializerClass";
-
-        private static StubInitializer findRmiStubInitializer() {
-            String factory = doPrivileged(getSysProp(rmiStubInitializerKey, RMIStubInitializer.class.getName()));
-            try {
-                final Class<? extends StubInitializer> type = loadServiceClass(factory, rmiStubInitializerKey);
-                return doPrivileged(getNoArgInstance(type));
-            } catch (Exception e) {
-                throw as(INITIALIZE::new, e,"Can not create RMIStubInitializer: " + factory);
-            }
-        }
-    }
-
-    /**
-     * Get the RMI stub handler initializer to use for RMI invocation
-     * stubs.  The Class in question must implement the StubInitializer method.
-     *
-     * @return The class used to create StubHandler instances.
-     */
-    private static StubInitializer getRMIStubInitializer() {
-        return RMI_STUB_INITIALIZER;
-    }
 }

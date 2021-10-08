@@ -28,9 +28,9 @@ import java.security.PrivilegedAction;
 import java.security.ProtectionDomain;
 import java.security.cert.Certificate;
 
+import static java.lang.Thread.currentThread;
 import static java.security.AccessController.doPrivileged;
 import static java.util.Objects.requireNonNull;
-import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 class Util {
     static String getPackageName(Class clazz) {
@@ -73,38 +73,29 @@ class Util {
             return new ProtectionDomain(new CodeSource(STUB_SOURCE_URL, NO_CERTS), new Permissions(), loader, null);
         }
 
-        private static PrivilegedAction<Class> invoker(ClassLoader loader, String className, byte[] data) {
-            return () -> {
+        /** Requires the caller to have class definition privileges */
+        private static Class<?> invoke(ClassLoader loader, String className, byte[] data) {
+            try {
+                return (Class) defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
+            } catch (IllegalAccessException|IllegalArgumentException ex) {
+                throw new Error("internal error", ex);
+            } catch (InvocationTargetException ex) {
                 try {
-                    return (Class) defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
-                } catch (IllegalAccessException|IllegalArgumentException ex) {
-                    throw new Error("internal error", ex);
-                } catch (InvocationTargetException ex) {
-                    try {
-                        throw ex.getTargetException();
-                    } catch (Error|RuntimeException e) {
-                        throw e;
-                    } catch (Throwable e) {
-                        throw new Error("unexpected exception: " + ex.getMessage(), ex);
-                    }
+                    throw ex.getTargetException();
+                } catch (Error|RuntimeException e) {
+                    throw e;
+                } catch (Throwable e) {
+                    throw new Error("unexpected exception: " + ex.getMessage(), ex);
                 }
-            };
+            }
         }
     }
 
+    /** Requires the caller to have class definition privileges */
     static Class defineClass(final ClassLoader loader, String className, byte[] data) {
         return loader == null ?
-                defineClass(requireNonNull(doPrivileged(GET_CONTEXT_CLASS_LOADER)), className, data) :
-                doPrivileged(DefineClass.invoker(loader, className, data));
+                defineClass(requireNonNull(currentThread().getContextClassLoader()), className, data) :
+                DefineClass.invoke(loader, className, data);
     }
 
-    static String methodFieldName(int i) { return "__method$" + i; }
-
-    static String handlerFieldName() { return "__handler"; }
-
-    static String initializerFieldName() { return "__initializer"; }
-
-    static String getSuperMethodName(String name) {
-        return String.format("__super_%s$%s", name, Integer.toHexString(name.hashCode() & 0xffff));
-    }
 }

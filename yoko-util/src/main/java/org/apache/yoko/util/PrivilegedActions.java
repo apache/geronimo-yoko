@@ -23,7 +23,6 @@ import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
-import java.util.function.Supplier;
 
 import static java.lang.Thread.currentThread;
 
@@ -60,5 +59,5 @@ public enum PrivilegedActions {
         return () -> type.getDeclaredMethod(name, parameterTypes);
     }
 
-    public static final <T> PrivilegedAction<T> action(Supplier<T> supplier) { return supplier::get; }
+    public static final <T> PrivilegedAction<T> action(PrivilegedAction<T> action) { return action; }
 }
