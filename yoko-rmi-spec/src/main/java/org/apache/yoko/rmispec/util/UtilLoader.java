@@ -91,6 +91,7 @@ public class UtilLoader {
         Optional<Class<T>> foundClass = Stream.of(loadersFromStack, loaderOfThisClass, loaderFromContext)
                 .flatMap(s -> s)
                 .map(loadClass)
+                .filter(Objects::nonNull)
                 .findFirst();
 
         if (foundClass.isPresent()) return foundClass.get();
