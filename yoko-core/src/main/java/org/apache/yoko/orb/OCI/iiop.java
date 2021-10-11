@@ -17,15 +17,34 @@
 
 package org.apache.yoko.orb.OCI;
 
-import java.util.logging.Logger;
-
-import org.apache.yoko.util.AssertionFailed;
+import org.apache.yoko.orb.OB.OptionFilter;
 import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
 import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
+import org.apache.yoko.orb.OCI.IIOP.Plugin_impl;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.AssertionFailed;
+import org.apache.yoko.util.Exceptions;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.StringSeqHolder;
+
+import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Properties;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
+
+import static java.security.AccessController.doPrivileged;
+import static java.util.Optional.ofNullable;
+import static java.util.logging.Level.FINE;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 
 public class iiop implements PluginInit {
     static final Logger logger = Logger.getLogger(iiop.class.getName());
+    public static final String ROOT_POAMGR_ENDPOINT_KEY = "yoko.orb.poamanager.RootPOAManager.endpoint";
+    public static final String OA_ENDPOINT_KEY = "yoko.orb.oa.endpoint";
     // default settings for loading the connectionHelper "plugin-to-the-plugin"
     private String connectionHelper = "org.apache.yoko.orb.OCI.IIOP.DefaultConnectionHelper";
     private String helperArgs = "";
@@ -35,242 +54,57 @@ public class iiop implements PluginInit {
     // compatible with the given OCI version, and raise an exception
     // if not.
     //
-    public void version(org.omg.CORBA.ORB orb, String ver) {
+    public void version(ORB orb, String ver) {
         // Nothing to do
     }
 
     //
     // Initialize the plug-in for an ORB
     //
-    public org.apache.yoko.orb.OCI.Plugin init(org.omg.CORBA.ORB orb,
-            org.omg.CORBA.StringSeqHolder args) {
+    public Plugin init(ORB orb, StringSeqHolder args) {
         org.apache.yoko.orb.CORBA.ORB oborb = (org.apache.yoko.orb.CORBA.ORB) orb;
-        java.util.Properties props = oborb.properties();
+        Properties props = oborb.properties();
 
-        //
-        // Parse arguments
-        //
         args.value = parse_args(args.value, props);
 
         try {
             // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-            Class c = ProviderLocator.loadClass(connectionHelper, getClass(), loader);
-            Object o = c.newInstance();
-            if (o instanceof org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) {
-                ConnectionHelper helper = (org.apache.yoko.orb.OCI.IIOP.ConnectionHelper) o;
-                // give this a chance to initializer
+            Class<?> c = ProviderLocator.loadClass(connectionHelper, getClass(), doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            Object o = doPrivileged(getNoArgInstance(c));
+            if (o instanceof ConnectionHelper) {
+                ConnectionHelper helper = (ConnectionHelper)o;
                 helper.init(orb, helperArgs);
-                return new org.apache.yoko.orb.OCI.IIOP.Plugin_impl(orb, helper);
-            } else if (o instanceof org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper) {
-                ExtendedConnectionHelper helper = (org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper) o;
-                // give this a chance to initializer
+                return new Plugin_impl(orb, helper);
+            } else if (o instanceof ExtendedConnectionHelper) {
+                ExtendedConnectionHelper helper = (ExtendedConnectionHelper)o;
                 helper.init(orb, helperArgs);
-                return new org.apache.yoko.orb.OCI.IIOP.Plugin_impl(orb, helper);
+                return new Plugin_impl(orb, helper);
             }
             throw new AssertionFailed("connection helper class " + connectionHelper + " does not implement ConnectionHelper or ExtendedConnectionHelper");
-        } catch (AssertionFailed af) {
-            throw af;
-        } catch (org.omg.CORBA.INITIALIZE i) {
-            throw i;
-        } catch (Exception ex) {
-            throw new org.omg.CORBA.INITIALIZE("unable to load IIOP ConnectionHelper plug-in `" + connectionHelper + "': " + ex.getMessage());
+        } catch (AssertionFailed|INITIALIZE e) {
+            throw e;
+        } catch (Exception e) {
+            throw Exceptions.as(INITIALIZE::new, e, "unable to load IIOP ConnectionHelper plug-in `" + connectionHelper + "'");
         }
-
     }
 
     //
     // Parse IIOP arguments. The return value is the a new array
     // with the IIOP arguments removed.
     //
-    public String[] parse_args(String[] args, java.util.Properties props) {
-        String backlog = null;
-        String bind = null;
-        String host = null;
-        boolean numeric = false;
-        String port = null;
-        boolean haveArgs = false;
+    public String[] parse_args(String[] args, Properties props) {
+        OptionParser
+                .parse(props) // parse properties first since they have lower precedence
+                .parse(args) // parse args second so they can override properties
+                .apply(this)
+                .update(props);
 
-        //
-        // First check deprecated properties, which have lowest precedence
-        //
-        {
-            java.util.Enumeration keys = props.keys();
-            while (keys.hasMoreElements()) {
-                String key = (String) keys.nextElement();
-                // we'll recognize and process the some of the 
-                // portable CORBA properties for cross-orb compatibility
-                if (key.startsWith("org.omg.CORBA.")) {
-                    String value = props.getProperty(key);
-                    if (key.equals("org.omg.CORBA.ORBInitialHost")) {
-                        host = value; 
-                        haveArgs = true; 
-                        logger.fine("Using ORBInitialHost value of " + host); 
-                    }
-                    else if (key.equals("org.omg.CORBA.ORBInitialPort")) {
-                        port = value; 
-                        haveArgs = true; 
-                        logger.fine("Using ORBInitialPort value of " + port); 
-                    }
-                    else if (key.equals("org.omg.CORBA.ORBListenEndpoints")) {
-                        // both specified on one property 
-                        int sep = value.indexOf(':'); 
-                        if (sep != -1) {
-                            host = value.substring(0, sep); 
-                            port = value.substring(sep + 1); 
-                            haveArgs = true; 
-                            logger.fine("Using ORBListenEndpoints values of " + host + "/" + port); 
-                        }
-                    }
-                }
-                else if (key.startsWith("yoko.iiop.")) {
-                    String value = props.getProperty(key);
-
-                    if (key.equals("yoko.iiop.host")) {
-                        host = value;
-                        haveArgs = true;
-                        logger.fine("Using yoko.iiop.host value of " + host); 
-                    } else if (key.equals("yoko.iiop.numeric")) {
-                        numeric = true;
-                        haveArgs = true;
-                        logger.fine("Using yoko.iiop.numeric value"); 
-                    } else if (key.equals("yoko.iiop.port")) {
-                        port = value;
-                        haveArgs = true;
-                        logger.fine("Using yoko.iiop.port value of " + port); 
-                    } else {
-                        throw new org.omg.CORBA.INITIALIZE("iiop: unknown "
-                                + "property " + key);
-                    }
-                }
-            }
-        }
-
-        //
-        // Check command-line arguments
-        //
-        int i = 0;
-        while (i < args.length) {
-            if (args[i].equals("-IIOPbacklog")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + "-IIOPbacklog");
-                backlog = args[i + 1];
-                haveArgs = true;
-                i += 2;
-            } else if (args[i].equals("-IIOPbind")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + "-IIOPbind");
-                bind = args[i + 1];
-                haveArgs = true;
-                i += 2;
-            } else if (args[i].equals("-IIOPhost") || args[i].equals("-OAhost")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + args[i]);
-                host = args[i + 1];
-                haveArgs = true;
-                i += 2;
-            } else if (args[i].equals("-IIOPnumeric")
-                    || args[i].equals("-OAnumeric")) {
-                numeric = true;
-                haveArgs = true;
-                i++;
-            } else if (args[i].equals("-IIOPport") || args[i].equals("-OAport")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + args[i]);
-                port = args[i + 1];
-                haveArgs = true;
-                i += 2;
-            } else if (args[i].equals("-IIOPconnectionHelper")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + args[i]);
-                connectionHelper = args[i + 1];
-                // NB:  We strip out the connection helper related arguments, so we don't set the
-                // haveArgs flag for this.
-                i += 2;
-            } else if (args[i].equals("-IIOPconnectionHelperArgs")) {
-                if (i + 1 >= args.length)
-                    throw new org.omg.CORBA.INITIALIZE("iiop: argument "
-                            + "expected for " + args[i]);
-                helperArgs = args[i + 1];
-                // NB:  We strip out the connection helper related arguments, so we don't set the
-                // haveArgs flag for this.
-                i += 2;
-            } else if (args[i].startsWith("-IIOP")) {
-                throw new org.omg.CORBA.INITIALIZE("iiop: unknown option `"
-                        + args[i] + "'");
-            } else
-                i++;
-        }
-
-        if (haveArgs) {
-            String propName = "yoko.orb.poamanager.RootPOAManager.endpoint";
-            String value = props.getProperty(propName);
-            if (value == null) {
-                propName = "yoko.orb.oa.endpoint";
-                value = props.getProperty(propName);
-            }
-
-            String str = "iiop";
-            if (backlog != null) {
-                str += " --backlog ";
-                str += backlog;
-            }
-            if (bind != null) {
-                str += " --bind ";
-                str += bind;
-            }
-            if (host != null) {
-                str += " --host ";
-                //
-                // If host contains a comma, then we must put the value
-                // in quotes
-                //
-                if (host.indexOf(',') != -1) {
-                    str += '"';
-                    str += host;
-                    str += '"';
-                } else
-                    str += host;
-            }
-            if (numeric) {
-                str += " --numeric";
-            }
-            if (port != null) {
-                str += " --port ";
-                str += port;
-            }
-
-            if (value == null) {
-                logger.fine("Setting endpoint property " + propName + " to " + str); 
-                props.put(propName, str);
-            }
-            else {
-                //
-                // Append to existing property value
-                //
-                logger.fine("Setting endpoint property " + propName + " to " + value + ", " + str); 
-                props.put(propName, value + ", " + str);
-            }
-        }
-
-        //
-        // Filter arguments
-        //
-        org.apache.yoko.orb.OB.OptionFilter filter;
-        filter = new org.apache.yoko.orb.OB.OptionFilter("iiop.parse_args",
-                "-OA");
+        OptionFilter filter = new OptionFilter("iiop.parse_args", "-OA");
         filter.add("host", 1); // Deprecated
         filter.add("numeric", 0); // Deprecated
         filter.add("port", 1); // Deprecated
         args = filter.filter(args);
-        filter = new org.apache.yoko.orb.OB.OptionFilter("iiop.parse_args",
-                "-IIOP");
+        filter = new OptionFilter("iiop.parse_args", "-IIOP");
         filter.add("backlog", 1);
         filter.add("bind", 1);
         filter.add("host", 1);
@@ -278,4 +112,133 @@ public class iiop implements PluginInit {
         filter.add("port", 1);
         return filter.filter(args);
     }
+
+    static class OptionParser {
+        private String backlog;
+        private String bind;
+        private String host;
+        private boolean numeric;
+        private String port;
+        private String connHelper;
+        private String connHelperArgs;
+        private boolean noArgs = true;
+
+        interface ArgParser { IIOPSetter parse(String[] args); }
+        interface IIOPSetter { PropertySetter apply(iiop target); }
+        interface PropertySetter { void update(Properties props); }
+
+        static ArgParser parse(Properties props) {
+            OptionParser op = new OptionParser();
+            props.entrySet().forEach(op::parseProperty);
+            return op::parseArguments;
+        }
+
+        private void parseProperty(Entry<Object, Object> property) {
+            String key = String.valueOf(property.getKey());
+            String value = String.valueOf(property.getValue());
+            switch (key) {
+                case "org.omg.CORBA.ORBInitialHost":
+                case "yoko.iiop.host":
+                    this.setHost(value);
+                    logger.fine("Using " + key + " value of " + value);
+                    break;
+                case "org.omg.CORBA.ORBInitialPort":
+                case "yoko.iiop.port":
+                    this.setPort(value);
+                    logger.fine("Using " + key + " value of " + value);
+                    break;
+                case "org.omg.CORBA.ORBListenEndpoints":
+                    // both specified on one property
+                    int sep = value.indexOf(':');
+                    if (sep != -1) {
+                        this.setHost(value.substring(0, sep));
+                        this.setPort(value.substring(sep + 1));
+                        logger.fine("Using " + key + " value of " + value);
+                    }
+                    break;
+                case "yoko.iiop.numeric":
+                    this.setNumeric();
+                    logger.fine("Using " + key + " value of " + value);
+                    break;
+                default:
+                    if (key.startsWith("yoko.iiop.")) throw new INITIALIZE("iiop: unknown property " + key);
+            }
+        }
+
+        private IIOPSetter parseArguments(String[] args) {
+            Consumer<String> pending = null;
+            for (String arg: args) {
+                if (null == pending) {
+                    pending = parseArgument(arg);
+                    continue;
+                }
+                pending.accept(arg);
+                pending = null;
+            }
+            if (null == pending) return this::applyConnectionHelperSettings;
+            throw new INITIALIZE("iiop: argument expected for " + args[args.length - 1]);
+        }
+
+        private Consumer<String> parseArgument(String arg) {
+            switch(arg) {
+                case "-IIOPbacklog": return this::setBacklog;
+                case "-IIOPbind": return this::setBind;
+                case "-IIOPhost": // fallthru
+                case "-OAhost": return this::setHost;
+                case "-IIOPport": // fallthru
+                case "-OAport": return this::setPort;
+                case "-IIOPconnectionHelper": return this::setConnHelper;
+                case "-IIOPconnectionHelperArgs": return this::setConnHelperArgs;
+                case "-IIOPnumeric":
+                case "-OAnumeric":
+                    this.setNumeric();
+                    return null;
+                default:
+                    if (arg.startsWith("-IIOP")) throw new INITIALIZE("iiop: unknown option `" + arg + "'");
+                    return null;
+            }
+        }
+
+        private PropertySetter applyConnectionHelperSettings(iiop target) {
+            if (null != connHelper) target.connectionHelper = connHelper;
+            if (null != connHelperArgs) target.helperArgs = connHelperArgs;
+            return this::updateProperties;
+        }
+
+        private void updateProperties(Properties target) {
+            if (noArgs) return;
+
+            // choose the property key to use:
+            String key = Stream.of(ROOT_POAMGR_ENDPOINT_KEY, OA_ENDPOINT_KEY)
+                    .filter(target::containsKey)
+                    .findFirst()
+                    .orElse(OA_ENDPOINT_KEY);
+
+            // Start with the existing value if there is one
+            StringBuilder value = new StringBuilder(
+                    Optional.of(key)
+                            .map(target::getProperty)
+                            .map(oldValue -> oldValue + ", ")
+                            .orElse(""));
+
+            value.append(numeric ? "iiop --numeric" : "iiop");
+            ofNullable(host).map(s -> " --host \"" + s + "\"").map(value::append);
+            ofNullable(port).map(s -> " --port " + s).map(value::append);
+            ofNullable(backlog).map(s -> " --backlog " + s).map(value::append);
+            ofNullable(bind).map(s -> " --bind " + s).map(value::append);
+
+            if (logger.isLoggable(FINE)) logger.fine(String.format("Setting endpoint property \"%s\" to \"%s\"", key, value));
+            target.put(key, value);
+        }
+
+        private void setBacklog(String s) { noArgs = false; backlog = s; }
+        private void setBind(String s) { noArgs = false; bind = s; }
+        private void setHost(String s) { noArgs = false; host = s; }
+        private void setPort(String s) { noArgs = false; port = s; }
+        private void setNumeric() { noArgs = false; numeric = true; }
+        private void setConnHelper(String s) { connHelper = s; }
+        private void setConnHelperArgs(String s) { connHelperArgs = s; }
+    }
+
+
 }
