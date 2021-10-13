@@ -18,30 +18,28 @@
 
 package org.apache.yoko.rmi.api;
 
-import java.security.AccessController;
-
-import org.apache.yoko.rmi.util.GetSystemPropertyAction;
 import org.apache.yoko.osgi.ProviderLocator;
-import org.apache.yoko.util.PrivilegedActions;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public class PortableRemoteObjectExt {
     private static final class DelegateHolder {
         private static final PortableRemoteObjectExtDelegate delegate;
 
+        public static final String DELEGATE_KEY = "org.apache.yoko.rmi.PortableRemoteObjectExtClass";
+
         static {
             Object d = null;
             final ClassLoader contextCl = doPrivileged(GET_CONTEXT_CLASS_LOADER);
             try {
-                d = ProviderLocator.getService("org.apache.yoko.rmi.PortableRemoteObjectExtClass", PortableRemoteObjectExt.class, contextCl);
+                d = ProviderLocator.getService(DELEGATE_KEY, PortableRemoteObjectExt.class, contextCl);
                 if (null == d) {
-                    String name = doPrivileged(getSysProp("org.apache.yoko.rmi.PortableRemoteObjectExtClass", "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
+                    String name = doPrivileged(getSysProp(DELEGATE_KEY, "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
 
-                    d = doPrivileged(getNoArgConstructor(ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, contextCl))).newInstance();
+                    d = doPrivileged(getNoArgInstance(ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, contextCl)));
                 }
             } catch (Exception e) {
                 throw new RuntimeException("internal problem: " + e.getMessage(), e);

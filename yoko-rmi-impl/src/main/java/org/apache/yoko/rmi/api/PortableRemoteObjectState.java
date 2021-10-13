@@ -32,12 +32,6 @@ public interface PortableRemoteObjectState {
     org.omg.CORBA.ORB getORB();
 
     /**
-     * ContextClassLoader for this state
-     */
-
-    ClassLoader getClassLoader();
-
-    /**
      * Shutdown this state
      */
     public void shutdown();

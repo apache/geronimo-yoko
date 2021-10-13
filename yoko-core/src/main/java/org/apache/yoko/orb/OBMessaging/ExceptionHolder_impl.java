@@ -16,9 +16,10 @@
  */
 
 package org.apache.yoko.orb.OBMessaging;
+
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_CONTEXT;
 import org.omg.CORBA.BAD_INV_ORDER;
@@ -64,7 +65,9 @@ import org.omg.Messaging._ExceptionHolder;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 public class ExceptionHolder_impl extends _ExceptionHolder {
     //
@@ -258,7 +261,7 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
                 //
                 // get the appropriate class for the loading.
                 ClassLoader loader = exClass.getClassLoader();
-                Class c = ProviderLocator.loadClass(className + "Helper", exClass);
+                Class c = ProviderLocator.loadClass(className + "Helper", exClass, doPrivileged(GET_CONTEXT_CLASS_LOADER));
                 Class[] paramTypes = new Class[2];
                 paramTypes[0] = Any.class;
                 paramTypes[1] = exClass;

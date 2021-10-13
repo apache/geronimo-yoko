@@ -42,6 +42,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.security.PrivilegedActionException;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -131,11 +132,6 @@ public class RMIState implements PortableRemoteObjectState {
         return (RMIState) PortableRemoteObjectExt.getState();
     }
 
-    public ClassLoader getClassLoader() {
-        ClassLoader loader  = Thread.currentThread().getContextClassLoader();
-        return loader;
-    }
-
     /**
      * data for use in PortableRemoteObjectImpl
      */
@@ -194,8 +190,8 @@ public class RMIState implements PortableRemoteObjectState {
             return doPrivileged(getNoArgConstructor(stubClass));
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINE, "failed to load remote class " + stubName + " from " + codebase, ex);
-        } catch (NoSuchMethodError ex) {
-            logger.log(Level.WARNING, "stub class " + stubName + " has no default constructor", ex);
+        } catch (PrivilegedActionException e) {
+            logger.log(Level.WARNING, "stub class " + stubName + " has no default constructor", e);
         }
         return null;
     }

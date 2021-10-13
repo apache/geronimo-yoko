@@ -17,10 +17,15 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.OCI.PluginInit;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.Assert;
 
 import java.util.logging.Level;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 
 public final class PluginManager {
     //
@@ -123,18 +128,14 @@ public final class PluginManager {
             //
             // Load the class
             //
-            org.apache.yoko.orb.OCI.PluginInit pi = null;
+            PluginInit pi = null;
             try {
-                // get the appropriate class for the loading.
-                ClassLoader loader = Thread.currentThread().getContextClassLoader();
-
-                Class c = ProviderLocator.loadClass(className, this.getClass(), loader);
-                pi = (org.apache.yoko.orb.OCI.PluginInit) c.newInstance();
+                Class<? extends PluginInit> c = ProviderLocator.loadClass(className, this.getClass(), doPrivileged(GET_CONTEXT_CLASS_LOADER));
+                pi = doPrivileged(getNoArgInstance(c));
             } catch (org.omg.CORBA.SystemException ex) {
                 throw ex;
             } catch (Exception ex) {
-                String err = "unable to load OCI plug-in `" + name + "':\n"
-                        + ex.getMessage();
+                String err = "unable to load OCI plug-in `" + name + "':\n" + ex.getMessage();
                 logger.log(Level.SEVERE, err, ex);
                 return null;
             }

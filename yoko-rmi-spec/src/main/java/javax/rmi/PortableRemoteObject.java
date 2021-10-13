@@ -25,6 +25,8 @@ import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import static java.security.AccessController.doPrivileged;
 
@@ -34,16 +36,14 @@ public class PortableRemoteObject {
     private static final String DELEGATE_KEY = "javax.rmi.CORBA.PortableRemoteObjectClass";
     private static final PortableRemoteObjectDelegate delegate = getDelegate();
 
-    private static PortableRemoteObjectDelegate getDelegate() {
-        PortableRemoteObjectDelegate d;
-        String delegateName = doPrivileged((PrivilegedAction<String>)() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
+    private static <T extends PortableRemoteObjectDelegate> PortableRemoteObjectDelegate getDelegate() {
+        String delegateName = doPriv(() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
         try {
-            Class<? extends PortableRemoteObjectDelegate> delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATE_KEY);
-            d = delegateClass.newInstance();
+            Class<T> delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATE_KEY);
+            return doPrivEx(delegateClass::getConstructor).newInstance();
         } catch (Throwable e) {
             throw (INITIALIZE) new INITIALIZE("Can not create PortableRemoteObject delegate: " + delegateName).initCause(e);
         }
-        return d;
     }
 
     protected PortableRemoteObject() throws RemoteException {
@@ -70,5 +70,8 @@ public class PortableRemoteObject {
     public static void unexportObject(Remote o) throws NoSuchObjectException {
         delegate.unexportObject(o);
     }
+
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
+    private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }
 

@@ -22,6 +22,13 @@ package org.apache.yoko.osgi.locator;
 
 import org.osgi.framework.Bundle;
 
+import java.lang.reflect.InvocationTargetException;
+import java.security.PrivilegedAction;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+
+import static java.security.AccessController.doPrivileged;
+
 /**
  * Holder class for located services information.
  */
@@ -67,27 +74,6 @@ public class BundleProviderLoader implements Comparable<BundleProviderLoader> {
         }
     }
 
-    /**
-     * Create an instance of the registred service.
-     *
-     * @return The created instance.  A new instance is created on each call.
-     * @exception Exception
-     */
-    public Object createInstance() throws Exception {
-        // get the class object
-        Class <?> cls = loadClass();
-        try {
-            // just create an instance using the default constructor
-            return cls.newInstance();
-        } catch (Exception e) {
-//                log(LogService.LOG_DEBUG, "exception caught while creating " + this, e);
-            throw e;
-        } catch (Error e) {
-//                log(LogService.LOG_DEBUG, "error caught while creating " + this, e);
-            throw e;
-        }
-    }
-
 
     public String id() {
         return providerId;
@@ -128,11 +114,18 @@ public class BundleProviderLoader implements Comparable<BundleProviderLoader> {
 
                     @Override
                     public Object newInstance(Class cls) throws InstantiationException, IllegalAccessException {
-                        return cls.newInstance();
+                        try {
+                            return doPrivEx(cls::getConstructor).newInstance();
+                        } catch (PrivilegedActionException | InvocationTargetException e) {
+                            throw (InstantiationException)(new InstantiationException().initCause(e));
+                        }
                     }
                 },
                 providerId,
                 providerClass,
                 priority);
     }
+
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
+    private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }

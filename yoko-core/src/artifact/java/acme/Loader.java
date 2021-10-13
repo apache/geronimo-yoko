@@ -96,11 +96,4 @@ public enum Loader {
     public <T> T newInstance(String className) {
         return (T) invokeWithImpunity(getConstructor(className)::newInstance);
     }
-
-    public EasyCloseable setAsThreadContextClassLoader() {
-        final Thread t = Thread.currentThread();
-        final ClassLoader l = t.getContextClassLoader();
-        t.setContextClassLoader(this.loader);
-        return () -> t.setContextClassLoader(l);
-    }
 }

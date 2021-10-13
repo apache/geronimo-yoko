@@ -23,6 +23,8 @@ import javax.security.auth.Subject;
 import javax.security.auth.login.LoginException;
 
 import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public abstract class SecurityContext {
@@ -43,17 +45,13 @@ public abstract class SecurityContext {
     }
 
     private static SecurityContextDelegate allocateDelegate() {
-
         String className = doPrivileged(getSysProp("org.freeorb.csi.SecurityContextClass", "org.freeorb.csi.DefaultSecurityContextDelegate"));
 
         try {
-            // get the appropriate class for the loading.
-            ClassLoader loader = Thread.currentThread().getContextClassLoader();
-            Class c = ProviderLocator.loadClass(className, SecurityContext.class, loader);
-            return (SecurityContextDelegate) c.newInstance();
-        }
-        catch (Exception ex) {
-            throw new InternalError("unable to attach to SecurityContext");
+            Class<? extends SecurityContextDelegate> c = ProviderLocator.loadClass(className, SecurityContext.class, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            return doPrivileged(getNoArgInstance(c));
+        } catch (Exception e) {
+            throw new InternalError("unable to attach to SecurityContext", e);
         }
     }
 

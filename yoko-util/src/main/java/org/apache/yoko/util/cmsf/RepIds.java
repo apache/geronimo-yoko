@@ -11,6 +11,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+
 public enum RepIds {
     ;
 
@@ -82,8 +85,7 @@ public enum RepIds {
         if (className != null) {
             try {
                 // get the appropriate class for the loading.
-                ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                result = Util.loadClass(className, codebase, loader);
+                result = Util.loadClass(className, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
             } catch (ClassNotFoundException ex) {
                 if (LOGGER.isLoggable(Level.FINE))
                     LOGGER.fine(String.format("Class \"%s\" not found", className));

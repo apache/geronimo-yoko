@@ -17,10 +17,13 @@
 
 package org.apache.yoko.orb.OBMessaging;
 
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.Assert;
 
 import java.lang.reflect.InvocationTargetException;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 
 public class UserExceptionRaiseProxy {
     public void raise(org.omg.Messaging._ExceptionHolder execptHolder)
@@ -44,7 +47,7 @@ public class UserExceptionRaiseProxy {
                 // appropriate parameter types
                 //
                 // get the appropriate class for the loading.
-                Class c = ProviderLocator.loadClass(className + "Helper", exClass);
+                Class c = ProviderLocator.loadClass(className + "Helper", exClass, doPrivileged(GET_CONTEXT_CLASS_LOADER));
                 Class[] paramTypes = new Class[2];
                 paramTypes[0] = org.omg.CORBA.Any.class;
                 paramTypes[1] = exClass;

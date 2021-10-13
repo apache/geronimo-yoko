@@ -45,18 +45,32 @@ import org.omg.SendingContext.CodeBase;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.security.PrivilegedActionException;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
 
+import static java.lang.Boolean.getBoolean;
+import static java.security.AccessController.doPrivileged;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.logging.VerboseLogging.MARSHAL_LOG;
+import static org.apache.yoko.orb.OB.ValueReader.SettingsHolder.IGNORE_INVALID_VALUE_TAG;
+import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
+import static org.apache.yoko.util.PrivilegedActions.action;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueReader {
+
+    enum SettingsHolder {
+        ;
+        static final boolean IGNORE_INVALID_VALUE_TAG = doPrivileged(action(() -> getBoolean("org.apache.yoko.ignoreInvalidValueTag")));
+    }
+
     /** Chunk data */
     private static class ChunkState {
         boolean chunked;
@@ -186,7 +200,7 @@ public final class ValueReader {
             }
 
             try {
-                Serializable result = clz_.newInstance();
+                Serializable result = doPrivileged(getNoArgInstance(clz_));
                 reader_.addInstance(h.headerPos, result);
                 try {
                     reader_.unmarshalValueState(result);
@@ -195,7 +209,7 @@ public final class ValueReader {
                     throw ex;
                 }
                 return result;
-            } catch (ClassCastException | InstantiationException | IllegalAccessException ignored) {
+            } catch (ClassCastException | PrivilegedActionException ignored) {
             }
 
             throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + clz_.getName(), MinorNoValueFactory,
@@ -264,18 +278,15 @@ public final class ValueReader {
         }
 
         private BoxedValueHelper getBoxedHelper(String id) {
-            if (WStringValueHelper.id().equals(id))
-                return new WStringValueHelper();
+            if (WStringValueHelper.id().equals(id)) return new WStringValueHelper();
 
-            final Class<?> helperClass = RepIds.query(id).suffix("Helper").toClass();
+            final Class<? extends BoxedValueHelper> helperClass = RepIds.query(id).suffix("Helper").toClass();
 
-            if (helperClass != null) {
-                try {
-                    return (BoxedValueHelper)helperClass.newInstance();
-                } catch (ClassCastException | InstantiationException | IllegalAccessException ex) {
-                    String msg = describeMarshal(MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id;
-                    throw (MARSHAL) new MARSHAL(msg, MinorNoValueFactory, COMPLETED_NO).initCause(ex);
-                }
+            try {
+                if (helperClass != null) return doPrivileged(getNoArgInstance(helperClass));
+            } catch (ClassCastException | PrivilegedActionException ex) {
+                String msg = describeMarshal(MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id;
+                throw as(MARSHAL::new, ex, msg, MinorNoValueFactory, COMPLETED_NO);
             }
 
             return null;
@@ -1022,7 +1033,7 @@ public final class ValueReader {
             return arrayInstance.getClass();
         } else {
             try {
-                return javax.rmi.CORBA.Util.loadClass(name, codebase, Util.getContextClassLoader());
+                return javax.rmi.CORBA.Util.loadClass(name, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
             } catch (ClassNotFoundException ex) {
                 // this will be sorted out later
                 return null;
@@ -1054,7 +1065,7 @@ public final class ValueReader {
             result = read(strategy);
         } catch (MARSHAL marshalex) {
             MARSHAL_LOG.severe(String.format("MARSHAL \"%s\", 4 bytes before ", marshalex.getMessage(), (in_.dumpPosition())));
-            if ("true".equalsIgnoreCase(System.getProperty("org.apache.yoko.ignoreInvalidValueTag"))) {
+            if (IGNORE_INVALID_VALUE_TAG) {
                 result = read(strategy);
             } else {
                 throw marshalex;

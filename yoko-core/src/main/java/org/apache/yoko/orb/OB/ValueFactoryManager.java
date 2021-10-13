@@ -17,23 +17,39 @@
 
 package org.apache.yoko.orb.OB;
 
+import org.apache.yoko.orb.CORBA.StringValueFactory;
+import org.apache.yoko.orb.CORBA.WStringValueFactory;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.cmsf.RepIds;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.StringValueHelper;
+import org.omg.CORBA.WStringValueHelper;
+import org.omg.CORBA.portable.ValueFactory;
+
+import java.security.PrivilegedActionException;
+import java.util.Hashtable;
 import java.util.logging.Logger;
 
-import org.apache.yoko.util.Assert;
-import org.apache.yoko.util.MinorCodes;
-import org.apache.yoko.util.cmsf.RepIds;
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.util.MinorCodes.MinorValueFactoryError;
+import static org.apache.yoko.util.MinorCodes.describeBadParam;
+import static org.apache.yoko.util.MinorCodes.describeInitialize;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueFactoryManager {
     static final Logger logger = Logger.getLogger(ValueFactoryManager.class.getName());
     //
     // The set of registered valuetype factories
     //
-    private java.util.Hashtable factories_;
+    private Hashtable factories_;
 
     //
     // Cached set of factories resolved by class (Java only)
     //
-    private java.util.Hashtable classFactories_;
+    private Hashtable classFactories_;
 
     private boolean destroy_; // True if destroy() was called
 
@@ -43,7 +59,6 @@ public final class ValueFactoryManager {
 
     protected void finalize() throws Throwable {
         Assert.ensure(destroy_);
-
         super.finalize();
     }
 
@@ -53,7 +68,6 @@ public final class ValueFactoryManager {
 
     synchronized void destroy() {
         Assert.ensure(!destroy_); // May only be destroyed once
-
         //
         // Destroy the hashtable
         //
@@ -68,34 +82,27 @@ public final class ValueFactoryManager {
         //
         // Create the hashtables
         //
-        factories_ = new java.util.Hashtable(1023);
-        classFactories_ = new java.util.Hashtable(1023);
+        factories_ = new Hashtable(1023);
+        classFactories_ = new Hashtable(1023);
 
         //
         // Install factories for standard value box types
         //
-        registerValueFactory(org.omg.CORBA.StringValueHelper.id(),
-                new org.apache.yoko.orb.CORBA.StringValueFactory());
-        registerValueFactory(org.omg.CORBA.WStringValueHelper.id(),
-                new org.apache.yoko.orb.CORBA.WStringValueFactory());
+        registerValueFactory(StringValueHelper.id(), new StringValueFactory());
+        registerValueFactory(WStringValueHelper.id(), new WStringValueFactory());
     }
 
-    public synchronized org.omg.CORBA.portable.ValueFactory registerValueFactory(
-            String id, org.omg.CORBA.portable.ValueFactory factory) {
+    public synchronized ValueFactory registerValueFactory(String id, ValueFactory factory) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(MinorCodes
-                    .describeInitialize(MinorCodes.MinorORBDestroyed),
-                    MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
         Assert.ensure(id != null && factory != null);
 
-        org.omg.CORBA.portable.ValueFactory old = (org.omg.CORBA.portable.ValueFactory) factories_
-                .get(id);
+        ValueFactory old = (ValueFactory) factories_.get(id);
 
         factories_.put(id, factory);
 
@@ -108,60 +115,47 @@ public final class ValueFactoryManager {
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(MinorCodes
-                    .describeInitialize(MinorCodes.MinorORBDestroyed),
-                    MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
         Assert.ensure(id != null);
 
         if (factories_.remove(id) == null)
-            throw new org.omg.CORBA.BAD_PARAM(MinorCodes
-                    .describeBadParam(MinorCodes.MinorValueFactoryError)
-                    + ": " + id, MinorCodes.MinorValueFactoryError,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new BAD_PARAM(describeBadParam(MinorValueFactoryError) + ": " + id, MinorValueFactoryError, COMPLETED_NO);
     }
 
-    public synchronized org.omg.CORBA.portable.ValueFactory lookupValueFactory(
-            String id) {
+    public synchronized ValueFactory lookupValueFactory(String id) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
         if (destroy_)
-            throw new org.omg.CORBA.INITIALIZE(MinorCodes
-                    .describeInitialize(MinorCodes.MinorORBDestroyed),
-                    MinorCodes.MinorORBDestroyed,
-                    org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
 
         Assert.ensure(id != null);
 
-        return (org.omg.CORBA.portable.ValueFactory) factories_.get(id);
+        return (ValueFactory)factories_.get(id);
     }
 
     // Java-specific method
-    public org.omg.CORBA.portable.ValueFactory lookupValueFactoryWithClass(String id) {
+    public ValueFactory lookupValueFactoryWithClass(String id) {
         //
         // The ORB destroys this object, so it's an initialization error
         // if this operation is called after ORB destruction
         //
         if (destroy_)
         {
-            throw new org.omg.CORBA.INITIALIZE(MinorCodes
-                                               .describeInitialize(MinorCodes.MinorORBDestroyed),
-                                               MinorCodes.MinorORBDestroyed,
-                                               org.omg.CORBA.CompletionStatus.COMPLETED_NO);
+            throw new INITIALIZE(describeInitialize(MinorORBDestroyed), MinorORBDestroyed, COMPLETED_NO);
         }
 
         Assert.ensure(id != null);
 
-        org.omg.CORBA.portable.ValueFactory result;
+        ValueFactory result;
 
         logger.fine("Looking up value factory for class " + id);
         //
         // Check the registered factories
         //
-        result = (org.omg.CORBA.portable.ValueFactory) factories_.get(id);
+        result = (ValueFactory) factories_.get(id);
         if (result != null) {
             logger.finer("Returning registered value factory " + result.getClass().getName());
             return result;
@@ -170,7 +164,7 @@ public final class ValueFactoryManager {
         //
         // Check the cached factories
         //
-        result = (org.omg.CORBA.portable.ValueFactory) classFactories_.get(id);
+        result = (ValueFactory) classFactories_.get(id);
         if (result != null) {
             logger.finer("Returning cached value factory " + result.getClass().getName());
             return result;
@@ -179,25 +173,20 @@ public final class ValueFactoryManager {
         //
         // Try to convert the repository ID into a class name.
         //
-        Class c = RepIds.query(id).suffix("DefaultFactory").toClass();
+        Class<? extends ValueFactory> c = RepIds.query(id).suffix("DefaultFactory").toClass();
         if (c != null) {
             try {
                 logger.finer("Attempting to create value factory from class " + c.getName());
                 //
                 // Instantiate the factory
                 //
-                result = (org.omg.CORBA.portable.ValueFactory) c.newInstance();
+                result = doPrivileged(getNoArgInstance(c));
 
                 //
                 // Cache the result
                 //
                 classFactories_.put(id, result);
-            } catch (ClassCastException ex) {
-                // ignore
-            } catch (InstantiationException ex) {
-                // ignore
-            } catch (IllegalAccessException ex) {
-                // ignore
+            } catch (ClassCastException | PrivilegedActionException ignored) {
             }
         }
 
