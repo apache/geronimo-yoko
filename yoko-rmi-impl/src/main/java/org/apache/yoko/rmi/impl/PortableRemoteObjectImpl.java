@@ -1,20 +1,19 @@
-/**
-*
-* Licensed to the Apache Software Foundation (ASF) under one or more
-*  contributor license agreements.  See the NOTICE file distributed with
-*  this work for additional information regarding copyright ownership.
-*  The ASF licenses this file to You under the Apache License, Version 2.0
-*  (the "License"); you may not use this file except in compliance with
-*  the License.  You may obtain a copy of the License at
-*
-*     http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-*/
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
 
 package org.apache.yoko.rmi.impl;
 
@@ -42,19 +41,21 @@ import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.PrivilegedActionException;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import static java.security.AccessController.doPrivileged;
 import static javax.rmi.CORBA.Util.getTie;
 import static javax.rmi.CORBA.Util.registerTarget;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.StubWriteReplaceMethodHolder.STUB_WRITE_REPLACE_METHOD;
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.apache.yoko.util.PrivilegedActions.getDeclaredMethod;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
-import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 
 public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
@@ -67,6 +68,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             try {
                 STUB_WRITE_REPLACE_METHOD = doPrivileged(getDeclaredMethod(RMIStub.class, "writeReplace"));
             } catch (PrivilegedActionException ex) {
+                //noinspection Convert2MethodRef
                 throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), e -> new Error(e));
             }
         }
@@ -99,21 +101,20 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
     private Object narrowRMI(ObjectImpl narrowFrom, Class<?> narrowTo) {
         if (LOGGER.isLoggable(Level.FINE))
             LOGGER.fine(String.format("RMI narrowing %s => %s", narrowFrom.getClass().getName(), narrowTo.getName()));
-        ObjectImpl object = narrowFrom;
 
         RMIState state = RMIState.current();
 
         Stub stub;
         try {
-            stub = createStub(state, null, narrowTo);
-        } catch (ClassNotFoundException ex) {
+            stub = createStub(state, narrowTo);
+        } catch (NoClassDefFoundError ex) {
             throw as(ClassCastException::new, ex, narrowTo.getName());
         }
 
         Delegate delegate;
         try {
             // let the stub adopt narrowFrom's identity
-            delegate = object._get_delegate();
+            delegate = narrowFrom._get_delegate();
 
         } catch (BAD_OPERATION ex) {
             // ignore
@@ -181,8 +182,8 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         Stub stub;
 
         try {
-            stub = createStub(state, null, narrowTo);
-        } catch (ClassNotFoundException ex) {
+            stub = createStub(state, narrowTo);
+        } catch (NoClassDefFoundError ex) {
             throw as(ClassCastException::new, ex, narrowTo.getName());
         }
 
@@ -201,13 +202,13 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         return (Remote) stub;
     }
 
-    static private Stub createStub(RMIState state, String codebase, Class<?> type) throws ClassNotFoundException {
+    private static Stub createStub(RMIState state, Class<?> type) {
         if (Remote.class == type) {
             return new RMIRemoteStub();
         }
 
         if (ClientUtil.isRunningAsClientContainer()) {
-            Stub stub = state.getStaticStub(codebase, type);
+            Stub stub = state.getStaticStub(null, type);
             if (stub != null) {
                 return stub;
             }
@@ -216,7 +217,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         return createRMIStub(state, type);
     }
 
-    static Stub createRMIStub(RMIState state, Class<?> type) throws ClassNotFoundException {
+    static Stub createRMIStub(RMIState state, Class<?> type) {
         if (!type.isInterface()) {
             throw new RuntimeException("non-interfaces not supported");
         }
@@ -226,8 +227,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
         Constructor<? extends Stub> cons = getRMIStubClassConstructor(state, type);
 
         try {
-            Stub result = cons.newInstance();
-            return result;
+            return cons.newInstance();
         } catch (InstantiationException|IllegalAccessException|InvocationTargetException ex) {
             throw new RuntimeException("internal problem: cannot instantiate stub", ex);
         }
@@ -235,7 +235,6 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
 
     static Constructor<? extends Stub> getRMIStubClassConstructor(RMIState state, Class<?> type) {
         LOGGER.fine("Requesting stub constructor of class " + type.getName());
-        @SuppressWarnings("unchecked")
         Constructor<? extends Stub> cons = state.stub_map.get(type);
 
         if (cons != null) {
@@ -243,35 +242,31 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             return cons;
         }
 
-        TypeRepository repository = state.repo;
-        RemoteDescriptor desc = repository.getRemoteInterface(type);
-
-        MethodDescriptor[] mdesc = desc.getMethods();
-        MethodDescriptor[] descriptors = new MethodDescriptor[mdesc.length + 1];
-        for (int i = 0; i < mdesc.length; i++) {
-            descriptors[i] = mdesc[i];
-        }
+        final ClassLoader loader = doPrivileged(action(type::getClassLoader));
+        final ClassLoader contextLoader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
 
         LOGGER.finer("TYPE ----> " + type);
-        LOGGER.finer("LOADER --> " + doPrivileged(action(type::getClassLoader)));
-        LOGGER.finer("CONTEXT -> " + doPrivileged(GET_CONTEXT_CLASS_LOADER));
+        LOGGER.finer("LOADER --> " + loader);
+        LOGGER.finer("CONTEXT -> " + contextLoader);
 
-        MethodRef[] methods = new MethodRef[descriptors.length];
+        final RemoteDescriptor desc = state.repo.getRemoteInterface(type);
+        final MethodDescriptor[] descriptors = desc.getMethods();
 
-        for (int i = 0; i < mdesc.length; i++) {
-            Method m = descriptors[i].getReflectedMethod();
-            LOGGER.finer("Method ----> " + m);
-            methods[i] = new MethodRef(m);
-        }
-        methods[mdesc.length] = new MethodRef(StubWriteReplaceMethodHolder.STUB_WRITE_REPLACE_METHOD);
+        final Stream<Method> methodStream = Arrays.stream(descriptors)
+                .map(MethodDescriptor::getReflectedMethod)
+                .peek((m) -> LOGGER.finer("Method ----> " + m));
+        final MethodRef[] methods = Stream.concat(methodStream, Stream.of(STUB_WRITE_REPLACE_METHOD)).map(MethodRef::new).toArray(MethodRef[]::new);
 
-
-        Class<? extends Stub> stubClass = null;
-
+        Class<? extends Stub> stubClass;
         try {
-            stubClass = StubClass.make(type, descriptors, methods, doPrivileged(action(type::getClassLoader)));
+            stubClass = StubClass.make(type, descriptors, methods, loader);
         } catch (NoClassDefFoundError ex) {
-            stubClass = StubClass.make(type, descriptors, methods, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            try {
+                stubClass = StubClass.make(type, descriptors, methods, contextLoader);
+            } catch(NoClassDefFoundError e) {
+                e.addSuppressed(ex);
+                throw e;
+            }
         }
 
         if (stubClass != null) {

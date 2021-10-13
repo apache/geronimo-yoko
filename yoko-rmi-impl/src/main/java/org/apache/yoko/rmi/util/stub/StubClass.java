@@ -76,10 +76,9 @@ public final class StubClass {
     public static <S extends Stub> Class<S> make(Class<?> type, MethodDescriptor[] descriptors, MethodRef[] methods, ClassLoader loader) {
         loader = chooseLoader(loader, type);
         methods = ofNullable(methods).orElseGet(() -> getMethodRefs(type));
-        final Object[] data = ofNullable((Object[]) descriptors).orElse(methods);
         final MethodRef handler = new MethodRef(STUB_INVOKE_METHOD);
         String className = stubClassName(getPackageName(type));
-        return BCELClassBuilder.make(loader, RMIStub.class, type, methods, data, handler, className, RMI_STUB_INITIALIZER);
+        return BCELClassBuilder.make(loader, RMIStub.class, type, methods, descriptors, handler, className, RMI_STUB_INITIALIZER);
     }
 
     static String stubClassName(String packageName) {

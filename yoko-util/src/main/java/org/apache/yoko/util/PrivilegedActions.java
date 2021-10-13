@@ -33,31 +33,31 @@ public enum PrivilegedActions {
         try {
             return System.getProperties();
         } catch (SecurityException swallowed) {
-            return Collections.EMPTY_MAP;
+            return Collections.emptyMap();
         }
     };
 
     public static final PrivilegedAction<ClassLoader> GET_CONTEXT_CLASS_LOADER = currentThread()::getContextClassLoader;
 
-    public static final PrivilegedAction<String> getSysProp(final String key) { return () -> System.getProperty(key); }
+    public static PrivilegedAction<String> getSysProp(final String key) { return () -> System.getProperty(key); }
 
-    public static final PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return () -> System.getProperty(key, defaultValue); }
+    public static PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return () -> System.getProperty(key, defaultValue); }
 
-    public static final <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
+    public static <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
         return type::getDeclaredConstructor;
     }
 
-    public static final <T> PrivilegedExceptionAction<T> getNoArgInstance(Class<T> type) {
+    public static <T> PrivilegedExceptionAction<T> getNoArgInstance(Class<T> type) {
         return () -> type.getDeclaredConstructor().newInstance();
     }
 
-    public static final PrivilegedExceptionAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {
+    public static PrivilegedExceptionAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {
         return () -> type.getMethod(name, parameterTypes);
     }
 
-    public static final PrivilegedExceptionAction<Method> getDeclaredMethod(Class<?> type, String name, Class<?>...parameterTypes) {
+    public static PrivilegedExceptionAction<Method> getDeclaredMethod(Class<?> type, String name, Class<?>...parameterTypes) {
         return () -> type.getDeclaredMethod(name, parameterTypes);
     }
 
-    public static final <T> PrivilegedAction<T> action(PrivilegedAction<T> action) { return action; }
+    public static <T> PrivilegedAction<T> action(PrivilegedAction<T> action) { return action; }
 }
