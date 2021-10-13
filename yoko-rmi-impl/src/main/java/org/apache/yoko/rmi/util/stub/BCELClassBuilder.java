@@ -142,7 +142,7 @@ class BCELClassBuilder {
             Class proxyClass = Util.defineClass(loader, className, classData); //privileged
 
             // initialize the static data fields
-            range(0, methods.length).forEach(i -> {
+            range(0, data.length).forEach(i -> {
                 try {
                     Field f = proxyClass.getDeclaredField(dataFieldGens[i].getName()); // privileged
                     f.setAccessible(true); // privileged

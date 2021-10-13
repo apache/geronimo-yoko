@@ -33,14 +33,10 @@ import static java.security.AccessController.doPrivileged;
 import static java.util.Objects.requireNonNull;
 
 class Util {
-    static String getPackageName(Class clazz) {
+    static String getPackageName(Class<?> clazz) {
         String class_name = clazz.getName();
         int idx = class_name.lastIndexOf('.');
-        if (idx == -1) {
-            return null;
-        } else {
-            return class_name.substring(0, idx);
-        }
+        return idx == -1 ? null : class_name.substring(0, idx);
     }
 
     private enum DefineClass {
@@ -55,11 +51,11 @@ class Util {
         }
         private static final Certificate[] NO_CERTS = new Certificate[0];
 
-        private static Method defineClass;
+        private static final Method defineClass;
         static {
             try {
                 // get the method object
-                Class clc = ClassLoader.class;
+                Class<?> clc = ClassLoader.class;
                 defineClass = clc.getDeclaredMethod("defineClass", String.class, byte[].class, int.class, int.class, ProtectionDomain.class );
                 doPrivileged((PrivilegedAction<Void>) () -> { defineClass.setAccessible(true); return null; } );
             } catch (RuntimeException ex) {
@@ -76,7 +72,7 @@ class Util {
         /** Requires the caller to have class definition privileges */
         private static Class<?> invoke(ClassLoader loader, String className, byte[] data) {
             try {
-                return (Class) defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
+                return (Class<?>)defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
             } catch (IllegalAccessException|IllegalArgumentException ex) {
                 throw new Error("internal error", ex);
             } catch (InvocationTargetException ex) {
@@ -92,7 +88,7 @@ class Util {
     }
 
     /** Requires the caller to have class definition privileges */
-    static Class defineClass(final ClassLoader loader, String className, byte[] data) {
+    static Class<?> defineClass(final ClassLoader loader, String className, byte[] data) {
         return loader == null ?
                 defineClass(requireNonNull(currentThread().getContextClassLoader()), className, data) :
                 DefineClass.invoke(loader, className, data);
