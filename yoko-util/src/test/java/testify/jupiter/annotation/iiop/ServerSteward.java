@@ -18,21 +18,31 @@ package testify.jupiter.annotation.iiop;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.omg.CORBA.ORB;
+import org.omg.CORBA.Object;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import testify.bus.Bus;
 import testify.jupiter.annotation.Summoner;
+import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
+import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.Control;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 import testify.jupiter.annotation.iiop.ServerExtension.ParamType;
 import testify.jupiter.annotation.impl.AnnotationButler;
 import testify.parts.PartRunner;
 
+import javax.rmi.PortableRemoteObject;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 
+import static java.util.stream.Collectors.joining;
 import static javax.rmi.PortableRemoteObject.narrow;
 import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.Matchers.is;
@@ -46,6 +56,7 @@ import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_P
 import static testify.jupiter.annotation.iiop.OrbSteward.args;
 import static testify.jupiter.annotation.iiop.OrbSteward.props;
 import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.util.Assertions.failf;
 import static testify.util.Reflect.setStaticField;
 
 class ServerSteward {
@@ -55,6 +66,7 @@ class ServerSteward {
     private final List<Field> nameServiceUrlFields;
     private final List<Field> corbanameUrlFields;
     private final List<Field> clientStubFields;
+    private final Map<Field, Remote> remoteImplFields;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
     private final ConfigureServer config;
@@ -66,7 +78,7 @@ class ServerSteward {
         this.config = config;
         this.context = context;
         Class<?> testClass = context.getRequiredTestClass();
-        this.controlFields = AnnotationButler.forClass(ConfigureServer.Control.class)
+        this.controlFields = AnnotationButler.forClass(Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -107,7 +119,7 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.clientStubFields = AnnotationButler.forClass(ConfigureServer.ClientStub.class)
+        this.clientStubFields = AnnotationButler.forClass(ClientStub.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -115,7 +127,16 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.beforeMethods = AnnotationButler.forClass(ConfigureServer.BeforeServer.class)
+        this.remoteImplFields = AnnotationButler.forClass(RemoteImpl.class)
+                .requireTestAnnotation(ConfigureServer.class)
+                .assertPublic()
+                .assertStatic()
+                .assertFinal()
+                .assertFieldTypes(Remote.class)
+                .filter(anno -> anno.serverName().equals(config.serverName()))
+                .recruit()
+                .findFieldsAsMap(testClass); // start with null values and initialize after server startup
+        this.beforeMethods = AnnotationButler.forClass(BeforeServer.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -131,11 +152,13 @@ class ServerSteward {
                 .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
-        assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
+        assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && remoteImplFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
-                + "\n - EITHER the test must annotate a public static method with@" + ConfigureServer.BeforeServer.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with@" + ConfigureServer.Control.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with@" + ConfigureServer.ClientStub.class.getSimpleName());
+                + "\n - EITHER the test must annotate a public static method with @" + BeforeServer.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with @" + Control.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with @" + ClientStub.class.getSimpleName()
+                + "\n - OR the test must annotate a public static final field with @" + RemoteImpl.class.getSimpleName()
+        );
 
         // blow up if jvm args specified unnecessarily
         if (config.separation() != INTER_PROCESS && config.jvmArgs().length > 0)
@@ -194,6 +217,13 @@ class ServerSteward {
             // instantiate the stub on the client
             setStaticField(f, narrow(clientOrb.string_to_object(ior), f.getType()));
         });
+        remoteImplFields.entrySet().forEach(e -> {
+            Field f = e.getKey();
+            String ior = serverComms.exportObject(f);
+            Object object = clientOrb.string_to_object(ior);
+            Remote stub = (Remote)PortableRemoteObject.narrow(object, f.getType());
+            e.setValue(stub);
+        });
     }
 
     private void beforeServer(ExtensionContext ctx) {
@@ -232,6 +262,42 @@ class ServerSteward {
 
     public void afterTestExecution(ExtensionContext ctx) {
 // TODO        if (config.separation() == INTER_PROCESS) serverComms.endLogging(TestLogger.getLogFinisher(ctx));
+    }
+
+    public boolean supportsParameter(Class<?> type) {
+        if (false == Remote.class.isAssignableFrom(type)) return false;
+        final List<Field> matches = findMatchingRemoteImplFields(type);
+        switch (matches.size()) {
+            case 1: return true;
+            case 0:
+                throw failf("Cannot find any fields of type %s annotated with @%s", type, RemoteImpl.class.getSimpleName());
+            default:
+                throw failf("Found multiple fields matching %s annotated with @%s: %s", type, RemoteImpl.class.getSimpleName(),
+                        matches.stream().map(Field::getName).collect(joining(", ")));
+        }
+    }
+
+    public Remote resolveParameter(Class<?> type) {
+        Field f = findMatchingRemoteImplFields(type)
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> failf("Could not find any fields matching type %s annotated with @%s", type, RemoteImpl.class.getSimpleName()));
+
+        return Optional.of(f)
+                .map(remoteImplFields::get)
+                .orElseThrow(() -> failf("Could not find stub object for field of type %s", type));
+    }
+
+    private List<Field> findMatchingRemoteImplFields(Class<?> type) {
+        final List<Field> exactMatches = new ArrayList<>();
+        final List<Field> inexactMatches = new ArrayList<>();
+
+        remoteImplFields.keySet().stream()
+                .filter(f -> type.isAssignableFrom(f.getType()))
+                .peek(inexactMatches::add)
+                .filter(f -> type.equals(f.getType()))
+                .forEach(exactMatches::add);
+        return exactMatches.isEmpty() ? inexactMatches : exactMatches;
     }
 
     private class ServerController implements ServerControl  {

@@ -27,10 +27,10 @@ import org.junit.jupiter.api.extension.ParameterContext;
 import org.junit.jupiter.api.extension.ParameterResolver;
 import org.omg.CORBA.ORB;
 import org.omg.PortableServer.POA;
-import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.logging.LoggingExtension;
+import testify.util.Assertions;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
@@ -97,6 +97,15 @@ public @interface ConfigureServer {
         /** The implementation class of the remote object */
         Class<? extends Remote> value();
         /** Specify which server should host the remote object. */
+        ServerName serverName() default DEFAULT_SERVER;
+    }
+
+    /**
+     * Annotate a static field in a test to denote a server-side target object.
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    @interface RemoteImpl {
         ServerName serverName() default DEFAULT_SERVER;
     }
 
@@ -177,29 +186,32 @@ class ServerExtension implements
     }
 
     @Override
-    public void beforeEach(ExtensionContext ctx) throws Exception { ServerSteward.getInstance(ctx).beforeEach(ctx); }
+    public void beforeEach(ExtensionContext ctx) { ServerSteward.getInstance(ctx).beforeEach(ctx); }
 
     @Override
     public boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) {
-        return ParamType.forClass(pCtx.getParameter().getType()).isPresent();
+        final Class<?> type = pCtx.getParameter().getType();
+        if (ParamType.forClass(type).isPresent()) return true;
+        return (ServerSteward.getInstance(ctx).supportsParameter(type));
     }
 
     // Since the ServerSteward was retrieved from BeforeAll (i.e. in the test class context),
     // that is the one that will be found and reused from here (even if this is a test method context)
     @Override
     public Object resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {
+        final ServerSteward steward = ServerSteward.getInstance(ctx);
+        final Class<?> type = pCtx.getParameter().getType();
         return ParamType
-                .forClass(pCtx.getParameter().getType())
+                .forClass(type)
                 .map(t -> {
-                    ServerSteward steward = ServerSteward.getInstance(ctx);
                     switch (t) {
                         case BUS: return steward.getBus(ctx);
                         case CLIENT_ORB: return steward.getClientOrb();
                         case ROOT_POA: return getActivatedRootPoa(steward.getClientOrb());
-                        default: throw new AssertionFailedError("Unknown parameter type: " + t);
+                        default: throw Assertions.failf("Unknown parameter type: %s", t);
                     }
                 })
-                .orElseThrow(() -> new AssertionFailedError("Cannot resolve parameter for context " + pCtx));
+                .orElseGet(() -> steward.resolveParameter(type));
     }
 
     @Override
