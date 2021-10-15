@@ -35,7 +35,6 @@ import java.util.logging.Logger;
 import static java.security.AccessController.doPrivileged;
 import static java.util.Optional.ofNullable;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
-import static org.apache.yoko.rmi.util.stub.StubClass.InitializerHolder.RMI_STUB_INITIALIZER;
 import static org.apache.yoko.rmi.util.stub.StubClass.StubInvokeMethodHolder.STUB_INVOKE_METHOD;
 import static org.apache.yoko.rmi.util.stub.Util.getPackageName;
 import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
@@ -78,7 +77,7 @@ public final class StubClass {
         methods = ofNullable(methods).orElseGet(() -> getMethodRefs(type));
         final MethodRef handler = new MethodRef(STUB_INVOKE_METHOD);
         String className = stubClassName(getPackageName(type));
-        return BCELClassBuilder.make(loader, RMIStub.class, type, methods, descriptors, handler, className, RMI_STUB_INITIALIZER);
+        return BCELClassBuilder.makeStub(loader, type, methods, descriptors, handler, className);
     }
 
     static String stubClassName(String packageName) {
