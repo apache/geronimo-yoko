@@ -25,7 +25,9 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Member;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -40,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedFields;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotatedMethods;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static org.junit.platform.commons.support.ModifierSupport.isFinal;
 import static org.junit.platform.commons.support.ModifierSupport.isPublic;
 import static org.junit.platform.commons.support.ModifierSupport.isStatic;
 
@@ -67,6 +70,12 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
             assertions = assertions.andThen(member -> assertTrue(isStatic(member), () -> ""
                     + "The " + annoName + " annotation must be used on only static members."
                     + " It has been used on the non-static member: " + member));
+            return this;
+        }
+        public Spec<A> assertFinal() {
+            assertions = assertions.andThen(member -> assertTrue(isFinal(member), () -> ""
+                    + "The " + annoName + " annotation must be used on only final members."
+                    + " It has been used on the non-final member: " + member));
             return this;
         }
         public <TA extends Annotation> Spec<A> requireTestAnnotation(Class<TA> testAnnoType) {
@@ -144,6 +153,15 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                 .filter(this::filter)
                 .peek(this.assertions)
                 .collect(toList());
+    }
+
+    public <V> Map<Field, V> findFieldsAsMap(Class<?> clazz) {
+        return findAnnotatedFields(clazz, annoType)
+                .stream()
+                .sequential()
+                .filter(this::filter)
+                .peek(this.assertions)
+                .collect(HashMap::new, (m, f) -> m.put(f, null), HashMap::putAll);
     }
 
     private boolean filter(AnnotatedElement elem) {

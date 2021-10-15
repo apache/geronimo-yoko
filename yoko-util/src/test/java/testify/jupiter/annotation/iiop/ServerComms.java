@@ -16,30 +16,14 @@
  */
 package testify.jupiter.annotation.iiop;
 
-import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
-import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.junit.platform.commons.support.ReflectionSupport;
-import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORB;
-import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.CORBA.Policy;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
-import org.omg.PortableServer.IdAssignmentPolicyValue;
-import org.omg.PortableServer.IdUniquenessPolicyValue;
-import org.omg.PortableServer.ImplicitActivationPolicyValue;
-import org.omg.PortableServer.LifespanPolicyValue;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
-import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
-import org.omg.PortableServer.POAPackage.InvalidPolicy;
-import org.omg.PortableServer.RequestProcessingPolicyValue;
 import org.omg.PortableServer.Servant;
-import org.omg.PortableServer.ServantRetentionPolicyValue;
-import org.omg.PortableServer.ThreadPolicyValue;
 import org.opentest4j.TestAbortedException;
 import testify.bus.Bus;
 import testify.bus.EnumSpec;
@@ -53,7 +37,6 @@ import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.ServerName;
 import testify.jupiter.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
-import testify.util.Maps;
 import testify.util.Optionals;
 import testify.util.Stack;
 import testify.util.Throw;
@@ -103,7 +86,7 @@ final class ServerComms implements Serializable {
     enum ServerInfo implements StringSpec {NAME_SERVICE_URL}
     private enum ServerRequest implements EnumSpec<ServerOp> {SEND}
     private enum MethodRequest implements MethodSpec {SEND}
-    private enum FieldRequest implements FieldSpec {INIT}
+    private enum FieldRequest implements FieldSpec {INIT, EXPORT}
     private enum BeginLogging implements TypeSpec<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
     private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
     private enum Result implements TypeSpec<ServerSideException> {RESULT}
@@ -130,57 +113,6 @@ final class ServerComms implements Serializable {
     private transient Optional<TestLogger> testLogger;
 
     private transient ServerComms otherSide; // can only be populated if the server is in the same process as the client
-
-    class ServerInstance {
-        final ORB orb;
-        final Map<Class<?>, Object> paramMap;
-        final POA childPoa;
-        final int port;
-        final String host;
-        private ServerInstance() {
-            this.orb = ORB.init(args, props);
-            try {
-                POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
-                POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
-                pm.activate();
-                final AcceptorInfo info = (AcceptorInfo) pm.get_acceptors()[0].get_info();
-                // We might have been started up without a specific port.
-                // In any case, dig out the host and port number and save them away.
-                this.port = info.port() & 0xFFFF;
-                this.host = info.hosts()[0];
-                bus.log(() -> String.format("Server listening on host %s and port %d%n", host, port));
-                // create the POA policies for the server
-                Policy[] policies = {
-                        rootPoa.create_thread_policy(ThreadPolicyValue.ORB_CTRL_MODEL),
-                        rootPoa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT),
-                        rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
-                        rootPoa.create_id_uniqueness_policy(IdUniquenessPolicyValue.MULTIPLE_ID),
-                        rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN),
-                        rootPoa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY),
-                        rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),
-                };
-                childPoa = rootPoa.create_POA(serverName.toString(), pm, policies);
-                this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus, POA.class, childPoa);
-            } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
-                throw Throw.andThrowAgain(e);
-            }
-        }
-
-        void stop() {
-            try {
-                bus.log("Calling orb.shutdown(true)");
-                orb.shutdown(true);
-                bus.log("ORB shutdown complete, calling orb.destroy()");
-                orb.destroy();
-                bus.log("orb.destroy() returned");
-            } catch (BAD_INV_ORDER e) {
-                // The ORB is sometimes already shut down.
-                // This should not cause an error in the test.
-                // TODO: find out how this happens
-                if (e.minor != 4) throw e;
-            }
-        }
-    }
 
     ServerComms(ServerName serverName, Properties props, String[] args) {
         this.inClient = true;
@@ -232,6 +164,7 @@ final class ServerComms implements Serializable {
         // register the control, method invocation, and field instantiation handlers
         this.bus.onMsg(ServerRequest.SEND, op -> completeRequest("control operation ", this::control0, op));
         this.bus.onMsg(FieldRequest.INIT, field -> completeRequest("instantiation of field " , this::instantiate0, field));
+        this.bus.onMsg(FieldRequest.EXPORT, field -> completeRequest("export of field " , this::exportObject0, field));
         this.bus.onMsg(MethodRequest.SEND, method -> completeRequest("invocation of ", this::invoke0, method));
         this.bus.onMsg(BeginLogging.BEGIN_LOGGING, supplier -> completeRequest("start logging", this::beginLogging0, supplier));
         this.bus.onMsg(EndLogging.END_LOGGING, consumer -> completeRequest("start logging", this::endLogging0, consumer));
@@ -250,7 +183,7 @@ final class ServerComms implements Serializable {
         case START_SERVER:
             assertServer(IS_STOPPED);
             try {
-                final ServerInstance newServer = new ServerInstance();
+                final ServerInstance newServer = new ServerInstance(bus, serverName, args, props);
                 System.out.println("### server started on " + newServer.host + ":" + newServer.port);
                 if (!this.serverRef.compareAndSet(null, newServer)) fail("Server already started");
                 ORB_MAP.put(uuid, newServer.orb);
@@ -361,34 +294,62 @@ final class ServerComms implements Serializable {
     void instantiate0(Field f) {
         assertServer(IS_STARTED);
         try {
-            bus.log(LogLevel.ERROR, "field = " + f);
+            bus.log(LogLevel.INFO, "field = " + f);
             final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
                     findAnnotation(f, ClientStub.class).map(ClientStub::value),
                     findAnnotation(f, CorbanameUrl.class).map(CorbanameUrl::value));
 
             IMPL o = newInstance(implClass, serverRef.get().paramMap);
-            // create the tie
-            if (!!!(o instanceof PortableRemoteObject)) {
-                PortableRemoteObject.exportObject(o);
-            }
-            TIE tie = (TIE) Util.getTie(o);
-            if (tie == null) {
-                // try creating the tie directly
-                tie = newMatchingInstance(implClass, "_*_Tie");
-            }
-            tie.setTarget(o);
-            // do the POA things
-            serverRef.get().childPoa.activate_object(tie);
-            // put the result on the bus
-            String result;
-            if (f.getType() == String.class) {
-                NamingContext root = NamingContextHelper.narrow(serverRef.get().orb.resolve_initial_references("NameService"));
-                NameComponent[] cosName = {new NameComponent(f.getName(), "")};
-                root.bind(cosName, tie.thisObject());
-                result = this.nsUrl + "#" + f.getName();
-            } else {
-                result = serverRef.get().orb.object_to_string(tie.thisObject());
-            }
+            boolean useNameService = f.getType() == String.class;
+            String result = getIor(f, o, useNameService);
+            bus.put(f.getName(), result);
+        } catch (Throwable throwable) {
+            throw Throw.andThrowAgain(throwable);
+        }
+    }
+
+    private <IMPL extends Remote, TIE extends Servant & Tie>
+    String getIor(Field f, IMPL o, boolean useNameService) throws Exception {
+        // create the tie
+        if (!!!(o instanceof PortableRemoteObject)) PortableRemoteObject.exportObject(o);
+        TIE tie = (TIE) Util.getTie(o);
+
+        // if that didn't work try creating the tie directly
+        if (tie == null) tie = newMatchingInstance(o.getClass(), "_*_Tie");
+
+        // do up the tie
+        tie.setTarget(o);
+        // connect the tie to the POA
+        serverRef.get().childPoa.activate_object(tie);
+        // put the result on the bus
+        String result;
+        if (useNameService) {
+            NamingContext root = NamingContextHelper.narrow(serverRef.get().orb.resolve_initial_references("NameService"));
+            NameComponent[] cosName = {new NameComponent(f.getName(), "")};
+            root.bind(cosName, tie.thisObject());
+            result = this.nsUrl + "#" + f.getName();
+        } else {
+            result = serverRef.get().orb.object_to_string(tie.thisObject());
+        }
+        return result;
+    }
+
+    String exportObject(Field f) {
+        assertClientSide();
+        bus.put(FieldRequest.EXPORT, f);
+        waitForCompletion(t -> new ObjectExportFailed(f, t));
+        final String ior = bus.get(f.getName());
+        bus.log(ior);
+        return ior;
+    }
+
+    private <IMPL extends Remote, TIE extends Servant & Tie>
+    void exportObject0(Field f) {
+        assertServer(IS_STARTED);
+        try {
+            bus.log(LogLevel.INFO, "field = " + f);
+            IMPL o = (IMPL) f.get(null);
+            String result = getIor(f, o, false);
             bus.put(f.getName(), result);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
@@ -462,6 +423,10 @@ final class ServerComms implements Serializable {
 
     static class FieldInstantiationFailed extends ServerResult {
         FieldInstantiationFailed(Field f, Throwable cause) { super("Received exception from server while trying to instantiate field:\n    " + f, cause); }
+    }
+
+    static class ObjectExportFailed extends ServerResult {
+        ObjectExportFailed(Field f, Throwable cause) { super("Received exception from server while trying to export object in final field:\n    " + f, cause); }
     }
 
     static class LoggingFailed extends ServerResult {
