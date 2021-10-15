@@ -70,9 +70,10 @@ class Util {
         }
 
         /** Requires the caller to have class definition privileges */
-        private static Class<?> invoke(ClassLoader loader, String className, byte[] data) {
+        private static <S> Class<S> invoke(ClassLoader loader, String className, byte[] data) {
             try {
-                return (Class<?>)defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
+                //noinspection unchecked
+                return (Class<S>)defineClass.invoke(loader, className, data, 0, data.length, getProtectionDomain(loader));
             } catch (IllegalAccessException|IllegalArgumentException ex) {
                 throw new Error("internal error", ex);
             } catch (InvocationTargetException ex) {
@@ -88,7 +89,7 @@ class Util {
     }
 
     /** Requires the caller to have class definition privileges */
-    static Class<?> defineClass(final ClassLoader loader, String className, byte[] data) {
+    static <S> Class<S> defineClass(final ClassLoader loader, String className, byte[] data) {
         return loader == null ?
                 defineClass(requireNonNull(currentThread().getContextClassLoader()), className, data) :
                 DefineClass.invoke(loader, className, data);

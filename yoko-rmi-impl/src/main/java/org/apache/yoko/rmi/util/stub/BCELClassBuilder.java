@@ -42,6 +42,7 @@ import org.apache.bcel.generic.ObjectType;
 import org.apache.bcel.generic.PUSH;
 import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.Type;
+import org.apache.yoko.rmi.impl.RMIStub;
 
 import java.io.File;
 import java.io.IOException;
@@ -50,9 +51,13 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -60,7 +65,6 @@ import static java.lang.reflect.Modifier.isStatic;
 import static java.security.AccessController.doPrivileged;
 import static java.util.Collections.unmodifiableMap;
 import static java.util.Objects.requireNonNull;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.IntStream.range;
 import static org.apache.bcel.Constants.ACC_FINAL;
 import static org.apache.bcel.Constants.ACC_PRIVATE;
@@ -76,31 +80,29 @@ import static org.apache.bcel.Constants.T_INT;
 import static org.apache.bcel.Constants.T_LONG;
 import static org.apache.bcel.Constants.T_OBJECT;
 import static org.apache.bcel.Constants.T_SHORT;
-import static org.apache.bcel.Constants.T_VOID;
 import static org.apache.bcel.generic.Type.getArgumentTypes;
 import static org.apache.bcel.generic.Type.getReturnType;
 import static org.apache.yoko.util.PrivilegedActions.action;
 
 class BCELClassBuilder {
-    static final Logger logger = Logger.getLogger(BCELClassBuilder.class.getName());
+    private static final Logger logger = Logger.getLogger(BCELClassBuilder.class.getName());
 
-    static <S> Class<S> make(ClassLoader loader, Class superClass, Class<?> type, MethodRef[] methods, Object[] data,
-                      MethodRef handlerMethodRef, String className, StubInitializer initializer) {
-        String superClassName = superClass.getName();
+    static <S> Class<S> makeStub(ClassLoader loader, Class<?> type, MethodRef[] methods, Object[] data, MethodRef handlerMethodRef, String className) {
+        String superClassName = RMIStub.class.getName();
         String[] interfaceNames = { type.getName(), Stub.class.getName() };
 
         ClassGen newStubClass = new ClassGen(className, superClassName, "generated", ACC_PUBLIC | ACC_FINAL, interfaceNames);
         ConstantPoolGen cp = newStubClass.getConstantPool();
 
-        Class[] paramTypes = requireNonNull(handlerMethodRef, "handler method is null").getParameterTypes();
+        Class<?>[] paramTypes = requireNonNull(handlerMethodRef, "handler method is null").getParameterTypes();
         if (paramTypes.length != 3) throw new IllegalArgumentException("handler method must have three arguments");
-        if (!paramTypes[0].isAssignableFrom(superClass)) throw new IllegalArgumentException("Handler's 1st argument must be super-type for " + superClass);
+        if (!paramTypes[0].isAssignableFrom(RMIStub.class)) throw new IllegalArgumentException("Handler's 1st argument must be super-type for " + RMIStub.class);
 
         Type typeOfDataFields = translate(paramTypes[1]);
         if (Object[].class != paramTypes[2]) throw new IllegalArgumentException("Handler's 3rd argument must be Object[]");
 
         // Construct field for the handler reference
-        Class handlerClass = handlerMethodRef.getDeclaringClass();
+        Class<?> handlerClass = handlerMethodRef.getDeclaringClass();
         FieldGen handlerFieldGen = new FieldGen(ACC_PRIVATE | ACC_FINAL, translate(handlerClass), "__handler", cp);
         newStubClass.addField(handlerFieldGen.getField());
 
@@ -139,7 +141,7 @@ class BCELClassBuilder {
                 }
             }
 
-            Class proxyClass = Util.defineClass(loader, className, classData); //privileged
+            Class<S> proxyClass = Util.defineClass(loader, className, classData); //privileged
 
             // initialize the static data fields
             range(0, data.length).forEach(i -> {
@@ -151,7 +153,7 @@ class BCELClassBuilder {
                 } catch (NoSuchFieldException | IllegalAccessException e) {
                     logger.log(Level.WARNING, "cannot find/access field " + dataFieldGens[i].getName()
                             + " for stub class " + className + " extends: " + superClassName
-                            + " implements: " + Arrays.stream(interfaceNames).collect(joining(", ")), e);
+                            + " implements: " + String.join(", ", interfaceNames), e);
                     throw new Error("internal error!", e);
                 }
             });
@@ -160,7 +162,7 @@ class BCELClassBuilder {
             try {
                 Field f = proxyClass.getDeclaredField( "__initializer"); // privileged
                 f.setAccessible(true); // privileged
-                f.set(null, initializer); // privileged
+                f.set(null, StubClass.InitializerHolder.RMI_STUB_INITIALIZER); // privileged
             } catch (NoSuchFieldException | IllegalAccessException ex) {
                 throw new Error("internal error!", ex);
             }
@@ -186,7 +188,7 @@ class BCELClassBuilder {
        put(Throwable.class, Type.THROWABLE);
     }});
 
-    static Type translate(Class clazz) {
+    private static Type translate(Class<?> clazz) {
         Type result = KNOWN_TYPE_MAP.get(clazz);
         if (result != null) return result;
         if (clazz.isPrimitive()) throw new InternalError("Unknown primitive type: " + clazz);
@@ -195,7 +197,7 @@ class BCELClassBuilder {
                 new ObjectType(clazz.getName());
     }
 
-    static Type[] translate(Class[] clazz) {
+    private static Type[] translate(Class<?>[] clazz) {
         return Stream.of(clazz)
                 .map(BCELClassBuilder::translate)
                 .toArray(Type[]::new);
@@ -206,13 +208,14 @@ class BCELClassBuilder {
      * subclass of <code>super_class</code>, implementing
      * <code>interfaces</code>.
      */
-    public static MethodRef[] collectMethods(Class super_class, Class<?> type) {
-        HashMap<String, MethodRef> methods = new HashMap();
+    public static MethodRef[] collectMethods(Class<?> super_class, Class<?> type) {
+        HashMap<String, MethodRef> methods = new HashMap<>();
 
         collectAbstractMethods(methods, type);
         collectAbstractMethods(methods, super_class);
         removeImplementedMethods(methods, super_class);
 
+        //noinspection SimplifyStreamApiCallChains
         return methods.values().stream().toArray(MethodRef[]::new);
     }
 
@@ -220,10 +223,10 @@ class BCELClassBuilder {
      * Collect all methods to be generated. We'll only collect each method once;
      * so multiple redeclations will be eliminetd.
      */
-    private static void collectAbstractMethods(Map<String, MethodRef> methods, Class type) {
+    private static void collectAbstractMethods(Map<String, MethodRef> methods, Class<?> type) {
         if (type == Object.class || type == null) return;
 
-        for (Class if_type : type.getInterfaces()) collectAbstractMethods(methods, if_type);
+        for (Class<?> if_type : type.getInterfaces()) collectAbstractMethods(methods, if_type);
 
         collectAbstractMethods(methods, type.getSuperclass());
 
@@ -241,7 +244,7 @@ class BCELClassBuilder {
      * This is used in the second phase of collect, to remove methods that have
      * been collected in collectAbstractMethods.
      */
-    private static void removeImplementedMethods(Map<String, ?> methods, Class type) {
+    private static void removeImplementedMethods(Map<String, ?> methods, Class<?> type) {
         if (type == Object.class || type == null) return;
         removeImplementedMethods(methods, type.getSuperclass());
         Arrays.stream(type.getDeclaredMethods())
@@ -263,7 +266,7 @@ class BCELClassBuilder {
     //
     // Constructor for a stub with an initializer
     //
-    static void emitInitializerConstructor(ClassGen stubClass, FieldGen handlerField, FieldGen initializerField) {
+    private static void emitInitializerConstructor(ClassGen stubClass, FieldGen handlerField, FieldGen initializerField) {
         String stubClassName = stubClass.getClassName();
         ConstantPoolGen cp = stubClass.getConstantPool();
         InstructionList il = new InstructionList();
@@ -300,7 +303,7 @@ class BCELClassBuilder {
         stubClass.addMethod(mg.getMethod());
     }
 
-    static void generateHandlerGetter(ClassGen clazz, FieldGen handlerField) {
+    private static void generateHandlerGetter(ClassGen clazz, FieldGen handlerField) {
         Method[] stub_methods = Stub.class.getDeclaredMethods();
         if (stub_methods.length != 1) throw new IllegalStateException("" + Stub.class + " has wrong # methods");
 
@@ -330,7 +333,7 @@ class BCELClassBuilder {
         clazz.addMethod(mg.getMethod());
     }
 
-    static void generate(ClassGen clazz, MethodRef method, FieldGen dataField, FieldGen handlerField, MethodRef handlerMethodRef) {
+    private static void generate(ClassGen clazz, MethodRef method, FieldGen dataField, FieldGen handlerField, MethodRef handlerMethodRef) {
         ConstantPoolGen cp;
         InstructionList il;
 
@@ -392,11 +395,11 @@ class BCELClassBuilder {
         // catch...
         InstructionHandle rethrowLocation = il.append(new ATHROW());
 
-        Class[] exceptions = method.getExceptionTypes();
+        Class<?>[] exceptions = method.getExceptionTypes();
         boolean handle_throwable_exception = true;
         boolean handle_runtime_exception = true;
         if (exceptions != null) {
-            for (Class ex : exceptions) {
+            for (Class<?> ex: exceptions) {
                 if (ex == Throwable.class) handle_throwable_exception = false;
                 if (ex == RuntimeException.class || ex == Exception.class) handle_runtime_exception = false;
                 mg.addExceptionHandler(tryStart, tryEnd, rethrowLocation, (ObjectType) translate(ex));
@@ -424,123 +427,149 @@ class BCELClassBuilder {
         clazz.addMethod(mg.getMethod());
     }
 
-    static InstructionHandle emitReturn(InstructionList il, Type type) {
-        switch (type.getType()) {
-        case T_BOOLEAN:
-        case T_CHAR:
-        case T_BYTE:
-        case T_SHORT:
-        case T_INT: return il.append(new IRETURN());
-        case T_LONG: return il.append(new LRETURN());
-        case T_FLOAT: return il.append(new FRETURN());
-        case T_DOUBLE: return il.append(new DRETURN());
-        case T_VOID: return il.append(InstructionConstants.RETURN);
-        default: return il.append(new ARETURN());
+    private static InstructionHandle emitReturn(InstructionList il, Type type) {
+        return PrimitiveTypeEmitters.get(type)
+                .map(pte -> pte.emitReturn.apply(il))
+                .orElse(il.append(new ARETURN()));
+    }
+
+    private static void emitCoerceToObject(InstructionList il, InstructionFactory fac, Type type) {
+        PrimitiveTypeEmitters.get(type)
+                .map(pte -> pte.emitBox.apply(il,fac));
+    }
+
+    private static void emitCoerceFromObject(InstructionList il, InstructionFactory fac, Type type) {
+        PrimitiveTypeEmitters.get(type)
+                .map(pte -> pte.emitUnbox)
+                .orElse(emitCoerceToTypeFromObject(type))
+                .apply(il, fac);
+    }
+
+    private static BiFunction<InstructionList, InstructionFactory, InstructionHandle> emitCoerceToTypeFromObject(Type type) {
+        return (il, fac) -> {
+            switch(type.getType()) {
+            case T_OBJECT:
+            case T_ARRAY:
+                return il.append(fac.createCast(Type.OBJECT, type));
+            default:
+                throw new Error();
+            }
+        };
+    }
+
+    enum PrimitiveTypeEmitters {
+        BOOLEAN_EMITTERS(boolean.class, Boolean.class),
+        CHAR_EMITTERS(char.class, Character.class),
+        BYTE_EMITTERS(byte.class, Byte.class),
+        SHORT_EMITTERS(short.class, Short.class),
+        INT_EMITTERS(int.class, Integer.class),
+        LONG_EMITTERS(long.class, Long.class),
+        FLOAT_EMITTERS(float.class, Float.class),
+        DOUBLE_EMITTERS(double.class, Double.class),
+        VOID_EMITTERS(Type.VOID,
+                (il, fac) -> il.append(InstructionConstants.POP),
+                (il, fac) -> il.append(InstructionConstants.ACONST_NULL),
+                (il) -> il.append(InstructionConstants.RETURN));
+
+        final Type type;
+        final BiFunction<InstructionList, InstructionFactory, InstructionHandle> emitUnbox;
+        final BiFunction<InstructionList, InstructionFactory, InstructionHandle> emitBox;
+        final Function<InstructionList, InstructionHandle> emitReturn;
+
+        private static final Map<Type, PrimitiveTypeEmitters> EMITTERS = unmodifiableMap(Arrays.stream(values())
+                    .collect(Collectors.toMap(pte -> pte.type, pte -> pte)));
+
+        static Optional<PrimitiveTypeEmitters> get(Type type) {
+            return Optional.ofNullable(EMITTERS.get(type));
+        }
+
+        PrimitiveTypeEmitters(Class<?> primitiveClass, Class<?> wrapperClass) {
+            this(Type.getType(primitiveClass), wrapperClass, primitiveClass.getName() + "Value");
+        }
+
+        PrimitiveTypeEmitters(Type type, Class<?> wrapperClass, String unboxMethodName) {
+            this(type, genEmitUnbox(wrapperClass, unboxMethodName), genEmitBox(type, wrapperClass), genEmitReturn(type));
+        }
+
+        PrimitiveTypeEmitters(Type type, BiFunction<InstructionList, InstructionFactory, InstructionHandle> emitUnbox,
+                              BiFunction<InstructionList, InstructionFactory, InstructionHandle> emitBox,
+                              Function<InstructionList, InstructionHandle> emitReturn) {
+            this.type = type;
+            this.emitUnbox = emitUnbox;
+            this.emitBox = emitBox;
+            this.emitReturn = emitReturn;
+        }
+
+        private static Function<InstructionList, InstructionHandle> genEmitReturn(Type type) {
+            switch (type.getType()) {
+            case T_BOOLEAN:
+            case T_CHAR:
+            case T_BYTE:
+            case T_SHORT:
+            case T_INT: return (il) -> il.append(new IRETURN());
+            case T_LONG: return (il) -> il.append(new LRETURN());
+            case T_FLOAT: return (il) -> il.append(new FRETURN());
+            case T_DOUBLE: return (il) -> il.append(new DRETURN());
+            default: throw new InternalError();
+            }
+        }
+
+        private static BiFunction<InstructionList, InstructionFactory, InstructionHandle> genEmitBox(Type type, Class<?> wrapperClass) {
+            String wrapperClassName = wrapperClass.getName();
+            Type[] argTypes = { type };
+            ObjectType newObjectType = new ObjectType(wrapperClassName);
+            switch (type.getType()) {
+            case T_BOOLEAN:
+            case T_CHAR:
+            case T_BYTE:
+            case T_SHORT:
+            case T_INT:
+            case T_FLOAT:
+                return (il,fac) -> {
+                    // float
+                    il.append(fac.createNew(newObjectType));
+                    // float Float
+                    il.append(InstructionConstants.DUP_X1);
+                    // Float float Float
+                    il.append(InstructionConstants.SWAP);
+                    // Float Float float
+                    return il.append(fac.createInvoke(wrapperClassName, "<init>", Type.VOID, argTypes, Constants.INVOKESPECIAL));
+                };
+            case T_DOUBLE:
+            case T_LONG:
+                return (il,fac) -> {
+                    // double/2
+                    il.append(fac.createNew(newObjectType));
+                    // double/2 Double
+                    il.append(InstructionConstants.DUP_X2);
+                    // Double double/2 Double
+                    il.append(InstructionConstants.DUP_X2);
+                    // Double Double double/2 Double
+                    il.append(InstructionConstants.POP);
+                    // Double Double double/2
+                    return il.append(fac.createInvoke(wrapperClassName, "<init>", Type.VOID, argTypes, Constants.INVOKESPECIAL));
+                };
+            default:
+                throw new InternalError();
+            }
+        }
+
+
+        private static BiFunction<InstructionList, InstructionFactory, InstructionHandle> genEmitUnbox(Class<?> wrapperClass, String unwrapMethodName) {
+            ObjectType objectType = new ObjectType(wrapperClass.getName());
+            try {
+                MethodRef unwrapMethodRef = new MethodRef(wrapperClass.getDeclaredMethod(unwrapMethodName));
+                return (il,fac) -> {
+                    il.append(fac.createCast(Type.OBJECT, objectType));
+                    return emitInvoke(il, fac, unwrapMethodRef);
+                };
+            } catch (NoSuchMethodException e) {
+                throw new Error("unwrap method not found for " + wrapperClass, e);
+            }
         }
     }
 
-    static void emitCoerceToObject(InstructionList il, InstructionFactory fac, Type type) {
-        int tag = type.getType();
-        switch (tag) {
-        case T_BOOLEAN:
-        case T_CHAR:
-        case T_BYTE:
-        case T_SHORT:
-        case T_INT:
-        case T_FLOAT:
-
-            // float
-            il.append(fac.createNew(new ObjectType(BASIC_CLASS_NAMES[tag])));
-
-            // float Float
-            il.append(InstructionConstants.DUP_X1);
-
-            // Float float Float
-            il.append(InstructionConstants.SWAP);
-
-            // Float Float float
-            il.append(fac.createInvoke(BASIC_CLASS_NAMES[tag], "<init>", Type.VOID, new Type[] { type }, Constants.INVOKESPECIAL));
-
-            // Float
-            return;
-
-        case T_DOUBLE:
-        case T_LONG:
-
-            // double/2
-            il.append(fac.createNew(new ObjectType(BASIC_CLASS_NAMES[tag])));
-
-            // double/2 Double
-            il.append(InstructionConstants.DUP_X2);
-
-            // Double double/2 Double
-            il.append(InstructionConstants.DUP_X2);
-
-            // Double Double double/2 Double
-            il.append(InstructionConstants.POP);
-
-            // Double Double double/2
-            il.append(fac.createInvoke(BASIC_CLASS_NAMES[tag], "<init>",
-                    Type.VOID, new Type[] { type }, Constants.INVOKESPECIAL));
-
-            // Double
-            return;
-
-        case T_VOID:
-            il.append(InstructionConstants.ACONST_NULL);
-
-        default:
-            return;
-        }
-    }
-
-    public static final String[] BASIC_CLASS_NAMES = { null, null, null, null,
-            "java.lang.Boolean", "java.lang.Character", "java.lang.Float",
-            "java.lang.Double", "java.lang.Byte", "java.lang.Short",
-            "java.lang.Integer", "java.lang.Long", "java.lang.Void", null,
-            null, null, null };
-
-    static MethodRef[] UNBOXING_METHOD = new MethodRef[T_VOID];
-
-    static {
-        try {
-            UNBOXING_METHOD[T_BOOLEAN] = new MethodRef(Boolean.class.getDeclaredMethod("booleanValue"));
-            UNBOXING_METHOD[T_CHAR] = new MethodRef(Character.class.getDeclaredMethod("charValue"));
-            UNBOXING_METHOD[T_FLOAT] = new MethodRef(Float.class.getDeclaredMethod("floatValue"));
-            UNBOXING_METHOD[T_DOUBLE] = new MethodRef(Double.class.getDeclaredMethod("doubleValue"));
-            UNBOXING_METHOD[T_BYTE] = new MethodRef(Byte.class.getDeclaredMethod("byteValue"));
-            UNBOXING_METHOD[T_SHORT] = new MethodRef(Short.class.getDeclaredMethod("shortValue"));
-            UNBOXING_METHOD[T_INT] = new MethodRef(Integer.class.getDeclaredMethod("intValue"));
-            UNBOXING_METHOD[T_LONG] = new MethodRef(Long.class.getDeclaredMethod("longValue"));
-        } catch (NoSuchMethodException ex) {
-            throw new Error(ex);
-        }
-    }
-
-    static InstructionHandle emitCoerceFromObject(InstructionList il, InstructionFactory fac, Type type) {
-        int tag = type.getType();
-        switch (tag) {
-        case T_BOOLEAN:
-        case T_CHAR:
-        case T_BYTE:
-        case T_SHORT:
-        case T_INT:
-        case T_LONG:
-        case T_FLOAT:
-        case T_DOUBLE:
-            il.append(fac.createCast(Type.OBJECT, new ObjectType(BASIC_CLASS_NAMES[tag])));
-            return emitInvoke(il, fac, UNBOXING_METHOD[tag]);
-        case T_OBJECT:
-        case T_ARRAY:
-            return il.append(fac.createCast(Type.OBJECT, type));
-        case T_VOID:
-            return il.append(InstructionConstants.POP);
-        default:
-            throw new RuntimeException("internal error");
-        }
-    }
-
-    static InstructionHandle emitInvoke(InstructionList il, InstructionFactory fac, MethodRef method) {
+    private static InstructionHandle emitInvoke(InstructionList il, InstructionFactory fac, MethodRef method) {
         String signature = method.getSignature();
         Type[] args = getArgumentTypes(signature);
         Type ret = getReturnType(signature);
