@@ -75,7 +75,7 @@ public class CodeBaseProxy extends LocalObject implements CodeBase {
         return getCodeBase().metas(arg0);
     }
     
-    CodeBase getCodeBase() {
+    public CodeBase getCodeBase() {
         CodeBase result = codebase;
         if (null != result) { return result; }
         synchronized (codebaseObj) {
