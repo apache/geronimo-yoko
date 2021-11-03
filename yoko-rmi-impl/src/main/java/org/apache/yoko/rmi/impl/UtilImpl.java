@@ -18,6 +18,7 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.rmispec.util.DelegateType;
 import org.apache.yoko.util.Exceptions;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
@@ -521,13 +522,16 @@ public class UtilImpl implements UtilDelegate {
         // walk down the stack looking for the first class loader that is NOT
         //  - the system class loader (null)
         //  - the loader that loaded Util.class
-        CLASS_LOG.finest(() -> "Looking for stack loader other than loader of Util: " + JAVAX_RMI_CORBA_UTIL_CLASSLOADER);
+        //  - the loader(s) that loaded any delegate class
+        CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko: " + JAVAX_RMI_CORBA_UTIL_CLASSLOADER);
         for (Class<?> candidateContextClass: STACK_CONTEXT_SUPPLIER.get()) {
             final ClassLoader candidateLoader = doPrivileged(action(candidateContextClass::getClassLoader));
             if (null == candidateLoader) {
                 CLASS_LOG.finest(() -> "Ignoring system class " + candidateContextClass.getName());
             } else if (JAVAX_RMI_CORBA_UTIL_CLASSLOADER == candidateLoader) {
                 CLASS_LOG.finest(() -> "Ignoring yoko class " + candidateContextClass.getName());
+            } else if (DelegateType.isDelegateClassLoader(candidateLoader)) {
+                CLASS_LOG.finest(() -> "Ignoring delegate class " + candidateContextClass.getName());
             } else {
                 CLASS_LOG.finer(() -> "Using " + candidateContextClass.getName() + "'s loader: " + candidateLoader);
                 return candidateLoader;
