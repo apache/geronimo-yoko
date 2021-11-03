@@ -17,32 +17,28 @@
 
 package javax.rmi;
 
-import org.apache.yoko.rmispec.util.UtilLoader;
+import org.apache.yoko.rmispec.util.DelegateType;
 import org.omg.CORBA.INITIALIZE;
 
 import javax.rmi.CORBA.PortableRemoteObjectDelegate;
+import java.lang.reflect.Constructor;
 import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
 import static java.security.AccessController.doPrivileged;
 
 public class PortableRemoteObject {
-    // Initialize delegate
-    private static final String defaultDelegate = "org.apache.yoko.rmi.impl.PortableRemoteObjectImpl";
-    private static final String DELEGATE_KEY = "javax.rmi.CORBA.PortableRemoteObjectClass";
-    private static final PortableRemoteObjectDelegate delegate = getDelegate();
+    private static final PortableRemoteObjectDelegate DELEGATE;
 
-    private static <T extends PortableRemoteObjectDelegate> PortableRemoteObjectDelegate getDelegate() {
-        String delegateName = doPriv(() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
+    static {
         try {
-            Class<T> delegateClass = UtilLoader.loadServiceClass(delegateName, DELEGATE_KEY);
-            return doPrivEx(delegateClass::getConstructor).newInstance();
+            Constructor<? extends PortableRemoteObjectDelegate> constructor = doPrivEx(DelegateType.PRO.getConstructorAction());
+            DELEGATE = constructor.newInstance();
         } catch (Throwable e) {
-            throw (INITIALIZE) new INITIALIZE("Can not create PortableRemoteObject delegate: " + delegateName).initCause(e);
+            throw (INITIALIZE) new INITIALIZE("Can not create PortableRemoteObject delegate").initCause(e);
         }
     }
 
@@ -52,26 +48,25 @@ public class PortableRemoteObject {
     }
 
     public static void connect(Remote target, Remote source) throws RemoteException {
-        delegate.connect(target, source);
+        DELEGATE.connect(target, source);
     }
 
     public static void exportObject(Remote o) throws RemoteException {
-        delegate.exportObject(o);
+        DELEGATE.exportObject(o);
     }
 
-    public static Object narrow(Object from, Class to) throws ClassCastException {
-        return delegate.narrow(from, to);
+    public static Object narrow(Object from, Class<?> to) throws ClassCastException {
+        return DELEGATE.narrow(from, to);
     }
 
     public static Remote toStub(Remote o) throws NoSuchObjectException {
-        return delegate.toStub(o);
+        return DELEGATE.toStub(o);
     }
 
     public static void unexportObject(Remote o) throws NoSuchObjectException {
-        delegate.unexportObject(o);
+        DELEGATE.unexportObject(o);
     }
 
-    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
     private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }
 

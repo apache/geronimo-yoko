@@ -17,6 +17,7 @@
 
 package javax.rmi.CORBA;
 
+import org.apache.yoko.rmispec.util.DelegateType;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA_2_3.portable.ObjectImpl;
@@ -25,13 +26,12 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Constructor;
 import java.rmi.RemoteException;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
 import static java.security.AccessController.doPrivileged;
-import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
 /**
  * This class is deliberately not serializable.
@@ -46,16 +46,13 @@ import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
  * </ul>
  */
 abstract class DelegateHolder extends ObjectImpl {
-    private static final String defaultDelegate = "org.apache.yoko.rmi.impl.StubImpl";
-    private static final String DELEGATE_KEY = "javax.rmi.CORBA.StubClass";
-    private static final Class<? extends StubDelegate> DELEGATE_CLASS;
+    private static final Constructor<? extends StubDelegate> DELEGATE_CONSTRUCTOR;
 
     static {
-        String delegateName = doPriv(() -> System.getProperty(DELEGATE_KEY, defaultDelegate));
         try {
-            DELEGATE_CLASS = loadServiceClass(delegateName, DELEGATE_KEY);
+            DELEGATE_CONSTRUCTOR = doPrivEx(DelegateType.STUB.getConstructorAction());
         } catch (Exception e) {
-            throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate: " + delegateName).initCause(e);
+            throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate").initCause(e);
         }
     }
 
@@ -63,13 +60,12 @@ abstract class DelegateHolder extends ObjectImpl {
 
     DelegateHolder() {
         try {
-            delegate = doPrivEx(DELEGATE_CLASS::getConstructor).newInstance();
+            delegate = DELEGATE_CONSTRUCTOR.newInstance();
         } catch (Exception e) {
-            throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate: " + DELEGATE_CLASS.getName()).initCause(e);
+            throw (INITIALIZE) new INITIALIZE("Can not create Stub delegate").initCause(e);
         }
     }
 
-    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
     private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }
 
@@ -78,6 +74,7 @@ public abstract class Stub extends DelegateHolder implements Serializable {
     public void connect(ORB orb) throws RemoteException { delegate.connect(this, orb); }
     private void readObject(ObjectInputStream ois) throws IOException, ClassNotFoundException { delegate.readObject(this, ois); }
     private void writeObject(ObjectOutputStream oos) throws IOException { delegate.writeObject(this, oos); }
+    @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
     public boolean equals(Object o) { return delegate.equals(this, o); }
     public int hashCode() { return delegate.hashCode(this); }
     public String toString() { return delegate.toString(this); }
