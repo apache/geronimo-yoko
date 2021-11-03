@@ -57,26 +57,23 @@ public class Util {
         return DELEGATE.copyObject(o, orb);
     }
 
+    @SuppressWarnings("unused")
     public static Object[] copyObjects(Object[] objs, ORB orb) throws RemoteException {
         return DELEGATE.copyObjects(objs, orb);
     }
 
-    public static ValueHandler createValueHandler() {
-        return DELEGATE.createValueHandler();
-    }
+    public static ValueHandler createValueHandler() { return DELEGATE.createValueHandler(); }
 
-    public static String getCodebase(Class clz) {
-        return DELEGATE.getCodebase(clz);
-    }
+    @SuppressWarnings("rawtypes")
+    public static String getCodebase(Class clz) { return DELEGATE.getCodebase(clz); }
 
-    public static Tie getTie(Remote t) {
-        return DELEGATE.getTie(t);
-    }
+    public static Tie getTie(Remote t) { return DELEGATE.getTie(t); }
 
     public static boolean isLocal(Stub s) throws RemoteException {
         return DELEGATE.isLocal(s);
     }
 
+    @SuppressWarnings("rawtypes")
     public static Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
         return null == DELEGATE ?
                 // If there is no delegate yet, use the default implementation search order

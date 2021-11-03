@@ -1,5 +1,4 @@
-/**
- *
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -19,6 +18,7 @@
 package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.osgi.ProviderLocator;
+import org.apache.yoko.util.Exceptions;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -43,7 +43,6 @@ import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.UtilDelegate;
 import javax.rmi.CORBA.ValueHandler;
 import javax.rmi.PortableRemoteObject;
-import java.io.Externalizable;
 import java.io.Serializable;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -59,6 +58,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 import static java.security.AccessController.doPrivileged;
@@ -71,45 +71,8 @@ import static org.apache.yoko.util.PrivilegedActions.action;
 public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
 
-    // Note: this field must be declared before the static intializer that calls Util.loadClass
-    // since that method will call loadClass0 which uses this field... if it is below the static
-    // initializer the _secman field will be null
-    private static final SecMan _secman = doPrivileged(action(SecMan::new));
-
-    private static final ClassLoader BEST_GUESS_AT_EXTENSION_CLASS_LOADER;
-    static {
-        ClassLoader candidateLoader = doPrivileged(action(UtilImpl.class::getClassLoader));
-
-        if (candidateLoader == null) {
-            // looks like this class was loaded by the boot class loader
-            // so it is safe to try loading stuff by reflection without
-            // worrying about whether we have imported the packages into the OSGi bundle
-            candidateLoader = findFirstNonNullLoader(
-                    "sun.net.spi.nameservice.dns.DNSNameService",
-                    "javax.transaction.UserTransaction");
-        }
-
-        // We will try to find the extension class
-        // loader by ascending the loader hierarchy
-        // starting from whatever loader we found.
-        for (ClassLoader l = candidateLoader; l != null; l = l.getParent()) {
-            candidateLoader = l;
-        }
-
-        BEST_GUESS_AT_EXTENSION_CLASS_LOADER = candidateLoader;
-    }
-
-    private static ClassLoader findFirstNonNullLoader(String...classNames) {
-        for (String className : classNames) {
-            try {
-                final Class<?> c = Class.forName(className);
-                ClassLoader cl = doPrivileged(action(c::getClassLoader));
-                if (cl != null) return cl;
-            } catch (Exception|NoClassDefFoundError ignored) {
-            }
-        }
-        return null;
-    }
+    private static final Supplier<Class<?>[]> STACK_CONTEXT_SUPPLIER = doPrivileged(action(StackContextSupplier::new));
+    private static final ClassLoader JAVAX_RMI_CORBA_UTIL_CLASSLOADER = doPrivileged(action(Util.class::getClassLoader));
 
     /**
      * Translate a CORBA SystemException to the corresponding RemoteException
@@ -134,7 +97,7 @@ public class UtilImpl implements UtilDelegate {
 
          // construct the exception message according to �1.4.8
 
-        StringBuffer buf = new StringBuffer("CORBA ");
+        StringBuilder buf = new StringBuilder("CORBA ");
 
         final String prefix = "org.omg.CORBA";
         if (name.startsWith(prefix)) {
@@ -190,14 +153,14 @@ public class UtilImpl implements UtilDelegate {
                     .orElseGet(() -> new RemoteException(message));
         }
 
+        @SuppressWarnings({"rawtypes", "unchecked"})
         Class<? extends RemoteException> loadClass(String name) {
             try {
-                Class<? extends RemoteException> clazz = Util.loadClass(name, null, null);
+                Class clazz = Util.loadClass(name, null, null);
                 if (RemoteException.class.isAssignableFrom(clazz)) {
-                    return clazz;
+                    return (Class<? extends RemoteException>)clazz;
                 }
-            } catch (ClassNotFoundException e) {
-            }
+            } catch (ClassNotFoundException ignored) {}
             return null;
         }
 
@@ -348,15 +311,12 @@ public class UtilImpl implements UtilDelegate {
                         "object not exported " + ro).initCause(ex);
             }
 
-            any.insert_Object((org.omg.CORBA.Object) corba_obj);
+            any.insert_Object(corba_obj);
 
-        } else if (obj instanceof Serializable || obj instanceof Externalizable) {
-
+        } else if (obj instanceof Serializable) {
             any.insert_Value((Serializable) obj);
-
         } else {
-            throw new MARSHAL("cannot write as " + obj.getClass()
-                    + " to an Any");
+            throw new MARSHAL("cannot write as " + obj.getClass() + " to an Any");
         }
 
         out.write_any(any);
@@ -423,11 +383,9 @@ public class UtilImpl implements UtilDelegate {
             try {
                 objref = (javax.rmi.CORBA.Stub) PortableRemoteObject.toStub((java.rmi.Remote) obj);
 
-            } catch (NoSuchObjectException ex) {
-            }
+            } catch (NoSuchObjectException ignored) {}
 
-            if (objref == null) {
-
+            if (null == objref) {
                 try {
                     PortableRemoteObject.exportObject((java.rmi.Remote) obj);
                     objref = (javax.rmi.CORBA.Stub) PortableRemoteObject.toStub((java.rmi.Remote) obj);
@@ -435,7 +393,6 @@ public class UtilImpl implements UtilDelegate {
                     throw (MARSHAL) new MARSHAL("cannot convert Remote to Object").initCause(ex);
                 }
             }
-
         } else {
             throw new MARSHAL("object is neither Remote nor org.omg.CORBA.Object: " + obj.getClass().getName());
         }
@@ -446,35 +403,30 @@ public class UtilImpl implements UtilDelegate {
     public void writeAbstractObject(OutputStream out, Object obj) {
         logger.finer("writeAbstractObject.1 " + " out=" + out);
 
-        if (obj instanceof org.omg.CORBA.Object || obj instanceof Serializable) {
-
-            // skip //
-
-        } else if (obj instanceof Remote) {
-            org.omg.CORBA.Object objref = null;
-
-            try {
-                objref = (org.omg.CORBA.Object) PortableRemoteObject.toStub((Remote) obj);
-
-            } catch (NoSuchObjectException ignored) {
-            }
-
-            if (objref == null) {
-                try {
-                    PortableRemoteObject.exportObject((Remote) obj);
-                    objref = (org.omg.CORBA.Object) PortableRemoteObject.toStub((Remote) obj);
-                } catch (RemoteException ex) {
-                    throw (MARSHAL) new MARSHAL("unable to export object").initCause(ex);
-                }
-            }
-            obj = objref;
-        }
-
         org.omg.CORBA_2_3.portable.OutputStream out_ = (org.omg.CORBA_2_3.portable.OutputStream) out;
 
         logger.finer("writeAbstractObject.2 " + " out=" + out);
 
-        out_.write_abstract_interface(obj);
+        out_.write_abstract_interface(convertObject(obj));
+    }
+
+    private Object convertObject(Object obj) {
+        if (obj instanceof org.omg.CORBA.Object) return obj;
+        if (obj instanceof Serializable) return obj;
+        if (!(obj instanceof Remote)) return obj;
+
+        Remote remote = (Remote)obj;
+        try {
+            Object objectRef = PortableRemoteObject.toStub(remote);
+            if (null != objectRef) return objectRef;
+        } catch (NoSuchObjectException ignored) {}
+
+        try {
+            PortableRemoteObject.exportObject(remote);
+            return PortableRemoteObject.toStub(remote);
+        } catch (RemoteException ex) {
+            throw Exceptions.as(MARSHAL::new, ex,"unable to export object");
+        }
     }
 
     protected java.util.Map<Remote, Tie> tie_map() {
@@ -503,17 +455,17 @@ public class UtilImpl implements UtilDelegate {
         return ValueHandlerImpl.get();
     }
 
+    @SuppressWarnings("rawtypes")
     public String getCodebase(Class clz) {
         // Specifically disable the ability to specify a remote codebase using "java.rmi.server.codebase"
         // system property, because it's an *EVIL* vector for security holes
         return null;
     }
 
-    static class SecMan extends java.rmi.RMISecurityManager {
-        @SuppressWarnings("rawtypes")
-        public Class[] getClassContext() {
-            return super.getClassContext();
-        }
+    @SuppressWarnings("deprecation")
+    private static class StackContextSupplier extends java.rmi.RMISecurityManager implements Supplier<Class<?>[]> {
+        @Override
+        public Class<?>[] get() { return getClassContext(); }
     }
 
     @SuppressWarnings("rawtypes")
@@ -564,17 +516,17 @@ public class UtilImpl implements UtilDelegate {
         }
     }
 
+
     private static ClassLoader getStackLoader() {
         // walk down the stack looking for the first class loader that is NOT
         //  - the system class loader (null)
         //  - the loader that loaded Util.class
-        final ClassLoader thisLoader = UtilImpl.class.getClassLoader();
-        CLASS_LOG.finest(() -> "Looking for stack loader other than loader of UtilImpl: " + thisLoader);
-        for (Class<?> candidateContextClass : _secman.getClassContext()) {
-            final ClassLoader candidateLoader = candidateContextClass.getClassLoader();
-            if (candidateLoader == null) {
+        CLASS_LOG.finest(() -> "Looking for stack loader other than loader of Util: " + JAVAX_RMI_CORBA_UTIL_CLASSLOADER);
+        for (Class<?> candidateContextClass: STACK_CONTEXT_SUPPLIER.get()) {
+            final ClassLoader candidateLoader = doPrivileged(action(candidateContextClass::getClassLoader));
+            if (null == candidateLoader) {
                 CLASS_LOG.finest(() -> "Ignoring system class " + candidateContextClass.getName());
-            } else if (thisLoader == candidateLoader) {
+            } else if (JAVAX_RMI_CORBA_UTIL_CLASSLOADER == candidateLoader) {
                 CLASS_LOG.finest(() -> "Ignoring yoko class " + candidateContextClass.getName());
             } else {
                 CLASS_LOG.finer(() -> "Using " + candidateContextClass.getName() + "'s loader: " + candidateLoader);
@@ -634,16 +586,13 @@ public class UtilImpl implements UtilDelegate {
         Class<?> targetClass;
 
         try {
-            targetClass = Util.loadClass(desc.type.getName(), stub
-                    ._get_codebase(), loader);
+            targetClass = Util.loadClass(desc.type.getName(), stub._get_codebase(), loader);
         } catch (ClassNotFoundException ex) {
-            logger.log(FINER, "copyRMIStub exception (current loader is: " + loader
-                    + ") " + ex.getMessage(), ex);
+            logger.log(FINER, "copyRMIStub exception (current loader is: " + loader + ") " + ex.getMessage(), ex);
             throw new RemoteException("Class not found", ex);
         }
 
-        return PortableRemoteObjectImpl.narrow1(RMIState.current(), stub,
-                targetClass);
+        return PortableRemoteObjectImpl.narrow1(RMIState.current(), stub, targetClass);
     }
 
     /**
@@ -693,8 +642,6 @@ public class UtilImpl implements UtilDelegate {
         }
 
     }
-
-    static final Object READ_SERIALIZABLE_KEY = new Object();
 
     /**
      * Copy an array of objects, maintaining internal reference integrity.
