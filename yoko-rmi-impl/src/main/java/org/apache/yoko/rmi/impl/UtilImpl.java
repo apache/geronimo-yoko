@@ -61,19 +61,21 @@ import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import static java.security.AccessController.doPrivileged;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.logging.VerboseLogging.CLASS_LOG;
+import static org.apache.yoko.util.Predicates.not;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
 
 public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
 
-    private static final Supplier<Class<?>[]> STACK_CONTEXT_SUPPLIER = doPrivileged(action(StackContextSupplier::new));
-    private static final ClassLoader JAVAX_RMI_CORBA_UTIL_CLASSLOADER = doPrivileged(action(Util.class::getClassLoader));
+    private static final Supplier<Stream<Class<?>>> STACK_CONTEXT_SUPPLIER = doPrivileged(action(StackContextSupplier::new));
+    private static final ClassLoader UTILIMPL_CLASSLOADER = doPrivileged(action(UtilImpl.class::getClassLoader));
 
     /**
      * Translate a CORBA SystemException to the corresponding RemoteException
@@ -464,9 +466,10 @@ public class UtilImpl implements UtilDelegate {
     }
 
     @SuppressWarnings("deprecation")
-    private static class StackContextSupplier extends java.rmi.RMISecurityManager implements Supplier<Class<?>[]> {
+    private static class StackContextSupplier extends java.rmi.RMISecurityManager implements Supplier<Stream<Class<?>>> {
+        @SuppressWarnings("RedundantCast")
         @Override
-        public Class<?>[] get() { return getClassContext(); }
+        public Stream<Class<?>> get() { return Arrays.stream((Class<?>[])getClassContext()).sequential().skip(1); }
     }
 
     @SuppressWarnings("rawtypes")
@@ -523,21 +526,17 @@ public class UtilImpl implements UtilDelegate {
         //  - the system class loader (null)
         //  - the loader that loaded Util.class
         //  - the loader(s) that loaded any delegate class
-        CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko: " + JAVAX_RMI_CORBA_UTIL_CLASSLOADER);
-        for (Class<?> candidateContextClass: STACK_CONTEXT_SUPPLIER.get()) {
-            final ClassLoader candidateLoader = doPrivileged(action(candidateContextClass::getClassLoader));
-            if (null == candidateLoader) {
-                CLASS_LOG.finest(() -> "Ignoring system class " + candidateContextClass.getName());
-            } else if (JAVAX_RMI_CORBA_UTIL_CLASSLOADER == candidateLoader) {
-                CLASS_LOG.finest(() -> "Ignoring yoko class " + candidateContextClass.getName());
-            } else if (DelegateType.isDelegateClassLoader(candidateLoader)) {
-                CLASS_LOG.finest(() -> "Ignoring delegate class " + candidateContextClass.getName());
-            } else {
-                CLASS_LOG.finer(() -> "Using " + candidateContextClass.getName() + "'s loader: " + candidateLoader);
-                return candidateLoader;
-            }
-        }
-        return null;
+        CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko: " + UTILIMPL_CLASSLOADER);
+        return STACK_CONTEXT_SUPPLIER.get()
+                .filter(Objects::nonNull)
+                .peek((c) -> CLASS_LOG.finest(() -> "Considering class: " + c.getName()))
+                .map((c) -> doPrivileged(action(c::getClassLoader)))
+                .filter(Objects::nonNull)
+                .filter(not(UTILIMPL_CLASSLOADER::equals))
+                .filter(not(DelegateType::isDelegateClassLoader))
+                .peek((l) -> CLASS_LOG.finer(() -> "Using loader " + l))
+                .findFirst()
+                .orElse(null);
     }
 
     public boolean isLocal(Stub stub) throws RemoteException {
