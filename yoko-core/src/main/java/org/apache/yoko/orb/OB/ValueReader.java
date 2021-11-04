@@ -901,14 +901,13 @@ public final class ValueReader {
     }
 
     private Serializable readRMIValue(Header h, String repid) {
-        if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Reading RMI value of type \"%s\"", repid));
-        if (valueHandler == null) valueHandler = javax.rmi.CORBA.Util.createValueHandler();
-
-
         if (repid == null) {
             repid = h.ids[0];
             if (repid == null) throw new MARSHAL("missing repository id");
         }
+
+        if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Reading RMI value of type \"%s\"", repid));
+        if (valueHandler == null) valueHandler = javax.rmi.CORBA.Util.createValueHandler();
 
         final String className = RepIds.query(repid).toClassName();
 
@@ -927,13 +926,8 @@ public final class ValueReader {
     }
 
     private static Class resolveRepoClass(String name) {
-        if (MARSHAL_LOG.isLoggable(FINE))
-            MARSHAL_LOG.fine(String.format("Attempting to resolve class \"%s\"", name));
-        if (name.startsWith("[")) {
-            return resolveArrayClass(name);
-        } else {
-            return resolveClass(name);
-        }
+        if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Attempting to resolve class \"%s\"", name));
+        return name.startsWith("[") ? resolveArrayClass(name) : resolveClass(name);
     }
 
     private static Class<?> resolveArrayClass(String name) {
@@ -1042,11 +1036,7 @@ public final class ValueReader {
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean()) {
-            return in_.read_Object();
-        } else {
-            return readValue();
-    }
+        return in_.read_boolean() ? in_.read_Object() : readValue();
     }
 
     public Object readAbstractInterface(Class<? extends Serializable> clz) {
@@ -1055,11 +1045,7 @@ public final class ValueReader {
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean()) {
-            return in_.read_Object(clz);
-        } else {
-            return readValue(clz);
-    }
+        return in_.read_boolean() ? in_.read_Object(clz) : readValue(clz);
     }
 
     //
