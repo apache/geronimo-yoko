@@ -20,6 +20,7 @@ import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.omg.PortableInterceptor.ORBInitializer;
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.util.Optional;
@@ -32,6 +33,7 @@ import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.NONE;
 @ExtendWith(OrbExtension.class)
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)
+@Inherited
 public @interface ConfigureOrb {
     enum NameService {
         NONE,

@@ -32,6 +32,7 @@ import testify.jupiter.annotation.ConfigurePartRunner;
 import testify.jupiter.annotation.logging.LoggingExtension;
 import testify.util.Assertions;
 
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.rmi.Remote;
@@ -56,6 +57,7 @@ import static testify.jupiter.annotation.iiop.OrbSteward.getActivatedRootPoa;
 @Target({ANNOTATION_TYPE, TYPE})
 @ConfigurePartRunner
 @Retention(RUNTIME)
+@Inherited
 public @interface ConfigureServer {
     enum ServerName {DEFAULT_SERVER}
     enum Separation {COLLOCATED, INTER_ORB, INTER_PROCESS}

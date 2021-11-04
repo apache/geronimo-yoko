@@ -23,6 +23,7 @@ import testify.jupiter.annotation.impl.SimpleParameterResolver;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
@@ -32,6 +33,7 @@ import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
 @ExtendWith(PartRunnerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
+@Inherited
 public @interface ConfigurePartRunner {}
 
 class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
