@@ -19,7 +19,12 @@ package org.apache.yoko;
 import acme.Loader;
 import acme.Processor;
 import acme.Widget;
+import org.apache.yoko.io.SimplyCloseable;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.TestInstance.Lifecycle;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.omg.CORBA.ORB;
@@ -53,13 +58,36 @@ import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINEST;
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 @Tracing
 @Logging(value = "yoko.verbose.data", level = FINEST)
+@TestInstance(Lifecycle.PER_CLASS) // this allows @BeforeAll on an instance method
 public class FullValueDescriptorTest {
     @ConfigureServer(
             separation = Separation.COLLOCATED,
             serverOrb = @ConfigureOrb(nameService = READ_WRITE)
     )
-    public static class Collocated extends FullValueDescriptorTest{
-        public void testSerializingAValue() {} // re-declare to disable the test
+    public static class FVDCollocatedTest extends FullValueDescriptorTest {}
+
+    public static class FVDThreadContextTest extends FullValueDescriptorTest {
+        SimplyCloseable threadContextSetting;
+
+        @BeforeAll
+        public void initClient(ORB orb, Bus bus) throws Exception {
+            Object obj = nameService.resolve(PROCESSOR_BIND_NAME);
+            // Narrow using the more specialized interface from the client loader.
+            // This should allow the correct class loader context when unmarshalling the return value.
+            stub = (Processor)PortableRemoteObject.narrow(obj, Processor.class);
+            bus.log("Narrowed stub");
+        }
+
+        @BeforeEach
+        public void setTCCL() {
+            threadContextSetting = CLIENT_LOADER.setAsThreadContextClassLoader();
+        }
+
+        @AfterEach
+        public void unsetTCCL() {
+            threadContextSetting.close();
+            threadContextSetting = null;
+        }
     }
 
     private static final Loader CLIENT_LOADER = Loader.V1;
@@ -72,7 +100,6 @@ public class FullValueDescriptorTest {
     public static NamingContext nameService;
 
     private static Processor stub;
-
 
     @BeforeServer
     public static void initServer(ORB orb, Bus bus) throws Exception {
@@ -96,7 +123,7 @@ public class FullValueDescriptorTest {
     }
 
     @BeforeAll
-    public static void initClient(ORB orb, Bus bus) throws Exception {
+    public void initClient(ORB orb, Bus bus) throws Exception {
         Object obj = nameService.resolve(PROCESSOR_BIND_NAME);
         // Narrow using the more specialized interface from the client loader.
         // This should allow the correct class loader context when unmarshalling the return value.

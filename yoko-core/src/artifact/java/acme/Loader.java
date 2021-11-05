@@ -1,7 +1,7 @@
 package acme;
 
+import org.apache.yoko.io.SimplyCloseable;
 import org.apache.yoko.util.AssertionFailed;
-import testify.io.EasyCloseable;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -95,5 +95,12 @@ public enum Loader {
 
     public <T> T newInstance(String className) {
         return (T) invokeWithImpunity(getConstructor(className)::newInstance);
+    }
+
+    public SimplyCloseable setAsThreadContextClassLoader() {
+        Thread t = Thread.currentThread();
+        ClassLoader old = t.getContextClassLoader();
+        t.setContextClassLoader(this.loader);
+        return () -> t.setContextClassLoader(old);
     }
 }
