@@ -158,25 +158,4 @@ public class FullValueDescriptorTest {
         returned.validateAndReplace();
     }
 
-    @ParameterizedTest(name = "Serialize and deserialize a {0}")
-    @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
-    public void testSerializingAValue(String widgetClassName) throws Exception {
-        // test that the validateAndReplace() methods work correctly when using normal serialization
-        Widget w1 = CLIENT_LOADER.newInstance(widgetClassName);
-        Widget w2 = SERVER_LOADER.deserializeFromBytes(serializeToBytes(w1));
-        w2 = w2.validateAndReplace();
-        w1 = CLIENT_LOADER.deserializeFromBytes(serializeToBytes(w2));
-        w1 = w1.validateAndReplace();
-    }
-
-    private byte[] serializeToBytes(Widget payload) throws IOException {
-        try (
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(baos);
-        ) {
-            oos.writeObject(payload);
-            oos.flush();
-            return baos.toByteArray();
-        }
-    }
 }

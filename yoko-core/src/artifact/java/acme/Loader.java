@@ -80,7 +80,7 @@ public enum Loader {
                 ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bais) {
                     @Override
-                    protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+                    protected Class<?> resolveClass(ObjectStreamClass desc) throws ClassNotFoundException {
                         return Class.forName(desc.getName(), false, loader);
                     }
                 };
