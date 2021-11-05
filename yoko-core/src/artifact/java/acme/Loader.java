@@ -28,6 +28,7 @@ import static testify.util.Throw.invokeWithImpunity;
  * Ensure that the build.gradle for this project sets up the class paths appropriately.
  */
 public enum Loader {
+    V0,
     V1,
     V2;
     final URLClassLoader loader;

@@ -95,4 +95,28 @@ public abstract class VersionedWidgetTest<T> {
             return widgetReader.apply(in);
         }
     }
+
+
+    /** Test ProviderLoader classes on the stack are ignored when selecting a stack loader */
+    public static class WidgetDeepStackLoaderTest extends WidgetMarshallingTest {
+        @Override
+        Widget decode(InputStream in, String widgetClassName, Loader context) {
+            in.__setSendingContextRuntime(SendingContextRuntimes.LOCAL_CODE_BASE);
+            Function<InputStream, Widget> widgetReader = Loader.V0.newInstance("versioned.WidgetReader");
+            widgetReader = chain(widgetReader, context);
+            ProviderRegistryImpl rgy = new ProviderRegistryImpl();
+            rgy.registerPackages(Loader.V0.newInstance("versioned.VersionedPackageProvider"));
+            rgy.start();
+            try {
+                return widgetReader.apply(in);
+            } finally {
+                rgy.stop();
+            }
+        }
+
+        <T, R> Function<T,R> chain(Function<T,R> fun, Loader context) {
+            Function<Function<T,R>, Function<T,R>> chainer = context.newInstance("versioned.FunctionChainer");
+            return chainer.apply(fun);
+        }
+    }
 }
