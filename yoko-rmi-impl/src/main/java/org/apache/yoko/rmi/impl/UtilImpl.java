@@ -37,6 +37,7 @@ import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.IDLEntity;
 import org.omg.CORBA.portable.OutputStream;
 import org.omg.CORBA.portable.UnknownException;
+import org.omg.stub.java.rmi._Remote_Stub;
 
 import javax.rmi.CORBA.Stub;
 import javax.rmi.CORBA.Tie;
@@ -75,7 +76,6 @@ public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
 
     private static final Supplier<Stream<Class<?>>> STACK_CONTEXT_SUPPLIER = doPrivileged(action(StackContextSupplier::new));
-    private static final ClassLoader UTILIMPL_CLASSLOADER = doPrivileged(action(UtilImpl.class::getClassLoader));
 
     /**
      * Translate a CORBA SystemException to the corresponding RemoteException
@@ -520,19 +520,31 @@ public class UtilImpl implements UtilDelegate {
         }
     }
 
+    private static boolean isYokoImplClass(Class<?> c) { return c.getName().startsWith("org.apache.yoko."); }
+    private static boolean isJavaxRmiClass(Class<?> c) { return c.getName().startsWith("javax.rmi."); }
+
+    private static boolean isOmgClass(Class<?> c) {
+        if (_Remote_Stub.class == c) return true;
+        final String name = c.getName();
+        return (name.startsWith("org.omg.") && !name.startsWith("org.omg.stub."));
+    }
 
     private static ClassLoader getStackLoader() {
         // walk down the stack looking for the first class loader that is NOT
         //  - the system class loader (null)
-        //  - the loader that loaded Util.class
+        //  - the loader(s) for Yoko implementation classes
+        //  - the loader(s) for OMG classes
+        //  - the loader(s) for javax.rmi.* classes
         //  - the loader(s) that loaded any delegate class
-        CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko: " + UTILIMPL_CLASSLOADER);
+        CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko");
         return STACK_CONTEXT_SUPPLIER.get()
-                .filter(Objects::nonNull)
                 .peek((c) -> CLASS_LOG.finest(() -> "Considering class: " + c.getName()))
+                .filter(not(UtilImpl::isYokoImplClass))
+                .filter(not(UtilImpl::isOmgClass))
+                .filter(not(UtilImpl::isJavaxRmiClass))
+                .peek((c) -> CLASS_LOG.finest(() -> "Considering classloader for class: " + c.getName()))
                 .map((c) -> doPrivileged(action(c::getClassLoader)))
                 .filter(Objects::nonNull)
-                .filter(not(UTILIMPL_CLASSLOADER::equals))
                 .filter(not(DelegateType::isDelegateClassLoader))
                 .peek((l) -> CLASS_LOG.finer(() -> "Using loader " + l))
                 .findFirst()
@@ -541,11 +553,7 @@ public class UtilImpl implements UtilDelegate {
 
     public boolean isLocal(Stub stub) throws RemoteException {
         try {
-            if (stub instanceof RMIStub) {
-                return true;
-            } else {
-                return stub._is_local();
-            }
+            return (stub instanceof RMIStub) || stub._is_local();
         } catch (SystemException ex) {
             throw mapSystemException(ex);
         }
