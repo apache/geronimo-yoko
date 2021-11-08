@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -19,15 +19,21 @@ package org.apache.yoko.osgi.locator;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.osgi.ProviderRegistry;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.security.PrivilegedAction;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static java.security.AccessController.doPrivileged;
+import static java.util.Collections.newSetFromMap;
+import static java.util.Collections.synchronizedSet;
 
 /**
  * The implementation of the provider registry used to store
@@ -44,6 +50,9 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
     private final SPIRegistry serviceProviders = new SPIRegistry();
 
     private final ConcurrentHashMap<String, PackageProvider> packageProviders = new ConcurrentHashMap<>();
+
+    /** Store the known classloaders weakly to eliminate them from enquiries when stack-walking */
+    private final Set<ClassLoader> knownLoaders = synchronizedSet(newSetFromMap(new WeakHashMap<>()));
 
     public void start() {
         ProviderLocator.setRegistry(this);
@@ -109,24 +118,32 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      *         if this is not registered or the indicated class can't be
      *         loaded.
      */
-    public Class<?> locate(String providerId) {
-        // see if we have a registered match for this...getting just the first instance
-        ServiceProvider loader = providers.getProvider(providerId);
-        if (loader != null) {
-            try {
-                return loader.getServiceClass();
-            } catch (ClassNotFoundException cnfe) {
-                // ServiceProvider, you had one job...*facepalm*
-                // There should never be a case where the provider cannot load the class it is meant to provide
-                // so treat this as a serious error.
-                throw (Error)new NoClassDefFoundError().initCause(cnfe);
-            }
-        }
-        String packageName = PackageProvider.packageName(providerId);
-        PackageProvider provider = packageProviders.get(packageName);
-        if (provider == null)
-            return null;
-        return provider.loadClass(providerId);
+    public <T> Class<T> locate(String providerId) {
+        return this.<T>loadFromServiceProvider(providerId)
+                .map(Optional::of)
+                .orElseGet(() -> loadFromPackageProvider(providerId))
+                .map(this::recordClass)
+                .orElse(null);
+    }
+
+    private <T> Optional<Class<T>> loadFromServiceProvider(String providerId) {
+        return Optional.of(providerId)
+                .map(providers::getProvider)
+                .map(l -> {
+                    try {
+                        return l.getServiceClass();
+                    } catch (ClassNotFoundException cnfe) {
+                        // ServiceProvider, you had one job...*facepalm*
+                        // Should never happen so treat as a serious error.
+                        throw (Error) new NoClassDefFoundError().initCause(cnfe);
+                    }});
+    }
+
+    private <T> Optional<Class<T>> loadFromPackageProvider(String providerId) {
+        return Optional.of(providerId)
+                .map(PackageProvider::packageName)
+                .map(packageProviders::get)
+                .map(provider -> provider.loadClass(providerId));
     }
 
     /**
@@ -137,16 +154,18 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      *
      * @return The service instance.  Returns null if no service definitions
      *         can be located.
-     * @exception Exception Any classloading or other exceptions thrown during
-     *                      the process of creating this service instance.
      */
-    public Object getService(String providerId) throws Exception {
+    public <T> T getService(String providerId) {
         // see if we have a registered match for this...getting just the first instance
         ServiceProvider loader = serviceProviders.getProvider(providerId);
         if (loader != null) {
             // try to load this and create an instance.  Any/all exceptions forName
             // thrown here
-            return loader.getServiceInstance();
+            try {
+                return recordInstance(loader.getServiceInstance());
+            } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+                throw new RuntimeException("Error trying to load service of type " + loader.getClassName(), e);
+            }
         }
         // no match to return
         return null;
@@ -160,19 +179,46 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
      *
      * @return The provider class.   Returns null if no service definitions
      *         can be located.
-     * @exception ClassNotFoundException Any classloading or other exceptions thrown during
-     *                      the process of loading this service provider class.
      */
-    public Class<?> getServiceClass(String providerId) throws ClassNotFoundException {
+    public <T> Class<T> getServiceClass(String providerId) {
         // see if we have a registered match for this...getting just the first instance
         ServiceProvider sp = serviceProviders.getProvider(providerId);
         if (sp != null) {
             // try to load this and create an instance.  Any/all exceptions forName
             // thrown here
-            return sp.getServiceClass();
+            try {
+                return recordClass(sp.getServiceClass());
+            } catch (ClassNotFoundException e) {
+                throw new RuntimeException("Error locating service class: " + sp.getClassName(), e);
+            }
         }
         // no match to return
         return null;
+    }
+
+    private <T> T recordInstance(T t) {
+        Optional.ofNullable(t)
+                .map(Object::getClass)
+                .map(this::recordClass);
+        return t;
+    }
+
+    private <T> Class<T> recordClass(Class<T> cls) {
+        Optional.ofNullable(cls)
+                .map(c -> doPriv(c::getClassLoader))
+                .map(this::recordLoader);
+        return cls;
+    }
+
+    private ClassLoader recordLoader(ClassLoader loader) {
+        Optional.ofNullable(loader).map(knownLoaders::add);
+        return loader;
+    }
+
+
+    @Override
+    public boolean isServiceClassLoader(ClassLoader loader) {
+        return knownLoaders.contains(loader);
     }
 
     /**
@@ -226,15 +272,6 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
 
             return q.peek();
         }
-
-        private synchronized Collection<ServiceProvider> getProviders(String id) {
-            Queue<ServiceProvider> q = registry.get(id);
-
-            if (q == null || q.isEmpty())
-                return Collections.emptyList();
-
-            return Collections.unmodifiableCollection(q);
-        }
     }
 
     @Override
@@ -260,4 +297,6 @@ public class ProviderRegistryImpl implements ProviderRegistry, Register {
     public void unregisterService(BundleProviderLoader bundleProviderLoader) {
         unregisterService(bundleProviderLoader.wrapAsServiceProvider());
     }
+
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
 }

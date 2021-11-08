@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -25,6 +25,9 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.Optional;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public enum ProviderLocator {;
     static private ProviderRegistry registry;
@@ -43,17 +46,9 @@ public enum ProviderLocator {;
      *         loaded.
      */
     static public Class<?> locate(String providerId) {
-        ProviderRegistry registry = getRegistry();
-        // if no registry service available, this is a failure
-        if (registry == null) {
-            return null;
-        }
-        // get the service, if it exists.  NB, if there is a service object,
-        // then the extender and the interface class are available, so this cast should be
-        // safe now.
-
-        // the rest of the work is done by the registry
-        return registry.locate(providerId);
+        return getRegistry()
+                .map(r -> r.locate(providerId))
+                .orElse(null);
     }
 
     /**
@@ -64,27 +59,26 @@ public enum ProviderLocator {;
      */
     static public <T> Class<T> loadClass(String className, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // First check the registered service providers for this class
-        Class cls = locate(className);
-        if (cls != null) {
-            return cls;
-        }
+        Class<T> cls = generify(locate(className));
+        if (null != cls) return cls;
 
         // Load from the explicit class loader if there is one
-        if (loader != null) {
+        if (null != loader) {
             try {
-                return (Class<T>) Class.forName(className, false, loader);
+                return generify(Class.forName(className, false, loader));
             } catch (ClassNotFoundException e) {
-                if (contextClass == null)
-                    throw e;
+                if (null == contextClass) throw e;
             }
         }
 
         // Load from either the context class loader, if provided,
         // or the system class loader (i.e. null)
-        loader = contextClass == null ? null : contextClass.getClassLoader();
-        return (Class<T>) Class.forName(className, false, loader);
-
+        loader = null == contextClass ? null : contextClass.getClassLoader();
+        return generify(Class.forName(className, false, loader));
     }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T> generify(Class<?> c) { return (Class<T>)c; }
 
 
     /**
@@ -106,13 +100,13 @@ public enum ProviderLocator {;
         // if we are working in an OSGi environment, then process the service
         // registry first.  Ideally, we would do this last, but because of boot delegation
         // issues with some API implementations, we must try the OSGi version first
-        Object registry = getRegistry();
+        ProviderRegistry registry = getRegistry().orElse(null); // TODO: use Optional throughout
         if (registry != null) {
             // get the service, if it exists.  NB, if there is a service object,
             // then the extender and the interface class are available, so this cast should be
             // safe now.
             // the rest of the work is done by the registry
-            Object service = ((ProviderRegistry)registry).getService(iface);
+            Object service = registry.getService(iface);
             if (service != null) {
                 return service;
             }
@@ -144,21 +138,21 @@ public enum ProviderLocator {;
      *
      * @return The located class, or null if no matching services
      *         can be found.
-     * @exception Exception Thrown for any classloading exceptions thrown
+     * @exception ClassNotFoundException Thrown for any classloading exceptions thrown
      *                      trying to load the class.
      */
     static public <T> Class<T> getServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // if we are working in an OSGi environment, then process the service
         // registry first.  Ideally, we would do this last, but because of boot delegation
         // issues with some API implementations, we must try the OSGi version first
-        Object registry = getRegistry();
+        ProviderRegistry registry = getRegistry().orElse(null); // TODO: use Optional throughout
         if (registry != null) {
             // get the service, if it exists.  NB, if there is a service object,
             // then the extender and the interface class are available, so this cast should be
             // safe now.
 
             // If we've located stuff in the registry, then return it
-            Class<T> cls = ((ProviderRegistry)registry).getServiceClass(iface);
+            Class<T> cls = registry.getServiceClass(iface);
             if (cls != null) {
                 return cls;
             }
@@ -167,6 +161,15 @@ public enum ProviderLocator {;
         // try for a classpath locatable instance first.  If we find an appropriate class mapping,
         // create an instance and return it.
         return locateServiceClass(iface, contextClass, loader);
+    }
+
+    /**
+     * Test whether a class loader is associated with a provided service.
+     */
+    public static boolean isServiceClassLoader(ClassLoader loader) {
+        return getRegistry()
+                .map(r -> r.isServiceClassLoader(loader))
+                .orElse(false);
     }
 
 
@@ -193,8 +196,7 @@ public enum ProviderLocator {;
                         return providerNames.get(0);
                     }
                 }
-            } catch (IOException e) {
-            }
+            } catch (IOException ignored) {}
         }
         // not found
         return null;
@@ -220,7 +222,6 @@ public enum ProviderLocator {;
             loader = contextClass.getClassLoader();
             name = locateServiceClassName(iface, loader);
         }
-
         return name == null ? null : loadClass(name, contextClass, loader);
     }
 
@@ -236,15 +237,14 @@ public enum ProviderLocator {;
      */
     static private List<String> parseServiceDefinition(URL u) {
         final String url = u.toString();
-        List<String> classes = new ArrayList<String>();
+        List<String> classes = new ArrayList<>();
         // ignore directories
         if (url.endsWith("/")) {
             return classes;
         }
         // the identifier used for the provider is the last item in the URL.
-        final String providerId = url.substring(url.lastIndexOf("/") + 1);
         try {
-            BufferedReader br = new BufferedReader(new InputStreamReader(u.openStream(), "UTF-8"));
+            BufferedReader br = new BufferedReader(new InputStreamReader(u.openStream(), UTF_8));
             // the file can be multiple lines long, with comments.  A single file can define multiple providers
             // for a single key, so we might need to create multiple entries.  If the file does not contain any
             // definition lines, then as a default, we use the providerId as an implementation class also.
@@ -272,14 +272,7 @@ public enum ProviderLocator {;
     }
 
 
-    /**
-     * Retrieve the registry from the tracker if it is available,
-     * all without causing the interface class to load.
-     *
-     * @return The registry service instance, or null if it is not
-     *         available for any reason.
-     */
-    private static ProviderRegistry getRegistry() {
-        return registry;
+    private static Optional<ProviderRegistry> getRegistry() {
+        return Optional.ofNullable(registry);
     }
 }

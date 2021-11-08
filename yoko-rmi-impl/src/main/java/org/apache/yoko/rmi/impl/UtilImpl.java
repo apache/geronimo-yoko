@@ -545,6 +545,7 @@ public class UtilImpl implements UtilDelegate {
                 .peek((c) -> CLASS_LOG.finest(() -> "Considering classloader for class: " + c.getName()))
                 .map((c) -> doPrivileged(action(c::getClassLoader)))
                 .filter(Objects::nonNull)
+                .filter(not(ProviderLocator::isServiceClassLoader))
                 .filter(not(DelegateType::isDelegateClassLoader))
                 .peek((l) -> CLASS_LOG.finer(() -> "Using loader " + l))
                 .findFirst()

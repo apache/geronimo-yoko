@@ -47,12 +47,12 @@ public final class ServiceProvider implements Comparable<ServiceProvider> {
         return priority;
     }
 
-    public Class<?> getServiceClass() throws ClassNotFoundException {
-        return localFactory.forName(className);
+    public <T> Class<T> getServiceClass() throws ClassNotFoundException {
+        return (Class<T>) localFactory.forName(className);
     }
 
-    public Object getServiceInstance() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        return localFactory.newInstance(getServiceClass());
+    public <T> T getServiceInstance() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+        return (T) localFactory.newInstance(getServiceClass());
     }
 
     @Override
