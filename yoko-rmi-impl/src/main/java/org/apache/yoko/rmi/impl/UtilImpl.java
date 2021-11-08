@@ -501,7 +501,9 @@ public class UtilImpl implements UtilDelegate {
     }
 
     enum ClassLoadStrategy {
+        /** Give providers a change to supply classes */
         PROVIDER_LOADER(l -> Optional.of(n -> ProviderLocator.loadClass(n, null, l))),
+        /** Ignoring Yoko, API, delegate, and provider classes, try the first non-null loader on the stack */
         STACK_LOADER(l -> Optional.ofNullable(getStackLoader()).map(sl -> sl::loadClass)),
         THIS_LOADER(l -> Optional.ofNullable(l).map(gl -> gl::loadClass)),
         /*
@@ -535,6 +537,7 @@ public class UtilImpl implements UtilDelegate {
         //  - the loader(s) for Yoko implementation classes
         //  - the loader(s) for OMG classes
         //  - the loader(s) for javax.rmi.* classes
+        //  - the loader(s) that loaded any ProviderRegistry-provided classes or services
         //  - the loader(s) that loaded any delegate class
         CLASS_LOG.finest(() -> "Looking for stack loader other than those used by Yoko");
         return STACK_CONTEXT_SUPPLIER.get()
