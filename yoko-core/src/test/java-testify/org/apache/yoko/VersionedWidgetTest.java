@@ -17,9 +17,9 @@ import java.io.ObjectOutputStream;
 import java.util.function.Function;
 
 public abstract class VersionedWidgetTest<T> {
-    @ParameterizedTest(name = "Serialize and deserialize a {0}")
+    @ParameterizedTest(name = "Encode and decode a {0}")
     @ValueSource(strings = {"versioned.SmallWidget", "versioned.BigWidget"})
-    public void testSerializingAValue(String widgetClassName) throws Exception {
+    public void testEncodeAndDecode(String widgetClassName) throws Exception {
         // test that the validateAndReplace() methods work correctly when using normal serialization
         Widget w1 = Loader.V1.newInstance(widgetClassName);
         T intermediateForm = encode(w1);
@@ -54,7 +54,7 @@ public abstract class VersionedWidgetTest<T> {
         }
     }
 
-    /** Test widgets can be marshalled and demarshalled */
+    /** Test widgets can be marshalled and unmarshalled */
     public static class WidgetMarshallingTest extends VersionedWidgetTest<InputStream> {
         @Override
         InputStream encode(Widget widget) {
@@ -65,16 +65,22 @@ public abstract class VersionedWidgetTest<T> {
         }
 
         @Override
-        Widget decode(InputStream in, String widgetClassName, Loader context) {
-            return (Widget)in.read_value(context.loadClass(widgetClassName));
+        final Widget decode(InputStream in, String widgetClassName, Loader context) {
+            in.__setSendingContextRuntime(SendingContextRuntimes.LOCAL_CODE_BASE);
+            return unmarshal(in, widgetClassName, context);
+        }
+
+        Widget unmarshal(InputStream in, String widgetClassName, Loader context) {
+            Class<? extends Widget> knownType = context.loadClass(widgetClassName);
+            System.out.printf("### Try to read value of expected type: " + knownType);
+            return (Widget) in.read_value(knownType);
         }
     }
 
     /** Test widgets can be demarshalled using a provider to resolve classes */
     public static class WidgetProviderLoaderTest extends WidgetMarshallingTest {
         @Override
-        Widget decode(InputStream in, String widgetClassName, Loader context) {
-            in.__setSendingContextRuntime(SendingContextRuntimes.LOCAL_CODE_BASE);
+        Widget unmarshal(InputStream in, String widgetClassName, Loader context) {
             ProviderRegistryImpl rgy = new ProviderRegistryImpl();
             rgy.registerPackages(context.newInstance("versioned.VersionedPackageProvider"));
             rgy.start();
@@ -89,8 +95,9 @@ public abstract class VersionedWidgetTest<T> {
     /** Test widgets can be demarshalled using the stack loader to resolve classes */
     public static class WidgetStackLoaderTest extends WidgetMarshallingTest {
         @Override
-        Widget decode(InputStream in, String widgetClassName, Loader context) {
-            in.__setSendingContextRuntime(SendingContextRuntimes.LOCAL_CODE_BASE);
+        Widget unmarshal(InputStream in, String widgetClassName, Loader context) {
+            // To unmarshall from the correct class loading context,
+            // delegate the read_value() to a WidgetReader from the context loader
             Function<InputStream, Widget> widgetReader = context.newInstance("versioned.WidgetReader");
             return widgetReader.apply(in);
         }
@@ -100,10 +107,12 @@ public abstract class VersionedWidgetTest<T> {
     /** Test ProviderLoader classes on the stack are ignored when selecting a stack loader */
     public static class WidgetDeepStackLoaderTest extends WidgetMarshallingTest {
         @Override
-        Widget decode(InputStream in, String widgetClassName, Loader context) {
-            in.__setSendingContextRuntime(SendingContextRuntimes.LOCAL_CODE_BASE);
+        Widget unmarshal(InputStream in, String widgetClassName, Loader context) {
+            // To insert an extra layer into the call stack, use the WidgetReader from the WRONG loader, V0.
             Function<InputStream, Widget> widgetReader = Loader.V0.newInstance("versioned.WidgetReader");
+            // Then invoke the WidgetReader from another object loaded by the RIGHT loader.
             widgetReader = chain(widgetReader, context);
+            // Register the V0 package provider with the provider registry so it can be ignored in the call stack.
             ProviderRegistryImpl rgy = new ProviderRegistryImpl();
             rgy.registerPackages(Loader.V0.newInstance("versioned.VersionedPackageProvider"));
             rgy.start();
