@@ -42,12 +42,14 @@ import org.omg.CORBA.portable.StreamableValue;
 import org.omg.CORBA.portable.ValueFactory;
 import org.omg.SendingContext.CodeBase;
 
+import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.security.PrivilegedActionException;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 
 import static java.lang.Boolean.getBoolean;
@@ -196,7 +198,7 @@ public final class ValueReader {
             Assert.ensure((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
-                return reader_.readRMIValue(h, h.ids[0]);
+                return reader_.readRMIValue(h, h.ids[0], clz_);
             }
 
             try {
@@ -900,7 +902,8 @@ public final class ValueReader {
         headerTable_ = new Hashtable<>(131);
     }
 
-    private Serializable readRMIValue(Header h, String repid) {
+    private Serializable readRMIValue(Header h, String repid) { return readRMIValue(h, repid, null); }
+    private Serializable readRMIValue(Header h, String repid, Class<?> declaredType) {
         if (repid == null) {
             repid = h.ids[0];
             if (repid == null) throw new MARSHAL("missing repository id");
@@ -909,11 +912,13 @@ public final class ValueReader {
         if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Reading RMI value of type \"%s\"", repid));
         if (valueHandler == null) valueHandler = javax.rmi.CORBA.Util.createValueHandler();
 
-        final String className = RepIds.query(repid).toClassName();
+        final String repoClassName = RepIds.query(repid).toClassName();
 
-        Class repoClass = resolveRepoClass(className);
+        Class<?> repoClass = Optional.ofNullable(declaredType)
+                .filter(type -> type.getName().equals(repoClassName))
+                .orElseGet(() -> resolveRepoClass(repoClassName));
 
-        if (repoClass == null) throw new MARSHAL("class " + className + " not found");
+        if (repoClass == null) throw new MARSHAL("class " + repoClassName + " not found");
 
         if (remoteCodeBase == null) remoteCodeBase = in_.__getSendingContextRuntime();
 
@@ -925,15 +930,15 @@ public final class ValueReader {
         }
     }
 
-    private static Class resolveRepoClass(String name) {
+    private static <T> Class<T> resolveRepoClass(String name) {
         if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Attempting to resolve class \"%s\"", name));
         return name.startsWith("[") ? resolveArrayClass(name) : resolveClass(name);
     }
 
-    private static Class<?> resolveArrayClass(String name) {
+    private static <T> Class<T> resolveArrayClass(String name) {
         int levels = 1 + name.lastIndexOf('[');
 
-        Class elementClass = null;
+        Class<?> elementClass = null;
         // now resolve the element descriptor to a class
         switch (name.charAt(levels)) {
         case 'Z': elementClass = boolean.class; break;
@@ -947,23 +952,22 @@ public final class ValueReader {
         case 'L':
             // extract the class from the name and resolve that.
             elementClass = resolveClass(name.substring(levels + 1, name.indexOf(';')));
-            if (elementClass == null) return null;
+            if (null == elementClass) return null;
             break;
         }
 
         // Until Java 12, there is no good way to get an array class for a known element class.
         // Instead, create a zero-length n-dimensional array and return its class.
-        switch (levels) {
-        case 1: return Array.newInstance(elementClass, 0).getClass();
-        case 2: return Array.newInstance(elementClass, 0, 0).getClass();
-        case 3: return Array.newInstance(elementClass, 0, 0, 0).getClass();
-        default: return Array.newInstance(elementClass, new int[levels]).getClass();
-        }
+        Object archetype = (1 == levels) ? Array.newInstance(elementClass, 0) : Array.newInstance(elementClass, new int[levels]);
+        return generify(archetype.getClass());
     }
 
-    private static Class resolveClass(String name) {
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T> generify(Class<?> c) { return (Class<T>)c; }
+
+    private static <T> Class<T> resolveClass(String name) {
         try {
-            return javax.rmi.CORBA.Util.loadClass(name, null, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            return generify(Util.loadClass(name, null, doPrivileged(GET_CONTEXT_CLASS_LOADER)));
         } catch (ClassNotFoundException ex) {
             // this will be sorted out later
             return null;
