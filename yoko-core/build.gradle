@@ -42,6 +42,7 @@ jar {
 test {
   exclude '**/Abstract*'
   // Set up the class paths for acme.Loader
+  systemProperty "acme.loader.v0.path", (sourceSets.v0.output.classesDirs).join(File.pathSeparator)
   systemProperty "acme.loader.v1.path", (sourceSets.v0.output.classesDirs + sourceSets.v1.output.classesDirs).join(File.pathSeparator)
   systemProperty "acme.loader.v2.path", (sourceSets.v0.output.classesDirs + sourceSets.v2.output.classesDirs).join(File.pathSeparator)
 }

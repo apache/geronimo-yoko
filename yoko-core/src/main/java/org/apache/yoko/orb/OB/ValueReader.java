@@ -42,12 +42,14 @@ import org.omg.CORBA.portable.StreamableValue;
 import org.omg.CORBA.portable.ValueFactory;
 import org.omg.SendingContext.CodeBase;
 
+import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
 import java.lang.reflect.Array;
 import java.security.PrivilegedActionException;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 
 import static java.lang.Boolean.getBoolean;
@@ -196,7 +198,7 @@ public final class ValueReader {
             Assert.ensure((h.tag >= 0x7fffff00) && (h.tag != -1));
 
             if (h.isRMIValue()) {
-                return reader_.readRMIValue(h, h.ids[0]);
+                return reader_.readRMIValue(h, h.ids[0], clz_);
             }
 
             try {
@@ -900,68 +902,25 @@ public final class ValueReader {
         headerTable_ = new Hashtable<>(131);
     }
 
-    private Serializable readRMIValue(Header h, String repid) {
-        if (MARSHAL_LOG.isLoggable(FINE))
-            MARSHAL_LOG.fine(String.format("Reading RMI value of type \"%s\"", repid));
-        if (valueHandler == null) {
-            valueHandler = javax.rmi.CORBA.Util.createValueHandler();
-        }
-
+    private Serializable readRMIValue(Header h, String repid) { return readRMIValue(h, repid, null); }
+    private Serializable readRMIValue(Header h, String repid, Class<?> declaredType) {
         if (repid == null) {
             repid = h.ids[0];
-
-            if (repid == null) {
-                throw new MARSHAL("missing repository id");
-            }
+            if (repid == null) throw new MARSHAL("missing repository id");
         }
 
-        final String className = RepIds.query(repid).toClassName();
-        String codebase  = h.codebase;
+        if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Reading RMI value of type \"%s\"", repid));
+        if (valueHandler == null) valueHandler = javax.rmi.CORBA.Util.createValueHandler();
 
-        if (codebase == null) {
-            codebase = in_.__getCodeBase();
-        }
+        final String repoClassName = RepIds.query(repid).toClassName();
 
-        Class repoClass = resolveRepoClass(className, codebase);
+        Class<?> repoClass = Optional.ofNullable(declaredType)
+                .filter(type -> type.getName().equals(repoClassName))
+                .orElseGet(() -> resolveRepoClass(repoClassName));
 
-        // if we have a non-null codebase and can't resolve this, throw an
-        // exception now.  Otherwise, we'll try again after grabbing the remote
-        // codebase.
-        if ((repoClass == null) && (codebase != null) && !codebase.isEmpty()) {
-            throw new MARSHAL("class " + className + " not found (cannot load from " + codebase + ")");
-        }
+        if (repoClass == null) throw new MARSHAL("class " + repoClassName + " not found");
 
-        if (remoteCodeBase == null) {
-            remoteCodeBase = in_.__getSendingContextRuntime();
-        }
-        if (repoClass == null) {
-            if ((codebase == null) && (remoteCodeBase != null)) {
-                try {
-                    codebase = remoteCodeBase.implementation(repid);
-                } catch (SystemException ignored) {
-                }
-
-            }
-
-            if (codebase == null) {
-                // TODO: add minor code
-                throw new MARSHAL("class " + className + " not found (no codebase provided)");
-            } else {
-                repoClass = resolveRepoClass(className, codebase);
-                if (repoClass == null) {
-                    throw new MARSHAL("class " + className + " not found (cannot load from " + codebase + ")");
-                }
-            }
-        }
-
-        /*
-         * Suns crappy ValueHandler implementation narrows the remote CodeBase
-         * to a com.sun.org.omg.SendingContext.CodeBase. Narrowing CodeBaseProxy
-         * is not possible, we need a stub.
-         */
-        if (remoteCodeBase instanceof CodeBaseProxy) {
-            remoteCodeBase = ((CodeBaseProxy) remoteCodeBase).getCodeBase();
-        }
+        if (remoteCodeBase == null) remoteCodeBase = in_.__getSendingContextRuntime();
 
         try {
             return valueHandler.readValue(in_, h.headerPos, repoClass, repid, remoteCodeBase);
@@ -969,75 +928,49 @@ public final class ValueReader {
             if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.log(FINE, "Caught exception when reading GIOP stream: \n" + in_.dumpAllDataWithPosition(), ex);
             throw ex;
         }
-
     }
 
-    private Class resolveRepoClass(String name, String codebase) {
-        if (MARSHAL_LOG.isLoggable(FINE))
-            MARSHAL_LOG.fine(String.format(
-                    "Attempting to resolve class \"%s\" from codebase \"%s\"",
-                    name, codebase));
-        if (name.startsWith("[")) {
-            int levels = 0;
-            for (int i = 0; name.charAt(i) == '['; i++) {
-                levels++;
-            }
-            Class elementClass = null;
+    private static <T> Class<T> resolveRepoClass(String name) {
+        if (MARSHAL_LOG.isLoggable(FINE)) MARSHAL_LOG.fine(String.format("Attempting to resolve class \"%s\"", name));
+        return name.startsWith("[") ? resolveArrayClass(name) : resolveClass(name);
+    }
 
-            // now resolve the element descriptor to a class
-            switch (name.charAt(levels)) {
-                case 'Z':
-                    elementClass = Boolean.TYPE;
-                    break;
-                case 'B':
-                    elementClass = Byte.TYPE;
-                    break;
-                case 'S':
-                    elementClass = Short.TYPE;
-                    break;
-                case 'C':
-                    elementClass = Character.TYPE;
-                    break;
-                case 'I':
-                    elementClass = Integer.TYPE;
-                    break;
-                case 'J':
-                    elementClass = Long.TYPE;
-                    break;
-                case 'F':
-                    elementClass = Float.TYPE;
-                    break;
-                case 'D':
-                    elementClass = Double.TYPE;
-                    break;
-                case 'L':
-                    // extract the class from the name and resolve that.
-                    elementClass = resolveRepoClass(name.substring(levels + 1, name.indexOf(';')), codebase);
-                    if (elementClass == null) {
-                        return null;
-                    }
-                    break;
-            }
+    private static <T> Class<T> resolveArrayClass(String name) {
+        int levels = 1 + name.lastIndexOf('[');
 
-            // ok, we need to recurse and resolve the base array element class
-            Object arrayInstance;
-            // this is easier with a single level
-            if (levels == 1) {
-                arrayInstance = Array.newInstance(elementClass, 0);
-            } else {
-                // all elements will be zero
-                final int[] dimensions = new int[levels];
-                arrayInstance = Array.newInstance(elementClass, dimensions);
-            }
-            // return the class associated with this array
-            return arrayInstance.getClass();
-        } else {
-            try {
-                return javax.rmi.CORBA.Util.loadClass(name, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
-            } catch (ClassNotFoundException ex) {
-                // this will be sorted out later
-                return null;
-            }
+        Class<?> elementClass = null;
+        // now resolve the element descriptor to a class
+        switch (name.charAt(levels)) {
+        case 'Z': elementClass = boolean.class; break;
+        case 'B': elementClass = byte.class; break;
+        case 'S': elementClass = short.class; break;
+        case 'C': elementClass = char.class; break;
+        case 'I': elementClass = int.class; break;
+        case 'J': elementClass = long.class; break;
+        case 'F': elementClass = float.class; break;
+        case 'D': elementClass = double.class; break;
+        case 'L':
+            // extract the class from the name and resolve that.
+            elementClass = resolveClass(name.substring(levels + 1, name.indexOf(';')));
+            if (null == elementClass) return null;
+            break;
+        }
+
+        // Until Java 12, there is no good way to get an array class for a known element class.
+        // Instead, create a zero-length n-dimensional array and return its class.
+        Object archetype = (1 == levels) ? Array.newInstance(elementClass, 0) : Array.newInstance(elementClass, new int[levels]);
+        return generify(archetype.getClass());
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> Class<T> generify(Class<?> c) { return (Class<T>)c; }
+
+    private static <T> Class<T> resolveClass(String name) {
+        try {
+            return generify(Util.loadClass(name, null, doPrivileged(GET_CONTEXT_CLASS_LOADER)));
+        } catch (ClassNotFoundException ex) {
+            // this will be sorted out later
+            return null;
         }
     }
 
@@ -1107,11 +1040,7 @@ public final class ValueReader {
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean()) {
-            return in_.read_Object();
-        } else {
-            return readValue();
-    }
+        return in_.read_boolean() ? in_.read_Object() : readValue();
     }
 
     public Object readAbstractInterface(Class<? extends Serializable> clz) {
@@ -1120,11 +1049,7 @@ public final class ValueReader {
         // boolean discriminator - if true, an objref follows,
         // otherwise a valuetype follows
         //
-        if (in_.read_boolean()) {
-            return in_.read_Object(clz);
-        } else {
-            return readValue(clz);
-    }
+        return in_.read_boolean() ? in_.read_Object(clz) : readValue(clz);
     }
 
     //

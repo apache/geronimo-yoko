@@ -1,4 +1,4 @@
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.
@@ -30,7 +30,7 @@ public interface ProviderRegistry {
      *         if this is not registered or the indicated class can't be
      *         loaded.
      */
-    Class<?> locate(String factoryId);
+    <T> Class<T> locate(String factoryId);
     
     /**
      * Locate and instantiate an instance of a service provider
@@ -38,12 +38,10 @@ public interface ProviderRegistry {
      *
      * @param providerId The name of the target interface class.
      *
-     * @return The service instance.  Returns null if no service defintions
+     * @return The service instance. Returns null if no service definitions
      *         can be located.
-     * @exception Exception Any classloading or other exceptions thrown during
-     *                      the process of creating this service instance.
      */
-    Object getService(String providerId) throws Exception;
+    <T> T getService(String providerId);
 
 
     /**
@@ -52,10 +50,13 @@ public interface ProviderRegistry {
      *
      * @param providerId The name of the target interface class.
      *
-     * @return The provider class.   Returns null if no service defintions
+     * @return The provider class. Returns null if no service definitions
      *         can be located.
-     * @exception Exception Any classloading or other exceptions thrown during
-     *                      the process of loading this service provider class.
      */
-    <T> Class<T> getServiceClass(String providerId) throws ClassNotFoundException;
+    <T> Class<T> getServiceClass(String providerId);
+
+    /**
+     * Test whether a given class loader is associated with a provided service.
+     */
+    boolean isServiceClassLoader(ClassLoader loader);
 }

@@ -16,57 +16,47 @@ public final class ServiceProvider implements Comparable<ServiceProvider> {
         this.priority = priority;
     }
 
-    public ServiceProvider(LocalFactory localFactory, String id, String className) {
+    private ServiceProvider(LocalFactory localFactory, String id, String className) {
         this(localFactory, id, className, ServiceProvider.DEFAULT_PRIORITY);
     }
 
+    @SuppressWarnings("unused")
     public ServiceProvider(LocalFactory localFactory, String id, Class<?> implClass, int priority) {
         this(localFactory, id, implClass.getName(), priority);
     }
 
-    public ServiceProvider(LocalFactory localFactory, String id, Class<?> implClass) {
-        this(localFactory, id, implClass.getName());
-    }
-
-    public <T, U extends T> ServiceProvider(LocalFactory localFactory, Class<T> idClass, Class<U> implClass, int priority) {
-        this(localFactory, idClass.getName(), implClass.getName(), priority);
-    }
-
-    public <T, U extends T> ServiceProvider(LocalFactory localFactory, Class<T> idClass, Class<U> implClass) {
+    private <T, U extends T> ServiceProvider(LocalFactory localFactory, Class<T> idClass, Class<U> implClass) {
         this(localFactory, idClass.getName(), implClass.getName());
     }
 
-    public <T> ServiceProvider(LocalFactory localFactory, Class<T> svcClass, int priority) {
-        this(localFactory, svcClass, svcClass, priority);
-    }
-
+    @SuppressWarnings("unused")
     public <T> ServiceProvider(LocalFactory localFactory, Class<T> svcClass) {
         this(localFactory, svcClass, svcClass);
     }
 
-    public final String getId() {
+    public String getId() {
         return id;
     }
 
-    public final String getClassName() {
+    public String getClassName() {
         return className;
     }
 
     /** A higher value takes priority over a lower value */
-    public final int getPriority() {
+    public int getPriority() {
         return priority;
     }
 
-    public final Class<?> getServiceClass() throws ClassNotFoundException {
-        return localFactory.forName(className);
+    public <T> Class<T> getServiceClass() throws ClassNotFoundException {
+        return (Class<T>) localFactory.forName(className);
     }
 
-    public final Object getServiceInstance() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
-        return localFactory.newInstance(getServiceClass());
+    public <T> T getServiceInstance() throws ClassNotFoundException, InstantiationException, IllegalAccessException {
+        return (T) localFactory.newInstance(getServiceClass());
     }
 
     @Override
-    public final boolean equals(Object theOther) {
+    public boolean equals(Object theOther) {
         if (this.getClass() != theOther.getClass())
             return false;
         ServiceProvider that = (ServiceProvider) theOther;
@@ -77,17 +67,17 @@ public final class ServiceProvider implements Comparable<ServiceProvider> {
     }
 
     @Override
-    public final int hashCode() {
+    public int hashCode() {
         return Objects.hash(id, className, priority);
     }
 
     @Override
-    public final int compareTo(ServiceProvider that) {
+    public int compareTo(ServiceProvider that) {
         return that.priority - this.priority;
     }
 
     @Override
-    public final String toString() {
+    public String toString() {
         return String.format("Service id=%s class=%s priority=%d", id, className, priority);
     }
 }

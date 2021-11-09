@@ -20,6 +20,7 @@ package org.apache.yoko.orb.CORBA;
 import org.apache.yoko.io.AlignmentBoundary;
 import org.apache.yoko.io.Buffer;
 import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.orb.OB.CodeBaseProxy;
 import org.apache.yoko.orb.OB.CodeConverterBase;
 import org.apache.yoko.orb.OB.CodeConverters;
 import org.apache.yoko.orb.OB.CodeSetReader;
@@ -1589,7 +1590,12 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     public void __setSendingContextRuntime(CodeBase runtime) {
-        sendingContextRuntime_ = runtime;
+        /*
+         * Sun's ValueHandler implementation narrows the remote CodeBase
+         * to a com.sun.org.omg.SendingContext.CodeBase. Narrowing CodeBaseProxy
+         * is not possible, we need a stub.
+         */
+        sendingContextRuntime_ = (runtime instanceof CodeBaseProxy) ? ((CodeBaseProxy) runtime).getCodeBase() : runtime;
     }
 
     public CodeBase __getSendingContextRuntime() {

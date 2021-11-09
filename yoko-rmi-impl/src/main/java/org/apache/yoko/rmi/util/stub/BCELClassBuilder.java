@@ -43,11 +43,16 @@ import org.apache.bcel.generic.PUSH;
 import org.apache.bcel.generic.PUTFIELD;
 import org.apache.bcel.generic.Type;
 import org.apache.yoko.rmi.impl.RMIStub;
+import org.apache.yoko.rmispec.util.DelegateType;
+import org.omg.CORBA.INITIALIZE;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -82,6 +87,8 @@ import static org.apache.bcel.Constants.T_OBJECT;
 import static org.apache.bcel.Constants.T_SHORT;
 import static org.apache.bcel.generic.Type.getArgumentTypes;
 import static org.apache.bcel.generic.Type.getReturnType;
+import static org.apache.yoko.rmi.util.stub.BCELClassBuilder.StubInitializerHolder.RMI_STUB_INITIALIZER;
+import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.action;
 
 class BCELClassBuilder {
@@ -162,7 +169,7 @@ class BCELClassBuilder {
             try {
                 Field f = proxyClass.getDeclaredField( "__initializer"); // privileged
                 f.setAccessible(true); // privileged
-                f.set(null, StubClass.InitializerHolder.RMI_STUB_INITIALIZER); // privileged
+                f.set(null, RMI_STUB_INITIALIZER); // privileged
             } catch (NoSuchFieldException | IllegalAccessException ex) {
                 throw new Error("internal error!", ex);
             }
@@ -583,5 +590,20 @@ class BCELClassBuilder {
         else kind = Constants.INVOKEVIRTUAL;
 
         return il.append(fac.createInvoke(cname, mname, ret, args, kind));
+    }
+
+    enum StubInitializerHolder {
+        ;
+        static final StubInitializer RMI_STUB_INITIALIZER;
+
+        static {
+            try {
+                Constructor<? extends StubInitializer> constructor = doPrivEx(DelegateType.STUB_INIT.getConstructorAction());
+                RMI_STUB_INITIALIZER = constructor.newInstance();
+            } catch (Exception e) {
+                throw as(INITIALIZE::new, e, "Can not create RMIStubInitializer");
+            }
+        }
+        private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
     }
 }

@@ -19,9 +19,7 @@ package org.apache.yoko.rmi.util.stub;
 
 import org.apache.yoko.rmi.impl.MethodDescriptor;
 import org.apache.yoko.rmi.impl.RMIStub;
-import org.apache.yoko.rmi.impl.RMIStubInitializer;
 import org.apache.yoko.rmi.impl.StubHandler;
-import org.omg.CORBA.INITIALIZE;
 
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
@@ -37,12 +35,8 @@ import static java.util.Optional.ofNullable;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.rmi.util.stub.StubClass.StubInvokeMethodHolder.STUB_INVOKE_METHOD;
 import static org.apache.yoko.rmi.util.stub.Util.getPackageName;
-import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
-import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.action;
 import static org.apache.yoko.util.PrivilegedActions.getDeclaredMethod;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
-import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public final class StubClass {
     static final Logger LOGGER = Logger.getLogger(StubClass.class.getName());
@@ -95,23 +89,6 @@ public final class StubClass {
             } catch (PrivilegedActionException ex) {
                 //noinspection Convert2MethodRef
                 throw wrapped(LOGGER, ex, "cannot initialize: \n" + ex.getMessage(), e -> new Error(e));
-            }
-        }
-    }
-
-    enum InitializerHolder {
-        ;
-        static final StubInitializer RMI_STUB_INITIALIZER = findRmiStubInitializer();
-
-        private static final String rmiStubInitializerKey ="org.apache.yoko.rmi.RMIStubInitializerClass";
-
-        private static StubInitializer findRmiStubInitializer() {
-            String factory = doPrivileged(getSysProp(rmiStubInitializerKey, RMIStubInitializer.class.getName()));
-            try {
-                final Class<? extends StubInitializer> type = loadServiceClass(factory, rmiStubInitializerKey);
-                return doPrivileged(getNoArgInstance(type));
-            } catch (Exception e) {
-                throw as(INITIALIZE::new, e,"Can not create RMIStubInitializer: " + factory);
             }
         }
     }

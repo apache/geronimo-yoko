@@ -1,7 +1,7 @@
 package acme;
 
+import org.apache.yoko.io.SimplyCloseable;
 import org.apache.yoko.util.AssertionFailed;
-import testify.io.EasyCloseable;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -28,6 +28,7 @@ import static testify.util.Throw.invokeWithImpunity;
  * Ensure that the build.gradle for this project sets up the class paths appropriately.
  */
 public enum Loader {
+    V0,
     V1,
     V2;
     final URLClassLoader loader;
@@ -80,7 +81,7 @@ public enum Loader {
                 ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
                 ObjectInputStream ois = new ObjectInputStream(bais) {
                     @Override
-                    protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+                    protected Class<?> resolveClass(ObjectStreamClass desc) throws ClassNotFoundException {
                         return Class.forName(desc.getName(), false, loader);
                     }
                 };
@@ -95,5 +96,12 @@ public enum Loader {
 
     public <T> T newInstance(String className) {
         return (T) invokeWithImpunity(getConstructor(className)::newInstance);
+    }
+
+    public SimplyCloseable setAsThreadContextClassLoader() {
+        Thread t = Thread.currentThread();
+        ClassLoader old = t.getContextClassLoader();
+        t.setContextClassLoader(this.loader);
+        return () -> t.setContextClassLoader(old);
     }
 }

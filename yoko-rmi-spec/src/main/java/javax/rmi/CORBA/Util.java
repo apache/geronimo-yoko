@@ -17,6 +17,7 @@
 
 package javax.rmi.CORBA;
 
+import org.apache.yoko.rmispec.util.DelegateType;
 import org.apache.yoko.rmispec.util.UtilLoader;
 import org.omg.CORBA.INITIALIZE;
 import org.omg.CORBA.ORB;
@@ -24,29 +25,24 @@ import org.omg.CORBA.SystemException;
 import org.omg.CORBA.portable.InputStream;
 import org.omg.CORBA.portable.OutputStream;
 
+import java.lang.reflect.Constructor;
 import java.rmi.NoSuchObjectException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 
 import static java.security.AccessController.doPrivileged;
-import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
 public class Util {
-    private static final String DEFAULT_DELEGATE = "org.apache.yoko.rmi.impl.UtilImpl";
-    private static final String DELEGATE_KEY = "javax.rmi.CORBA.UtilClass";
     private static final UtilDelegate DELEGATE;
 
     static {
-        String delegateName = doPriv(() -> System.getProperty(DELEGATE_KEY, DEFAULT_DELEGATE));
         try {
-            // this is a bit recursive, but this will use the full default search order for locating this.
-            Class<? extends UtilDelegate> delegateClass = loadServiceClass(delegateName, DELEGATE_KEY);
-            DELEGATE = doPrivEx(delegateClass::getConstructor).newInstance();
+            Constructor<? extends UtilDelegate> constructor = doPrivEx(DelegateType.UTIL.getConstructorAction());
+            DELEGATE = constructor.newInstance();
         } catch (Throwable e) {
-            throw (INITIALIZE)(new INITIALIZE("Can not create Util delegate: "+delegateName).initCause(e));
+            throw (INITIALIZE)(new INITIALIZE("Can not create Util delegate").initCause(e));
         }
     }
 
@@ -57,26 +53,23 @@ public class Util {
         return DELEGATE.copyObject(o, orb);
     }
 
+    @SuppressWarnings("unused")
     public static Object[] copyObjects(Object[] objs, ORB orb) throws RemoteException {
         return DELEGATE.copyObjects(objs, orb);
     }
 
-    public static ValueHandler createValueHandler() {
-        return DELEGATE.createValueHandler();
-    }
+    public static ValueHandler createValueHandler() { return DELEGATE.createValueHandler(); }
 
-    public static String getCodebase(Class clz) {
-        return DELEGATE.getCodebase(clz);
-    }
+    @SuppressWarnings("rawtypes")
+    public static String getCodebase(Class clz) { return DELEGATE.getCodebase(clz); }
 
-    public static Tie getTie(Remote t) {
-        return DELEGATE.getTie(t);
-    }
+    public static Tie getTie(Remote t) { return DELEGATE.getTie(t); }
 
     public static boolean isLocal(Stub s) throws RemoteException {
         return DELEGATE.isLocal(s);
     }
 
+    @SuppressWarnings("rawtypes")
     public static Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
         return null == DELEGATE ?
                 // If there is no delegate yet, use the default implementation search order
@@ -117,6 +110,5 @@ public class Util {
         DELEGATE.writeRemoteObject(os, o);
     }
 
-    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
     private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 }
