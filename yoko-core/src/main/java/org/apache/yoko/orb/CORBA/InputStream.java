@@ -206,7 +206,7 @@ final public class InputStream extends InputStreamWithOffsets {
             int offs = read_long();
             int indirectionPos = readBuffer.getPosition() - 4 + offs;
             indirectionPos += (indirectionPos & 0x3); // adjust for alignment
-            TypeCode p = (TypeCode) history.get(indirectionPos);
+            TypeCode p = history.get(indirectionPos);
             if (p == null) {
                 throw newMarshalError(MinorReadInvTypeCodeIndirection);
             }
@@ -825,10 +825,9 @@ final public class InputStream extends InputStreamWithOffsets {
         readBuffer.align(TWO_BYTE_BOUNDARY);
 
         if (readBuffer.available() < 2) throw newMarshalError(MinorReadShortOverflow);
-        if (swap_)
-            return (short) ((readBuffer.readByte() & 0xff) | (readBuffer.readByte() << 8));
-        else
-            return (short) ((readBuffer.readByte() << 8) | (readBuffer.readByte() & 0xff));
+        //noinspection IfStatementWithIdenticalBranches
+        if (swap_) return (short) ((readBuffer.readByte() & 0xff) | (readBuffer.readByte() << 8));
+        else return (short) ((readBuffer.readByte() << 8) | (readBuffer.readByte() & 0xff));
     }
 
     public short read_ushort() {
@@ -841,7 +840,7 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     @Override
-    public final long position() { return readBuffer.getPosition(); }
+    public long position() { return readBuffer.getPosition(); }
 
     public int read_ulong() {
         return read_long();
@@ -1248,7 +1247,8 @@ final public class InputStream extends InputStreamWithOffsets {
         return objectFactory.createObject(ior);
     }
 
-    public org.omg.CORBA.Object read_Object(Class expectedType) {
+    @Override
+    public org.omg.CORBA.Object read_Object(@SuppressWarnings("rawtypes") Class expectedType) {
         org.omg.CORBA.Object obj = read_Object();
 
         if (obj == null) return null;
@@ -1271,7 +1271,7 @@ final public class InputStream extends InputStreamWithOffsets {
         try {
             if (IDLEntity.class.isAssignableFrom(expectedType)) {
                 final Class<?> helperClass = Util.loadClass(expectedType.getName() + "Helper", codebase, expectedType.getClassLoader());
-                final Method helperNarrow = doPrivileged(getMethod(helperClass,"narrow", Object.class));
+                final Method helperNarrow = doPrivileged(getMethod(helperClass, "narrow", org.omg.CORBA.Object.class));
                 return (org.omg.CORBA.Object) helperNarrow.invoke(null, impl);
             }
             return createStub(getRMIStubClass(codebase, expectedType), impl._get_delegate());
@@ -1339,7 +1339,7 @@ final public class InputStream extends InputStreamWithOffsets {
         // is needed for TypeCode. Therefore it is not necessary to do
         // encapsulation in a separate buffer.
         checkChunk();
-        return readTypeCodeImpl(new Hashtable<Integer, TypeCode>(), true);
+        return readTypeCodeImpl(new Hashtable<>(), true);
     }
 
     public org.omg.CORBA.Any read_any() {
@@ -1412,7 +1412,8 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     @SuppressWarnings("unchecked")
-    public Serializable read_value(Class clz) {
+    @Override
+    public Serializable read_value(@SuppressWarnings("rawtypes") Class clz) {
         return valueReader().readValue(clz);
     }
 
@@ -1434,7 +1435,8 @@ final public class InputStream extends InputStreamWithOffsets {
     }
 
     @SuppressWarnings("unchecked")
-    public Object read_abstract_interface(Class clz) {
+    @Override
+    public Object read_abstract_interface(@SuppressWarnings("rawtypes") Class clz) {
         return valueReader().readAbstractInterface(clz);
     }
 
@@ -1628,12 +1630,14 @@ final public class InputStream extends InputStreamWithOffsets {
     public String dumpAllData() { return readBuffer.dumpAllData(); }
 
     /** Append all the data in the buffer as a formatted string suitable for logging. */
+    @SuppressWarnings("UnusedReturnValue")
     public StringBuilder dumpAllData(StringBuilder sb) { return readBuffer.dumpAllData(sb); }
 
     /** Return all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
     public String dumpAllDataWithPosition() { return readBuffer.dumpAllDataWithPosition(); }
 
     /** Append all the data in the buffer, with the position marked, as a formatted string suitable for logging. */
+    @SuppressWarnings("UnusedReturnValue")
     public StringBuilder dumpAllDataWithPosition(StringBuilder sb, String label) { return readBuffer.dumpAllDataWithPosition(sb, label); }
 
     private void checkChunk() {
