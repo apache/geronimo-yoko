@@ -23,7 +23,7 @@ final class CurrentStateHolder {
     java.util.Stack transportStack = new java.util.Stack();
 }
 
-final public class Current_impl extends org.omg.CORBA.LocalObject implements
+final public class OciCurrentImpl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Current {
     private java.util.Hashtable stateKey_ = new java.util.Hashtable();
 

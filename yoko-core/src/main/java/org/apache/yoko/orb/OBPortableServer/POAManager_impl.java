@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OBPortableServer;
 
 import java.util.logging.Logger;
 
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.util.Assert;
 import org.omg.PortableServer.POAManagerPackage.*;
 
@@ -106,7 +107,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
                     .getInitialServiceManager();
             org.omg.CORBA.Object o = initialServiceManager
                     .resolveInitialReferences("POACurrent");
-            org.apache.yoko.orb.PortableServer.Current_impl current = (org.apache.yoko.orb.PortableServer.Current_impl) o;
+            PoaCurrentImpl current = (PoaCurrentImpl) o;
 
             inInvocation = current._OB_inUpcall();
             if (inInvocation) {

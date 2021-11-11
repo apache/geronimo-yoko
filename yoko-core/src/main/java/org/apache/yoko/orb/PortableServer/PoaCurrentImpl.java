@@ -32,11 +32,11 @@ final class CurrentState {
     CurrentState next;
 }
 
-final public class Current_impl extends org.omg.CORBA.LocalObject implements
+final public class PoaCurrentImpl extends org.omg.CORBA.LocalObject implements
         org.omg.PortableServer.Current {
     private java.util.Hashtable stateKey_ = new java.util.Hashtable();
 
-    public Current_impl() {
+    public PoaCurrentImpl() {
     }
 
     protected void finalize() throws Throwable {

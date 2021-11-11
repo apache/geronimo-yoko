@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.util.MinorCodes;
 
 //
@@ -182,7 +183,7 @@ class RetainStrategy extends ActiveObjectOnlyStrategy {
     }
 
     public byte[] servantToId(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.PortableServer.Current_impl poaCurrent) {
+            PoaCurrentImpl poaCurrent) {
         byte[] oid = super.servantToId(servant, poaCurrent);
         if (oid == null && defaultServant_ != null)
             return defaultServant_.servantToId(servant, poaCurrent);

@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.util.Assert;
 
 class DefaultServantHolder {
@@ -50,7 +51,7 @@ class DefaultServantHolder {
     // Retrieve the ObjectId associated with the servant, if necessary
     //
     synchronized byte[] servantToId(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.PortableServer.Current_impl poaCurrent) {
+            PoaCurrentImpl poaCurrent) {
         if (servant != servant_)
             return null;
 
