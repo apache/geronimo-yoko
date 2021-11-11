@@ -1,5 +1,5 @@
 /*
- *  Licensed to the Apache Software Foundation (ASF) under one or more
+ * Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
  *  The ASF licenses this file to You under the Apache License, Version 2.0
@@ -14,8 +14,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.omg.CORBA.portable;
+package org.apache.yoko.util;
 
-public class ServantObject {
-    public Object servant;
+import java.util.stream.Stream;
+
+import static java.util.stream.Stream.concat;
+import static java.util.stream.Stream.empty;
+
+public enum Streams {
+    ;
+    @SafeVarargs
+    public static <T> Stream<T> concatStreams(Stream<T>... streams) {
+        Stream<T> stream = empty();
+        for (Stream<T> s: streams) stream = concat(stream, s.sequential());
+        return stream;
+    }
 }
