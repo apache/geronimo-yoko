@@ -22,6 +22,7 @@ import static org.hamcrest.CoreMatchers.endsWith;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+@SuppressWarnings("unused")
 public class BigWidget extends NonSerializableSuper implements Widget {
     private static final long serialVersionUID = 1L;
     private String a = "a_v1";

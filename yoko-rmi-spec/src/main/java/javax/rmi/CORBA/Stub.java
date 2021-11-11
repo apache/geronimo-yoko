@@ -58,7 +58,8 @@ abstract class DelegateHolder extends ObjectImpl {
 
     protected final StubDelegate delegate;
 
-    DelegateHolder() {
+    /** This constructor must be public so that child classes can be deserialized successfully */
+    public DelegateHolder() {
         try {
             delegate = DELEGATE_CONSTRUCTOR.newInstance();
         } catch (Exception e) {
