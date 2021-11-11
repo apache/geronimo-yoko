@@ -17,6 +17,8 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
+
 interface ServantLocationStrategy {
     //
     // Destroy the ServantLocatioStrategy
@@ -47,7 +49,7 @@ interface ServantLocationStrategy {
     // Return the ObjectId associated with the Servant
     //
     byte[] servantToId(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.PortableServer.Current_impl poaCurrent);
+            PoaCurrentImpl poaCurrent);
 
     //
     // Return the Servant associated with the ObjectId

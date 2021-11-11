@@ -17,6 +17,7 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.MinorCodes;
 
@@ -363,7 +364,7 @@ class ActiveObjectOnlyStrategy implements ServantLocationStrategy {
     }
 
     public byte[] servantToId(org.omg.PortableServer.Servant servant,
-            org.apache.yoko.orb.PortableServer.Current_impl poaCurrent) {
+            PoaCurrentImpl poaCurrent) {
         byte[] id = null;
         if (servantIdTable_ != null)
             id = (byte[]) servantIdTable_.get(servant);

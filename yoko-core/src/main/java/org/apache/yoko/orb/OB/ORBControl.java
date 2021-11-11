@@ -17,12 +17,16 @@
 
 package org.apache.yoko.orb.OB;
 
-import static org.apache.yoko.util.MinorCodes.MinorDestroyWouldBlock;
-import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
-import static org.apache.yoko.util.MinorCodes.MinorShutdownCalled;
-import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
-import static org.apache.yoko.util.MinorCodes.describeInitialize;
-import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
+import org.apache.yoko.orb.OBPortableServer.POA_impl;
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
+import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.PortableServer.CurrentPackage.NoContext;
+import org.omg.PortableServer.POA;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -30,16 +34,12 @@ import java.util.concurrent.Phaser;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
-import org.apache.yoko.orb.OBPortableServer.POA_impl;
-import org.apache.yoko.orb.PortableServer.Current_impl;
-import org.apache.yoko.util.Assert;
-import org.apache.yoko.util.MinorCodes;
-import org.omg.CORBA.BAD_INV_ORDER;
-import org.omg.CORBA.INITIALIZE;
-import org.omg.CORBA.ORBPackage.InvalidName;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.CurrentPackage.NoContext;
+import static org.apache.yoko.util.MinorCodes.MinorDestroyWouldBlock;
+import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
+import static org.apache.yoko.util.MinorCodes.MinorShutdownCalled;
+import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
+import static org.apache.yoko.util.MinorCodes.describeInitialize;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ORBControl {
     //
@@ -328,7 +328,7 @@ public final class ORBControl {
             try {
                 InitialServiceManager initialServiceManager = orbInstance_.getInitialServiceManager();
                 org.omg.CORBA.Object o = initialServiceManager.resolveInitialReferences("POACurrent");
-                Current_impl current = (Current_impl) o;
+                PoaCurrentImpl current = (PoaCurrentImpl) o;
                 inInvocation = current._OB_inUpcall();
                 if (inInvocation) {
                     //
@@ -513,7 +513,7 @@ public final class ORBControl {
         //
         // Create the Root POA
         //
-        org.apache.yoko.orb.OBPortableServer.POA_impl root = new org.apache.yoko.orb.OBPortableServer.POA_impl(orb, orbInstance_, serverId, manager);
+        POA_impl root = new POA_impl(orb, orbInstance_, serverId, manager);
         root._OB_addPolicyFactory();
         rootPOA_ = root;
 

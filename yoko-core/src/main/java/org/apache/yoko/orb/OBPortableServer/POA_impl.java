@@ -20,13 +20,11 @@ package org.apache.yoko.orb.OBPortableServer;
 import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.DispatchRequest_impl;
 import org.apache.yoko.orb.OB.DispatchStrategy;
 import org.apache.yoko.orb.OB.InitialServiceManager;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.MessageRoutingUtil;
-import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectKey;
 import org.apache.yoko.orb.OB.ObjectKeyData;
@@ -45,18 +43,21 @@ import org.apache.yoko.orb.OBMessageRouting.ImmediateSuspendPolicy_impl;
 import org.apache.yoko.orb.OBPortableInterceptor.PersistentORT_impl;
 import org.apache.yoko.orb.OBPortableInterceptor.TransientORT_impl;
 import org.apache.yoko.orb.OCI.Acceptor;
+import org.apache.yoko.orb.OCI.OciCurrentImpl;
 import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.TransportInfo;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
 import org.apache.yoko.orb.PortableInterceptor.POAPolicyFactory_impl;
-import org.apache.yoko.orb.PortableServer.Current_impl;
 import org.apache.yoko.orb.PortableServer.IdAssignmentPolicy_impl;
 import org.apache.yoko.orb.PortableServer.IdUniquenessPolicy_impl;
 import org.apache.yoko.orb.PortableServer.ImplicitActivationPolicy_impl;
 import org.apache.yoko.orb.PortableServer.LifespanPolicy_impl;
+import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.orb.PortableServer.RequestProcessingPolicy_impl;
 import org.apache.yoko.orb.PortableServer.ServantRetentionPolicy_impl;
 import org.apache.yoko.orb.PortableServer.ThreadPolicy_impl;
+import org.apache.yoko.util.Assert;
+import org.apache.yoko.util.MinorCodes;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_PARAM;
@@ -125,223 +126,94 @@ import org.omg.PortableServer.ThreadPolicy;
 import org.omg.PortableServer.ThreadPolicyValue;
 
 import java.util.Enumeration;
-import java.util.Hashtable;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Vector;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+
+import static java.util.Arrays.stream;
+import static java.util.stream.Stream.concat;
+import static org.omg.PortableServer.IdAssignmentPolicyValue.SYSTEM_ID;
+import static org.omg.PortableServer.IdUniquenessPolicyValue.MULTIPLE_ID;
+import static org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID;
+import static org.omg.PortableServer.ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION;
+import static org.omg.PortableServer.LifespanPolicyValue.TRANSIENT;
+import static org.omg.PortableServer.RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY;
+import static org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT;
+import static org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN;
+import static org.omg.PortableServer.ThreadPolicyValue.ORB_CTRL_MODEL;
 
 final public class POA_impl extends LocalObject implements POA {
     static final Logger logger = Logger.getLogger(POA_impl.class.getName());
-    //
-    // The ORB
-    //
     private org.omg.CORBA.ORB orb_;
-
-    //
-    // The ORBInstance object
-    //
-    private ORBInstance orbInstance_;
-
-    //
-    // The name of this POA and the name of the root POA
-    //
-    private String name_;
-
-    //
-    // The adapter id
-    //
-    private byte[] adapterId_;
-
-    //
-    // The Server ID (or "_RootPOA" if not set
-    //
-    String serverId_;
-
-    //
-    // The POA name. This is the full path to the POA.
-    //
-    private String[] poaId_;
-
-    //
-    // My parent POA
-    //
-    private POA_impl parent_;
-
-    //
-    // My POA manager
-    //
+    private final ORBInstance orbInstance_;
+    private final String name_;
+    private final byte[] adapterId_;
+    final String serverId_;
+    private final String[] poaId_;
+    private final POA_impl parent_;
     private POAManager manager_;
-
-    //
-    // My servant location strategy
-    //
-    private ServantLocationStrategy servantLocationStrategy_;
-
-    //
-    // My POAControl object
-    //
-    private POAControl poaControl_;
-
-    //
-    // The associated AdapterActivator
-    //
-    private AdapterActivatorHolder adapterActivator_;
-
-    //
-    // All children of this POA
-    //
-    private Hashtable children_;
-
-    //
-    // My policies
-    //
-    private POAPolicies policies_;
-
-    //
-    // Used for generating object ids
-    //
-    private IdGenerationStrategy idGenerationStrategy_;
-
-    //
-    // The POA creation time, if not persistent
-    //
-    private int poaCreateTime_;
-
-    //
-    // If this POA has the single thread policy set then this mutex is
-    // used ensure this policy is met
-    //
-    private RecursiveMutex poaSyncMutex_ = new RecursiveMutex();
-
-    private DispatchStrategy dispatchStrategy_;
-
-    //
-    // The Current implementation. The RootPOA is responsible for the
-    // creation and deletion of the one and only PortableServer::Current.
-    //
-    private Current_impl poaCurrent_;
-
-    //
-    // The OCI::Current implementation. The RootPOA is responsible for
-    // the creation and deletion of the one and only OCI::Current.
-    //
-    private org.apache.yoko.orb.OCI.Current_impl ociCurrent_;
-
-    //
-    // This is the set of policies that are not POA policies and are
-    // registered with a valid PolicyFactory
-    //
-    private Policy[] rawPolicies_;
-
-    //
-    // The primary, secondary and current ObjectReferenceTemplate
-    //
+    private final ServantLocationStrategy servantLocationStrategy_;
+    private final POAControl poaControl_;
+    private final AdapterActivatorHolder adapterActivator_;
+    private final ConcurrentHashMap<String, POA_impl> children_;
+    private final POAPolicies policies_;
+    private final IdGenerationStrategy idGenerationStrategy_;
+    private final int poaCreateTime_;
+    /** If this POA has the single thread policy set then this mutex is used ensure this policy is met */
+    private final RecursiveMutex poaSyncMutex_ = new RecursiveMutex();
+    private final DispatchStrategy dispatchStrategy_;
+    private final PoaCurrentImpl poaCurrent_;
+    private final OciCurrentImpl ociCurrent_;
+    /** This is the set of policies that are not POA policies and are registered with a valid PolicyFactory */
+    private final Policy[] rawPolicies_;
     private ObjectReferenceTemplate adapterTemplate_;
-
-    private ObjectReferenceFactory currentFactory_;
-
-    private ObjectReferenceFactory ort_;
-
-    //
-    // The IORInfo
-    //
+    private ObjectReferenceFactory ort_ = null;
     private IORInfo iorInfo_;
+    /** The child ORTs required for adapterStateChange call when POA is destroyed. */
+    private final Vector<ObjectReferenceTemplate> childTemplates_ = new Vector<>();
+    /** Should POA call AdapterStateChange when destroyed */
+    boolean callAdapterStateChange_ = true;
 
-    //
-    // The child ORTs required for adapterStateChange call when
-    // POA is destroyed.
-    //
-    private Vector childTemplates_;
-
-    //
-    // Should POA call AdapterStateChange when destroyed
-    //
-    boolean callAdapterStateChange_;
-
-    // ----------------------------------------------------------------------
-    // POA private member implementation
-    // ----------------------------------------------------------------------
-
-    //
-    // Return the appropriate object reference template.
-    //
+    /** Return the appropriate object reference template. */
     private ObjectReferenceFactory ort() {
         if (ort_ == null) {
             ort_ = current_factory();
-            if (ort_ == null)
-                ort_ = adapterTemplate_;
+            if (ort_ == null) ort_ = adapterTemplate_;
         }
         return ort_;
     }
 
-    //
-    // Given an object id create an object key
-    //
-    private byte[] createObjectKey(byte[] id) {
-        return ObjectKey
-                .CreateObjectKey(new ObjectKeyData(
-                        serverId_,
-                        poaId_,
-                        id,
-                        policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT,
-                        poaCreateTime_));
-    }
-
-    //
-    // Find the index of the given policy
-    //
-    private boolean findPolicyIndex(Policy[] p, int type,
-                                    IntHolder i) {
-        for (i.value = 0; i.value < p.length; i.value++)
-            if (p[i.value].policy_type() == type)
-                return true;
+    private boolean findPolicyIndex(Policy[] p, int type, IntHolder policyIndexHolder) {
+        for (policyIndexHolder.value = 0; policyIndexHolder.value < p.length; policyIndexHolder.value++)
+            if (p[policyIndexHolder.value].policy_type() == type) return true;
         return false;
     }
 
-    //
-    // Validate a specific set of POA policies
-    //
-    private boolean validatePolicies(POAPolicies policies,
-            Policy[] policyList, IntHolder i) {
-        //
-        // NON_RETAIN requires either USE_DEFAULT_SERVANT or
-        // USE_SERVANT_MANAGER
-        //
+    private boolean validatePolicies(POAPolicies policies, Policy[] policyList, IntHolder i) {
         if (policies.servantRetentionPolicy() == ServantRetentionPolicyValue.NON_RETAIN
                 && policies.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_SERVANT_MANAGER
-                && policies.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT) {
-            boolean ok = findPolicyIndex(policyList,
-                    SERVANT_RETENTION_POLICY_ID.value, i);
+                && policies.requestProcessingPolicy() != USE_DEFAULT_SERVANT) {
+            boolean ok = findPolicyIndex(policyList, SERVANT_RETENTION_POLICY_ID.value, i);
             Assert.ensure(ok);
             return false;
         }
 
-        //
-        // USE_ACTIVE_OBJECT_MAP_ONLY requires RETAIN
-        //
-        if (policies.requestProcessingPolicy() == RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY
-                && policies.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN) {
-            //
+        if (USE_ACTIVE_OBJECT_MAP_ONLY == policies.requestProcessingPolicy()
+                && RETAIN != policies.servantRetentionPolicy()) {
             // One of the two must be present
-            //
-            boolean ok = findPolicyIndex(policyList,
-                    SERVANT_RETENTION_POLICY_ID.value, i);
-            if (!ok)
-                ok = findPolicyIndex(
-                        policyList,
-                        REQUEST_PROCESSING_POLICY_ID.value,
-                        i);
+            boolean ok = findPolicyIndex(policyList, SERVANT_RETENTION_POLICY_ID.value, i)
+                    || findPolicyIndex(policyList, REQUEST_PROCESSING_POLICY_ID.value, i);
             Assert.ensure(ok);
             return false;
         }
 
-        //
-        // USE_DEFAULT_SERVANT requires MULTIPLE_ID
-        //
-        if (policies.requestProcessingPolicy() == RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
-                && policies.idUniquenessPolicy() != IdUniquenessPolicyValue.MULTIPLE_ID) {
-            //
+        if (USE_DEFAULT_SERVANT == policies.requestProcessingPolicy()
+                && MULTIPLE_ID != policies.idUniquenessPolicy()) {
             // Since USE_DEFAULT_SERVANT, this must be present
-            //
             boolean ok = findPolicyIndex(policyList,
                     REQUEST_PROCESSING_POLICY_ID.value,
                     i);
@@ -349,44 +221,24 @@ final public class POA_impl extends LocalObject implements POA {
             return false;
         }
 
-        //
         // IMPLICIT_ACTIVATION requires SYSTEM_ID and RETAIN
-        //
-        if (policies.implicitActivationPolicy() == ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION
-                && policies.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
-                && policies.idAssignmentPolicy() != IdAssignmentPolicyValue.SYSTEM_ID) {
-            //
+        if (policies.implicitActivationPolicy() == IMPLICIT_ACTIVATION
+                && policies.servantRetentionPolicy() != RETAIN
+                && policies.idAssignmentPolicy() != SYSTEM_ID) {
             // Since IMPLICIT_ACTIVATION , this must be present
-            //
-            boolean ok = findPolicyIndex(policyList,
-                    IMPLICIT_ACTIVATION_POLICY_ID.value,
-                    i);
+            boolean ok = findPolicyIndex(policyList, IMPLICIT_ACTIVATION_POLICY_ID.value, i);
             Assert.ensure(ok);
             return false;
         }
-
         return true;
     }
 
-    //
-    // Handle unknown exceptions
-    //
-    private void handleUnknownException(Upcall upcall,
-                                        Exception ex) {
-        UnknownExceptionStrategy strategy = orbInstance_
-                .getUnknownExceptionStrategy();
-
-        UnknownExceptionInfo info = new UnknownExceptionInfo_impl(
-                upcall.operation(), upcall.responseExpected(), upcall
-                        .transportInfo(), (RuntimeException) ex);
-
+    private void handleUnknownException(Upcall upcall, Exception ex) {
+        UnknownExceptionStrategy strategy = orbInstance_.getUnknownExceptionStrategy();
+        UnknownExceptionInfo info = new UnknownExceptionInfo_impl(upcall.operation(), upcall.responseExpected(), upcall.transportInfo(), (RuntimeException) ex);
         try {
             strategy.unknown_exception(info);
-
-            //
-            // Return CORBA::UNKNOWN if the strategy doesn't raise
-            // an exception
-            //
+            // Return CORBA::UNKNOWN if the strategy doesn't raise an exception
             upcall.setSystemException(new UNKNOWN());
         } catch (SystemException sysEx) {
             upcall.setSystemException(sysEx);
@@ -395,223 +247,43 @@ final public class POA_impl extends LocalObject implements POA {
         }
     }
 
-    //
-    // Complete the destroy of the POA
-    //
     private void completeDestroy() {
-        logger.fine("Completing destroy of POA " + name_ + " using POAContrl " + poaControl_); 
-        //
-        // Wait for all pending requests to terminate. If the POA has
-        // destruction has already completed waitPendingRequests
-        // returns false.
-        //
+        logger.fine("Completing destroy of POA " + name_ + " using POAControl " + poaControl_);
         if (poaControl_.waitPendingRequests()) {
-            //
-            // Remove this POA from our parent
-            //
             if (parent_ != null) {
                 synchronized (parent_.children_) {
-                    Assert.ensure(parent_.children_
-                            .containsKey(name_));
+                    Assert.ensure(parent_.children_.containsKey(name_));
                     parent_.children_.remove(name_);
                 }
             }
-
-            //
-            // Unregister from the POAManager If the manager_ is nil then
-            // the POA is being destroyed on startup.
-            //
             if (manager_ != null) {
                 POAManager_impl m = (POAManager_impl) manager_;
                 m._OB_removePOA(poaId_);
                 manager_ = null;
             }
-
-            //
-            // Call the adapter_state_change hook
-            //
             if (callAdapterStateChange_) {
-                ObjectReferenceTemplate[] orts = new ObjectReferenceTemplate[childTemplates_
-                        .size()];
-                childTemplates_.copyInto(orts);
-
-                PIManager piManager = orbInstance_
-                        .getPIManager();
-                piManager.adapterStateChange(orts,
-                        NON_EXISTENT.value);
+                ObjectReferenceTemplate[] orts = childTemplates_.stream().toArray(ObjectReferenceTemplate[]::new);
+                orbInstance_.getPIManager().adapterStateChange(orts, NON_EXISTENT.value);
             }
-
-            //
-            // Destroy the servant location strategy
-            //
             servantLocationStrategy_.destroy(this, poaControl_.etherealize());
-
-            //
-            // Clear internal state variables
-            //
             adapterActivator_.destroy();
-
-            //
-            // Clear the ORB reference
-            //
             orb_ = null;
-
-            //
-            // Mark the destroy as complete
-            //
             poaControl_.markDestroyCompleted();
-            
-            logger.fine("POA " + name_ + " is in a destroyed state"); 
-
-            //
-            // Release the IORInfo object now
-            //
+            logger.fine("POA " + name_ + " is in a destroyed state");
             iorInfo_ = null;
         }
     }
 
-    //
-    // Common initialization code
-    //
-    private void init() {
-        //
-        // Set the POA create time
-        //
-        poaCreateTime_ = (int) (System.currentTimeMillis() / 1000);
-
-        //
-        // Setup the adapter id. This ID is unique for the lifespan of
-        // this POA.
-        //
-        // TODO: It would be nicer if this didn't use CreateObjectKey
-        //
-        byte[] oid = new byte[0];
-        ObjectKeyData data = new ObjectKeyData(
-                serverId_,
-                poaId_,
-                oid,
-                policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT,
-                poaCreateTime_);
-        adapterId_ = ObjectKey.CreateObjectKey(data);
-
-        //
-        // Setup the object-reference templates for this POA. This
-        // involves running the IORInterceptor to establish the IOR
-        // components, and after calling the components_established
-        // interception point.
-        //
-        POAManager_impl m = (POAManager_impl) manager_;
-
-        Acceptor[] acceptors = m._OB_getAcceptors();
-
-        //
-        // Create the IORInfo for this POA
-        //
-        IORInfo_impl iorInfoImpl = new IORInfo_impl(
-                orbInstance_, acceptors, rawPolicies_, policies_, m._OB_getAdapterManagerId(), m
-                        ._OB_getAdapterState());
-        iorInfo_ = iorInfoImpl;
-
-        //
-        // Establish the components to place in IORs generated by this
-        // POA.
-        //
-        PIManager piManager = orbInstance_
-                .getPIManager();
-        piManager.establishComponents(iorInfo_);
-
-        //
-        // Once the components have been established the IORTemplate can
-        // be created for this POA.
-        //
-        IOR iorTemplate = new IOR();
-        iorTemplate.profiles = new TaggedProfile[0];
-        iorTemplate.type_id = new String();
-
-        IORHolder iorH = new IORHolder(iorTemplate);
-        iorInfoImpl._OB_addComponents(iorH, m._OB_getGIOPVersion());
-
-        //
-        // Create the primary, secondary and current object-reference
-        // template.
-        //
-        String orbId = orbInstance_.getOrbId();
-        String serverId = orbInstance_.getServerId();
-        logger.fine("POA " + name_ + " activated on ORB " + orbId + " and server " + serverId); 
-        if (policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT)
-            adapterTemplate_ = new PersistentORT_impl(
-                    orbInstance_, serverId, orbId, poaId_, iorTemplate);
-        else
-            adapterTemplate_ = new TransientORT_impl(
-                    orbInstance_, serverId, orbId, poaId_, poaCreateTime_,
-                    iorTemplate);
-
-        //
-        // Set the primary template
-        //
-        iorInfoImpl._OB_adapterTemplate(adapterTemplate_);
-
-        //
-        // Call the componentsEstablished callback. This method can throw
-        // an exception.
-        //
-        piManager.componentsEstablished(iorInfo_);
-
-        //
-        // After this point no exception should be thrown
-        //
-
-        //
-        // Create the id generation strategy
-        //
-        idGenerationStrategy_ = IdGenerationStrategyFactory
-                .createIdGenerationStrategy(policies_);
-
-        //
-        // Create the adapter activator holder
-        //
-        adapterActivator_ = new AdapterActivatorHolder();
-
-        //
-        // Create the POA control
-        //
-        poaControl_ = new POAControl();
-        
-        //
-        // Initialize the ServantLocationStategy
-        //
-        servantLocationStrategy_ = ServantLocationStrategyFactory
-                .createServantLocationStrategy(policies_, orbInstance_);
-
-        //
-        // Initialize the POA child hashtable
-        //
-        children_ = new Hashtable(31);
-
-        //
-        // Initialize the dispatch strategy
-        //
-        dispatchStrategy_ = policies_.dispatchStrategyPolicy();
-
-        //
-        // Register with the POAManager
-        //
-        m._OB_addPOA(this, poaId_);
-    }
-
-    // ----------------------------------------------------------------------
-    // POA_impl constructors
-    // ----------------------------------------------------------------------
-
-    //
-    // Constructor for any POA other than the root
-    //
     private POA_impl(org.omg.CORBA.ORB orb,
-            ORBInstance orbInstance, String serverId,
-            String name, POA_impl parent, POAManager manager,
-            Current_impl poaCurrent,
-            org.apache.yoko.orb.OCI.Current_impl ociCurrent,
-            POAPolicies policies, Policy[] rawPolicies) {
+                     ORBInstance orbInstance,
+                     String serverId,
+                     String name,
+                     POA_impl parent,
+                     POAManager manager,
+                     PoaCurrentImpl poaCurrent,
+                     OciCurrentImpl ociCurrent,
+                     POAPolicies policies,
+                     Policy[] rawPolicies) {
         orb_ = orb;
         orbInstance_ = orbInstance;
         serverId_ = serverId;
@@ -622,104 +294,85 @@ final public class POA_impl extends LocalObject implements POA {
         poaCurrent_ = poaCurrent;
         ociCurrent_ = ociCurrent;
         rawPolicies_ = rawPolicies;
-        adapterTemplate_ = null;
-        currentFactory_ = null;
-        ort_ = null;
-        childTemplates_ = new Vector();
-        callAdapterStateChange_ = true;
-        
-        logger.fine("Creating POA " + name + " using manager " + manager.get_id()); 
 
-        //
-        // Set my POA id
-        //
-        Assert.ensure(parent != null);
-        poaId_ = new String[parent.poaId_.length + 1];
-        System.arraycopy(parent.poaId_, 0, poaId_, 0, parent.poaId_.length);
-        poaId_[parent.poaId_.length] = name;
+        logger.fine("Creating POA " + name + " using manager " + manager.get_id());
 
-        init();
+        poaId_ = null == parent ? new String[0] : concat(stream(parent.poaId_), Stream.of(name)).toArray(String[]::new);
+        poaCreateTime_ = (int) (System.currentTimeMillis() / 1000);
+
+        // TODO: It would be nicer if this didn't use CreateObjectKey
+        byte[] oid = new byte[0];
+        ObjectKeyData data = new ObjectKeyData(serverId_, poaId_, oid, policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT, poaCreateTime_);
+        adapterId_ = ObjectKey.CreateObjectKey(data);
+
+        // Setup the object-reference templates for this POA. This
+        // involves running the IORInterceptor to establish the IOR
+        // components, and after calling the components_established
+        // interception point.
+        POAManager_impl m = (POAManager_impl) manager_;
+
+        Acceptor[] acceptors = m._OB_getAcceptors();
+
+        IORInfo_impl iorInfoImpl = new IORInfo_impl(orbInstance_, acceptors, rawPolicies_, policies_, m._OB_getAdapterManagerId(), m._OB_getAdapterState());
+        iorInfo_ = iorInfoImpl;
+
+        orbInstance_.getPIManager().establishComponents(iorInfo_);
+
+        IOR iorTemplate = new IOR("", new TaggedProfile[0]);
+
+        IORHolder iorH = new IORHolder(iorTemplate);
+        iorInfoImpl._OB_addComponents(iorH, m._OB_getGIOPVersion());
+
+        // Create the primary, secondary and current object-reference template.
+        String orbId = orbInstance_.getOrbId();
+        String serverId1 = orbInstance_.getServerId();
+        logger.fine("POA " + name_ + " activated on ORB " + orbId + " and server " + serverId1);
+        adapterTemplate_ = policies_.lifespanPolicy() == LifespanPolicyValue.PERSISTENT ?
+                new PersistentORT_impl(orbInstance_, serverId1, orbId, poaId_, iorTemplate) :
+                new TransientORT_impl(orbInstance_, serverId1, orbId, poaId_, poaCreateTime_, iorTemplate);
+        iorInfoImpl._OB_adapterTemplate(adapterTemplate_);
+        orbInstance_.getPIManager().componentsEstablished(iorInfo_);
+        idGenerationStrategy_ = IdGenerationStrategyFactory.createIdGenerationStrategy(policies_);
+        adapterActivator_ = new AdapterActivatorHolder();
+        poaControl_ = new POAControl();
+        servantLocationStrategy_ = ServantLocationStrategyFactory.createServantLocationStrategy(policies_, orbInstance_);
+        children_ = new ConcurrentHashMap<>(31);
+        dispatchStrategy_ = policies_.dispatchStrategyPolicy();
+        m._OB_addPOA(this, poaId_);
     }
 
     //
     // Constructor for the root POA
     //
-    public POA_impl(org.omg.CORBA.ORB orb,
-            ORBInstance orbInstance, String name,
-            POAManager manager) {
-        orb_ = orb;
-        orbInstance_ = orbInstance;
-        serverId_ = name;
-        name_ = name;
-        parent_ = null;
-        manager_ = manager;
-        policies_ = null;
-        poaCurrent_ = null;
-        ociCurrent_ = null;
-        adapterTemplate_ = null;
-        currentFactory_ = null;
-        ort_ = null;
-        childTemplates_ = new Vector();
-        callAdapterStateChange_ = true;
-
-        Policy[] pl = new Policy[1];
-        pl[0] = new ImplicitActivationPolicy_impl(
-                ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
-
-        //
-        // Create the policies_ member
-        //
-        policies_ = new POAPolicies(orbInstance_, pl);
-
-        //
-        // This is the default externally visible for the RootPOA
-        //
-        rawPolicies_ = new Policy[7];
-        rawPolicies_[0] = new ThreadPolicy_impl(
-                ThreadPolicyValue.ORB_CTRL_MODEL);
-        rawPolicies_[1] = new LifespanPolicy_impl(
-                LifespanPolicyValue.TRANSIENT);
-        rawPolicies_[2] = new IdUniquenessPolicy_impl(
-                IdUniquenessPolicyValue.UNIQUE_ID);
-        rawPolicies_[3] = new IdAssignmentPolicy_impl(
-                IdAssignmentPolicyValue.SYSTEM_ID);
-        rawPolicies_[4] = new ServantRetentionPolicy_impl(
-                ServantRetentionPolicyValue.RETAIN);
-        rawPolicies_[5] = new RequestProcessingPolicy_impl(
-                RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY);
-        rawPolicies_[6] = new ImplicitActivationPolicy_impl(
-                ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION);
-
-        //
-        // Create the POA and OCI Current implementation object
-        //
-        poaCurrent_ = new Current_impl();
-        ociCurrent_ = new org.apache.yoko.orb.OCI.Current_impl();
-
-        //
-        // Register the POA::Current, and the OCI::Current classes with
-        // the ORB
-        //
-        InitialServiceManager ism = orbInstance_
-                .getInitialServiceManager();
+    public POA_impl(org.omg.CORBA.ORB orb, ORBInstance orbInstance, String name, POAManager manager) {
+        this(orb, orbInstance, name, name, null, manager, new PoaCurrentImpl(), new OciCurrentImpl(), getDefaultPolicies(orbInstance), getDefaultRawPolicies());
+        InitialServiceManager ism = orbInstance_.getInitialServiceManager();
         try {
             ism.addInitialReference("POACurrent", poaCurrent_);
             ism.addInitialReference("OCICurrent", ociCurrent_);
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         }
-
-        //
-        // Set the POAID
-        //
-        poaId_ = new String[0];
-
-        //
-        // Initialize the POA
-        //
-        init();
     }
 
+    private static POAPolicies getDefaultPolicies(ORBInstance orbInstance) {
+        Policy[] policies = { new ImplicitActivationPolicy_impl(IMPLICIT_ACTIVATION) };
+        return new POAPolicies(orbInstance, policies);
+    }
+
+    private static Policy[] getDefaultRawPolicies() {
+        return new Policy[]{
+                new ThreadPolicy_impl(ORB_CTRL_MODEL),
+                new LifespanPolicy_impl(TRANSIENT),
+                new IdUniquenessPolicy_impl(UNIQUE_ID),
+                new IdAssignmentPolicy_impl(SYSTEM_ID),
+                new ServantRetentionPolicy_impl(RETAIN),
+                new RequestProcessingPolicy_impl(USE_ACTIVE_OBJECT_MAP_ONLY),
+                new ImplicitActivationPolicy_impl(IMPLICIT_ACTIVATION)
+        };
+    }
+
+    @SuppressWarnings("deprecation")
     protected void finalize() throws Throwable {
         Assert.ensure(poaControl_.getDestroyed());
 
@@ -755,7 +408,7 @@ final public class POA_impl extends LocalObject implements POA {
             throw new InvalidPolicy(
                     (short) idx.value);
 
-        POA_impl child = null;
+        POA_impl child;
 
         //
         // It's not possible to a POA that already exists. If the POA is
@@ -768,29 +421,15 @@ final public class POA_impl extends LocalObject implements POA {
                 throw new AdapterAlreadyExists();
             }
 
-            //
             // If necessary create a new POAManager for this POA
-            //
-            POAManager obmanager = null;
+            POAManager obmanager;
             if (manager == null) {
                 try {
-                    InitialServiceManager ism = orbInstance_
-                            .getInitialServiceManager();
-                    POAManagerFactory factory = POAManagerFactoryHelper
-                            .narrow(ism.resolveInitialReferences("POAManagerFactory"));
+                    InitialServiceManager ism = orbInstance_.getInitialServiceManager();
+                    POAManagerFactory factory = POAManagerFactoryHelper.narrow(ism.resolveInitialReferences("POAManagerFactory"));
                     Policy[] emptyPl = new Policy[0];
-                    obmanager = (POAManager) factory
-                            .create_POAManager(adapter, emptyPl);
-                } catch (InvalidName ex) {
-                    throw Assert.fail(ex);
-                } catch (ManagerAlreadyExists ex) {
-                    throw Assert.fail(ex);
-                }
-                // catch(org.apache.yoko.orb.OCI.InvalidParam ex)
-                // {
-                // org.apache.yoko.orb.OB.Assert._OB_assert(ex);
-                // }
-                catch (PolicyError ex) {
+                    obmanager = (POAManager) factory.create_POAManager(adapter, emptyPl);
+                } catch (InvalidName | ManagerAlreadyExists | PolicyError ex) {
                     throw Assert.fail(ex);
                 }
             } else {
@@ -805,19 +444,15 @@ final public class POA_impl extends LocalObject implements POA {
             // Create the new POA
             //
             try {
-                child = new POA_impl(orb_, orbInstance_, serverId_, adapter,
-                        this, obmanager, poaCurrent_, ociCurrent_, policies,
-                        rawPolicies);
+                child = new POA_impl(orb_, orbInstance_, serverId_, adapter, this, obmanager, poaCurrent_, ociCurrent_, policies, rawPolicies);
             } catch (SystemException ex) {
-                //
                 // If the creation of the POA fails and a new POAManager
                 // was created the deactivate the POAManager
-                //
                 if (manager == null) {
                     Assert.ensure(obmanager != null);
                     try {
                         obmanager.deactivate(true, true);
-                    } catch (AdapterInactive e) {
+                    } catch (AdapterInactive ignored) {
                     }
                 }
                 throw ex;
@@ -857,8 +492,7 @@ final public class POA_impl extends LocalObject implements POA {
         // will not get called.
         //
         if (!children_.containsKey(adapter) && activate) {
-            AdapterActivator adapterActivator = adapterActivator_
-                    .getAdapterActivator();
+            AdapterActivator adapterActivator = adapterActivator_.getAdapterActivator();
             if (adapterActivator != null) {
                 //
                 // From the spec:
@@ -999,23 +633,12 @@ final public class POA_impl extends LocalObject implements POA {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
-        //
         // Since its possible that the children list changes while
         // this method call is in progress its necessary to check the
         // return value of Hashtable::get.
-        //
-        Vector content = new Vector();
-        Enumeration e = children_.elements();
-        while (e.hasMoreElements()) {
-            org.omg.PortableServer.POA child = (org.omg.PortableServer.POA) e.nextElement();
-            if (child != null) {
-                content.addElement(child);
-            }
-        }
-        org.omg.PortableServer.POA[] children = new org.omg.PortableServer.POA[content.size()];
-        content.copyInto(children);
-
-        return children;
+        return children_.values().stream()
+                .filter(Objects::nonNull)
+                .toArray(org.omg.PortableServer.POA[]::new);
     }
 
     public org.omg.PortableServer.POAManager the_POAManager() {
@@ -1061,7 +684,7 @@ final public class POA_impl extends LocalObject implements POA {
     public ObjectReferenceFactory current_factory() {
         if (iorInfo_ != null) {
             try {
-                return ((IORInfo_impl) iorInfo_)
+                return iorInfo_
                         .current_factory();
             } catch (ClassCastException e) {
                 return iorInfo_.current_factory();
@@ -1094,78 +717,48 @@ final public class POA_impl extends LocalObject implements POA {
         return servantManagerStrategy.getServantManager();
     }
 
-    public void set_servant_manager(ServantManager mgr)
-            throws WrongPolicy {
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
-
-        ServantManagerStrategy servantManagerStrategy = servantLocationStrategy_
-                .getServantManagerStrategy();
-
-        if (servantManagerStrategy == null)
-            throw new WrongPolicy();
-
-        servantManagerStrategy.setServantManager(mgr);
+    public void set_servant_manager(ServantManager mgr) throws WrongPolicy {
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        Optional.of(servantLocationStrategy_)
+                .map(ServantLocationStrategy::getServantManagerStrategy)
+                .orElseThrow(WrongPolicy::new)
+                .setServantManager(mgr);
     }
 
-    public Servant get_servant()
-            throws NoServant,
-            WrongPolicy {
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
+    public Servant get_servant() throws NoServant, WrongPolicy {
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
 
-        DefaultServantHolder defaultServantHolder = servantLocationStrategy_
-                .getDefaultServantHolder();
+        DefaultServantHolder holder = Optional.of(servantLocationStrategy_)
+                .map(ServantLocationStrategy::getDefaultServantHolder)
+                .orElseThrow(WrongPolicy::new);
 
-        if (defaultServantHolder == null)
-            throw new WrongPolicy();
-
-        Servant servant = defaultServantHolder
-                .getDefaultServant();
-
-        if (servant == null)
-            throw new NoServant();
-        return servant;
+        return Optional.of(holder)
+                .map(DefaultServantHolder::getDefaultServant)
+                .orElseThrow(NoServant::new);
     }
 
-    public void set_servant(Servant servant)
-            throws WrongPolicy {
+    public void set_servant(Servant servant) throws WrongPolicy {
         Assert.ensure(servant != null);
 
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
 
-        DefaultServantHolder defaultServantHolder = servantLocationStrategy_
-                .getDefaultServantHolder();
-        if (defaultServantHolder == null)
-            throw new WrongPolicy();
+        Optional.of(servantLocationStrategy_)
+                .map(ServantLocationStrategy::getDefaultServantHolder)
+                .orElseThrow(WrongPolicy::new)
+                .setDefaultServant(servant);
 
         ((ORB) orbInstance_.getORB()).set_delegate(servant);
-
-        defaultServantHolder.setDefaultServant(servant);
     }
 
-    public byte[] activate_object(Servant servant)
-            throws ServantAlreadyActive,
-            WrongPolicy {
+    public byte[] activate_object(Servant servant) throws ServantAlreadyActive, WrongPolicy {
         Assert.ensure(servant != null);
-
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
-
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         byte[] oid = idGenerationStrategy_.createId();
-
         try {
             servantLocationStrategy_.activate(oid, servant);
         } catch (ObjectAlreadyActive ex) {
-            throw Assert.fail(ex); // Should not
-                                                                // occur
+            throw Assert.fail(ex); // Should not occur
         }
-
         return oid;
     }
 
@@ -1175,75 +768,36 @@ final public class POA_impl extends LocalObject implements POA {
         //
         RouterListHolder configRouterList = new RouterListHolder();
         configRouterList.value = new Router[0];
-        MessageRoutingUtil.getRouterListFromConfig(
-                orbInstance_, configRouterList);
+        MessageRoutingUtil.getRouterListFromConfig(orbInstance_, configRouterList);
 
-        int numRouters = configRouterList.value.length;
-        for (int i = 0; i < numRouters; ++i) {
-            Router curRouter = configRouterList.value[i];
-
-            //
-            // Get the router admin
-            //
-            RouterAdmin routerAdmin = null;
+        Router[] value = configRouterList.value;
+        for (Router curRouter : value) {
             try {
-                routerAdmin = curRouter.admin();
-            } catch (SystemException ex) {
-            }
-
-            //
-            // Only continue if the router could be contacted and a valid
-            // router admin object is available
-            //
-            if (routerAdmin != null) {
-                org.omg.CORBA.Object dest;
-                try {
-                    dest = id_to_reference(oid);
-                } catch (ObjectNotActive ex) {
-                    break;
-                } catch (WrongPolicy ex) {
-                    break;
-                }
-
+                RouterAdmin routerAdmin = curRouter.admin();
+                if (null == routerAdmin) continue;
+                // The object itself must be registered with the router
+                // admin. The 'oid' parameter can be used to create a
+                // reference for this object.
+                final org.omg.CORBA.Object dest = id_to_reference(oid);
                 if (activate) {
-                    ImmediateSuspendPolicy_impl retryPolicy = new ImmediateSuspendPolicy_impl();
-
-                    int decaySeconds = 0;
-                    DecayPolicy_impl decayPolicy = new DecayPolicy_impl(
-                            decaySeconds);
-
-                    //
-                    // The object itself must be registered with the router
-                    // admin. The 'oid' parameter can be used to create a
-                    // reference for this object.
-                    //
-                    try {
-                        routerAdmin.register_destination(dest, false,
-                                retryPolicy, decayPolicy);
-                    } catch (SystemException ex) {
-                    }
-                } else // deactivate
-                {
-                    try {
-                        routerAdmin.unregister_destination(dest);
-                    } catch (InvalidState ex) {
-                    } catch (SystemException ex) {
-                    }
+                    routerAdmin.register_destination(dest, false,
+                            new ImmediateSuspendPolicy_impl(),
+                            new DecayPolicy_impl(0));
+                } else {
+                    routerAdmin.unregister_destination(dest);
                 }
+            } catch (ObjectNotActive | WrongPolicy ex) {
+                return;
+            } catch (InvalidState | SystemException ignored) {
             }
         }
     }
 
-    public void activate_object_with_id(byte[] oid,
-            Servant servant)
-            throws ServantAlreadyActive,
-            ObjectAlreadyActive,
-            WrongPolicy {
+    public void activate_object_with_id(byte[] oid, Servant servant) throws ServantAlreadyActive, ObjectAlreadyActive, WrongPolicy {
         Assert.ensure(servant != null);
 
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+
 
         //
         // Validate that the ObjectId is valid
@@ -1265,12 +819,9 @@ final public class POA_impl extends LocalObject implements POA {
         notifyRouters(true, oid);
     }
 
-    public void deactivate_object(byte[] oid)
-            throws ObjectNotActive,
-            WrongPolicy {
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
+    public void deactivate_object(byte[] oid) throws ObjectNotActive, WrongPolicy {
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+
 
         servantLocationStrategy_.deactivate(this, oid);
 
@@ -1327,10 +878,10 @@ final public class POA_impl extends LocalObject implements POA {
         // either the UNIQUE_ID policy or the IMPLICIT_ACTIVATION (w/
         // SYSTEM_ID) policies.
         //
-        if (policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT
-                && (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN || (policies_
-                        .idUniquenessPolicy() != IdUniquenessPolicyValue.UNIQUE_ID && policies_
-                        .implicitActivationPolicy() != ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)))
+        if (policies_.requestProcessingPolicy() != USE_DEFAULT_SERVANT
+                && (policies_.servantRetentionPolicy() != RETAIN || (policies_
+                        .idUniquenessPolicy() != UNIQUE_ID && policies_
+                        .implicitActivationPolicy() != IMPLICIT_ACTIVATION)))
             throw new WrongPolicy();
 
         byte[] oid = servantLocationStrategy_.servantToId(servant, poaCurrent_);
@@ -1340,7 +891,7 @@ final public class POA_impl extends LocalObject implements POA {
             // If the POA doesn't have the IMPLICIT_ACTIVATION
             // (w/ SYSTEM_ID) then a ServantNotActive exception
             //
-            if (policies_.implicitActivationPolicy() != ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)
+            if (policies_.implicitActivationPolicy() != IMPLICIT_ACTIVATION)
                 throw new ServantNotActive();
 
             try {
@@ -1373,6 +924,7 @@ final public class POA_impl extends LocalObject implements POA {
                 && poaCurrent_._OB_getServant() == servant) {
             try {
                 byte[] oid = poaCurrent_.get_object_id();
+                assert servant != null;
                 String intf = servant._all_interfaces(this, oid)[0];
                 return ort().make_object(intf, oid);
             } catch (NoContext ex) {
@@ -1381,6 +933,7 @@ final public class POA_impl extends LocalObject implements POA {
         }
 
         byte[] oid = servant_to_id(servant);
+        assert servant != null;
         String intf = servant._all_interfaces(this, oid)[0];
         return create_reference_with_id(oid, intf);
     }
@@ -1400,8 +953,8 @@ final public class POA_impl extends LocalObject implements POA {
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT
         // policy.
         //
-        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
-                && policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
+        if (policies_.servantRetentionPolicy() != RETAIN
+                && policies_.requestProcessingPolicy() != USE_DEFAULT_SERVANT)
             throw new WrongPolicy();
 
         byte[] oid = reference_to_id(reference);
@@ -1416,14 +969,14 @@ final public class POA_impl extends LocalObject implements POA {
     }
 
     public byte[] reference_to_id(org.omg.CORBA.Object reference)
-            throws WrongAdapter,
-            WrongPolicy {
+            throws WrongAdapter {
         Assert.ensure(reference != null);
 
         if (poaControl_.getDestroyed()) {
             throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
         }
 
+        assert reference != null;
         Delegate d = (Delegate) ((ObjectImpl) reference)
                 ._get_delegate();
         IOR ior = d._OB_IOR();
@@ -1472,8 +1025,8 @@ final public class POA_impl extends LocalObject implements POA {
         //
         // Requires the RETAIN policy or the USE_DEFAULT_SERVANT policy.
         //
-        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN
-                && policies_.requestProcessingPolicy() != RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)
+        if (policies_.servantRetentionPolicy() != RETAIN
+                && policies_.requestProcessingPolicy() != USE_DEFAULT_SERVANT)
             throw new WrongPolicy();
 
         Servant servant = servantLocationStrategy_
@@ -1494,7 +1047,7 @@ final public class POA_impl extends LocalObject implements POA {
 
         // Requires the RETAIN policy
         //
-        if (policies_.servantRetentionPolicy() != ServantRetentionPolicyValue.RETAIN)
+        if (policies_.servantRetentionPolicy() != RETAIN)
             throw new WrongPolicy();
 
         Servant servant = servantLocationStrategy_
@@ -1673,7 +1226,7 @@ final public class POA_impl extends LocalObject implements POA {
         // (implying the client has the BidirPolicy as well),
         // then we must map these in the transportInfo structure
         //
-        if (upcall != null) _OB_handleBidirContext(transportInfo, requestContexts);
+        _OB_handleBidirContext(transportInfo, requestContexts);
 
 
         return upcall;
@@ -1787,7 +1340,7 @@ final public class POA_impl extends LocalObject implements POA {
                 policies);
     }
 
-    public Current_impl _OB_POACurrent() {
+    public PoaCurrentImpl _OB_POACurrent() {
         return poaCurrent_;
     }
 
@@ -1927,13 +1480,9 @@ final public class POA_impl extends LocalObject implements POA {
         }
     }
 
-    public void _OB_destroy(boolean etherealize, boolean waitForCompletion,
-            Vector templates) {
+    public void _OB_destroy(boolean etherealize, boolean waitForCompletion, List<ObjectReferenceTemplate> templates) {
         logger.fine("Destroying POA " + name_); 
-        if (poaControl_.getDestroyed()) {
-            // this is not an error on other ORBS. 
-            return;
-        }
+        if (poaControl_.getDestroyed()) return;
 
         //
         // If waitForCompletion is TRUE and the current thread is in
@@ -1944,11 +1493,8 @@ final public class POA_impl extends LocalObject implements POA {
         if (waitForCompletion && poaCurrent_._OB_inUpcall()) {
             try {
                 POA_impl p = (POA_impl) poaCurrent_.get_POA();
-                if (p._OB_ORBInstance() == orbInstance_) {
-                    throw new BAD_INV_ORDER(
-                            "Invocation in progress");
-                }
-            } catch (NoContext ex) {
+                if (p._OB_ORBInstance() == orbInstance_) throw new BAD_INV_ORDER("Invocation in progress");
+            } catch (NoContext ignored) {
             }
         }
 
@@ -1958,7 +1504,7 @@ final public class POA_impl extends LocalObject implements POA {
         // on this POA.
         //
         if (templates != null) {
-            templates.addElement(adapter_template());
+            templates.add(adapter_template());
             callAdapterStateChange_ = false;
         }
 
@@ -1968,22 +1514,15 @@ final public class POA_impl extends LocalObject implements POA {
         // true) until the POA destruction is complete.
         //
         if (poaControl_.markDestroyPending(etherealize, waitForCompletion)) {
-            //
             // Recursively destroy all children
-            //
+
             Enumeration e = children_.elements();
-            while (e.hasMoreElements()) {
-                POA_impl child = (POA_impl) e
-                        .nextElement();
-                if (child != null) {
-                    if (templates == null)
-                        child._OB_destroy(etherealize, waitForCompletion,
-                                childTemplates_);
-                    else
-                        child._OB_destroy(etherealize, waitForCompletion,
-                                templates);
-                }
-            }
+
+            final List<ObjectReferenceTemplate> orts = null == templates ? childTemplates_ : templates;
+
+            children_.values().stream()
+                    .filter(Objects::nonNull)
+                    .forEach(p -> p._OB_destroy(etherealize, waitForCompletion, orts));
 
             //
             // If waitForCompletion is FALSE, the destroy operation
@@ -2004,9 +1543,7 @@ final public class POA_impl extends LocalObject implements POA {
             // completed then destruction of the the POA will
             // complete.
             //
-            if (!waitForCompletion && poaControl_.hasPendingRequests()) {
-                return;
-            }
+            if (!waitForCompletion && poaControl_.hasPendingRequests()) return;
 
             completeDestroy();
         }

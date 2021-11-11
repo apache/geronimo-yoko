@@ -50,7 +50,7 @@ public final class Delegate implements org.omg.PortableServer.portable.Delegate 
 
         org.omg.PortableServer.POA thePOA = self._default_POA();
         org.apache.yoko.orb.OBPortableServer.POA_impl poaImpl = (org.apache.yoko.orb.OBPortableServer.POA_impl) thePOA;
-        Current_impl current = poaImpl._OB_POACurrent();
+        PoaCurrentImpl current = poaImpl._OB_POACurrent();
 
         // now that we have the current context, we need to use the current POA 
         // for validating.  
