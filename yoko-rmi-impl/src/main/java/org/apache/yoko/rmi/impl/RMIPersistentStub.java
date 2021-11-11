@@ -35,12 +35,7 @@ public class RMIPersistentStub extends javax.rmi.CORBA.Stub {
     
     /** the class-type to which this object should be narrow'ed */
     private Class type;
-
-    /** constructor for use by serialization */
-    RMIPersistentStub() {
-        // System.out.println ("Creating instance of RMIPersistentStub");
-    }
-
+    
     /** constructor used in org.apache.yoko.rmi.impl.RMIStubHandler */
     public RMIPersistentStub(javax.rmi.CORBA.Stub stub, Class type) {
         _set_delegate(stub._get_delegate());
