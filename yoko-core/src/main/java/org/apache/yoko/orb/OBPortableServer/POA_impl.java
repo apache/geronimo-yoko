@@ -61,7 +61,6 @@ import org.apache.yoko.util.MinorCodes;
 import org.omg.BiDirPolicy.BOTH;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_PARAM;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.IntHolder;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
@@ -136,6 +135,9 @@ import java.util.stream.Stream;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Stream.concat;
+import static org.apache.yoko.util.MinorCodes.MinorSystemExceptionInUnknownAdapter;
+import static org.apache.yoko.util.MinorCodes.describeObjAdapter;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.PortableServer.IdAssignmentPolicyValue.SYSTEM_ID;
 import static org.omg.PortableServer.IdUniquenessPolicyValue.MULTIPLE_ID;
 import static org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID;
@@ -467,82 +469,43 @@ final public class POA_impl extends LocalObject implements POA {
         return child;
     }
 
-    public org.omg.PortableServer.POA find_POA(String adapter, boolean activate)
-            throws AdapterNonExistent {
-        Assert.ensure(adapter != null);
+    public org.omg.PortableServer.POA find_POA(String adapter, boolean activate) throws AdapterNonExistent {
+        Objects.requireNonNull(adapter);
+        if (poaControl_.getDestroyed()) throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
+        logger.fine("POA " + name_ + " finding POA with name " + adapter);
 
-        if (poaControl_.getDestroyed()) {
-            throw new OBJECT_NOT_EXIST("POA " + name_ + " has been destroyed");
-        }
-        
-        logger.fine("POA " + name_ + " finding POA with name " + adapter); 
+        org.omg.PortableServer.POA poa = children_.get(adapter);
+        if (null != poa) return poa;
+        if (!activate) throw new AdapterNonExistent();
 
-        boolean check = true;
+        // If the child isn't registered, and we've been asked to activate the POA and we have an AdapterActivator
+        // and the POAManager's state is active then we activate the POA (see below requirement)
+        //
+        // From 11-18: In addition, when a POA manager is in the holding state, the adapter activators registered with
+        // the associated POAs will not get called.
 
+
+        // From the spec:
         //
-        // If the child isn't registered, and we've been asked to
-        // activate the POA and we have an AdapterActivator and the
-        // POAManager's state is active then we activate the POA (see
-        // below requirement)
-        //
-        // From 11-18:
-        //
-        // In addition, when a POA manager is in the holding state,
-        // the adapter activators registered with the associated POAs
-        // will not get called.
-        //
-        if (!children_.containsKey(adapter) && activate) {
-            AdapterActivator adapterActivator = adapterActivator_.getAdapterActivator();
-            if (adapterActivator != null) {
-                //
-                // From the spec:
-                //
-                // Creating a POA using a POA manager that is in the
-                // active state can lead to race conditions if the POA
-                // supports preexisting objects, because the new POA
-                // may receive a request before its adapter activator,
-                // servant manager, or default servant have been
-                // initialized. These problems do not occur if the POA
-                // is created by an adapter activator registered with
-                // a parent of the new POA, because requests are
-                // queued until the adapter activator returns. To
-                // avoid these problems when a POA must be explicitly
-                // initialized, the application can initialize the POA
-                // by invoking find_POA with a TRUE activate
-                // parameter.
-                //
-                // TODO: This requirement is not met
-                //
-                try {
-                    check = adapterActivator.unknown_adapter(this, adapter);
-                } catch (SystemException ex) {
-                    //
-                    // 11.3.3.2:
-                    //
-                    // If unknown_adapter raises a system exception, the ORB
-                    // will report an OBJ_ADAPTER system exception with
-                    // standard minor code 1.
-                    //
-                    throw new OBJ_ADAPTER(
-                            MinorCodes
-                                    .describeObjAdapter(MinorCodes.MinorSystemExceptionInUnknownAdapter),
-                            MinorCodes.MinorSystemExceptionInUnknownAdapter,
-                            CompletionStatus.COMPLETED_NO);
-                }
-            }
+        // Creating a POA using a POA manager that is in the active state can lead to race conditions if the POA
+        // supports preexisting objects, because the new POA may receive a request before its adapter activator,
+        // servant manager, or default servant have been initialized. These problems do not occur if the POA
+        // is created by an adapter activator registered with a parent of the new POA, because requests are
+        // queued until the adapter activator returns. To avoid these problems when a POA must be explicitly
+        // initialized, the application can initialize the POA by invoking find_POA with a TRUE activate parameter.
+        // TODO: This requirement is not met
+        try {
+            Optional.of(adapterActivator_)
+                    .map(AdapterActivatorHolder::getAdapterActivator)
+                    .ifPresent(aa -> aa.unknown_adapter(this, adapter));
+        } catch (SystemException ex) {
+            // 11.3.3.2: If unknown_adapter raises a system exception, the ORB will report an OBJ_ADAPTER with minor code 1.
+            throw new OBJ_ADAPTER(describeObjAdapter(MinorSystemExceptionInUnknownAdapter), MinorSystemExceptionInUnknownAdapter, COMPLETED_NO);
         }
 
-        //
-        // Lookup the POA in our set of children.
-        //
-        org.omg.PortableServer.POA poa = null;
-        if (check)
-            poa = (org.omg.PortableServer.POA) children_.get(adapter);
-
-        if (poa == null)
-            throw new AdapterNonExistent();
-
-        return poa;
+        return Optional.of(adapter)
+                .map(children_::get)
+                .orElseThrow(AdapterNonExistent::new);
     }
 
     public void destroy(boolean etherealize, boolean waitForCompletion) {
@@ -809,7 +772,7 @@ final public class POA_impl extends LocalObject implements POA {
                             + ": POA has SYSTEM_ID policy but the object ID was not "
                             + "generated by this POA",
                     MinorCodes.MinorInvalidObjectId,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
 
         servantLocationStrategy_.activate(oid, servant);
 
@@ -859,7 +822,7 @@ final public class POA_impl extends LocalObject implements POA {
                             + ": POA has SYSTEM_ID policy but the object ID was not "
                             + "generated by this POA",
                     MinorCodes.MinorInvalidObjectId,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
 
         return ort().make_object(intf, oid);
     }
@@ -1162,7 +1125,7 @@ final public class POA_impl extends LocalObject implements POA {
                     MinorCodes
                             .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
                     MinorCodes.MinorCannotDispatch,
-                    CompletionStatus.COMPLETED_NO);
+                    COMPLETED_NO);
 
         servantLocationStrategy_.preinvoke(oid);
         servantLocationStrategy_.postinvoke(oid, this, op, cookieHolder.value,
@@ -1303,7 +1266,7 @@ final public class POA_impl extends LocalObject implements POA {
                                 MinorCodes
                                         .describeObjectNotExist(MinorCodes.MinorCannotDispatch),
                                 MinorCodes.MinorCannotDispatch,
-                                CompletionStatus.COMPLETED_NO));
+                                COMPLETED_NO));
             }
         } catch (LocationForward ex) {
             upcall.setLocationForward(ex.ior, ex.perm);
