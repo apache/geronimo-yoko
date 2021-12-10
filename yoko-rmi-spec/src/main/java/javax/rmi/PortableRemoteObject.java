@@ -55,7 +55,7 @@ public class PortableRemoteObject {
         DELEGATE.exportObject(o);
     }
 
-    public static Object narrow(Object from, Class<?> to) throws ClassCastException {
+    public static Object narrow(Object from, Class to) throws ClassCastException {
         return DELEGATE.narrow(from, to);
     }
 
