@@ -17,9 +17,7 @@
 
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.ClientManager;
-import org.apache.yoko.orb.OB.CoreTraceLevels;
 import org.apache.yoko.orb.OB.DowncallStub;
 import org.apache.yoko.orb.OB.FailureException;
 import org.apache.yoko.orb.OB.LocationForward;
@@ -31,7 +29,7 @@ import org.apache.yoko.orb.OBPortableServer.DirectServant;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.exceptions.Transients;
-import org.apache.yoko.util.Factory;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.DomainManager;
@@ -66,13 +64,13 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.FINE;
+import static org.apache.yoko.logging.VerboseLogging.RETRY_LOG;
+import static org.apache.yoko.logging.VerboseLogging.logged;
+import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.util.MinorCodes.MinorDuplicatePolicyType;
 import static org.apache.yoko.util.MinorCodes.MinorNoPolicy;
 import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
-import static org.apache.yoko.logging.VerboseLogging.RETRY_LOG;
-import static org.apache.yoko.logging.VerboseLogging.logged;
-import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
@@ -109,7 +107,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     // ------------------------------------------------------------------
 
     // Check whether it's safe to retry
-    private synchronized void checkRetry(int retry, SystemException ex, boolean remote) {
+    private synchronized void checkRetry(int retry, SystemException ex) {
         // We remove the downcall stub, whether we retry or not
         downcallStub_ = null;
 
@@ -121,7 +119,6 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         checkLocal = true;
 
         // Get the core trace levels
-        CoreTraceLevels coreTraceLevels = orbInstance.getCoreTraceLevels();
 
         // We only retry upon COMM_FAILURE, TRANSIENT, and NO_RESPONSE
         try {
@@ -140,11 +137,6 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         //    logException("retry forbidden by NO_RECONNECT policy - caught exception", ex);
         //    throw (REBIND)new org.omg.CORBA.REBIND().initCause(ex);
         //}
-
-        // Check policy to see if we should retry on remote exceptions
-        if (!policyList.retry.remote && remote) {
-            throw logged(RETRY_LOG, ex, "Caught a non-local exception");
-        }
 
         // Only try maximum number of times. Zero indicates infinite retry.
         if (policyList.retry.max != 0 && retry > policyList.retry.max) {
@@ -222,7 +214,6 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         }
     }
 
-    @SuppressWarnings("deprecation")
     public org.omg.CORBA.Object get_interface_def(org.omg.CORBA.Object self) {
         return get_interface(self);
     }
@@ -528,7 +519,8 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         return false;
     }
 
-    public ServantObject servant_preinvoke(org.omg.CORBA.Object self, String operation, Class expectedType) {
+    @Override
+    public ServantObject servant_preinvoke(org.omg.CORBA.Object self, String operation, @SuppressWarnings("rawtypes") Class expectedType) {
         DirectServant ds;
         synchronized (directServantMutex) {
             if (directServant == null) return null;
@@ -659,13 +651,13 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     private void handleTRANSIENT(TRANSIENT e, RetryInfo info) {
         info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
-        checkRetry(info.getRetry(), e, false);
+        checkRetry(info.getRetry(), e);
     }
 
     private void handleFailure(FailureException e, RetryInfo info) {
         if (e.incrementRetry) info.incrementRetryCount();
         // If it's not safe to retry, throw the exception
-        checkRetry(info.getRetry(), e.exception, false);
+        checkRetry(info.getRetry(), e.exception);
     }
 
     private synchronized void handleLocationForward(LocationForward e, RetryInfo info, boolean ignoreRebind) {
@@ -674,9 +666,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
         //
         // TODO: NO_REBIND should raise exception as well if LocationForward changes client effective QoS policies
         if (policyList.rebindMode == NO_RECONNECT.value && !ignoreRebind) {
-            throw wrapped(RETRY_LOG, e, "Honouring NO_RECONNECT policy", new Factory<REBIND>(){ public REBIND create() {
-                return new REBIND();
-            }});
+            throw wrapped(RETRY_LOG, e, "Honouring NO_RECONNECT policy", () -> new REBIND());
         }
 
         // Check for a potential infinite forwarding loop.
