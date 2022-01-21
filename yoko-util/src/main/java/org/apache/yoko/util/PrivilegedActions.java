@@ -43,6 +43,8 @@ public enum PrivilegedActions {
 
     public static PrivilegedAction<String> getSysProp(final String key, final String defaultValue) { return () -> System.getProperty(key, defaultValue); }
 
+    public static PrivilegedAction<ClassLoader> getClassLoader(final Class<?> clz) { return clz::getClassLoader; }
+
     public static <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
         return type::getDeclaredConstructor;
     }

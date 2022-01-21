@@ -21,13 +21,18 @@ package org.apache.yoko.osgi;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
+import java.security.PrivilegedAction;
 import java.util.ArrayList;
-import java.util.Enumeration;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Function;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.security.AccessController.doPrivileged;
 
 public enum ProviderLocator {;
     static private ProviderRegistry registry;
@@ -73,12 +78,15 @@ public enum ProviderLocator {;
 
         // Load from either the context class loader, if provided,
         // or the system class loader (i.e. null)
-        loader = null == contextClass ? null : contextClass.getClassLoader();
+        loader = null == contextClass ? null : doPriv(contextClass::getClassLoader);
         return generify(Class.forName(className, false, loader));
     }
 
     @SuppressWarnings("unchecked")
     private static <T> Class<T> generify(Class<?> c) { return (Class<T>)c; }
+
+    @SuppressWarnings("SpellCheckingInspection")
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
 
 
     /**
@@ -93,38 +101,39 @@ public enum ProviderLocator {;
      *
      * @return The service instance, or null if no matching services
      *         can be found.
-     * @exception Exception Thrown for any classloading or exceptions thrown
-     *                      trying to instantiate a service instance.
      */
-    static public Object getService(String iface, Class<?> contextClass, ClassLoader loader) throws Exception {
+    static public <T> Optional<T> getService(String iface, Class<?> contextClass, ClassLoader loader, Function<Class<T>,Constructor<T>> privilegedGetConstructor) {
         // if we are working in an OSGi environment, then process the service
         // registry first.  Ideally, we would do this last, but because of boot delegation
         // issues with some API implementations, we must try the OSGi version first
-        ProviderRegistry registry = getRegistry().orElse(null); // TODO: use Optional throughout
-        if (registry != null) {
-            // get the service, if it exists.  NB, if there is a service object,
-            // then the extender and the interface class are available, so this cast should be
-            // safe now.
-            // the rest of the work is done by the registry
-            Object service = registry.getService(iface);
-            if (service != null) {
-                return service;
-            }
-        }
 
-        // try for a classpath locatable instance next.  If we find an appropriate class mapping,
-        // create an instance and return it.
-        Class<?> cls = locateServiceClass(iface, contextClass, loader);
-        if (cls != null) {
-            // TODO: this should have a doPrivileged() around it
-            // BUT because locateServiceClass tries to load any service described in one loader
-            // from another loader as well, a doPrivileged() block here would expose a HUGE security hole
-            return cls.getConstructor().newInstance();
-        }
-        // a provider was not found
-        return null;
+        return getRegistry()
+                // get the service, if it exists.
+                .map(r -> r.<T>getService(iface))
+                .map(Optional::of)
+                // try for a classpath locatable instance next.
+                .orElseGet(() -> ProviderLocator.<T>locateServiceClass(iface, contextClass, loader)
+                                .map(privilegedGetConstructor)
+                                .map(ProviderLocator::newInstance));
     }
 
+    private static <T> T newInstance(Constructor<T> constructor) {
+        try {
+            return constructor.newInstance();
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+            throw new Error(e);
+        }
+    }
+
+    public static <T> PrivilegedAction<Constructor<T>> getNoArgsConstructor(Class<T> clz) {
+        return () -> {
+            try {
+                return clz.getConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new Error(e);
+            }
+        };
+    }
 
     /**
      * Locate a service class that matches an interface
@@ -136,31 +145,18 @@ public enum ProviderLocator {;
      * @param loader A class loader to use for searching for service definitions
      *               and loading classes.
      *
-     * @return The located class, or null if no matching services
-     *         can be found.
-     * @exception ClassNotFoundException Thrown for any classloading exceptions thrown
-     *                      trying to load the class.
+     * @return An Optional containing The located class, if found.
      */
-    static public <T> Class<T> getServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
+    static public <T> Optional<Class<T>> getServiceClass(String iface, Class<?> contextClass, ClassLoader loader) {
         // if we are working in an OSGi environment, then process the service
         // registry first.  Ideally, we would do this last, but because of boot delegation
         // issues with some API implementations, we must try the OSGi version first
-        ProviderRegistry registry = getRegistry().orElse(null); // TODO: use Optional throughout
-        if (registry != null) {
-            // get the service, if it exists.  NB, if there is a service object,
-            // then the extender and the interface class are available, so this cast should be
-            // safe now.
-
-            // If we've located stuff in the registry, then return it
-            Class<T> cls = registry.getServiceClass(iface);
-            if (cls != null) {
-                return cls;
-            }
-        }
-
-        // try for a classpath locatable instance first.  If we find an appropriate class mapping,
-        // create an instance and return it.
-        return locateServiceClass(iface, contextClass, loader);
+        return getRegistry()
+                // get the service class, if it is known to the registry.
+                .map(r -> r.<T>getServiceClass(iface))
+                .map(Optional::of)
+                // try for a classpath locatable instance
+                .orElseGet(() -> locateServiceClass(iface, contextClass, loader));
     }
 
     /**
@@ -182,24 +178,19 @@ public enum ProviderLocator {;
      * @return The mapped class name, if one is found.  Returns null if the
      *         mapping is not located.
      */
-    static private String locateServiceClassName(String iface, ClassLoader loader) {
+    static Optional<String> locateServiceClassName(String iface, ClassLoader loader) {
         if (loader != null) {
             try {
                 // we only look at resources that match the file name, using the specified loader
-                String service = "META-INF/services/" + iface;
-                Enumeration<URL> providers = loader.getResources(service);
-
-                while (providers.hasMoreElements()) {
-                    List<String>providerNames = parseServiceDefinition(providers.nextElement());
-                    // if there is something defined here, return the first entry
-                    if (!providerNames.isEmpty()) {
-                        return providerNames.get(0);
+                for (URL provider : Collections.list(loader.getResources("META-INF/services/" + iface))) {
+                    for (String providerName: parseServiceDefinition(provider)) {
+                        return Optional.of(providerName);
                     }
                 }
             } catch (IOException ignored) {}
         }
         // not found
-        return null;
+        return Optional.empty();
     }
 
 
@@ -211,20 +202,24 @@ public enum ProviderLocator {;
      * @param iface  The interface class name used for the match.
      * @param loader The classloader for locating resources.
      *
-     * @return The mapped provider class, if found.  Returns null if
-     *         no mapping is located.
+     * @return An Optional containing The mapped provider class, if found.
      */
-    static private <T> Class<T> locateServiceClass(String iface, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
-        // search first with the loader class path
-        String name = locateServiceClassName(iface, loader);
-        if (name == null && contextClass != null) {
-            // then with the context class, if there is one
-            loader = contextClass.getClassLoader();
-            name = locateServiceClassName(iface, loader);
-        }
-        return name == null ? null : loadClass(name, contextClass, loader);
+    static private <T> Optional<Class<T>> locateServiceClass(String iface, Class<?> contextClass, ClassLoader loader) {
+        Optional<String> name = locateServiceClassName(iface, loader);
+        final ClassLoader cl = name
+                .map(n -> loader)
+                .orElse(null == contextClass ? loader : doPriv(contextClass::getClassLoader));
+        return name
+                .map(Optional::of)
+                .orElseGet(() -> locateServiceClassName(iface, cl))
+                .map(n -> {
+                    try {
+                        return loadClass(n, contextClass, cl);
+                    } catch (ClassNotFoundException e) {
+                        return null;
+                    }
+                });
     }
-
 
     /**
      * Parse a definition file and return the names of all included implementation classes

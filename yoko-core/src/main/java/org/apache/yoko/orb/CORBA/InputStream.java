@@ -101,6 +101,7 @@ import static org.apache.yoko.util.MinorCodes.MinorReadWStringOverflow;
 import static org.apache.yoko.util.MinorCodes.MinorReadWStringZeroLength;
 import static org.apache.yoko.util.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
 import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
@@ -1270,7 +1271,7 @@ final public class InputStream extends InputStreamWithOffsets {
 
         try {
             if (IDLEntity.class.isAssignableFrom(expectedType)) {
-                final Class<?> helperClass = Util.loadClass(expectedType.getName() + "Helper", codebase, expectedType.getClassLoader());
+                final Class<?> helperClass = Util.loadClass(expectedType.getName() + "Helper", codebase, doPrivileged(getClassLoader(expectedType)));
                 final Method helperNarrow = doPrivileged(getMethod(helperClass, "narrow", org.omg.CORBA.Object.class));
                 return (org.omg.CORBA.Object) helperNarrow.invoke(null, impl);
             }
@@ -1320,7 +1321,7 @@ final public class InputStream extends InputStreamWithOffsets {
     @SuppressWarnings("unchecked")
     private Class<? extends org.omg.CORBA.portable.ObjectImpl> getRMIStubClass(String codebase, Class<?> type) throws ClassNotFoundException {
         String name = getRMIStubClassName(type);
-        ClassLoader cl = type.getClassLoader();
+        ClassLoader cl = doPrivileged(getClassLoader(type));
         try {
             return Util.loadClass(name, codebase, cl);
         } catch (ClassNotFoundException e1) {

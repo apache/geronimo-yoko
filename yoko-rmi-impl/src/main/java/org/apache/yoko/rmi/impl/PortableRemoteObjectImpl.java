@@ -20,6 +20,7 @@ package org.apache.yoko.rmi.impl;
 import org.apache.yoko.rmi.util.ClientUtil;
 import org.apache.yoko.rmi.util.stub.MethodRef;
 import org.apache.yoko.rmi.util.stub.StubClass;
+import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.portable.Delegate;
@@ -54,6 +55,7 @@ import static org.apache.yoko.rmi.impl.PortableRemoteObjectImpl.StubWriteReplace
 import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 import static org.apache.yoko.util.PrivilegedActions.getDeclaredMethod;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
 
@@ -129,7 +131,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
     private Object narrowIDL(ObjectImpl narrowFrom, Class<?> narrowTo) {
         if (LOGGER.isLoggable(Level.FINE))
             LOGGER.fine(String.format("IDL narrowing %s => %s", narrowFrom.getClass().getName(), narrowTo.getName()));
-        final ClassLoader idlClassLoader = doPrivileged(action(narrowTo::getClassLoader));
+        final ClassLoader idlClassLoader = doPrivileged(getClassLoader(narrowTo));
         final String helperClassName = narrowTo.getName() + "Helper";
 
         try {
@@ -242,7 +244,7 @@ public class PortableRemoteObjectImpl implements PortableRemoteObjectDelegate {
             return cons;
         }
 
-        final ClassLoader loader = doPrivileged(action(type::getClassLoader));
+        final ClassLoader loader = doPrivileged(getClassLoader(type));
         final ClassLoader contextLoader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
 
         LOGGER.finer("TYPE ----> " + type);

@@ -70,6 +70,7 @@ import static org.apache.yoko.util.MinorCodes.MinorDuplicatePolicyType;
 import static org.apache.yoko.util.MinorCodes.MinorNoPolicy;
 import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
@@ -491,7 +492,7 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
                 // servers, for example). The only solution is to
                 // consider the servant to be "remote" and marshal
                 // the request.
-                if (directServant.servant.getClass().getClassLoader() == self.getClass().getClassLoader()) {
+                if (getClassLoader(directServant.servant.getClass()) == getClassLoader(self.getClass())) {
                     threadSpecificRetryInfo.remove();
                     if (directServant.locate_request()) return true;
                     throw new OBJECT_NOT_EXIST();

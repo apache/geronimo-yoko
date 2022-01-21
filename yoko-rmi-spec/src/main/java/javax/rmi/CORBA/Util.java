@@ -41,6 +41,8 @@ public class Util {
         try {
             Constructor<? extends UtilDelegate> constructor = doPrivEx(DelegateType.UTIL.getConstructorAction());
             DELEGATE = constructor.newInstance();
+        } catch (INITIALIZE e) {
+            throw e;
         } catch (Throwable e) {
             throw (INITIALIZE)(new INITIALIZE("Can not create Util delegate").initCause(e));
         }
@@ -73,7 +75,7 @@ public class Util {
     public static Class loadClass(String name, String codebase, ClassLoader loader) throws ClassNotFoundException {
         return null == DELEGATE ?
                 // If there is no delegate yet, use the default implementation search order
-                UtilLoader.loadClass(name, loader) :
+                UtilLoader.loadDelegateClass(name, loader).orElseThrow(() -> new ClassNotFoundException(name)) :
                 DELEGATE.loadClass(name, codebase, loader);
 
     }
