@@ -26,7 +26,6 @@ import org.apache.yoko.orb.OB.RETRY_NEVER;
 import org.apache.yoko.orb.OB.RETRY_STRICT;
 import org.apache.yoko.orb.OB.RefCountPolicyList;
 import org.apache.yoko.orb.OBPortableServer.DirectServant;
-import org.apache.yoko.orb.OBPortableServer.POAManagerFactory;
 import org.apache.yoko.orb.OBPortableServer.POAManagerFactory_impl;
 import org.apache.yoko.orb.exceptions.Transients;
 import org.apache.yoko.util.Assert;
@@ -463,58 +462,44 @@ public final class Delegate extends org.omg.CORBA_2_4.portable.Delegate {
     }
 
     public boolean is_local(org.omg.CORBA.Object self) {
-        if (checkLocal) {
-            synchronized (directServantMutex) {
-                if (directServant != null && !directServant.deactivated()) {
-                    return true;
-                }
+        if (!checkLocal) return false;
+        synchronized (directServantMutex) {
+            if (directServant != null && !directServant.deactivated()) return true;
 
-                POAManagerFactory pmFactory = orbInstance.getPOAManagerFactory();
-                POAManagerFactory_impl factory = (POAManagerFactory_impl) pmFactory;
-                while (true) {
-                    try {
-                        directServant = factory._OB_getDirectServant(ior, policyList);
-                        break;
-                    } catch (LocationForward ex) {
-                        synchronized (this) {
-                            //
-                            // Change the IOR
-                            //
-                            ior = ex.ior;
-                            if (ex.perm) {
-                                origIor = ex.ior;
-                            }
+            final POAManagerFactory_impl factory = (POAManagerFactory_impl)orbInstance.getPOAManagerFactory();
+            while (true) {
+                try {
+                    directServant = factory._OB_getDirectServant(ior, policyList);
+                    break;
+                } catch (LocationForward ex) {
+                    synchronized (this) {
+                        // Change the IOR
+                        ior = ex.ior;
+                        if (ex.perm) origIor = ex.ior;
 
-                            //
-                            // Clear the downcall stub
-                            //
-                            downcallStub_ = null;
-                        }
+                        // Clear the downcall stub
+                        downcallStub_ = null;
                     }
                 }
-
-                // If the servant is collocated, then we remove the entry for this thread from the retry TSS
-                if (directServant != null) {
-                    // We can only make collocated calls on a servant if
-                    // the servant class was loaded by the same class
-                    // loader (which may not be the case in application
-                    // servers, for example). The only solution is to
-                    // consider the servant to be "remote" and marshal
-                    // the request.
-                    if (directServant.servant.getClass().getClassLoader() == self.getClass().getClassLoader()) {
-                        threadSpecificRetryInfo.remove();
-                        if (!directServant.locate_request()) {
-                            throw new OBJECT_NOT_EXIST();
-                        }
-                        return true;
-                    }
-                }
-
-                //
-                // Collocated invocations are not possible on this object
-                //
-                checkLocal = false;
             }
+
+            // If the servant is collocated, then we remove the entry for this thread from the retry TSS
+            if (directServant != null) {
+                // We can only make collocated calls on a servant if
+                // the servant class was loaded by the same class
+                // loader (which may not be the case in application
+                // servers, for example). The only solution is to
+                // consider the servant to be "remote" and marshal
+                // the request.
+                if (directServant.servant.getClass().getClassLoader() == self.getClass().getClassLoader()) {
+                    threadSpecificRetryInfo.remove();
+                    if (directServant.locate_request()) return true;
+                    throw new OBJECT_NOT_EXIST();
+                }
+            }
+
+            // Collocated invocations are not possible on this object
+            checkLocal = false;
         }
         return false;
     }
