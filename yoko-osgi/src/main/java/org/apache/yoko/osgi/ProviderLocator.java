@@ -42,21 +42,6 @@ public enum ProviderLocator {;
     }
 
     /**
-     * Locate a class by its provider id indicator. .
-     *
-     * @param providerId The provider id (generally, a fully qualified class name).
-     *
-     * @return The Class corresponding to this provider id.  Returns null
-     *         if this is not registered or the indicated class can't be
-     *         loaded.
-     */
-    static public Class<?> locate(String providerId) {
-        return getRegistry()
-                .map(r -> r.locate(providerId))
-                .orElse(null);
-    }
-
-    /**
      * Standardized utility method for performing class lookups
      * with support for OSGi registry lookups.
      *
@@ -64,22 +49,29 @@ public enum ProviderLocator {;
      */
     static public <T> Class<T> loadClass(String className, Class<?> contextClass, ClassLoader loader) throws ClassNotFoundException {
         // First check the registered service providers for this class
-        Class<T> cls = generify(locate(className));
-        if (null != cls) return cls;
+        final Optional<Class<Object>> clz = getRegistry().map(r -> r.locate(className));
+        if (clz.isPresent()) return generify(clz.get());
 
-        // Load from the explicit class loader if there is one
+        ClassNotFoundException cnfe = null;
         if (null != loader) {
             try {
-                return generify(Class.forName(className, false, loader));
+                return findClass(className, loader, null);
             } catch (ClassNotFoundException e) {
+                cnfe = e;
                 if (null == contextClass) throw e;
             }
         }
+        return findClass(className, Optional.ofNullable(contextClass).map(c -> doPriv(c::getClassLoader)).orElse(null), cnfe);
+    }
 
-        // Load from either the context class loader, if provided,
-        // or the system class loader (i.e. null)
-        loader = null == contextClass ? null : doPriv(contextClass::getClassLoader);
-        return generify(Class.forName(className, false, loader));
+    private static <T> Class<T> findClass(String className, ClassLoader loader, ClassNotFoundException previous) throws ClassNotFoundException {
+        try {
+            return generify(Class.forName(className, false, loader));
+        } catch (ClassNotFoundException e) {
+            if (null == previous) throw e;
+            previous.addSuppressed(e);
+            throw previous;
+        }
     }
 
     @SuppressWarnings("unchecked")
