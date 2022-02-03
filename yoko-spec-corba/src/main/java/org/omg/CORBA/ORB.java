@@ -21,17 +21,24 @@ import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.portable.OutputStream;
 
 import java.applet.Applet;
+import java.lang.reflect.Constructor;
 import java.security.PrivilegedAction;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.lang.Thread.currentThread;
 import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.osgi.ProviderLocator.getNoArgsConstructor;
 import static org.omg.CORBA.ORB.OrbSingletonHolder.ORB_SINGLETON;
 
 public abstract class ORB {
+
+    @SuppressWarnings("SpellCheckingInspection")
+    private static final Function<Class<ORB>, Constructor<ORB>> DOPRIV_GET_CONSTRUCTOR = c -> doPriv(getNoArgsConstructor(c));
 
     public abstract String[] list_initial_services();
 
@@ -207,25 +214,27 @@ public abstract class ORB {
     private static ORB newOrb(String propertyKey, String orbClassName) {
         final ClassLoader contextClassLoader = doPriv(currentThread()::getContextClassLoader);
 
-        if (null == orbClassName) {
+        final Function<String, ORB> newOrbFromName = className -> {
             try {
-                return Objects.requireNonNull((ORB)ProviderLocator.getService(propertyKey, ORB.class, contextClassLoader));
-            } catch (NullPointerException ignored) { // ORB not found, but without exception
-            } catch (Exception ex) {
-                throw (INITIALIZE)new INITIALIZE(String.format("Invalid %s class from osgi: ",propertyKey)).initCause(ex);
+                final Class<? extends ORB> orbClass = ProviderLocator.loadClass(className, ORB.class, contextClassLoader);
+                return doPrivEx(orbClass::getConstructor).newInstance();
+            } catch (Throwable ex) {
+                throw (INITIALIZE)new INITIALIZE(String.format("Invalid %s class: %s", propertyKey, className)).initCause(ex);
             }
-            orbClassName = doPriv(() -> System.getProperty(propertyKey, "org.apache.yoko.orb.CORBA.ORB"));
-        }
+        };
+        final Supplier<Optional<ORB>> newOrbFromProvider = () -> ProviderLocator.getService(propertyKey, ORB.class, contextClassLoader, DOPRIV_GET_CONSTRUCTOR);
+        final Supplier<ORB> newOrbFromSysProps = () -> newOrbFromName.apply(doPriv(() -> System.getProperty(propertyKey, "org.apache.yoko.orb.CORBA.ORB")));
 
-        try {
-            final Class<? extends ORB> orbClass = ProviderLocator.loadClass(orbClassName, ORB.class, contextClassLoader);
-            return doPrivEx(orbClass::getConstructor).newInstance();
-        } catch (Throwable ex) {
-            throw (INITIALIZE)new INITIALIZE(String.format("Invalid %s class: %s", propertyKey, orbClassName)).initCause(ex);
-        }
+        return Optional.ofNullable(orbClassName)
+                .map(newOrbFromName)
+                .map(Optional::of)
+                .orElseGet(newOrbFromProvider)
+                .orElseGet(newOrbFromSysProps);
     }
 
+    @SuppressWarnings("SpellCheckingInspection")
     private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
+    @SuppressWarnings("SpellCheckingInspection")
     private static <T> T doPrivEx(PrivilegedExceptionAction<T> action) throws PrivilegedActionException { return doPrivileged(action); }
 
 

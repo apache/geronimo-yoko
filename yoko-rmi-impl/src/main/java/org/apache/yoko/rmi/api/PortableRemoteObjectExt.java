@@ -19,38 +19,61 @@
 package org.apache.yoko.rmi.api;
 
 import org.apache.yoko.osgi.ProviderLocator;
+import org.omg.CORBA.INTERNAL;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.security.PrivilegedAction;
+import java.util.Optional;
+import java.util.function.Function;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public class PortableRemoteObjectExt {
     private static final class DelegateHolder {
-        private static final PortableRemoteObjectExtDelegate delegate;
+        private static final PortableRemoteObjectExtDelegate DELEGATE;
 
         public static final String DELEGATE_KEY = "org.apache.yoko.rmi.PortableRemoteObjectExtClass";
+        @SuppressWarnings("SpellCheckingInspection")
+        private static final Function<Class<PortableRemoteObjectExtDelegate>, Constructor<PortableRemoteObjectExtDelegate>> DOPRIV_GET_CONSTRUCTOR = c -> doPrivileged(getNoArgsConstructor(c));
 
         static {
-            Object d = null;
             final ClassLoader contextCl = doPrivileged(GET_CONTEXT_CLASS_LOADER);
-            try {
-                d = ProviderLocator.getService(DELEGATE_KEY, PortableRemoteObjectExt.class, contextCl);
-                if (null == d) {
-                    String name = doPrivileged(getSysProp(DELEGATE_KEY, "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl"));
-
-                    d = doPrivileged(getNoArgInstance(ProviderLocator.loadClass(name, PortableRemoteObjectExt.class, contextCl)));
-                }
-            } catch (Exception e) {
-                throw new RuntimeException("internal problem: " + e.getMessage(), e);
-            } finally {
-                delegate = (PortableRemoteObjectExtDelegate)d;
-            }
+            DELEGATE = ProviderLocator.getService(DELEGATE_KEY, PortableRemoteObjectExt.class, contextCl, DOPRIV_GET_CONSTRUCTOR)
+                    .orElseGet(() -> {
+                        try {
+                            return Optional.of(doPrivileged(getSysProp(DELEGATE_KEY, "org.apache.yoko.rmi.impl.PortableRemoteObjectExtImpl")))
+                                    .map(name -> {
+                                        try {
+                                            return ProviderLocator.<PortableRemoteObjectExtDelegate>loadClass(name, PortableRemoteObjectExt.class, contextCl);
+                                        } catch (ClassNotFoundException e) {
+                                            throw new RuntimeException("internal problem: " + e.getMessage(), e);
+                                        }
+                                    })
+                                    .map(DOPRIV_GET_CONSTRUCTOR)
+                                    .orElseThrow(INTERNAL::new)
+                                    .newInstance();
+                        } catch (InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                            throw new RuntimeException("internal problem: " + e.getMessage(), e);
+                        }
+                    });
         }
+    }
+
+    private static <T> PrivilegedAction<Constructor<T>> getNoArgsConstructor(Class<T> clz) {
+        return () -> {
+            try {
+                return clz.getConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new Error(e);
+            }
+        };
     }
 
     /** Return the currently active state for this thread */
     public static PortableRemoteObjectState getState() {
-        return DelegateHolder.delegate.getCurrentState();
+        return DelegateHolder.DELEGATE.getCurrentState();
     }
 }

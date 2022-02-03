@@ -97,8 +97,7 @@ public abstract class Delegate {
         return false;
     }
 
-    public ServantObject servant_preinvoke(org.omg.CORBA.Object self,
-            String operation, Class expectedType) {
+    public ServantObject servant_preinvoke(org.omg.CORBA.Object self, String operation, @SuppressWarnings("rawtypes") Class expectedType) {
         return null;
     }
 

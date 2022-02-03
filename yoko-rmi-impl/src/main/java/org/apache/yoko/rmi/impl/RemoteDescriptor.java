@@ -18,6 +18,7 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.InputStream;
@@ -41,6 +42,9 @@ import java.util.TreeSet;
 import java.util.logging.Level;
 
 import javax.rmi.PortableRemoteObject;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 
 abstract class RemoteDescriptor extends TypeDescriptor {
     private java.util.Map method_map;
@@ -135,7 +139,7 @@ abstract class RemoteDescriptor extends TypeDescriptor {
             return;
         }
 
-        AccessController.doPrivileged(new PrivilegedAction() {
+        doPrivileged(new PrivilegedAction() {
             public Object run() {
                 init_methods0();
                 return null;
@@ -261,7 +265,7 @@ abstract class RemoteDescriptor extends TypeDescriptor {
         try {
             methods = clz.getDeclaredMethods();
         } catch (NoClassDefFoundError e) {
-            ClassLoader clzClassLoader = clz.getClassLoader();
+            ClassLoader clzClassLoader = doPrivileged(getClassLoader(clz));
             logger.log(Level.FINER, "cannot find class " + e.getMessage() + " from "
                     + clz.getName() + " (classloader " + clzClassLoader + "): "
                     + e.getMessage(), e);

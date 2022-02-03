@@ -21,45 +21,10 @@ import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Any;
-import org.omg.CORBA.BAD_CONTEXT;
-import org.omg.CORBA.BAD_INV_ORDER;
-import org.omg.CORBA.BAD_OPERATION;
-import org.omg.CORBA.BAD_PARAM;
-import org.omg.CORBA.BAD_QOS;
-import org.omg.CORBA.BAD_TYPECODE;
-import org.omg.CORBA.CODESET_INCOMPATIBLE;
-import org.omg.CORBA.COMM_FAILURE;
-import org.omg.CORBA.DATA_CONVERSION;
-import org.omg.CORBA.FREE_MEM;
-import org.omg.CORBA.IMP_LIMIT;
-import org.omg.CORBA.INITIALIZE;
-import org.omg.CORBA.INTERNAL;
-import org.omg.CORBA.INTF_REPOS;
-import org.omg.CORBA.INVALID_TRANSACTION;
-import org.omg.CORBA.INV_IDENT;
-import org.omg.CORBA.INV_OBJREF;
-import org.omg.CORBA.INV_POLICY;
-import org.omg.CORBA.MARSHAL;
-import org.omg.CORBA.NO_IMPLEMENT;
-import org.omg.CORBA.NO_MEMORY;
-import org.omg.CORBA.NO_PERMISSION;
-import org.omg.CORBA.NO_RESOURCES;
-import org.omg.CORBA.NO_RESPONSE;
-import org.omg.CORBA.OBJECT_NOT_EXIST;
-import org.omg.CORBA.OBJ_ADAPTER;
-import org.omg.CORBA.PERSIST_STORE;
-import org.omg.CORBA.REBIND;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.SystemExceptionHelper;
-import org.omg.CORBA.TIMEOUT;
-import org.omg.CORBA.TRANSACTION_MODE;
-import org.omg.CORBA.TRANSACTION_REQUIRED;
-import org.omg.CORBA.TRANSACTION_ROLLEDBACK;
-import org.omg.CORBA.TRANSACTION_UNAVAILABLE;
-import org.omg.CORBA.TRANSIENT;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.UNKNOWN;
-import org.omg.CORBA.portable.ValueBase;
 import org.omg.Messaging._ExceptionHolder;
 
 import java.lang.reflect.InvocationTargetException;
@@ -83,159 +48,50 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
     {
         if (is_system_exception) {
             InputStream in = _OB_inputStream();
-            SystemException sysEx = SystemExceptionHelper
-                    .read(in);
+            SystemException sysEx = SystemExceptionHelper.read(in);
 
-            try {
-                if (sysEx.getClass().getName().equals("org.omg.CORBA.UNKNOWN")) {
-                    UNKNOWN ex = (UNKNOWN) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_PARAM")) {
-                    BAD_PARAM ex = (BAD_PARAM) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.NO_MEMORY")) {
-                    NO_MEMORY ex = (NO_MEMORY) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.IMP_LIMIT")) {
-                    IMP_LIMIT ex = (IMP_LIMIT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.COMM_FAILURE")) {
-                    COMM_FAILURE ex = (COMM_FAILURE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INV_OBJREF")) {
-                    INV_OBJREF ex = (INV_OBJREF) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.NO_PERMISSION")) {
-                    NO_PERMISSION ex = (NO_PERMISSION) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INTERNAL")) {
-                    INTERNAL ex = (INTERNAL) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.MARSHAL")) {
-                    MARSHAL ex = (MARSHAL) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INITIALIZE")) {
-                    INITIALIZE ex = (INITIALIZE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.NO_IMPLEMENT")) {
-                    NO_IMPLEMENT ex = (NO_IMPLEMENT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_TYPECODE")) {
-                    BAD_TYPECODE ex = (BAD_TYPECODE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_OPERATION")) {
-                    BAD_OPERATION ex = (BAD_OPERATION) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.NO_RESOURCES")) {
-                    NO_RESOURCES ex = (NO_RESOURCES) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.NO_RESPONSE")) {
-                    NO_RESPONSE ex = (NO_RESPONSE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.PERSIST_STORE")) {
-                    PERSIST_STORE ex = (PERSIST_STORE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_INV_ORDER")) {
-                    BAD_INV_ORDER ex = (BAD_INV_ORDER) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TRANSIENT")) {
-                    TRANSIENT ex = (TRANSIENT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.FREE_MEM")) {
-                    FREE_MEM ex = (FREE_MEM) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INV_IDENT")) {
-                    INV_IDENT ex = (INV_IDENT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INTF_REPOS")) {
-                    INTF_REPOS ex = (INTF_REPOS) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_CONTEXT")) {
-                    BAD_CONTEXT ex = (BAD_CONTEXT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.OBJ_ADAPTER")) {
-                    OBJ_ADAPTER ex = (OBJ_ADAPTER) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.DATA_CONVERSION")) {
-                    DATA_CONVERSION ex = (DATA_CONVERSION) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.OBJECT_NOT_EXIST")) {
-                    OBJECT_NOT_EXIST ex = (OBJECT_NOT_EXIST) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TRANSACTION_REQUIRED")) {
-                    TRANSACTION_REQUIRED ex = (TRANSACTION_REQUIRED) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TRANSACTION_ROLLEDBACK")) {
-                    TRANSACTION_ROLLEDBACK ex = (TRANSACTION_ROLLEDBACK) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INVALID_TRANSACTION")) {
-                    INVALID_TRANSACTION ex = (INVALID_TRANSACTION) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.INV_POLICY")) {
-                    INV_POLICY ex = (INV_POLICY) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.CODESET_INCOMPATIBLE")) {
-                    CODESET_INCOMPATIBLE ex = (CODESET_INCOMPATIBLE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.REBIND")) {
-                    REBIND ex = (REBIND) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TIMEOUT")) {
-                    TIMEOUT ex = (TIMEOUT) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TRANSACTION_UNAVAILABLE")) {
-                    TRANSACTION_UNAVAILABLE ex = (TRANSACTION_UNAVAILABLE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.TRANSACTION_MODE")) {
-                    TRANSACTION_MODE ex = (TRANSACTION_MODE) sysEx;
-                    throw ex;
-                } else if (sysEx.getClass().getName().equals(
-                        "org.omg.CORBA.BAD_QOS")) {
-                    BAD_QOS ex = (BAD_QOS) sysEx;
-                    throw ex;
-                }
-            } catch (SystemException ex) {
-                throw ex;
+            switch (sysEx.getClass().getName()) {
+            case "org.omg.CORBA.UNKNOWN":
+            case "org.omg.CORBA.BAD_PARAM":
+            case "org.omg.CORBA.NO_MEMORY":
+            case "org.omg.CORBA.IMP_LIMIT":
+            case "org.omg.CORBA.COMM_FAILURE":
+            case "org.omg.CORBA.INV_OBJREF":
+            case "org.omg.CORBA.BAD_QOS":
+            case "org.omg.CORBA.TRANSACTION_MODE":
+            case "org.omg.CORBA.TRANSACTION_UNAVAILABLE":
+            case "org.omg.CORBA.TIMEOUT":
+            case "org.omg.CORBA.REBIND":
+            case "org.omg.CORBA.CODESET_INCOMPATIBLE":
+            case "org.omg.CORBA.INV_POLICY":
+            case "org.omg.CORBA.INVALID_TRANSACTION":
+            case "org.omg.CORBA.TRANSACTION_ROLLEDBACK":
+            case "org.omg.CORBA.TRANSACTION_REQUIRED":
+            case "org.omg.CORBA.OBJECT_NOT_EXIST":
+            case "org.omg.CORBA.DATA_CONVERSION":
+            case "org.omg.CORBA.OBJ_ADAPTER":
+            case "org.omg.CORBA.BAD_CONTEXT":
+            case "org.omg.CORBA.INTF_REPOS":
+            case "org.omg.CORBA.INV_IDENT":
+            case "org.omg.CORBA.FREE_MEM":
+            case "org.omg.CORBA.TRANSIENT":
+            case "org.omg.CORBA.BAD_INV_ORDER":
+            case "org.omg.CORBA.PERSIST_STORE":
+            case "org.omg.CORBA.NO_RESPONSE":
+            case "org.omg.CORBA.NO_RESOURCES":
+            case "org.omg.CORBA.BAD_OPERATION":
+            case "org.omg.CORBA.BAD_TYPECODE":
+            case "org.omg.CORBA.NO_IMPLEMENT":
+            case "org.omg.CORBA.INITIALIZE":
+            case "org.omg.CORBA.MARSHAL":
+            case "org.omg.CORBA.INTERNAL":
+            case "org.omg.CORBA.NO_PERMISSION":
+                throw sysEx;
             }
         }
 
-        if (raiseProxy_ != null)
-            raiseProxy_.raise(this);
-
-        throw new UNKNOWN();
+        if (null == raiseProxy_) throw new UNKNOWN();
+        raiseProxy_.raise(this);
     }
 
     //
@@ -252,34 +108,15 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
             //
             Any any = new org.apache.yoko.orb.CORBA.Any();
 
-            Class exClass = ex.getClass();
+            Class<?> exClass = ex.getClass();
             String className = exClass.getName();
             try {
-                //
                 // Get the helper class and the insert method with
                 // appropriate parameter types
-                //
-                // get the appropriate class for the loading.
-                ClassLoader loader = exClass.getClassLoader();
-                Class c = ProviderLocator.loadClass(className + "Helper", exClass, doPrivileged(GET_CONTEXT_CLASS_LOADER));
-                Class[] paramTypes = new Class[2];
-                paramTypes[0] = Any.class;
-                paramTypes[1] = exClass;
-                Method m = c.getMethod("insert", paramTypes);
-
-                //
-                // Build up the parameter list
-                //
-                Object[] parameters = new Object[2];
-                parameters[0] = any;
-                parameters[1] = ex;
-
-                //
-                // No object is needed since this is a static method
-                // call
-                //
-                m.invoke(null, parameters);
-            } catch (ClassNotFoundException e) {
+                Class<?> c = ProviderLocator.loadClass(className + "Helper", exClass, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+                Method m = c.getMethod("insert", Any.class, exClass);
+                m.invoke(null, any, ex);
+            } catch (ClassNotFoundException | SecurityException e) {
                 //
                 // REVISIT:
                 // This just means that we probably caught a non-CORBA
@@ -288,46 +125,13 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
                 return;
             } catch (NoSuchMethodException|IllegalAccessException|IllegalArgumentException|InvocationTargetException e) {
                 throw Assert.fail(ex);
-            } catch (SecurityException e) {
-                return;
             }
 
-            //
-            // Check against typecodes
-            //
-            for (int i = 0; i < exc_list.length; ++i) {
-                if (any.type().equal(exc_list[i]))
-                    throw ex;
+            final TypeCode anyType = any.type();
+            for (TypeCode typeCode : exc_list) {
+                if (anyType.equal(typeCode)) throw ex;
             }
         }
-    }
-
-    //
-    // from ValueBase
-    //
-    public ValueBase _copy_value()
-            throws SystemException {
-        ExceptionHolder_impl copy = new ExceptionHolder_impl();
-
-        //
-        // Copy data members
-        //
-        copy.is_system_exception = is_system_exception;
-        copy.byte_order = byte_order;
-        if (marshaled_exception != null) {
-            copy.marshaled_exception = new byte[marshaled_exception.length];
-            System.arraycopy(marshaled_exception, 0, copy.marshaled_exception,
-                    0, marshaled_exception.length);
-        }
-
-        //
-        // Copy the raiser class
-        //
-        if (raiseProxy_ != null) {
-            copy.raiseProxy_ = raiseProxy_;
-        }
-
-        return copy;
     }
 
     //
@@ -358,17 +162,4 @@ public class ExceptionHolder_impl extends _ExceptionHolder {
         raiseProxy_ = null;
     }
 
-    public ExceptionHolder_impl(boolean border) {
-        byte_order = border;
-        is_system_exception = false;
-        marshaled_exception = null;
-        raiseProxy_ = null;
-    }
-
-    public ExceptionHolder_impl(boolean border, boolean sys_except) {
-        byte_order = border;
-        is_system_exception = sys_except;
-        marshaled_exception = null;
-        raiseProxy_ = null;
-    }
 }

@@ -28,9 +28,11 @@ import javax.rmi.CORBA.Util;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Map;
+
+import static java.security.AccessController.doPrivileged;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 
 class IDLEntityDescriptor extends ValueDescriptor {
     private final boolean isCorba;
@@ -42,7 +44,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
         isCorba = org.omg.CORBA.Object.class.isAssignableFrom(type);
         try {
             final String helperName = type.getName() + "Helper";
-            helperType = Util.loadClass(helperName, null, type.getClassLoader());
+            helperType = Util.loadClass(helperName, null, doPrivileged(getClassLoader(type)));
         } catch (ClassNotFoundException ex) {
             throw new RuntimeException("cannot load IDL Helper class for "
                     + type, ex);
@@ -73,7 +75,7 @@ class IDLEntityDescriptor extends ValueDescriptor {
     }
 
     private Method genHelperMethod(final String name) {
-        return AccessController.doPrivileged(new PrivilegedAction<Method>() {
+        return doPrivileged(new PrivilegedAction<Method>() {
             @Override
             public Method run() {
                 for (Method m: helperType.getDeclaredMethods()) {

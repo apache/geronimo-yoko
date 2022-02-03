@@ -20,6 +20,7 @@ package org.apache.yoko.rmi.impl;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.rmispec.util.DelegateType;
 import org.apache.yoko.util.Exceptions;
+import org.apache.yoko.util.PrivilegedActions;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.COMM_FAILURE;
@@ -71,6 +72,7 @@ import static org.apache.yoko.logging.VerboseLogging.CLASS_LOG;
 import static org.apache.yoko.util.Predicates.not;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 
 public class UtilImpl implements UtilDelegate {
     private static final Logger logger = Logger.getLogger(UtilImpl.class.getName());
@@ -546,7 +548,7 @@ public class UtilImpl implements UtilDelegate {
                 .filter(not(UtilImpl::isOmgClass))
                 .filter(not(UtilImpl::isJavaxRmiClass))
                 .peek((c) -> CLASS_LOG.finest(() -> "Considering classloader for class: " + c.getName()))
-                .map((c) -> doPrivileged(action(c::getClassLoader)))
+                .map((c) -> doPrivileged(getClassLoader(c)))
                 .filter(Objects::nonNull)
                 .filter(not(ProviderLocator::isServiceClassLoader))
                 .filter(not(DelegateType::isDelegateClassLoader))
@@ -592,7 +594,7 @@ public class UtilImpl implements UtilDelegate {
     static Object copyRMIStub(RMIStub stub) throws RemoteException {
         ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
 
-        if (doPrivileged(action(stub._descriptor.type::getClassLoader)) == loader) {
+        if (doPrivileged(PrivilegedActions.getClassLoader(stub._descriptor.type)) == loader) {
             return stub;
         }
 

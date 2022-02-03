@@ -30,7 +30,6 @@ import org.omg.PortableServer.POAHelper;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -41,6 +40,7 @@ import static java.util.logging.Level.FINE;
 import static java.util.logging.Level.FINER;
 import static java.util.logging.Level.FINEST;
 import static org.apache.yoko.logging.VerboseLogging.REQ_IN_LOG;
+import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 
 public class RMIServant extends org.omg.PortableServer.Servant implements javax.rmi.CORBA.Tie, InvocationHandler {
     RMIState _state;
@@ -197,8 +197,8 @@ public class RMIServant extends org.omg.PortableServer.Servant implements javax.
         }
 
         _target = target;
-        ClassLoader targetLoader = doPrivileged((PrivilegedAction<ClassLoader>) () -> _target.getClass().getClassLoader());
-        if (targetLoader != null && targetLoader != this.getClass().getClassLoader())
+        ClassLoader targetLoader = doPrivileged((getClassLoader(_target.getClass())));
+        if (targetLoader != null && targetLoader != doPrivileged(getClassLoader(this.getClass())))
             proxyInvokeHandler = (InvokeHandler) newProxyInstance(targetLoader, new Class<?>[]{InvokeHandler.class}, this);
         else
             proxyInvokeHandler = this::_invoke0;

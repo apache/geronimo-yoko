@@ -19,10 +19,12 @@ package org.apache.yoko.rmispec.util;
 import org.omg.CORBA.INITIALIZE;
 
 import java.lang.reflect.Constructor;
+import java.security.PrivilegedAction;
 import java.security.PrivilegedExceptionAction;
 import java.util.HashSet;
 import java.util.Set;
 
+import static java.security.AccessController.doPrivileged;
 import static java.util.Collections.synchronizedSet;
 import static org.apache.yoko.rmispec.util.UtilLoader.loadServiceClass;
 
@@ -54,7 +56,7 @@ public enum DelegateType {
                 final Class<? extends U> delegateClass = loadServiceClass(delegateName, key);
                 final Constructor<? extends U> constructor = delegateClass.getConstructor();
                 // add class only after successful retrieval of constructor
-                final ClassLoader classLoader = delegateClass.getClassLoader();
+                final ClassLoader classLoader = doPriv(delegateClass::getClassLoader);
                 if (null != classLoader) delegateClassLoaders.add(classLoader);
                 return constructor;
             } catch(Exception e) {
@@ -62,4 +64,7 @@ public enum DelegateType {
             }
         };
     }
+
+    @SuppressWarnings("SpellCheckingInspection")
+    private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
 }

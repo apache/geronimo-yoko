@@ -20,6 +20,7 @@ package org.apache.yoko.rmi.util.stub;
 import org.apache.yoko.rmi.impl.MethodDescriptor;
 import org.apache.yoko.rmi.impl.RMIStub;
 import org.apache.yoko.rmi.impl.StubHandler;
+import org.apache.yoko.util.PrivilegedActions;
 
 import java.lang.reflect.Method;
 import java.security.PrivilegedActionException;
@@ -63,7 +64,7 @@ public final class StubClass {
     }
 
     private static ClassLoader getClassLoader(Class<?> c) {
-        return doPrivileged(action(c::getClassLoader));
+        return doPrivileged(PrivilegedActions.getClassLoader(c));
     }
 
     public static <S extends Stub> Class<S> make(Class<?> type, MethodDescriptor[] descriptors, MethodRef[] methods, ClassLoader loader) {

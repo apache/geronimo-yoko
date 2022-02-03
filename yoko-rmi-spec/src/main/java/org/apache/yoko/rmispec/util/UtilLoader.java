@@ -40,27 +40,26 @@ public class UtilLoader {
     // initializer the _secman field will be null
     private static final SecMan SEC_MAN = doPriv(SecMan::new);
 
-    private static final ClassLoader MY_LOADER = UtilLoader.class.getClassLoader();
-    private static final Function<Class, ClassLoader> GET_LOADER = type -> doPrivileged((PrivilegedAction<ClassLoader>) type::getClassLoader);
+    private static final ClassLoader MY_LOADER = doPriv(UtilLoader.class::getClassLoader);
+    @SuppressWarnings("rawtypes")
+    private static final Function<Class, ClassLoader> GET_LOADER = type -> doPriv(type::getClassLoader);
 
     public static <T> Class<T> loadServiceClass(String delegateName, String delegateKey) throws ClassNotFoundException {
-        try {
-            Class<T> cls = ProviderLocator.getServiceClass(delegateKey, null, null);
-            if (cls != null) return cls;
-        } catch (ClassNotFoundException ignored){
-        }
-        return loadClass0(delegateName, null);
+        return ProviderLocator.<T>getServiceClass(delegateKey, null, null)
+                .map(Optional::of)
+                .orElseGet(() -> loadClass0(delegateName, null))
+                .orElse(null);
     }
 
-    public static <T> Class<T> loadClass(String name, ClassLoader loader) throws ClassNotFoundException {
+    public static <T> Optional<Class<T>> loadDelegateClass(String name, ClassLoader loader) {
         try {
-            return ProviderLocator.loadClass(name, null, loader);
+            return Optional.of(ProviderLocator.loadClass(name, null, loader));
         } catch (ClassNotFoundException ignored) {
+            return loadClass0(name, loader);
         }
-        return loadClass0(name, loader);
     }
 
-    private static <T> Class<T> loadClass0(String name, ClassLoader loader) throws ClassNotFoundException {
+    private static <T> Optional<Class<T>> loadClass0(String name, ClassLoader loader) {
         // try loading using our loader, just in case we really were loaded
         // using the same classloader the delegate is in.
         Stream<ClassLoader> loadersFromStack = Stream.of(SEC_MAN.getClassContext())
@@ -81,6 +80,7 @@ public class UtilLoader {
 
         Function<ClassLoader, Class<T>> loadClass = ldr -> {
             try {
+                //noinspection unchecked
                 return (Class<T>) ldr.loadClass(name);
             } catch (ClassNotFoundException e) {
                 logger.log(Level.FINER, "Loader says " + e.getMessage(), e);
@@ -88,19 +88,18 @@ public class UtilLoader {
             }
         };
 
-        Optional<Class<T>> foundClass = Stream.of(loadersFromStack, loaderOfThisClass, loaderFromContext)
+        return Stream.of(loadersFromStack, loaderOfThisClass, loaderFromContext)
                 .flatMap(s -> s)
                 .map(loadClass)
                 .filter(Objects::nonNull)
                 .findFirst();
-
-        if (foundClass.isPresent()) return foundClass.get();
-        throw new ClassNotFoundException(name);
     }
 
     private static <T> T doPriv(PrivilegedAction<T> action) { return doPrivileged(action); }
 
+    @SuppressWarnings("deprecation")
     static class SecMan extends java.rmi.RMISecurityManager {
+        @SuppressWarnings("rawtypes")
         public Class[] getClassContext() {
             return super.getClassContext();
         }
