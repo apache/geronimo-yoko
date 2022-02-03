@@ -189,6 +189,7 @@ import java.io.BufferedInputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.InvocationTargetException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.PrivilegedActionException;
@@ -206,7 +207,7 @@ import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_16;
 import static org.apache.yoko.orb.OB.CodeSetInfo.UTF_8;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.GET_SYSPROPS_OR_EMPTY_MAP;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 
 // This class must be public and not final
 public class ORB_impl extends ORBSingleton {
@@ -779,12 +780,12 @@ public class ORB_impl extends ORBSingleton {
                         // get the appropriate class for the loading.
                         ClassLoader loader = doPrivileged(GET_CONTEXT_CLASS_LOADER);
                         final Class<? extends ORBInitializer> initClass = ProviderLocator.loadClass(className, getClass(), loader);
-                        initializers.put(className, doPrivileged(getNoArgInstance(initClass)));
+                        initializers.put(className, doPrivileged(getNoArgConstructor(initClass)).newInstance());
                     }
                     // Exceptions have to be ignored here
                     catch (ClassNotFoundException e) {
                         logger.log(Level.WARNING, "ORB.init: initializer class " + className + " not found", e);
-                    } catch (PrivilegedActionException e) {
+                    } catch (PrivilegedActionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
                         logger.log(Level.WARNING, "ORB.init: error occurred while instantiating initializer class " + className, e);
                     }
                 }

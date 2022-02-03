@@ -39,7 +39,7 @@ import static java.security.AccessController.doPrivileged;
 import static java.util.Optional.ofNullable;
 import static java.util.logging.Level.FINE;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 
 public class iiop implements PluginInit {
     static final Logger logger = Logger.getLogger(iiop.class.getName());
@@ -70,7 +70,7 @@ public class iiop implements PluginInit {
         try {
             // get the appropriate class for the loading.
             Class<?> c = ProviderLocator.loadClass(connectionHelper, getClass(), doPrivileged(GET_CONTEXT_CLASS_LOADER));
-            Object o = doPrivileged(getNoArgInstance(c));
+            Object o = doPrivileged(getNoArgConstructor(c)).newInstance();
             if (o instanceof ConnectionHelper) {
                 ConnectionHelper helper = (ConnectionHelper)o;
                 helper.init(orb, helperArgs);

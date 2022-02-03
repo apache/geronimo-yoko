@@ -35,6 +35,7 @@ import org.omg.CORBA.portable.ValueBase;
 
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
+import java.lang.reflect.InvocationTargetException;
 import java.security.PrivilegedActionException;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -44,7 +45,7 @@ import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.util.MinorCodes.MinorNoValueFactory;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_string;
 
@@ -57,9 +58,11 @@ final public class ValueWriter {
     private final WriteBuffer writeBuffer;
 
     /** Are we currently writing chunks? */
+    @SuppressWarnings("UnusedAssignment")
     private boolean chunked_ = false;
 
     /** The nesting level of chunked valuetypes */
+    @SuppressWarnings("UnusedAssignment")
     private int nestingLevel_ = 0;
 
     /**
@@ -91,7 +94,7 @@ final public class ValueWriter {
     private ValueHandler valueHandler;
 
     /** Helper class for using a String array as the key in a Hashtable */
-    private final class StringSeqHasher {
+    private final static class StringSeqHasher {
         final String[] seq_;
 
         final int hashCode_;
@@ -202,8 +205,8 @@ final public class ValueWriter {
         //
         if (helperClass != null) {
             try {
-                return doPrivileged(getNoArgInstance(helperClass));
-            } catch (PrivilegedActionException ignored) {
+                return doPrivileged(getNoArgConstructor(helperClass)).newInstance();
+            } catch (PrivilegedActionException | InvocationTargetException | InstantiationException | IllegalAccessException ignored) {
             }
         }
 
@@ -293,9 +296,7 @@ final public class ValueWriter {
             // * value is truncatable and actual type does not match the
             // formal type
             //
-            boolean chunked = false;
-            if (isCustom || (isTruncatable && !typeMatch))
-                chunked = true;
+            boolean chunked = isCustom || (isTruncatable && !typeMatch);
 
             //
             // Value header
@@ -443,7 +444,7 @@ final public class ValueWriter {
         //
         // Get the class object for the value
         //
-        Class clz = value.getClass ();
+        Class<?> clz = value.getClass();
 
         //
         // 0x7fffff00 + SINGLE_ID

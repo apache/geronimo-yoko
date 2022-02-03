@@ -72,6 +72,7 @@ import static org.apache.yoko.orb.OB.TypeCodeFactory.createValueBoxTC;
 import static org.apache.yoko.orb.OB.TypeCodeFactory.createWStringTC;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.Exceptions.as;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidUnionDiscriminator;
 import static org.apache.yoko.util.MinorCodes.MinorLoadStub;
 import static org.apache.yoko.util.MinorCodes.MinorReadBooleanArrayOverflow;
@@ -103,7 +104,7 @@ import static org.apache.yoko.util.MinorCodes.describeBadTypecode;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.apache.yoko.util.PrivilegedActions.getClassLoader;
 import static org.apache.yoko.util.PrivilegedActions.getMethod;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.TCKind._tk_Principal;
 import static org.omg.CORBA.TCKind._tk_TypeCode;
@@ -1289,14 +1290,12 @@ final public class InputStream extends InputStreamWithOffsets {
         @SuppressWarnings("unchecked")
         Class<? extends ObjectImpl> clz = (Class<? extends ObjectImpl>) stubClass;
         try {
-            org.omg.CORBA.portable.ObjectImpl stub = doPrivileged(getNoArgInstance(clz));
+            org.omg.CORBA.portable.ObjectImpl stub = doPrivileged(getNoArgConstructor(clz)).newInstance();
             stub._set_delegate(delegate);
             return stub;
-        } catch (PrivilegedActionException ex) {
+        } catch (InvocationTargetException | InstantiationException | IllegalAccessException | PrivilegedActionException ex) {
             logger.log(Level.FINE, "Exception creating object stub", ex);
-            MARSHAL m = new MARSHAL("Unable to create stub for class " + clz.getName(), MinorLoadStub, COMPLETED_NO);
-            m.initCause(ex);
-            throw m;
+            throw as(MARSHAL::new, ex, "Unable to create stub for class " + clz.getName(), MinorLoadStub, COMPLETED_NO);
         }
     }
 

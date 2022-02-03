@@ -24,7 +24,7 @@ import javax.security.auth.login.LoginException;
 
 import static java.security.AccessController.doPrivileged;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 import static org.apache.yoko.util.PrivilegedActions.getSysProp;
 
 public abstract class SecurityContext {
@@ -49,7 +49,7 @@ public abstract class SecurityContext {
 
         try {
             Class<? extends SecurityContextDelegate> c = ProviderLocator.loadClass(className, SecurityContext.class, doPrivileged(GET_CONTEXT_CLASS_LOADER));
-            return doPrivileged(getNoArgInstance(c));
+            return doPrivileged(getNoArgConstructor(c)).newInstance();
         } catch (Exception e) {
             throw new InternalError("unable to attach to SecurityContext", e);
         }
