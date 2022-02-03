@@ -46,6 +46,7 @@ import javax.rmi.CORBA.Util;
 import javax.rmi.CORBA.ValueHandler;
 import java.io.Serializable;
 import java.lang.reflect.Array;
+import java.lang.reflect.InvocationTargetException;
 import java.security.PrivilegedActionException;
 import java.util.Hashtable;
 import java.util.Map;
@@ -63,7 +64,7 @@ import static org.apache.yoko.util.MinorCodes.MinorReadInvalidIndirection;
 import static org.apache.yoko.util.MinorCodes.describeMarshal;
 import static org.apache.yoko.util.PrivilegedActions.GET_CONTEXT_CLASS_LOADER;
 import static org.apache.yoko.util.PrivilegedActions.action;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueReader {
@@ -202,7 +203,7 @@ public final class ValueReader {
             }
 
             try {
-                Serializable result = doPrivileged(getNoArgInstance(clz_));
+                Serializable result = doPrivileged(getNoArgConstructor(clz_)).newInstance();
                 reader_.addInstance(h.headerPos, result);
                 try {
                     reader_.unmarshalValueState(result);
@@ -211,11 +212,9 @@ public final class ValueReader {
                     throw ex;
                 }
                 return result;
-            } catch (ClassCastException | PrivilegedActionException ignored) {
+            } catch (ClassCastException | PrivilegedActionException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
+                throw as(MARSHAL::new, e, describeMarshal(MinorNoValueFactory) + ": " + clz_.getName(), MinorNoValueFactory, COMPLETED_NO);
             }
-
-            throw new MARSHAL(describeMarshal(MinorNoValueFactory) + ": " + clz_.getName(), MinorNoValueFactory,
-                    COMPLETED_NO);
         }
     }
 
@@ -285,8 +284,8 @@ public final class ValueReader {
             final Class<? extends BoxedValueHelper> helperClass = RepIds.query(id).suffix("Helper").toClass();
 
             try {
-                if (helperClass != null) return doPrivileged(getNoArgInstance(helperClass));
-            } catch (ClassCastException | PrivilegedActionException ex) {
+                if (helperClass != null) return doPrivileged(getNoArgConstructor(helperClass)).newInstance();
+            } catch (ClassCastException | PrivilegedActionException | InvocationTargetException | InstantiationException | IllegalAccessException ex) {
                 String msg = describeMarshal(MinorNoValueFactory) + ": invalid BoxedValueHelper for " + id;
                 throw as(MARSHAL::new, ex, msg, MinorNoValueFactory, COMPLETED_NO);
             }

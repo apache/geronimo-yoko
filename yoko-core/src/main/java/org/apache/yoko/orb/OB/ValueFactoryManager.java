@@ -27,6 +27,7 @@ import org.omg.CORBA.StringValueHelper;
 import org.omg.CORBA.WStringValueHelper;
 import org.omg.CORBA.portable.ValueFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.security.PrivilegedActionException;
 import java.util.Hashtable;
 import java.util.logging.Logger;
@@ -36,7 +37,7 @@ import static org.apache.yoko.util.MinorCodes.MinorORBDestroyed;
 import static org.apache.yoko.util.MinorCodes.MinorValueFactoryError;
 import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.apache.yoko.util.MinorCodes.describeInitialize;
-import static org.apache.yoko.util.PrivilegedActions.getNoArgInstance;
+import static org.apache.yoko.util.PrivilegedActions.getNoArgConstructor;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 public final class ValueFactoryManager {
@@ -180,13 +181,13 @@ public final class ValueFactoryManager {
                 //
                 // Instantiate the factory
                 //
-                result = doPrivileged(getNoArgInstance(c));
+                result = doPrivileged(getNoArgConstructor(c)).newInstance();
 
                 //
                 // Cache the result
                 //
                 classFactories_.put(id, result);
-            } catch (ClassCastException | PrivilegedActionException ignored) {
+            } catch (ClassCastException | PrivilegedActionException | InvocationTargetException | InstantiationException | IllegalAccessException ignored) {
             }
         }
 

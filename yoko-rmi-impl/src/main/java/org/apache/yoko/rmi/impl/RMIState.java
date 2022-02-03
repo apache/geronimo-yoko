@@ -63,7 +63,7 @@ public class RMIState implements PortableRemoteObjectState {
 
     final private ORB _orb;
 
-    private String _name;
+    private final String _name;
 
     final TypeRepository repo = TypeRepository.get();
     
@@ -140,9 +140,9 @@ public class RMIState implements PortableRemoteObjectState {
     /**
      * data for use in UtilImpl
      */
-    final Map<Remote, Tie> tie_map = synchronizedMap(new IdentityHashMap<Remote, Tie>());
+    final Map<Remote, Tie> tie_map = synchronizedMap(new IdentityHashMap<>());
 
-    private Map<Class<?>, Optional<Constructor<? extends Stub>>> static_stub_map = new NoDeleteSynchronizedMap<>();
+    private final Map<Class<?>, Optional<Constructor<? extends Stub>>> static_stub_map = new NoDeleteSynchronizedMap<>();
 
     private URL _codebase;
 
@@ -154,8 +154,9 @@ public class RMIState implements PortableRemoteObjectState {
         return _codebase;
     }
 
-    public Stub getStaticStub(String codebase, Class type) {
+    public Stub getStaticStub(String codebase, Class<?> type) {
         Optional<Constructor<? extends Stub>> entry = static_stub_map.get(type);
+        //noinspection OptionalAssignedToNull
         if (null == entry) {
             String stubClassName = getStubClassName(type);
             Constructor<? extends Stub> cons = getStubConstructor(codebase, stubClassName);
@@ -186,7 +187,7 @@ public class RMIState implements PortableRemoteObjectState {
 
     private Constructor<? extends Stub> findConstructor(String codebase, String stubName) {
         try {
-            Class<? extends Stub> stubClass = (Class<? extends Stub>) Util.loadClass(stubName, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
+            @SuppressWarnings("unchecked") Class<? extends Stub> stubClass = (Class<? extends Stub>) Util.loadClass(stubName, codebase, doPrivileged(GET_CONTEXT_CLASS_LOADER));
             return doPrivileged(getNoArgConstructor(stubClass));
         } catch (ClassNotFoundException ex) {
             logger.log(Level.FINE, "failed to load remote class " + stubName + " from " + codebase, ex);

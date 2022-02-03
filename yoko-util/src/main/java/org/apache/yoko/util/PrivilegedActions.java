@@ -45,13 +45,7 @@ public enum PrivilegedActions {
 
     public static PrivilegedAction<ClassLoader> getClassLoader(final Class<?> clz) { return clz::getClassLoader; }
 
-    public static <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> type) {
-        return type::getDeclaredConstructor;
-    }
-
-    public static <T> PrivilegedExceptionAction<T> getNoArgInstance(Class<T> type) {
-        return () -> type.getDeclaredConstructor().newInstance();
-    }
+    public static <T> PrivilegedExceptionAction<Constructor<T>> getNoArgConstructor(Class<T> clz) { return clz::getDeclaredConstructor; }
 
     public static PrivilegedExceptionAction<Method> getMethod(Class<?> type, String name, Class<?>...parameterTypes) {
         return () -> type.getMethod(name, parameterTypes);
