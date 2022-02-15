@@ -19,6 +19,7 @@ package org.apache.yoko.rmi.impl;
 
 import org.apache.yoko.rmi.util.StringUtil;
 import org.omg.CORBA.AttributeDescription;
+import org.omg.CORBA.INTERNAL;
 import org.omg.CORBA.Initializer;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
@@ -68,6 +69,7 @@ import java.util.logging.Logger;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.unmodifiableSet;
+import static org.apache.yoko.util.Exceptions.as;
 
 class ValueDescriptor extends TypeDescriptor {
     static final Logger logger = Logger.getLogger(ValueDescriptor.class.getName());
@@ -156,7 +158,7 @@ class ValueDescriptor extends TypeDescriptor {
             }
 
         } catch (RuntimeException | Error ex) {
-            logger.log(Level.FINE, "runtime error in ValueDescriptor.init " + ex.getMessage(), ex);
+            throw as(INTERNAL::new, ex);
         }
     }
 
