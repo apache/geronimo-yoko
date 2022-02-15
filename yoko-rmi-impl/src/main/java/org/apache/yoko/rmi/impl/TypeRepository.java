@@ -38,7 +38,7 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.sql.Date;
+import java.util.Date;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
