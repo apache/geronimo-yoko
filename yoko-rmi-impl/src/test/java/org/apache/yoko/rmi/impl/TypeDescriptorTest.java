@@ -1,8 +1,13 @@
 package org.apache.yoko.rmi.impl;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.portable.IDLEntity;
+import org.omg.CORBA.portable.InputStream;
+import org.omg.CORBA.portable.OutputStream;
 import testify.jupiter.annotation.ClassSource;
 
 import javax.rmi.CORBA.ClassDesc;
@@ -10,8 +15,6 @@ import java.io.Externalizable;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.util.Date;
-
-import static org.junit.Assert.*;
 
 public class TypeDescriptorTest {
     private interface S extends Serializable {}
@@ -48,17 +51,47 @@ public class TypeDescriptorTest {
 
     private interface I extends IDLEntity {}
 
-    private static class IHelper {}
+    @SuppressWarnings("unused")
+    private static class IHelper {
+        // static methods mandated by IDL2Java spec 1.5.2
+        public static void insert(Any a, I value) { throw new UnsupportedOperationException(); }
+        public static I extract(Any a) { throw new UnsupportedOperationException(); }
+        public static TypeCode type() { return null; }
+        public static String id() { throw new UnsupportedOperationException(); }
+        public static I read(InputStream is) { throw new UnsupportedOperationException(); }
+        public static void write(OutputStream os, I value) { throw new UnsupportedOperationException(); }
+        public static I narrow(Object o) { throw new UnsupportedOperationException(); }
+    }
 
     private static class II implements IDLEntity {}
 
-    private static class IIHelper {}
+    @SuppressWarnings("unused")
+    private static class IIHelper {
+        // static methods mandated by IDL2Java spec 1.5.2
+        public static void insert(Any a, II value) { throw new UnsupportedOperationException(); }
+        public static II extract(Any a) { throw new UnsupportedOperationException(); }
+        public static TypeCode type() { return null; }
+        public static String id() { throw new UnsupportedOperationException(); }
+        public static II read(InputStream is) { throw new UnsupportedOperationException(); }
+        public static void write(OutputStream os, II value) { throw new UnsupportedOperationException(); }
+        public static II narrow(Object o) { throw new UnsupportedOperationException(); }
+    }
 
     private static class II2 implements I {}
 
-    private static class II2Helper {}
+    @SuppressWarnings("unused")
+    private static class II2Helper {
+        // static methods mandated by IDL2Java spec 1.5.2
+        public static void insert(Any a, II2 value) { throw new UnsupportedOperationException(); }
+        public static II2 extract(Any a) { throw new UnsupportedOperationException(); }
+        public static TypeCode type() { return null; }
+        public static String id() { throw new UnsupportedOperationException(); }
+        public static II2 read(InputStream is) { throw new UnsupportedOperationException(); }
+        public static void write(OutputStream os, II2 value) { throw new UnsupportedOperationException(); }
+        public static II2 narrow(Object o) { throw new UnsupportedOperationException(); }
+    }
 
-    private static enum N {NC1, NC2 {}}
+    private enum N {NC1, NC2 {}}
 
     @ParameterizedTest
     @ClassSource({
@@ -122,12 +155,12 @@ public class TypeDescriptorTest {
             Object[].class, ObjectArrayDescriptor.class})
     public void testDescriptorType(Class<?> marshalledType, Class<?> descriptorType) {
         final TypeDescriptor descriptor = TypeRepository.get().getDescriptor(marshalledType);
-        assertEquals(descriptor.getClass(), descriptorType);
+        Assertions.assertEquals(descriptor.getClass(), descriptorType);
     }
 
     @ParameterizedTest
     @EnumSource(N.class)
-    public void testEnumDescriptorType(Enum e) {
+    public void testEnumDescriptorType(Enum<?> e) {
         testDescriptorType(e.getClass(), EnumSubclassDescriptor.class);
     }
 }
