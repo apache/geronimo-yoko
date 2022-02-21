@@ -48,7 +48,7 @@ import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCA
 public class TestInterceptorsThatThrow {
     /** Re-run the tests collocated */
     @ConfigureServer(separation = COLLOCATED)
-    static class Collocated extends TestInterceptorsThatThrow {}
+    static class TestCollocated extends TestInterceptorsThatThrow {}
 
     enum InterceptionPoint {
         receive_request_service_contexts(Target::receive_request_service_contexts),
@@ -61,7 +61,7 @@ public class TestInterceptorsThatThrow {
         private interface Invoker<T> { void invoke(T t) throws RemoteException; }
         private final Invoker<Target> invoker;
         final int minor = 1000000000 + this.ordinal();
-        private InterceptionPoint(Invoker<Target> invoker) {this.invoker = invoker;}
+        InterceptionPoint(Invoker<Target> invoker) {this.invoker = invoker;}
     }
 
     @UseWithOrb("server orb")
