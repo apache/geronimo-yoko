@@ -18,118 +18,54 @@
 package org.apache.yoko.orb.OB;
 
 import org.apache.yoko.util.Assert;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_PARAM;
+import org.omg.CORBA.BAD_POLICY;
+import org.omg.CORBA.Policy;
+import org.omg.CORBA.PolicyError;
+import org.omg.PortableInterceptor.PolicyFactory;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 public final class PolicyFactoryManager {
-    private boolean destroy_; // True if destroy() was called
+    private boolean destroy;
 
-    //
-    // These are PolicyFactory objects that are registered from the PIManager
-    //
-    java.util.Hashtable policyFactoryTableExternal_ = new java.util.Hashtable(
-            63);
+    /** PolicyFactory objects registered from the PIManager */
+    Map<Integer, PolicyFactory> policyFactoryTableExternal = new HashMap<>();
 
-    //
-    // These are PolicyFactory objects that are registered internally
-    // (for ORB policies, etc)
-    //
-    java.util.Hashtable policyFactoryTableInternal_ = new java.util.Hashtable(
-            63);
-
-    // ----------------------------------------------------------------------
-    // PolicyFactoryManager private and protected member implementations
-    // ----------------------------------------------------------------------
+    /** PolicyFactory objects registered internally (for ORB policies, etc) */
+    Map<Integer, PolicyFactory> policyFactoryTableInternal = new HashMap<>();
 
     void destroy() {
-        Assert.ensure(!destroy_);
-        destroy_ = true;
-
-        policyFactoryTableInternal_.clear();
-        policyFactoryTableExternal_.clear();
+        Assert.ensure(!destroy);
+        destroy = true;
+        policyFactoryTableInternal.clear();
+        policyFactoryTableExternal.clear();
     }
 
     // ----------------------------------------------------------------------
     // PolicyFactoryManager public member implementations
     // ----------------------------------------------------------------------
 
-    public void registerPolicyFactory(int type,
-            org.omg.PortableInterceptor.PolicyFactory factory, boolean internal) {
-        //
-        // TODO: some sensible error
-        //
-        java.util.Hashtable table = (internal) ? policyFactoryTableInternal_
-                : policyFactoryTableExternal_;
-
-        Integer itype = Integer.valueOf(type);
-        if (table.containsKey(itype))
-            throw new org.omg.CORBA.BAD_PARAM();
-        table.put(itype, factory);
+    public void registerPolicyFactory(int type, PolicyFactory factory, boolean internal) {
+        Map<Integer, PolicyFactory> table = internal ? policyFactoryTableInternal : policyFactoryTableExternal;
+        if (table.containsKey(type)) throw new BAD_PARAM();
+        table.put(type, factory);
     }
 
-    public org.omg.CORBA.Policy createPolicy(int type, org.omg.CORBA.Any any)
-            throws org.omg.CORBA.PolicyError {
-        java.lang.Object factory;
-        Integer itype = Integer.valueOf(type);
-
-        if ((factory = policyFactoryTableInternal_.get(itype)) != null)
-            return ((org.omg.PortableInterceptor.PolicyFactory) factory)
-                    .create_policy(type, any);
-        if ((factory = policyFactoryTableExternal_.get(itype)) != null)
-            return ((org.omg.PortableInterceptor.PolicyFactory) factory)
-                    .create_policy(type, any);
-
-        throw new org.omg.CORBA.PolicyError(org.omg.CORBA.BAD_POLICY.value);
+    public Policy createPolicy(int type, Any any) throws PolicyError {
+        PolicyFactory factory = Stream.of(policyFactoryTableInternal, policyFactoryTableExternal)
+                .map(m -> m.get(type))
+                .filter(Objects::nonNull)
+                .findFirst()
+                .orElseThrow(() -> new PolicyError(BAD_POLICY.value));
+        return factory.create_policy(type, any);
     }
 
-    public void filterPolicyList(org.omg.CORBA.PolicyListHolder in,
-            org.omg.CORBA.PolicyListHolder out) {
-        java.util.Vector inVec = new java.util.Vector();
-        for (int i = 0; i < in.value.length; i++)
-            inVec.addElement(in.value[i]);
-
-        java.util.Vector outVec = new java.util.Vector();
-        for (int i = 0; i < out.value.length; i++)
-            outVec.addElement(out.value[i]);
-
-        for (int policy = 0; policy < inVec.size(); policy++) {
-            org.omg.CORBA.Policy p = (org.omg.CORBA.Policy) inVec
-                    .elementAt(policy);
-            int type = p.policy_type();
-
-            java.util.Enumeration e = policyFactoryTableExternal_.keys();
-            while (e.hasMoreElements()) {
-                Integer key = (Integer) e.nextElement();
-                if (key.intValue() == type) {
-                    outVec.addElement(p);
-                    inVec.removeElementAt(policy);
-                    --policy;
-                    break;
-                }
-            }
-        }
-
-        if (inVec.size() != in.value.length) {
-            in.value = new org.omg.CORBA.Policy[inVec.size()];
-            inVec.copyInto(in.value);
-        }
-
-        if (outVec.size() != out.value.length) {
-            out.value = new org.omg.CORBA.Policy[outVec.size()];
-            outVec.copyInto(out.value);
-        }
-    }
-
-    /**
-     * Test if a policy type is valid for the current
-     * context.
-     *
-     * @param type   The policy type number.
-     *
-     * @return true if the policy is a registered type, false for
-     *         unknown types.
-     */
     public boolean isPolicyRegistered(int type) {
-        Integer itype = Integer.valueOf(type);
-
-        return policyFactoryTableInternal_.containsKey(itype) || policyFactoryTableExternal_.containsKey(itype);
+        return policyFactoryTableInternal.containsKey(type) || policyFactoryTableExternal.containsKey(type);
     }
 }
