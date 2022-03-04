@@ -65,6 +65,7 @@ configure(testProjects) {
   dependencies {
     testLib 'junit:junit:4.12'
     testLib 'org.mockito:mockito-core:2.22.0'
+    testLib 'org.mockito:mockito-junit-jupiter:2.22.0'
     testLib "org.hamcrest:hamcrest:2.1"
     testLib "org.junit.jupiter:junit-jupiter:5.5.1"
     testLib "org.junit.platform:junit-platform-runner:1.6.2"
