@@ -140,6 +140,7 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
      */
     static Properties props(ConfigureOrb cfg, Class<?> testClass, Predicate<Class<?>> nestedClassFilter) {
         Properties props = new Properties();
+        props.put("yoko.orb.id", cfg.value());
         props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
         props.put("org.omg.CORBA.ORBSingletonClass", "org.apache.yoko.orb.CORBA.ORBSingleton");
         for (String prop : cfg.props()) {
