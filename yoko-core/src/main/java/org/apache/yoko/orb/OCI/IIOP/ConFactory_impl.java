@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.IORDump;
 import org.apache.yoko.orb.OB.IORUtil;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
@@ -27,6 +26,7 @@ import org.apache.yoko.orb.OB.ProtocolPolicyHelper;
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.ConnectCB;
 import org.apache.yoko.orb.OCI.Connector;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
@@ -47,8 +47,6 @@ import org.omg.IOP.TaggedComponentHelper;
 import org.omg.IOP.TaggedProfile;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -70,9 +68,7 @@ final class ConFactory_impl extends LocalObject implements
 
     private final ListenerMap listenMap_;
 
-    private final ConnectionHelper connectionHelper_;  // plugin for making ssl transport decisions.
-
-    private final ExtendedConnectionHelper extendedConnectionHelper_;
+    private final UnifiedConnectionHelper connectionHelper;
 
     private final Set<Integer> helperComponentTags;
 
@@ -220,7 +216,7 @@ final class ConFactory_impl extends LocalObject implements
                     Connector newConnector = createConnector(ior, policies, host, cport, ccbs, codec);
                     iopConnectors.add(newConnector);
                 } else if (helperComponentTags.contains(tc.tag)) {
-                    for (TransportAddress endpoint : extendedConnectionHelper_.getEndpoints(tc, policies)) {
+                    for (TransportAddress endpoint : connectionHelper.getEndpoints(tc, policies)) {
                         if (logger.isLoggable(Level.FINE)) logger.fine("Creating extended connector to host=" + endpoint.host_name + ", port=" + endpoint.port);
                         Connector newConnector = createConnector(ior, policies, endpoint.host_name, endpoint.port, ccbs, codec);
                         extConnectors.add(newConnector);
@@ -243,9 +239,7 @@ final class ConFactory_impl extends LocalObject implements
     }
 
     private Connector createConnector(IOR ior, Policy[] policies, String host, int port, ConnectCB[] cbs, Codec codec) {
-        return ((connectionHelper_ != null) ?
-                new Connector_impl(ior, policies, host, port, keepAlive_, cbs, listenMap_, connectionHelper_, codec) :
-                new Connector_impl(ior, policies, host, port, keepAlive_, cbs, listenMap_, extendedConnectionHelper_, codec));
+        return new Connector_impl(ior, policies, host, port, keepAlive_, cbs, listenMap_, connectionHelper, codec);
     }
 
     public boolean equivalent(IOR ior1, IOR ior2) {
@@ -265,33 +259,12 @@ final class ConFactory_impl extends LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public ConFactory_impl(ORB orb, boolean keepAlive, ListenerMap lm, ConnectionHelper helper) {
-        // System.out.println("ConFactory");
+    public ConFactory_impl(ORB orb, boolean keepAlive, ListenerMap lm, UnifiedConnectionHelper helper) {
         orb_ = orb;
         keepAlive_ = keepAlive;
         info_ = new ConFactoryInfo_impl();
         listenMap_ = lm;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = null;
-        helperComponentTags = Collections.emptySet();
-    }
-
-    public ConFactory_impl(ORB orb, boolean keepAlive, ListenerMap lm, ExtendedConnectionHelper helper) {
-        // System.out.println("ConFactory");
-        orb_ = orb;
-        keepAlive_ = keepAlive;
-        info_ = new ConFactoryInfo_impl();
-        listenMap_ = lm;
-        connectionHelper_ = null;
-        extendedConnectionHelper_ = helper;
-        helperComponentTags = asSet(helper.tags());
-    }
-
-    private static Set<Integer> asSet(int...elems) {
-        if (elems == null || elems.length == 0)
-            return Collections.emptySet();
-        final Set<Integer> set = new HashSet<>();
-        for (int elem : elems) set.add(elem);
-        return Collections.unmodifiableSet(set);
+        connectionHelper = helper;
+        helperComponentTags = helper.tags();
     }
 }

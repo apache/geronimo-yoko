@@ -18,7 +18,6 @@
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OBPortableServer.POAPolicies;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.OCI.ProfileInfo;
@@ -54,16 +53,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Objects.requireNonNull;
 import static java.util.logging.Level.FINE;
+import static org.apache.yoko.logging.VerboseLogging.CONN_IN_LOG;
+import static org.apache.yoko.logging.VerboseLogging.logged;
+import static org.apache.yoko.logging.VerboseLogging.wrapped;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.ACCEPT;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.BIND;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.GET_HOST_BY_NAME;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SET_SOCK_OPT;
 import static org.apache.yoko.orb.OCI.IIOP.CommFailures.SOCKET;
-import static org.apache.yoko.logging.VerboseLogging.CONN_IN_LOG;
-import static org.apache.yoko.logging.VerboseLogging.logged;
-import static org.apache.yoko.logging.VerboseLogging.wrapped;
 
 final class Acceptor_impl extends LocalObject implements Acceptor {
     enum ProfileCardinality { ZERO, ONE, MANY }
@@ -78,8 +78,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
     private final InetAddress localAddress;
     private final AcceptorInfo_impl info_;
     private final ListenerMap listenMap_;
-    private final ConnectionHelper connHelper;    // plugin for managing connection config/creation
-    private final ExtendedConnectionHelper extConnHelper;
+    private final UnifiedConnectionHelper connectionHelper;
     private final Codec codec_;
 
     // ------------------------------------------------------------------
@@ -150,7 +149,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         } catch (SystemException ex) {
             try {
                 socket.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             throw logged(CONN_IN_LOG, ex, "error creating inbound connection");
         }
@@ -159,13 +158,9 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
 
     public Transport connect_self() {
         // Create socket and connect to local address
-        Socket socket = null;
+        final Socket socket;
         try {
-            if (connHelper != null) {
-                socket = connHelper.createSelfConnection(localAddress, port_);
-            } else {
-                socket = extConnHelper.createSelfConnection(localAddress, port_);
-            }
+            socket = connectionHelper.createSelfConnection(localAddress, port_);
         } catch (ConnectException ex) {
             throw wrapped(CONN_IN_LOG, ex, "Failure making self connection for host=" + localAddress + ", port=" + port_, Transients.CONNECT_FAILED);
 
@@ -191,7 +186,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
         } catch (SystemException ex) {
             try {
                 socket.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             throw ex;
         }
@@ -280,13 +275,11 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
     // ------------------------------------------------------------------
 
     public Acceptor_impl(String address, String[] hosts, ProfileCardinality profileCardinality,
-            int port, int backlog, boolean keepAlive, ConnectionHelper helper, ExtendedConnectionHelper extendedConnectionHelper, ListenerMap lm, String[] params, Codec codec) {
-        Assert.ensure((helper == null) ^ (extendedConnectionHelper == null));
+            int port, int backlog, boolean keepAlive, UnifiedConnectionHelper helper, ListenerMap lm, String[] params, Codec codec) {
         this.hosts_ = hosts;
         this.profileCardinality = profileCardinality;
         this.keepAlive_ = keepAlive;
-        this.connHelper = helper;
-        this.extConnHelper = extendedConnectionHelper;
+        this.connectionHelper = requireNonNull(helper);
         this.codec_ = codec;
         this.info_ = new AcceptorInfo_impl(this);
         this.listenMap_ = lm;
@@ -297,14 +290,10 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
             // Create socket and bind to requested network interface
             if (address == null) {
                 this.localAddress = InetAddress.getLoopbackAddress(); // use loopback address for connection to self
-                this.socket_ = extConnHelper == null
-                        ? connHelper.createServerSocket(port, backlog)
-                        : extConnHelper.createServerSocket(port, backlog, params);
+                this.socket_ = connectionHelper.createServerSocket(port, backlog, params);
             } else {
                 this.localAddress = Util.getInetAddress(address);    // use the explicit bind address for connection to self
-                this.socket_ = extConnHelper == null
-                        ? connHelper.createServerSocket(port, backlog, localAddress)
-                        : extConnHelper.createServerSocket(port, backlog, localAddress, params);
+                this.socket_ = connectionHelper.createServerSocket(port, backlog, localAddress, params);
             }
 
             // Read back the port. This is needed if the port was selected by the operating system.
@@ -327,7 +316,7 @@ final class Acceptor_impl extends LocalObject implements Acceptor {
     }
 
     // TODO: get rid of this finalizer, and use phantom refs in AccFactory_impl instead to track Acceptors going away.
-    public void finalize() throws Throwable {
+    protected void finalize() throws Throwable {
         if (socket_ != null) {
             close();
         }

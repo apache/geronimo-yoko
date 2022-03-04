@@ -19,7 +19,6 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OCI.AccFactory;
 import org.apache.yoko.orb.OCI.Acceptor;
@@ -44,6 +43,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
+import static java.lang.Integer.parseInt;
+import static java.util.Objects.requireNonNull;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.MANY;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ONE;
 import static org.apache.yoko.orb.OCI.IIOP.Acceptor_impl.ProfileCardinality.ZERO;
@@ -53,9 +54,8 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
     private static final Encoding CDR_1_2_ENCODING = new Encoding(ENCODING_CDR_ENCAPS.value, (byte) 1, (byte) 2);
     private final AccFactoryInfo_impl info_;
     private final ORB orb_;
-    private final ConnectionHelper connectionHelper_;   // client connection helper
+    private final UnifiedConnectionHelper connectionHelper;
     private final ListenerMap listenMap_;
-    private final ExtendedConnectionHelper extendedConnectionHelper_;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -90,7 +90,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                     i++;
                     String backlogArg = params[i];
                     try {
-                        backlog = Integer.valueOf(backlogArg);
+                        backlog = parseInt(backlogArg);
                     } catch (NumberFormatException ex) {
                         throw new InvalidParam("invalid argument for --backlog: " + backlogArg);
                     }
@@ -153,7 +153,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                     i++;
                     String portArg = params[i];
                     try {
-                        port = Integer.parseInt(portArg);
+                        port = parseInt(portArg);
                     } catch (NumberFormatException ex) {
                         throw new InvalidParam("invalid argument for --port: " + portArg);
                     }
@@ -162,7 +162,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                     break;
 
                 default:
-                    if (connectionHelper_ != null) throw new InvalidParam("unknown parameter: " + option);
+                    if (!connectionHelper.isExtended()) throw new InvalidParam("unknown parameter: " + option);
                 }
             } catch (IndexOutOfBoundsException e) {
                 throw (InvalidParam)new InvalidParam("argument expected for " + option).initCause(e);
@@ -184,7 +184,7 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
         }
 
         // this constructor modifies the provided ListenerMap
-        return new Acceptor_impl(bind, hosts, numProfiles, port, backlog, keepAlive, connectionHelper_, extendedConnectionHelper_, listenMap_, params, codec);
+        return new Acceptor_impl(bind, hosts, numProfiles, port, backlog, keepAlive, connectionHelper, listenMap_, params, codec);
     }
 
     public void change_key(IORHolder ior, byte[] key) {
@@ -210,12 +210,12 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
                 // Fill in the new object-key
                 body.object_key = key;
 
-                // Remarshal the new body
+                // Re-marshal the new body
                 try (OutputStream out = new OutputStream()) {
                     out._OB_writeEndian();
                     ProfileBody_1_0Helper.write(out, body);
 
-                    // Remarshal the components if the IIOP version is > 1.0
+                    // Re-marshal the components if the IIOP version is > 1.0
                     if (body.iiop_version.major > 1 || body.iiop_version.minor > 0) {
                         out.write_ulong(components.length);
                         for (TaggedComponent component : components) {
@@ -233,13 +233,11 @@ final class AccFactory_impl extends LocalObject implements AccFactory {
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public AccFactory_impl(ORB orb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper extendedHelper) {
-        Assert.ensure((helper == null) ^ (extendedHelper == null));
+    public AccFactory_impl(ORB orb, ListenerMap lm, UnifiedConnectionHelper helper) {
+        connectionHelper = requireNonNull(helper);
         orb_ = orb;
         info_ = new AccFactoryInfo_impl();
         listenMap_ = lm;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = extendedHelper;
     }
 
 }

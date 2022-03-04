@@ -18,9 +18,9 @@
 package org.apache.yoko.orb.OCI;
 
 import org.apache.yoko.orb.OB.OptionFilter;
-import org.apache.yoko.orb.OCI.IIOP.ConnectionHelper;
-import org.apache.yoko.orb.OCI.IIOP.ExtendedConnectionHelper;
 import org.apache.yoko.orb.OCI.IIOP.Plugin_impl;
+import org.apache.yoko.orb.OCI.IIOP.UnifiedConnectionHelper;
+import org.apache.yoko.orb.OCI.IIOP.UnifiedConnectionHelperProvider;
 import org.apache.yoko.osgi.ProviderLocator;
 import org.apache.yoko.util.AssertionFailed;
 import org.apache.yoko.util.Exceptions;
@@ -70,17 +70,10 @@ public class iiop implements PluginInit {
         try {
             // get the appropriate class for the loading.
             Class<?> c = ProviderLocator.loadClass(connectionHelper, getClass(), doPrivileged(GET_CONTEXT_CLASS_LOADER));
-            Object o = doPrivileged(getNoArgConstructor(c)).newInstance();
-            if (o instanceof ConnectionHelper) {
-                ConnectionHelper helper = (ConnectionHelper)o;
-                helper.init(orb, helperArgs);
-                return new Plugin_impl(orb, helper);
-            } else if (o instanceof ExtendedConnectionHelper) {
-                ExtendedConnectionHelper helper = (ExtendedConnectionHelper)o;
-                helper.init(orb, helperArgs);
-                return new Plugin_impl(orb, helper);
-            }
-            throw new AssertionFailed("connection helper class " + connectionHelper + " does not implement ConnectionHelper or ExtendedConnectionHelper");
+            UnifiedConnectionHelper connectionHelper = ((UnifiedConnectionHelperProvider)doPrivileged(getNoArgConstructor(c)).newInstance())
+                    .getUnifiedConnectionHelper();
+            connectionHelper.init(orb, helperArgs);
+            return new Plugin_impl(orb, connectionHelper);
         } catch (AssertionFailed|INITIALIZE e) {
             throw e;
         } catch (Exception e) {
@@ -89,7 +82,7 @@ public class iiop implements PluginInit {
     }
 
     //
-    // Parse IIOP arguments. The return value is the a new array
+    // Parse IIOP arguments. The return value is a new array
     // with the IIOP arguments removed.
     //
     public String[] parse_args(String[] args, Properties props) {

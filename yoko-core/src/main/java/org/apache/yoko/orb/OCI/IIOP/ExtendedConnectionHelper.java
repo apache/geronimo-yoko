@@ -16,26 +16,28 @@
  *  limitations under the License.
  */
 
-
-/**
- * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
- */
-
 package org.apache.yoko.orb.OCI.IIOP;
 
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TransportAddress;
+import org.omg.IOP.IOR;
 import org.omg.IOP.TaggedComponent;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
+import java.util.Set;
 
-public interface ExtendedConnectionHelper
+import static java.util.Collections.emptySet;
+import static java.util.Collections.unmodifiableSet;
+import static java.util.stream.Collectors.toSet;
+
+public interface ExtendedConnectionHelper extends UnifiedConnectionHelperProvider
 {
-    void init(ORB orb, String parms);
+    void init(ORB orb, String params);
 
     /**
      * The host may be encoded as described in {@link #getEndpoints(TaggedComponent, Policy[])}.
@@ -71,5 +73,49 @@ public interface ExtendedConnectionHelper
      * @return a possibly empty but non-null array of endpoints
      */
     TransportAddress[] getEndpoints(TaggedComponent taggedComponent, Policy[] policies);
+
+    default UnifiedConnectionHelper getUnifiedConnectionHelper() {
+        return new UnifiedConnectionHelper() {
+            @Override
+            public void init(ORB orb, String params) {
+                ExtendedConnectionHelper.this.init(orb, params);
+            }
+
+            @Override
+            public Socket createSocket(String host, int port, IOR ior, Policy... policies) throws IOException {
+                return ExtendedConnectionHelper.this.createSocket(host, port);
+            }
+
+            @Override
+            public Socket createSelfConnection(InetAddress address, int port) throws IOException {
+                return ExtendedConnectionHelper.this.createSelfConnection(address, port);
+            }
+
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog, String... params) throws IOException {
+                return ExtendedConnectionHelper.this.createServerSocket(port, backlog, params);
+            }
+
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog, InetAddress address, String... params) throws IOException {
+                return ExtendedConnectionHelper.this.createServerSocket(port, backlog, address, params);
+            }
+
+            @Override
+            public Set<Integer> tags() {
+                final int[] aTags = ExtendedConnectionHelper.this.tags();
+                if ((null == aTags) || (0 == aTags.length)) return emptySet();
+                return unmodifiableSet(Arrays.stream(aTags).boxed().collect(toSet()));
+            }
+
+            @Override
+            public TransportAddress[] getEndpoints(TaggedComponent taggedComponent, Policy... policies) {
+                return ExtendedConnectionHelper.this.getEndpoints(taggedComponent, policies);
+            }
+
+            @Override
+            public boolean isExtended() { return true; }
+        };
+    }
 }
 

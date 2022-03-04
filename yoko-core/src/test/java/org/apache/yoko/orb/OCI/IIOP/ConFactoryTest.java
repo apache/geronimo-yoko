@@ -68,7 +68,8 @@ public class ConFactoryTest {
         this.connectors = null;
         this.connectorsDesc = null;
         when(mockHelper.tags()).thenReturn(new int[]{TAG_CSI_SEC_MECH_LIST.value});
-        this.impl = new ConFactory_impl(orb, true, lm, mockHelper);
+        when(mockHelper.getUnifiedConnectionHelper()).thenCallRealMethod();
+        this.impl = new ConFactory_impl(orb, true, lm, mockHelper.getUnifiedConnectionHelper());
     }
 
     private void create_connectors(TaggedProfile...profiles) {
