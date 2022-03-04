@@ -2,9 +2,12 @@ package org.apache.yoko.orb.OCI.IIOP;
 
 import org.apache.yoko.orb.OCI.ConFactory;
 import org.apache.yoko.orb.OCI.Connector;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TransportAddress;
@@ -15,19 +18,23 @@ import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedComponent;
 import org.omg.IOP.TaggedProfile;
 import testify.hex.HexParser;
+import testify.jupiter.annotation.iiop.ConfigureOrb;
 
-import static org.mockito.ArgumentMatchers.any;
-import static testify.hex.HexBuilder.buildHex;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.mockito.Mockito.mock;
+import static org.hamcrest.Matchers.arrayWithSize;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.withSettings;
+import static testify.hex.HexBuilder.buildHex;
 
-public class ConFactoryTest {
+@ConfigureOrb
+@ExtendWith(MockitoExtension.class)
+class ConFactoryTest {
     private static final int TAG_UNKNOWN = -1;
 
+    // build hex strings semantically
     private static final String
             ANYDATA = "DEADC0DE", // we will use this wherever the content doesn't matter
             IOP_1_0 = buildHex().oct(0,1,0).str("HAL9000").u_s(2001).seq(ANYDATA).hex(),
@@ -54,70 +61,61 @@ public class ConFactoryTest {
         return new IOR("IDL:Location_Service:1.0", profiles);
     }
 
-    public ORB orb = ORB.init((String[]) null, null);
-
-    @Mock
-    public ExtendedConnectionHelper mockHelper = mock(ExtendedConnectionHelper.class, withSettings().verboseLogging());
+    @Mock(name = "Mock ExtendedConnectionHelper", answer = Answers.CALLS_REAL_METHODS)
+    public ExtendedConnectionHelper mockHelper;
 
     private ConFactory impl;
     private Connector[] connectors;
-    private String connectorsDesc;
 
-    @Before
-    public void setup() throws Exception{
+    @BeforeEach
+    public void setup(ORB orb) throws Exception{
         this.connectors = null;
-        this.connectorsDesc = null;
         when(mockHelper.tags()).thenReturn(new int[]{TAG_CSI_SEC_MECH_LIST.value});
-        when(mockHelper.getUnifiedConnectionHelper()).thenCallRealMethod();
         this.impl = new ConFactory_impl(orb, true, lm, mockHelper.getUnifiedConnectionHelper());
     }
 
-    private void create_connectors(TaggedProfile...profiles) {
+    private String create_connectors(TaggedProfile...profiles) {
         IOR ior = ior(profiles);
         Policy[] policies = {};
         this.connectors = impl.create_connectors(ior, policies);
+        for (Connector c: connectors) System.out.printf("connector: '%s'%n", c);
         // now summarize them into a handy string form
-        String s = "";
-        for (Connector conn: connectors) {
-            s += conn.get_info().toString() + " ";
-        }
-        this.connectorsDesc = s.replaceFirst(" $", "");
+        return stream(connectors)
+                .map(Connector::get_info)
+                .map(Object::toString)
+                .collect(joining(" "));
     }
 
     @Test
-    public void testEmptyIOR(){
+    void testEmptyIOR(){
         create_connectors();
         assertThat(connectors, is(arrayWithSize(0)));
     }
 
     @Test
-    public void testUnknownProfile(){
+    void testUnknownProfile(){
         create_connectors(UNKNOWN_PROFILE);
         assertThat(connectors, is(arrayWithSize(0)));
     }
 
     @Test
-    public void testIOP_1_0_Profile(){
-        create_connectors(IOP_1_0_PROFILE);
-        assertThat(connectorsDesc, is("[HAL9000:2001]"));
+    void testIOP_1_0_Profile(){
+        assertThat(create_connectors(IOP_1_0_PROFILE), is("[HAL9000:2001]"));
     }
 
     @Test
-    public void testIOP_1_1_Profile(){
-        create_connectors(IOP_1_1_PROFILE);
-        assertThat(connectorsDesc, is("[deepthought:42]"));
+    void testIOP_1_1_Profile(){
+        assertThat(create_connectors(IOP_1_1_PROFILE), is("[deepthought:42]"));
     }
 
     @Test
-    public void testAlternate_IIOP_ADDRESS_Profile(){
-        create_connectors(ALT_ADR_PROFILE);
-        assertThat(connectorsDesc, is("[holly:1988] [holly:1999]"));
+    void testAlternate_IIOP_ADDRESS_Profile(){
+        assertThat(create_connectors(ALT_ADR_PROFILE), is("[holly:1988] [holly:1999]"));
     }
 
     @Test
-    public void testMultipleProfiles(){
-        create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE);
-        assertThat(connectorsDesc, is("[HAL9000:2001] [deepthought:42] [holly:1988] [holly:1999]"));
+    void testMultipleProfiles(){
+        assertThat(create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE), is("[HAL9000:2001] [deepthought:42] [holly:1988] [holly:1999]"));
     }
 
     private void setMockHelperEndpoints(TransportAddress...endpoints) {
@@ -125,30 +123,27 @@ public class ConFactoryTest {
     }
 
     @Test
-    public void testCSIProfileWithNoEndpoints(){
+    void testCSIProfileWithNoEndpoints(){
         setMockHelperEndpoints();
-        create_connectors(CSI_SEC_PROFILE);
-        assertThat(connectorsDesc, is("[MU-TH-R:182]"));
+        assertThat(create_connectors(CSI_SEC_PROFILE), is("[MU-TH-R:182]"));
     }
 
     @Test
-    public void testCSIProfileWithOneEndpoint(){
+    void testCSIProfileWithOneEndpoint(){
         setMockHelperEndpoints(new TransportAddress("WOPR", (short)1983));
-        create_connectors(CSI_SEC_PROFILE);
-        assertThat(connectorsDesc, is("[WOPR:1983]"));
+        assertThat(create_connectors(CSI_SEC_PROFILE), is("[WOPR:1983]"));
     }
 
     @Test
-    public void testMultipleProfilesWithCSIButNoEndpoints() {
+    void testMultipleProfilesWithCSIButNoEndpoints() {
         setMockHelperEndpoints();
-        create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE, CSI_SEC_PROFILE);
-        assertThat(connectorsDesc, is("[HAL9000:2001] [deepthought:42] [holly:1988] [holly:1999] [MU-TH-R:182]"));
+        assertThat(create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE, CSI_SEC_PROFILE),
+                is("[HAL9000:2001] [deepthought:42] [holly:1988] [holly:1999] [MU-TH-R:182]"));
     }
 
     @Test
-    public void testMultipleProfilesWithCSIWithOneEndpoint() {
+    void testMultipleProfilesWithCSIWithOneEndpoint() {
         setMockHelperEndpoints(new TransportAddress("WOPR", (short)1983));
-        create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE, CSI_SEC_PROFILE);
-        assertThat(connectorsDesc, is("[WOPR:1983]"));
+        assertThat(create_connectors(IOP_1_0_PROFILE, IOP_1_1_PROFILE, ALT_ADR_PROFILE, CSI_SEC_PROFILE), is("[WOPR:1983]"));
     }
 }
