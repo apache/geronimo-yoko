@@ -17,8 +17,6 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.orb.exceptions.Transients;
-import org.apache.yoko.util.MinorCodes;
 import org.apache.yoko.orb.OB.Net;
 import org.apache.yoko.orb.OB.PROTOCOL_POLICY_ID;
 import org.apache.yoko.orb.OB.ProtocolPolicy;
@@ -29,8 +27,6 @@ import org.apache.yoko.orb.OCI.ProfileInfo;
 import org.apache.yoko.orb.OCI.ProfileInfoHolder;
 import org.apache.yoko.orb.OCI.ProfileInfoSeqHolder;
 import org.apache.yoko.orb.OCI.Transport;
-import org.omg.CORBA.COMM_FAILURE;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TAG_CSI_SEC_MECH_LIST;
 import org.omg.IOP.Codec;
@@ -38,20 +34,26 @@ import org.omg.IOP.IOR;
 import org.omg.IOP.TaggedComponent;
 
 import java.io.IOException;
-import java.net.InetAddress;
+import java.net.ConnectException;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Logger;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.FINE;
-import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
-import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
 import static org.apache.yoko.logging.VerboseLogging.CONN_LOG;
 import static org.apache.yoko.logging.VerboseLogging.CONN_OUT_LOG;
 import static org.apache.yoko.logging.VerboseLogging.logged;
 import static org.apache.yoko.logging.VerboseLogging.wrapped;
+import static org.apache.yoko.orb.OCI.IIOP.Exceptions.asCommFailure;
+import static org.apache.yoko.orb.OCI.IIOP.Util.extractProfileInfo;
+import static org.apache.yoko.orb.exceptions.Transients.CONNECT_FAILED;
 import static org.apache.yoko.util.HexConverter.octetsToAscii;
+import static org.apache.yoko.util.MinorCodes.MinorSocket;
 
 final class Connector_impl extends org.omg.CORBA.LocalObject implements Connector {
     static final Logger logger = Logger.getLogger(Connector_impl.class.getName());
@@ -60,19 +62,17 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
 
     private final Policy[] policies_;    // the policies used for the connection.
 
-    private boolean keepAlive_; // The keepalive flag
+    private final boolean keepAlive_; // The keepalive flag
 
     private final ConnectorInfo_impl info_; // Connector information
 
     private Socket socket_; // The socket
 
-    private ListenerMap listenMap_;
+    private final ListenerMap listenMap_;
 
-    private final ConnectionHelper connectionHelper_;
+    private final UnifiedConnectionHelper connectionHelper;
 
-    private byte[] transportInfo;
-
-    private final ExtendedConnectionHelper extendedConnectionHelper_;
+    private final byte[] transportInfo;
 
     private final Codec codec_;
 
@@ -114,20 +114,12 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
         final String targetDesc = ("host=" + info_.getHost() + ", port=" + info_.getPort());
         try {
             if (logger.isLoggable(FINE)) logger.fine("Connecting to " + targetDesc);
-            if (connectionHelper_ != null) {
-                InetAddress address = Util.getInetAddress(info_.getHost());
-                socket_ = connectionHelper_.createSocket(ior_, policies_, address, info_.getPort());
-            } else {
-                socket_ = extendedConnectionHelper_.createSocket(info_.getHost(), info_.getPort());
-            }
+            socket_ = connectionHelper.createSocket(info_.getHost(), info_.getPort(), ior_, policies_);
             if (logger.isLoggable(FINE)) logger.fine("Connection created with socket " + socket_);
-        } catch (java.net.ConnectException ex) {
-            throw wrapped(CONN_LOG, ex, "Error connecting to " + targetDesc, Transients.CONNECT_FAILED);
+        } catch (ConnectException ex) {
+            throw wrapped(CONN_LOG, ex, "Error connecting to " + targetDesc, CONNECT_FAILED);
         } catch (IOException ex) {
-            throw logged(CONN_LOG, (COMM_FAILURE) new COMM_FAILURE(
-                    MinorCodes.describeCommFailure(MinorCodes.MinorSocket),
-                    MinorCodes.MinorSocket,
-                    CompletionStatus.COMPLETED_NO).initCause(ex), "Error connecting to " + targetDesc);
+            throw logged(CONN_LOG, asCommFailure(ex, MinorSocket), "Error connecting to " + targetDesc);
         }
 
         //
@@ -142,15 +134,15 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             logger.log(FINE, "Socket setup error", ex);
             try {
                 socket_.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
-            throw Exceptions.asCommFailure(ex);
+            throw asCommFailure(ex);
         }
 
         //
         // Create new transport
         //
-        Transport tr = null;
+        Transport tr;
         try {
             tr = new Transport_impl(socket_, listenMap_);
             socket_ = null;
@@ -158,7 +150,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             logger.log(FINE, "Transport creation error", ex);
             try {
                 socket_.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             throw ex;
         }
@@ -185,109 +177,51 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
     // Helper class for connect_timeout()
     //
     private class ConnectTimeout extends Thread {
-        private InetAddress address_ = null;
-
-        private Socket so_ = null;
-
-        private IOException ex_ = null;
-
-        private boolean finished_ = false;
-
-        private boolean timeout_ = false;
-
-        ConnectTimeout(InetAddress address) {
-            address_ = address;
-        }
+        private final CompletableFuture<Socket> socketFuture = new CompletableFuture<>();
 
         public void run() {
+            final Socket so_;
             try {
-                if (connectionHelper_ != null) {
-                    so_ = connectionHelper_.createSocket(ior_, policies_, address_, info_.getPort());
-                } else {
-                    so_ = extendedConnectionHelper_.createSocket(info_.getHost(), info_.getPort());
-                }
-            } catch (IOException ex) {
-                logger.log(FINE, "Socket creation error", ex);
-                ex_ = ex;
-            }
-
-            synchronized (this) {
-                if (timeout_) {
-                    if (so_ != null) {
-                        try {
-                            so_.close();
-                        } catch (IOException ex) {
-                        }
-
-                        so_ = null;
-                    }
-                } else {
-                    finished_ = true;
-                    ConnectTimeout.this.notify();
-                }
+                so_ = connectionHelper.createSocket(info_.getHost(), info_.getPort(), ior_, policies_);
+                if (socketFuture.complete(so_)) return;
+                try {
+                    so_.close();
+                } catch (IOException ignored) {}
+            } catch (IOException e) {
+                socketFuture.completeExceptionally(e);
             }
         }
 
-        synchronized Socket waitForConnect(int t)
-                throws IOException {
-            while (!finished_) {
+        synchronized Socket waitForConnect(int t) throws IOException {
+            for (;;) {
                 try {
-                    ConnectTimeout.this.wait(t);
-                } catch (InterruptedException ex) {
-                    continue;
-                }
-
-                if (!finished_) // Timeout
-                {
-                    timeout_ = true;
-                    return null;
+                    return socketFuture.get(t, MILLISECONDS);
+                } catch (InterruptedException ignored) {
+                } catch (TimeoutException e) {
+                    if (socketFuture.cancel(false)) return null;
+                } catch (ExecutionException e) {
+                    throw (IOException) e.getCause();
                 }
             }
-
-            if (so_ != null) // Connect succeeded
-                return so_;
-
-            if (ex_ != null) // Connect failed
-                throw ex_;
-
-            throw new InternalError();
         }
     }
 
     public Transport connect_timeout(int t) {
-        if (socket_ != null)
-            close();
+        if (null != socket_) close();
 
-        //
-        // Get the address
-        //
-        InetAddress address = null;
-        try {
-            address = Util.getInetAddress(this.info_.getHost());
-        } catch (UnknownHostException ex) {
-            logger.log(FINE, "Host resolution error", ex);
-            throw asCommFailure(ex);
-        }
-
-        //
         // Create socket and connect
-        //
         try {
-            ConnectTimeout connectTimeout = new ConnectTimeout(address);
+            final ConnectTimeout connectTimeout = new ConnectTimeout();
             connectTimeout.start();
 
             socket_ = connectTimeout.waitForConnect(t);
 
-            if (socket_ == null)
-                return null;
-        } catch (java.net.ConnectException ex) {
-            throw wrapped(CONN_OUT_LOG, ex, "Socket connection error", Transients.CONNECT_FAILED);
+            if (null == socket_) return null;
+        } catch (ConnectException ex) {
+            throw wrapped(CONN_OUT_LOG, ex, "Socket connection error", CONNECT_FAILED);
         } catch (IOException ex) {
             logger.log(FINE, "Socket I/O error", ex);
-            throw (COMM_FAILURE)new COMM_FAILURE(
-                    MinorCodes.describeCommFailure(MinorCodes.MinorSocket) + ": " + ex.getMessage(),
-                    MinorCodes.MinorSocket,
-                    CompletionStatus.COMPLETED_NO).initCause(ex);
+            throw asCommFailure(ex, MinorSocket);
         }
 
         //
@@ -302,15 +236,15 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             logger.log(FINE, "Socket setup error", ex);
             try {
                 socket_.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
-            throw Exceptions.asCommFailure(ex);
+            throw asCommFailure(ex);
         }
 
         //
         // Create new transport
         //
-        Transport tr = null;
+        Transport tr;
         try {
             tr = new Transport_impl(socket_, listenMap_);
             socket_ = null;
@@ -318,7 +252,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
             logger.log(FINE, "Transport setup error", ex);
             try {
                 socket_.close();
-            } catch (IOException e) {
+            } catch (IOException ignored) {
             }
             throw ex;
         }
@@ -388,8 +322,7 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
 
     private boolean equal0(Connector_impl that) {
         if (this.info_.getPort() != that.info_.getPort()) return false;
-        return (Net.CompareHosts(this.info_.getHost(), that.info_.getHost()) ?
-                Arrays.equals(transportInfo, that.transportInfo) : false);
+        return (Net.CompareHosts(this.info_.getHost(), that.info_.getHost()) && Arrays.equals(transportInfo, that.transportInfo));
     }
 
     private byte[] extractTransportInfo(IOR ior) {
@@ -417,28 +350,18 @@ final class Connector_impl extends org.omg.CORBA.LocalObject implements Connecto
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    private Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, ExtendedConnectionHelper xhelper, Codec codec) {
-        if ((null == helper) && (null == xhelper)) throw new IllegalArgumentException("Both connection helpers must not be null");
+    Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, UnifiedConnectionHelper helper, Codec codec) {
         ior_ = ior;
         policies_ = policies;
         keepAlive_ = keepAlive;
         info_ = new ConnectorInfo_impl(host, port, cb);
         listenMap_ = lm;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = xhelper;
+        connectionHelper = requireNonNull(helper);
         codec_ = codec;
         transportInfo = extractTransportInfo(ior);
     }
 
-    Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ConnectionHelper helper, Codec codec) {
-        this(ior, policies, host, port, keepAlive, cb, lm, helper, null, codec);
-    }
-
-    Connector_impl(IOR ior, Policy[] policies, String host, int port, boolean keepAlive, ConnectCB[] cb, ListenerMap lm, ExtendedConnectionHelper xhelper, Codec codec) {
-        this(ior, policies, host, port, keepAlive, cb, lm, null, xhelper, codec);
-    }
-
-    public void finalize() throws Throwable {
+    protected void finalize() throws Throwable {
         if (socket_ != null)
             close();
 

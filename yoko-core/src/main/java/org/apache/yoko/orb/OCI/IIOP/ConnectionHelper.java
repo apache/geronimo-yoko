@@ -16,22 +16,16 @@
  *  limitations under the License.
  */
 
-
-/**
- * @version $Rev: 491396 $ $Date: 2006-12-30 22:06:13 -0800 (Sat, 30 Dec 2006) $
- */
-
 package org.apache.yoko.orb.OCI.IIOP;
-
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.net.ServerSocket;
 
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 
 //
 // IDL:orb.yoko.apache.org/OCI/IIOP/AcceptorInfo:1.0
@@ -40,22 +34,44 @@ import org.omg.IOP.IOR;
  *
  * Information on an IIOP OCI Acceptor object.
  *
- * @see Acceptor
  * @see AcceptorInfo
  *
  **/
 
-public interface ConnectionHelper
+public interface ConnectionHelper extends UnifiedConnectionHelperProvider
 {
-    public void init(ORB orb, String parms);
+    void init(ORB orb, String params);
+    Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException;
+    Socket createSelfConnection(InetAddress address, int port) throws IOException;
+    ServerSocket createServerSocket(int port, int backlog)  throws IOException;
+    ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException;
+    default UnifiedConnectionHelper getUnifiedConnectionHelper() {
+        return new UnifiedConnectionHelper() {
+            @Override
+            public void init(ORB orb, String params) {
+                ConnectionHelper.this.init(orb, params);
+            }
 
-    public Socket createSocket(IOR ior, Policy[] policies, InetAddress address, int port) throws IOException, ConnectException;
+            @Override
+            public Socket createSocket(String host, int port, IOR ior, Policy... policies) throws IOException {
+                return ConnectionHelper.this.createSocket(ior, policies, Util.getInetAddress(host), port);
+            }
 
-    public Socket createSelfConnection(InetAddress address, int port) throws IOException, ConnectException;
+            @Override
+            public Socket createSelfConnection(InetAddress address, int port) throws IOException {
+                return ConnectionHelper.this.createSelfConnection(address, port);
+            }
 
-    public ServerSocket createServerSocket(int port, int backlog)  throws IOException, ConnectException;
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog, String... ignored) throws IOException {
+                return ConnectionHelper.this.createServerSocket(port, backlog);
+            }
 
-    public ServerSocket createServerSocket(int port, int backlog, InetAddress address) throws IOException, ConnectException;
-
+            @Override
+            public ServerSocket createServerSocket(int port, int backlog, InetAddress address, String... ignored) throws IOException {
+                return ConnectionHelper.this.createServerSocket(port, backlog, address);
+            }
+        };
+    }
 }
 

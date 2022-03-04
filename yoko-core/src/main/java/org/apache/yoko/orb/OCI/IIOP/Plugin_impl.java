@@ -35,13 +35,11 @@ import static org.apache.yoko.util.Assert.*;
 
 public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         org.apache.yoko.orb.OCI.Plugin {
-    private org.omg.CORBA.ORB orb_; // The ORB
+    private final ORB orb_; // The ORB
 
-    private ListenerMap listenMap_; // list of listenPoints
+    private final ListenerMap listenMap_; // list of listenPoints
 
-    private final ConnectionHelper connectionHelper_;   // SSL connection helper
-
-    private final ExtendedConnectionHelper extendedConnectionHelper_;
+    private final UnifiedConnectionHelper connectionHelper;
 
     // ------------------------------------------------------------------
     // Standard IDL to Java Mapping
@@ -73,11 +71,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         //
         try {
             ConFactoryRegistry registry = ConFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIConFactoryRegistry"));
-            if (connectionHelper_ != null) {
-                registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper_));
-            } else {
-                registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, extendedConnectionHelper_));                
-            }
+            registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper));
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
@@ -93,9 +87,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
             ensure(scheme != null);
             CorbalocURLScheme corbaloc = org.apache.yoko.orb.OB.CorbalocURLSchemeHelper.narrow(scheme);
             corbaloc.add_protocol(new CorbalocProtocol_impl());
-        } catch (InvalidName ex) {
-            throw Assert.fail(ex);
-        } catch (ProtocolAlreadyExists ex) {
+        } catch (InvalidName | ProtocolAlreadyExists ex) {
             throw Assert.fail(ex);
         }
     }
@@ -103,7 +95,7 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
     public void init_server(String[] params) {
         try {
             AccFactoryRegistry registry = AccFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIAccFactoryRegistry"));
-            registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper_, extendedConnectionHelper_));
+            registry.add_factory(new AccFactory_impl(orb_, listenMap_, connectionHelper));
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
@@ -117,17 +109,9 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Plugin_impl(org.omg.CORBA.ORB orb, ConnectionHelper helper) {
+    public Plugin_impl(ORB orb, UnifiedConnectionHelper helper) {
         orb_ = orb;
-        connectionHelper_ = helper;
-        extendedConnectionHelper_ = null;
-        listenMap_ = new ListenerMap();
-    }
-
-    public Plugin_impl(ORB orb, ExtendedConnectionHelper helper) {
-        orb_ = orb;
-        connectionHelper_ = null;
-        extendedConnectionHelper_ = helper;
+        connectionHelper = helper;
         listenMap_ = new ListenerMap();
     }
 }
