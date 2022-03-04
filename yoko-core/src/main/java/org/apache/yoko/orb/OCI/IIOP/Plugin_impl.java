@@ -17,8 +17,8 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.CorbalocURLScheme;
+import org.apache.yoko.orb.OB.CorbalocURLSchemeHelper;
 import org.apache.yoko.orb.OB.CorbalocURLSchemePackage.ProtocolAlreadyExists;
 import org.apache.yoko.orb.OB.URLRegistry;
 import org.apache.yoko.orb.OB.URLRegistryHelper;
@@ -28,13 +28,18 @@ import org.apache.yoko.orb.OCI.AccFactoryRegistryHelper;
 import org.apache.yoko.orb.OCI.ConFactoryRegistry;
 import org.apache.yoko.orb.OCI.ConFactoryRegistryHelper;
 import org.apache.yoko.orb.OCI.FactoryAlreadyExists;
+import org.apache.yoko.orb.OCI.Plugin;
+import org.apache.yoko.util.Assert;
+import org.omg.CORBA.INITIALIZE;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
+import org.omg.IOP.TAG_INTERNET_IOP;
 
-import static org.apache.yoko.util.Assert.*;
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.Exceptions.as;
 
-public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
-        org.apache.yoko.orb.OCI.Plugin {
+public final class Plugin_impl extends LocalObject implements Plugin {
     private final ORB orb_; // The ORB
 
     private final ListenerMap listenMap_; // list of listenPoints
@@ -50,42 +55,31 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
     }
 
     public int tag() {
-        return org.omg.IOP.TAG_INTERNET_IOP.value;
+        return TAG_INTERNET_IOP.value;
     }
 
     public void init_client(String[] params) {
         boolean keepAlive = true;
-        int i = 0;
-        while (i < params.length) {
-            if (params[i].equals("--no-keepalive")) {
-                keepAlive = false;
-                i++;
-            } else {
-                throw new org.omg.CORBA.INITIALIZE("iiop: unknown client "
-                        + "parameter `" + params[i] + "'");
-            }
+        for (String param : params) {
+            if (param.equals("--no-keepalive")) keepAlive = false;
+            else throw new INITIALIZE("iiop: unknown client parameter `" + param + "'");
         }
 
-        //
-        // Install the ConFactory
-        //
         try {
             ConFactoryRegistry registry = ConFactoryRegistryHelper.narrow(orb_.resolve_initial_references("OCIConFactoryRegistry"));
             registry.add_factory(new ConFactory_impl(orb_, keepAlive, listenMap_, connectionHelper));
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
-            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
+            throw as(INITIALIZE::new, ex, "OCI IIOP plug-in already installed");
         }
 
-        //
         // Install the "iiop" corbaloc URL protocol
-        //
         try {
             URLRegistry registry = URLRegistryHelper.narrow(orb_.resolve_initial_references("URLRegistry"));
             URLScheme scheme = registry.find_scheme("corbaloc");
             ensure(scheme != null);
-            CorbalocURLScheme corbaloc = org.apache.yoko.orb.OB.CorbalocURLSchemeHelper.narrow(scheme);
+            CorbalocURLScheme corbaloc = CorbalocURLSchemeHelper.narrow(scheme);
             corbaloc.add_protocol(new CorbalocProtocol_impl());
         } catch (InvalidName | ProtocolAlreadyExists ex) {
             throw Assert.fail(ex);
@@ -99,10 +93,9 @@ public final class Plugin_impl extends org.omg.CORBA.LocalObject implements
         } catch (InvalidName ex) {
             throw Assert.fail(ex);
         } catch (FactoryAlreadyExists ex) {
-            throw new org.omg.CORBA.INITIALIZE("OCI IIOP plug-in already installed");
+            throw as(INITIALIZE::new, ex, "OCI IIOP plug-in already installed");
         }
     }
-
 
     // ------------------------------------------------------------------
     // Yoko internal functions
