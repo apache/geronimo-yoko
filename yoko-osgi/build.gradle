@@ -1,6 +1,6 @@
 dependencies {
   // compile against OSGi but assume that is provided by the framework
-  provided 'org.osgi:org.osgi.core:5.0.0'
+  provided 'org.osgi:org.osgi.core:6.0.0'
 }
 
 jar {
