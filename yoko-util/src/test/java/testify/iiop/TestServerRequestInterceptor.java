@@ -20,7 +20,7 @@ import org.omg.PortableInterceptor.ForwardRequest;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
 
-public interface TestServerRequestInterceptor extends TestORBInitializer, TestInterceptor, ServerRequestInterceptor {
+public interface TestServerRequestInterceptor extends TestInterceptor, ServerRequestInterceptor {
     default void receive_request_service_contexts(ServerRequestInfo ri) throws ForwardRequest {}
     default void receive_request(ServerRequestInfo ri) throws ForwardRequest {}
     default void send_reply(ServerRequestInfo ri) {}

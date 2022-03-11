@@ -20,10 +20,9 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitInfo;
-import org.omg.PortableInterceptor.ORBInitializer;
+import testify.iiop.TestORBInitializer;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 
@@ -64,15 +63,13 @@ public class TestConfigureServer {
         }
 
         @UseWithOrb("client orb")
-        public static class ClientOrbInitializer extends LocalObject implements ORBInitializer {
+        public static class ClientOrbInitializer implements TestORBInitializer {
             public void pre_init(ORBInitInfo info) { clientOrbId = info.arguments()[0]; }
-            public void post_init(ORBInitInfo info) {}
         }
 
         @UseWithOrb("server orb")
-        public static class ServerOrbInitializer extends LocalObject implements ORBInitializer {
+        public static class ServerOrbInitializer implements TestORBInitializer {
             public void pre_init(ORBInitInfo info) { serverOrbId = info.arguments()[0]; }
-            public void post_init(ORBInitInfo info) {}
         }
     }
 
@@ -84,7 +81,7 @@ public class TestConfigureServer {
     )
     class TestConfigureServerInterOrb extends TestConfigureServerBase {
         @Test
-        public void testServerOrbIsDistinct() {
+        void testServerOrbIsDistinct() {
             assertEquals("inter-orb client orb", clientOrbId);
             assertEquals("inter-orb server orb", serverOrbId);
             assertNotNull(clientOrb);
@@ -101,7 +98,7 @@ public class TestConfigureServer {
     )
     class TestConfigureServerInterProcess extends TestConfigureServerBase {
         @Test
-        public void testServerOrbIsNull() {
+        void testServerOrbIsNull() {
             // When we run inter process, the server-side stuff runs in the remote process, and none of the fields should be set locally
             assertEquals("inter-process client orb", clientOrbId);
             assertNotNull(clientOrb);
@@ -118,7 +115,7 @@ public class TestConfigureServer {
     )
     class TestConfigureServerCollocated extends TestConfigureServerBase {
         @Test
-        public void testServerOrbIsNotDistinct() {
+        void testServerOrbIsNotDistinct() {
             assertNull(clientOrbId); // TODO: rethink how @UseWithOrb works when the client ORB and the server ORB are the same
             assertEquals("collocated server orb", serverOrbId);
             assertNotNull(clientOrb);

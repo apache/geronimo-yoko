@@ -18,7 +18,7 @@ package testify.iiop;
 
 import org.omg.PortableInterceptor.Interceptor;
 
-interface TestInterceptor extends Interceptor {
+interface TestInterceptor extends TestORBInitializer, Interceptor {
     default String name() { return this.getClass().getName(); }
     default void destroy() {}
 }

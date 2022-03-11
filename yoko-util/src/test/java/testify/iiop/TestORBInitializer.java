@@ -19,14 +19,12 @@ package testify.iiop;
 import org.junit.jupiter.api.Assertions;
 import org.omg.PortableInterceptor.ClientRequestInterceptor;
 import org.omg.PortableInterceptor.IORInterceptor;
-import org.omg.PortableInterceptor.Interceptor;
-import org.omg.PortableInterceptor.InterceptorOperations;
 import org.omg.PortableInterceptor.ORBInitInfo;
 import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableInterceptor.ServerRequestInterceptor;
 
-interface TestORBInitializer extends ORBInitializer {
+public interface TestORBInitializer extends TestLocalObject, ORBInitializer {
     default void pre_init(ORBInitInfo info) { }
     default void post_init(ORBInitInfo info) {
         try {

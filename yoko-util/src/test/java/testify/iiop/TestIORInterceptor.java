@@ -19,7 +19,7 @@ package testify.iiop;
 import org.omg.PortableInterceptor.IORInfo;
 import org.omg.PortableInterceptor.IORInterceptor;
 
-public interface TestIORInterceptor extends TestORBInitializer, TestInterceptor, IORInterceptor {
+public interface TestIORInterceptor extends TestInterceptor, IORInterceptor {
     default void establish_components(IORInfo info) {}
 }
 
