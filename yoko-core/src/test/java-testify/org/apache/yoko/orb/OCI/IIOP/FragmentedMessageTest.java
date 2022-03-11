@@ -22,18 +22,14 @@ import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.INTERNAL;
-import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 import org.omg.PortableInterceptor.IORInfo;
-import org.omg.PortableInterceptor.IORInterceptor;
-import org.omg.PortableInterceptor.ORBInitInfo;
-import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
-import org.omg.PortableInterceptor.ORBInitializer;
 import testify.bus.Bus;
+import testify.iiop.TestIORInterceptor;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
@@ -176,22 +172,8 @@ public class FragmentedMessageTest {
      * The {@link ClientSideFragmenter} sees this component and then redirects the traffic via the alternative port.
      */
     @UseWithOrb("server orb")
-    public static class ServerSideFragmenter extends LocalObject implements IORInterceptor, ORBInitializer {
+    public static class ServerSideFragmenter implements TestIORInterceptor {
         private volatile Relay relay;
-
-        @Override
-        public void pre_init(ORBInitInfo orbInitInfo) {
-            try {
-                orbInitInfo.add_ior_interceptor(this);
-            } catch (DuplicateName duplicateName) {
-                duplicateName.printStackTrace();
-                throw (INTERNAL) new INTERNAL().initCause(duplicateName);
-            }
-        }
-
-        @Override
-        public void post_init(ORBInitInfo orbInitInfo) { }
-
         @Override
         public void establish_components(IORInfo iorInfo) {
             try {
@@ -217,13 +199,5 @@ public class FragmentedMessageTest {
                 throw (INTERNAL) new INTERNAL().initCause(e);
             }
         }
-
-        @Override
-        public String name() {
-            return "ServerSideFragmenter";
-        }
-
-        @Override
-        public void destroy() { }
     }
 }

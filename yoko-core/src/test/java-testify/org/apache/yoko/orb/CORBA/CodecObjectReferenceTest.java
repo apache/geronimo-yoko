@@ -21,7 +21,6 @@ import acme.EchoImpl;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.INITIALIZE;
-import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
@@ -31,7 +30,7 @@ import org.omg.IOP.CodecPackage.InvalidTypeForEncoding;
 import org.omg.IOP.ENCODING_CDR_ENCAPS;
 import org.omg.IOP.Encoding;
 import org.omg.PortableInterceptor.ORBInitInfo;
-import org.omg.PortableInterceptor.ORBInitializer;
+import test.iiopplugin.TestORBInitializer;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureOrb.NameService;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
@@ -50,9 +49,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 @ConfigureServer(serverOrb = @ConfigureOrb(value = "server orb", nameService = NameService.READ_ONLY))
 public class CodecObjectReferenceTest {
     @UseWithOrb("client orb")
-    public static class ClientOrbInitializer extends LocalObject implements ORBInitializer {
+    public static class ClientOrbInitializer extends TestORBInitializer {
         private static Codec codec;
-        public void pre_init(ORBInitInfo info) {}
         public void post_init(ORBInitInfo info) {
             try {
                 codec = info.codec_factory().create_codec(CDR_1_2_ENCODING);
@@ -63,9 +61,8 @@ public class CodecObjectReferenceTest {
     }
 
     @UseWithOrb("server orb")
-    public static class ServerOrbInitializer extends LocalObject implements ORBInitializer {
+    public static class ServerOrbInitializer extends TestORBInitializer {
         private static Codec codec;
-        public void pre_init(ORBInitInfo info) {}
         public void post_init(ORBInitInfo info) {
             try {
                 codec = info.codec_factory().create_codec(CDR_1_2_ENCODING);
@@ -84,7 +81,7 @@ public class CodecObjectReferenceTest {
     public static Echo echo;
 
     @Test
-    public void testEncodeAndDecodeRmiObject() throws Exception {
+    void testEncodeAndDecodeRmiObject() throws Exception {
         final byte[] bytes = encodeRefUsingClientCodec((Stub)echo);
         // Decode the RMI object using the server-side codec
         Any serverAny = ServerOrbInitializer.codec.decode(bytes);
@@ -100,7 +97,7 @@ public class CodecObjectReferenceTest {
     }
 
     @Test
-    public void testEncodeAndDecodeIdlObject(ORB clientOrb) throws Exception {
+    void testEncodeAndDecodeIdlObject(ORB clientOrb) throws Exception {
         // Encode the root naming context as an IDL object using the server-side codec
         assertFalse(nameService._is_a("RMI:java.util.Hashtable:C03324C0EA357270:13BB0F25214AE4B8"));
         final byte[] bytes = encodeRefUsingClientCodec(nameService);

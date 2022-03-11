@@ -16,7 +16,6 @@
  */
 package org.apache.yoko.orb;
 
-import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
@@ -45,7 +44,7 @@ public class StringToObjectTest {
 
     /** Traces request flows from the client ORB perspective */
     @UseWithOrb("client orb")
-    public static class ClientInterceptor extends LocalObject implements TestClientRequestInterceptor {
+    public static class ClientInterceptor implements TestClientRequestInterceptor {
         public void send_request(ClientRequestInfo ri) { System.out.println("### client interceptor send_request op=" + ri.operation()); }
         public void send_poll(ClientRequestInfo ri) { System.out.println("### client interceptor send_poll op=" + ri.operation()); }
         public void receive_reply(ClientRequestInfo ri) { System.out.println("### client interceptor receive_reply op=" + ri.operation()); }

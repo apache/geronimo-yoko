@@ -20,13 +20,9 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.omg.CORBA.INTERNAL;
-import org.omg.CORBA.LocalObject;
 import org.omg.PortableInterceptor.ForwardRequest;
-import org.omg.PortableInterceptor.ORBInitInfo;
-import org.omg.PortableInterceptor.ORBInitInfoPackage.DuplicateName;
-import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableInterceptor.ServerRequestInfo;
-import org.omg.PortableInterceptor.ServerRequestInterceptor;
+import testify.iiop.TestServerRequestInterceptor;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
@@ -65,23 +61,12 @@ public class TestInterceptorsThatThrow {
     }
 
     @UseWithOrb("server orb")
-    public static class InterceptorThatThrows extends LocalObject implements ServerRequestInterceptor, ORBInitializer {
-        public void pre_init(ORBInitInfo info) {
-            try {
-                info.add_server_request_interceptor(this);
-            } catch (DuplicateName duplicateName) {
-                duplicateName.printStackTrace();
-                throw (INTERNAL) new INTERNAL().initCause(duplicateName);
-            }
-        }
-        public void post_init(ORBInitInfo info) {}
+    public static class InterceptorThatThrows implements TestServerRequestInterceptor {
         public void receive_request_service_contexts(ServerRequestInfo ri) throws ForwardRequest { maybeThrowInternal(ri).orForwardRequest(); }
         public void receive_request(ServerRequestInfo ri) throws ForwardRequest { maybeThrowInternal(ri).orForwardRequest(); }
         public void send_reply(ServerRequestInfo ri) { maybeThrowInternal(ri); }
         public void send_exception(ServerRequestInfo ri) throws ForwardRequest { maybeThrowInternal(ri).orForwardRequest(); }
         public void send_other(ServerRequestInfo ri) throws ForwardRequest { maybeThrowInternal(ri).orForwardRequest(); }
-        public String name() { return "InterceptorThatThrows"; }
-        public void destroy() { }
 
         private interface Forwarder { void orForwardRequest() throws ForwardRequest; }
 
@@ -142,7 +127,7 @@ public class TestInterceptorsThatThrow {
 
     @ParameterizedTest
     @EnumSource(InterceptionPoint.class)
-    public void testThrowFromInterceptor(InterceptionPoint interceptionPoint) throws Throwable {
+    void testThrowFromInterceptor(InterceptionPoint interceptionPoint) throws Throwable {
         try {
             try {
                 interceptionPoint.invoker.invoke(stub);

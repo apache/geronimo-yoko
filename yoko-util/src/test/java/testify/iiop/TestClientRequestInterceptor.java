@@ -19,7 +19,7 @@ package testify.iiop;
 import org.omg.PortableInterceptor.ClientRequestInfo;
 import org.omg.PortableInterceptor.ClientRequestInterceptor;
 
-public interface TestClientRequestInterceptor extends TestORBInitializer, TestInterceptor, ClientRequestInterceptor {
+public interface TestClientRequestInterceptor extends TestInterceptor, ClientRequestInterceptor {
     default void send_request(ClientRequestInfo ri) {}
     default void send_poll(ClientRequestInfo ri) {}
     default void receive_reply(ClientRequestInfo ri) {}
