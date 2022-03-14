@@ -16,65 +16,44 @@
  */
 package org.omg.CORBA;
 
-public abstract class TypeCode implements org.omg.CORBA.portable.IDLEntity {
+import org.omg.CORBA.TypeCodePackage.BadKind;
+import org.omg.CORBA.TypeCodePackage.Bounds;
+import org.omg.CORBA.portable.IDLEntity;
+
+@SuppressWarnings("unused")
+public abstract class TypeCode implements IDLEntity {
     public abstract boolean equal(TypeCode tc);
-
     public abstract boolean equivalent(TypeCode tc);
-
     public abstract TypeCode get_compact_typecode();
-
     public abstract TCKind kind();
+    public abstract String id() throws BadKind;
+    public abstract String name() throws BadKind;
+    public abstract int member_count() throws BadKind;
+    public abstract String member_name(int index) throws BadKind, Bounds;
+    public abstract TypeCode member_type(int index) throws BadKind, Bounds;
+    public abstract Any member_label(int index) throws BadKind, Bounds;
+    public abstract TypeCode discriminator_type() throws BadKind;
+    public abstract int default_index() throws BadKind;
+    public abstract int length() throws BadKind;
+    public abstract TypeCode content_type() throws BadKind;
 
-    public abstract String id() throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract String name() throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract int member_count()
-            throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract String member_name(int index)
-            throws org.omg.CORBA.TypeCodePackage.BadKind,
-            org.omg.CORBA.TypeCodePackage.Bounds;
-
-    public abstract TypeCode member_type(int index)
-            throws org.omg.CORBA.TypeCodePackage.BadKind,
-            org.omg.CORBA.TypeCodePackage.Bounds;
-
-    public abstract Any member_label(int index)
-            throws org.omg.CORBA.TypeCodePackage.BadKind,
-            org.omg.CORBA.TypeCodePackage.Bounds;
-
-    public abstract TypeCode discriminator_type()
-            throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract int default_index()
-            throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract int length() throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public abstract TypeCode content_type()
-            throws org.omg.CORBA.TypeCodePackage.BadKind;
-
-    public short fixed_digits() throws org.omg.CORBA.TypeCodePackage.BadKind {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+    public short fixed_digits() throws BadKind {
+        throw new NO_IMPLEMENT();
     }
 
-    public short fixed_scale() throws org.omg.CORBA.TypeCodePackage.BadKind {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+    public short fixed_scale() throws BadKind {
+        throw new NO_IMPLEMENT();
     }
 
-    public short member_visibility(int index)
-            throws org.omg.CORBA.TypeCodePackage.BadKind,
-            org.omg.CORBA.TypeCodePackage.Bounds {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+    public short member_visibility(int index) throws BadKind, Bounds {
+        throw new NO_IMPLEMENT();
     }
 
-    public short type_modifier() throws org.omg.CORBA.TypeCodePackage.BadKind {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+    public short type_modifier() throws BadKind {
+        throw new NO_IMPLEMENT();
     }
 
-    public TypeCode concrete_base_type()
-            throws org.omg.CORBA.TypeCodePackage.BadKind {
-        throw new org.omg.CORBA.NO_IMPLEMENT();
+    public TypeCode concrete_base_type()  throws BadKind {
+        throw new NO_IMPLEMENT();
     }
 }

@@ -148,7 +148,7 @@ public final class TypeCodeFactory {
         if (primitives_[kind.value()] != null)
             return primitives_[kind.value()];
 
-        org.omg.CORBA.TypeCode tc = null;
+        org.omg.CORBA.TypeCode tc;
 
         switch (kind.value()) {
         case org.omg.CORBA.TCKind._tk_null:
