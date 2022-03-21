@@ -16,24 +16,33 @@
  */
 package org.apache.yoko.orb.CORBA;
 
-import org.apache.yoko.util.Assert;
-import org.apache.yoko.orb.OB.ORBInstance;
-import org.apache.yoko.orb.OB.TypeCodeFactory;
 import org.apache.yoko.io.ReadBuffer;
+import org.apache.yoko.orb.OB.ORBInstance;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_OPERATION;
 import org.omg.CORBA.DATA_CONVERSION;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.Principal;
+import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.portable.Streamable;
-import org.omg.CORBA_2_4.TCKind;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.logging.Logger;
 
+import static java.lang.String.format;
+import static java.util.Objects.requireNonNull;
+import static java.util.logging.Logger.getLogger;
+import static org.apache.yoko.orb.CORBA.TypeCode._OB_convertForeignTypeCode;
+import static org.apache.yoko.orb.CORBA.TypeCode._OB_getOrigType;
+import static org.apache.yoko.orb.OB.TypeCodeFactory.createPrimitiveTC;
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.Assert.fail;
 import static org.apache.yoko.util.MinorCodes.MinorLocalObject;
 import static org.apache.yoko.util.MinorCodes.MinorNativeNotSupported;
 import static org.apache.yoko.util.MinorCodes.MinorNoAlias;
@@ -77,29 +86,64 @@ import static org.omg.CORBA.TCKind._tk_value_box;
 import static org.omg.CORBA.TCKind._tk_void;
 import static org.omg.CORBA.TCKind._tk_wchar;
 import static org.omg.CORBA.TCKind._tk_wstring;
+import static org.omg.CORBA.TCKind.tk_TypeCode;
 import static org.omg.CORBA.TCKind.tk_abstract_interface;
+import static org.omg.CORBA.TCKind.tk_any;
+import static org.omg.CORBA.TCKind.tk_boolean;
+import static org.omg.CORBA.TCKind.tk_char;
+import static org.omg.CORBA.TCKind.tk_double;
+import static org.omg.CORBA.TCKind.tk_fixed;
+import static org.omg.CORBA.TCKind.tk_float;
+import static org.omg.CORBA.TCKind.tk_long;
+import static org.omg.CORBA.TCKind.tk_longlong;
+import static org.omg.CORBA.TCKind.tk_null;
 import static org.omg.CORBA.TCKind.tk_objref;
+import static org.omg.CORBA.TCKind.tk_octet;
+import static org.omg.CORBA.TCKind.tk_short;
+import static org.omg.CORBA.TCKind.tk_string;
+import static org.omg.CORBA.TCKind.tk_ulong;
+import static org.omg.CORBA.TCKind.tk_ulonglong;
+import static org.omg.CORBA.TCKind.tk_ushort;
 import static org.omg.CORBA.TCKind.tk_value;
 import static org.omg.CORBA.TCKind.tk_value_box;
+import static org.omg.CORBA.TCKind.tk_wchar;
+import static org.omg.CORBA.TCKind.tk_wstring;
+import static org.omg.CORBA_2_4.TCKind._tk_local_interface;
 import static org.omg.CORBA_2_4.TCKind.tk_local_interface;
 
 final public class Any extends org.omg.CORBA.Any {
-    private static final Logger logger = Logger.getLogger(Any.class.getName());
+    private static final Logger logger = getLogger(Any.class.getName());
     
     private ORBInstance orbInstance;
-
     private org.omg.CORBA.TypeCode typeCode;
-
     private TypeCode yokoTypeCode;
-
     private TypeCode origTypeCode;
-
     private Object value;
 
-    private void checkValue(org.omg.CORBA.TCKind kind) throws BAD_OPERATION {
-        if (origTypeCode.kind().value() != kind.value())
+    @Override
+    public String toString() {
+        try (StringWriter sw = new StringWriter();
+             PrintWriter pw = new PrintWriter(sw)) {
+            pw.println("Any {");
+            pw.printf("\t%s = %s%n", "tc", typeCode);
+            pw.printf("\t%s = %s%n", "ytc", equalTypeCodes(yokoTypeCode, typeCode) ? "tc" : yokoTypeCode);
+            pw.printf("\t%s = %s%n", "otc", equalTypeCodes(origTypeCode, typeCode) ? "tc" : equalTypeCodes(origTypeCode, yokoTypeCode) ? "ytc" : origTypeCode);
+            pw.printf("\t%s = %s%n", "value", value);
+            pw.println("}");
+            return sw.toString();
+        } catch(IOException ignored) { return "Any { ???? }"; }
+    }
+
+    private boolean equalTypeCodes(org.omg.CORBA.TypeCode tc1, org.omg.CORBA.TypeCode tc2) {
+        try {
+            return (null != tc1) && tc1.equal(tc2);
+        } catch (Throwable t) { return false; }
+    }
+
+    private void checkValue(TCKind kind) throws BAD_OPERATION {
+        if (!requireNonNull(kind).equals(origTypeCode.kind()))
             throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
-        if (value == null)
+        if (null == value)
             throw new BAD_OPERATION(describeBadOperation(MinorNullValueNotAllowed), MinorNullValueNotAllowed, COMPLETED_NO);
     }
 
@@ -112,16 +156,16 @@ final public class Any extends org.omg.CORBA.Any {
         typeCode = tc;
 
         // Get an equivalent Yoko TypeCode
-        yokoTypeCode = tc instanceof TypeCode ? (TypeCode) tc : TypeCode._OB_convertForeignTypeCode(tc);
+        yokoTypeCode = tc instanceof TypeCode ? (TypeCode) tc : _OB_convertForeignTypeCode(tc);
 
         //
         // Cache the unaliased TypeCode
         //
-        origTypeCode = TypeCode._OB_getOrigType(yokoTypeCode);
+        origTypeCode = _OB_getOrigType(yokoTypeCode);
     }
 
     private void readValue(org.omg.CORBA.portable.InputStream in) throws MARSHAL {
-        int kind = origTypeCode.kind().value();
+        final int kind = origTypeCode.kind().value();
 
         logger.fine("Reading ANY value of kind " + kind); 
         //
@@ -232,7 +276,7 @@ final public class Any extends org.omg.CORBA.Any {
                     org.omg.CORBA_2_3.portable.InputStream is = (org.omg.CORBA_2_3.portable.InputStream) in;
                     value = is.read_value(typeCode.id());
                 } catch (BadKind e) {
-                    throw Assert.fail(e);
+                    throw fail(e);
                 }
             }
             break;
@@ -243,10 +287,10 @@ final public class Any extends org.omg.CORBA.Any {
                 String str = in.read_string();
                 int len = origTypeCode.length();
                 if (len != 0 && str.length() > len)
-                    throw new MARSHAL(String.format("string length (%d) exceeds bound (%d)", str.length(), len), MinorReadStringOverflow, COMPLETED_NO);
+                    throw new MARSHAL(format("string length (%d) exceeds bound (%d)", str.length(), len), MinorReadStringOverflow, COMPLETED_NO);
                 value = str;
             } catch (BadKind ex) {
-                throw Assert.fail(ex);
+                throw fail(ex);
             }
             break;
         }
@@ -256,10 +300,10 @@ final public class Any extends org.omg.CORBA.Any {
                 String str = in.read_wstring();
                 int len = origTypeCode.length();
                 if (len != 0 && str.length() > len)
-                    throw new MARSHAL(String.format("wstring length (%d) exceeds bound (%d)", str.length(), len), MinorReadWStringOverflow, COMPLETED_NO);
+                    throw new MARSHAL(format("wstring length (%d) exceeds bound (%d)", str.length(), len), MinorReadWStringOverflow, COMPLETED_NO);
                 value = str;
             } catch (BadKind ex) {
-                throw Assert.fail(ex);
+                throw fail(ex);
             }
             break;
         }
@@ -268,7 +312,7 @@ final public class Any extends org.omg.CORBA.Any {
             try {
                 value = in.read_fixed().movePointLeft(origTypeCode.fixed_scale());
             } catch (BadKind ex) {
-                throw Assert.fail(ex);
+                throw fail(ex);
             }
 
             break;
@@ -278,7 +322,7 @@ final public class Any extends org.omg.CORBA.Any {
             throw new MARSHAL(
                 describeMarshal(MinorNativeNotSupported), MinorNativeNotSupported, COMPLETED_NO);
 
-        case TCKind._tk_local_interface:
+        case _tk_local_interface:
             throw new MARSHAL(describeMarshal(MinorLocalObject), MinorLocalObject, COMPLETED_NO);
 
         case _tk_alias:
@@ -326,7 +370,7 @@ final public class Any extends org.omg.CORBA.Any {
         case _tk_TypeCode:
         case _tk_Principal:
         case _tk_objref:
-        case TCKind._tk_local_interface:
+        case _tk_local_interface:
 
         case _tk_native:
             value = any.value;
@@ -352,7 +396,7 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_alias:
         default:
-            throw Assert.fail("tk_alias not supported for copying");
+            throw fail("tk_alias not supported for copying");
         }
     }
 
@@ -429,7 +473,7 @@ final public class Any extends org.omg.CORBA.Any {
             return extract_Principal().equals(any.extract_Principal());
 
         case _tk_objref:
-        case TCKind._tk_local_interface:
+        case _tk_local_interface:
             return extract_Object()._is_equivalent(any.extract_Object());
 
         case _tk_struct:
@@ -462,7 +506,7 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_alias:
         default:
-            throw Assert.fail("tk_alias not supported for comparison");
+            throw fail("tk_alias not supported for comparison");
         }
     }
 
@@ -616,7 +660,7 @@ final public class Any extends org.omg.CORBA.Any {
             try {
                 out.write_fixed(((BigDecimal) value).movePointRight(origTypeCode.fixed_scale()));
             } catch (BadKind ex) {
-                throw Assert.fail(ex);
+                throw fail(ex);
             }
 
             break;
@@ -627,7 +671,7 @@ final public class Any extends org.omg.CORBA.Any {
             if (value != null && value instanceof InputStream) {
                 InputStream in = (InputStream) value;
                 in._OB_reset();
-                Assert.ensure(!in.read_boolean());
+                ensure(!in.read_boolean());
                 o.write_abstract_interface(in.read_value());
             } else
                 o.write_abstract_interface(value);
@@ -637,12 +681,12 @@ final public class Any extends org.omg.CORBA.Any {
         case _tk_native:
             throw new MARSHAL(describeMarshal(MinorNativeNotSupported), MinorNativeNotSupported, COMPLETED_NO);
 
-        case TCKind._tk_local_interface:
+        case _tk_local_interface:
             throw new MARSHAL(describeMarshal(MinorLocalObject), MinorLocalObject, COMPLETED_NO);
 
         case _tk_alias:
         default:
-            throw Assert.fail("unable to write tk_alias types");
+            throw fail("unable to write tk_alias types");
         }
     }
 
@@ -669,143 +713,142 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public synchronized short extract_short() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_short);
+        checkValue(tk_short);
         return ((Integer) value).shortValue();
     }
 
     public synchronized void insert_short(short val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_short));
+        type(createPrimitiveTC(tk_short));
         value = (int) val;
     }
 
     public synchronized int extract_long() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_long);
+        checkValue(tk_long);
         return (Integer) value;
     }
 
     public synchronized void insert_long(int val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_long));
+        type(createPrimitiveTC(tk_long));
         value = val;
     }
 
     public synchronized long extract_longlong() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_longlong);
+        checkValue(tk_longlong);
         return (Long) value;
     }
 
     public synchronized void insert_longlong(long val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_longlong));
+        type(createPrimitiveTC(tk_longlong));
         value = val;
     }
 
     public synchronized short extract_ushort() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_ushort);
+        checkValue(tk_ushort);
         return ((Integer) value).shortValue();
     }
 
     public synchronized void insert_ushort(short val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_ushort));
+        type(createPrimitiveTC(tk_ushort));
         value = (int) val;
     }
 
     public synchronized int extract_ulong() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_ulong);
+        checkValue(tk_ulong);
         return (Integer) value;
     }
 
     public synchronized void insert_ulong(int val) {
-        type(TypeCodeFactory
-                .createPrimitiveTC(org.omg.CORBA.TCKind.tk_ulong));
+        type(createPrimitiveTC(tk_ulong));
         value = val;
     }
 
     public synchronized long extract_ulonglong() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_ulonglong);
+        checkValue(tk_ulonglong);
         return (Long) value;
     }
 
     public synchronized void insert_ulonglong(long val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_ulonglong));
+        type(createPrimitiveTC(tk_ulonglong));
         value = val;
     }
 
     public synchronized boolean extract_boolean() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_boolean);
+        checkValue(tk_boolean);
         return (Boolean) value;
     }
 
     public synchronized void insert_boolean(boolean val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_boolean));
+        type(createPrimitiveTC(tk_boolean));
         value = val;
     }
 
     public synchronized char extract_char() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_char);
+        checkValue(tk_char);
         return (Character) value;
     }
 
     public synchronized void insert_char(char val) throws DATA_CONVERSION {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_char));
+        type(createPrimitiveTC(tk_char));
         value = val;
     }
 
     public synchronized char extract_wchar() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_wchar);
+        checkValue(tk_wchar);
         return (Character) value;
     }
 
     public synchronized void insert_wchar(char val) throws DATA_CONVERSION {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_wchar));
+        type(createPrimitiveTC(tk_wchar));
         value = val;
     }
 
     public synchronized byte extract_octet() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_octet);
+        checkValue(tk_octet);
         return (Byte) value;
     }
 
     public synchronized void insert_octet(byte val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_octet));
+        type(createPrimitiveTC(tk_octet));
         value = val;
     }
 
     public synchronized float extract_float() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_float);
+        checkValue(tk_float);
         return (Float) value;
     }
 
     public synchronized void insert_float(float val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_float));
+        type(createPrimitiveTC(tk_float));
         value = val;
     }
 
     public synchronized double extract_double() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_double);
+        checkValue(tk_double);
         return (Double) value;
     }
 
     public synchronized void insert_double(double val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_double));
+        type(createPrimitiveTC(tk_double));
         value = val;
     }
 
     public synchronized org.omg.CORBA.Any extract_any() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_any);
+        checkValue(tk_any);
         return (org.omg.CORBA.Any) value;
     }
 
     public synchronized void insert_any(org.omg.CORBA.Any val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_any));
+        type(createPrimitiveTC(tk_any));
         value = val;
     }
 
     public synchronized org.omg.CORBA.TypeCode extract_TypeCode() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_TypeCode);
+        checkValue(tk_TypeCode);
         return (org.omg.CORBA.TypeCode) value;
     }
 
     public synchronized void insert_TypeCode(org.omg.CORBA.TypeCode val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_TypeCode));
+        type(createPrimitiveTC(tk_TypeCode));
         value = val;
     }
 
@@ -820,15 +863,13 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public synchronized org.omg.CORBA.Object extract_Object() throws BAD_OPERATION {
-        org.omg.CORBA.TCKind kind = origTypeCode.kind();
+        TCKind kind = origTypeCode.kind();
         if (kind != tk_objref && kind != tk_abstract_interface && kind != tk_local_interface) {
             throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
         }
 
         if (value != null && !(value instanceof org.omg.CORBA.Object)) {
-            throw new BAD_OPERATION(
-                describeBadOperation(MinorTypeMismatch),
-                MinorTypeMismatch, COMPLETED_NO);
+            throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
         }
 
         return (org.omg.CORBA.Object) value;
@@ -839,16 +880,16 @@ final public class Any extends org.omg.CORBA.Any {
         // If we don't have an ORB instance, then try to get one from
         // the object reference
         //
-        if (orbInstance == null && val != null) {
+        if (null == orbInstance && null != val) {
             try {
                 Delegate d = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) val)._get_delegate();
                 orbInstance = d._OB_ORBInstance();
-            } catch (BAD_OPERATION ex) {
+            } catch (BAD_OPERATION ignored) {
                 // Object has no delegate - ignore
             }
         }
 
-        org.omg.CORBA.TypeCode tc = TypeCodeFactory.createPrimitiveTC(tk_objref);
+        org.omg.CORBA.TypeCode tc = createPrimitiveTC(tk_objref);
         insert_Object(val, tc);
     }
 
@@ -858,12 +899,11 @@ final public class Any extends org.omg.CORBA.Any {
         // If we don't have an ORB instance, then try to get one from
         // the object reference
         //
-        if (orbInstance == null && val != null) {
+        if (null == orbInstance && null != val) {
             try {
-                Delegate d = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) val)
-                        ._get_delegate();
+                Delegate d = (Delegate) ((org.omg.CORBA.portable.ObjectImpl) val)._get_delegate();
                 orbInstance = d._OB_ORBInstance();
-            } catch (BAD_OPERATION ex) {
+            } catch (BAD_OPERATION ignored) {
                 // Object has no delegate - ignore
             }
         }
@@ -873,22 +913,22 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public synchronized String extract_string() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_string);
+        checkValue(tk_string);
         return (String) value;
     }
 
     public synchronized void insert_string(String val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_string));
+        type(createPrimitiveTC(tk_string));
         value = val;
     }
 
     public synchronized String extract_wstring() throws BAD_OPERATION {
-        checkValue(org.omg.CORBA.TCKind.tk_wstring);
+        checkValue(tk_wstring);
         return (String) value;
     }
 
     public synchronized void insert_wstring(String val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_wstring));
+        type(createPrimitiveTC(tk_wstring));
         value = val;
     }
 
@@ -903,12 +943,12 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public synchronized BigDecimal extract_fixed() {
-        checkValue(org.omg.CORBA.TCKind.tk_fixed);
+        checkValue(tk_fixed);
         return (BigDecimal) value;
     }
 
     public synchronized void insert_fixed(BigDecimal val) {
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_fixed));
+        type(createPrimitiveTC(tk_fixed));
         value = val;
     }
 
@@ -918,27 +958,27 @@ final public class Any extends org.omg.CORBA.Any {
     }
 
     public Serializable extract_Value() throws BAD_OPERATION {
-        org.omg.CORBA.TCKind kind = origTypeCode.kind();
+        TCKind kind = origTypeCode.kind();
 
-        if (kind != tk_value && kind != tk_value_box && kind != tk_abstract_interface) {
+        if (tk_value != kind && tk_value_box != kind && tk_abstract_interface != kind) {
             throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
         }
 
-        if (kind == tk_abstract_interface && value instanceof org.omg.CORBA.Object) {
+        if (tk_abstract_interface == kind && value instanceof org.omg.CORBA.Object) {
             throw new BAD_OPERATION(describeBadOperation(MinorTypeMismatch), MinorTypeMismatch, COMPLETED_NO);
         }
 
         if (value instanceof InputStream) {
             InputStream in = (InputStream) value;
             in._OB_reset();
-            if (kind == tk_abstract_interface) Assert.ensure(!in.read_boolean());
+            if (kind == tk_abstract_interface) ensure(!in.read_boolean());
             return in.read_value();
         } else
             return (Serializable) value;
     }
 
     public synchronized void insert_Value(Serializable val) {
-        org.omg.CORBA.TypeCode tc = TypeCodeFactory.createPrimitiveTC(tk_value);
+        org.omg.CORBA.TypeCode tc = createPrimitiveTC(tk_value);
         insert_Value(val, tc);
     }
 
@@ -959,7 +999,7 @@ final public class Any extends org.omg.CORBA.Any {
 
     public Any(ORBInstance orbInstance) {
         this.orbInstance = orbInstance;
-        type(TypeCodeFactory.createPrimitiveTC(org.omg.CORBA.TCKind.tk_null));
+        type(createPrimitiveTC(tk_null));
         value = null;
     }
 
@@ -1055,7 +1095,7 @@ final public class Any extends org.omg.CORBA.Any {
 
         case _tk_objref:
         case _tk_abstract_interface:
-        case TCKind._tk_local_interface:
+        case _tk_local_interface:
             try {
                 value = any.extract_Object();
                 break;

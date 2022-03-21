@@ -18,14 +18,15 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ObjectFactory;
 import org.apache.yoko.orb.OB.PIDowncall;
 import org.apache.yoko.orb.OB.Util;
 import org.apache.yoko.orb.OCI.ProfileInfo;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.CollectionExtras;
+import org.apache.yoko.util.Exceptions;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.apache.yoko.util.yasf.YasfThreadLocal;
@@ -52,16 +53,17 @@ import org.omg.PortableInterceptor.SUCCESSFUL;
 import org.omg.PortableInterceptor.SYSTEM_EXCEPTION;
 import org.omg.PortableInterceptor.USER_EXCEPTION;
 
+import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.yoko.util.Assert.ensure;
+import static java.util.Arrays.copyOf;
+import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidComponentId;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidPolicyType;
 import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
 import static org.apache.yoko.util.MinorCodes.describeBadParam;
 import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
-import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 
 final public class ClientRequestInfo_impl extends RequestInfo_impl implements ClientRequestInfo {
@@ -187,18 +189,17 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
     // send_request: yes send_poll: no receive_reply: yes
     // receive_exception: yes receive_other: yes
     public TaggedComponent get_effective_component(int id) {
-        for (int i = 0; i < profileInfo.components.length; i++)
-            if (profileInfo.components[i].tag == id) {
-                TaggedComponent result = new TaggedComponent();
-                result.tag = profileInfo.components[i].tag;
-                result.component_data = new byte[profileInfo.components[i].component_data.length];
-                System.arraycopy(profileInfo.components[i].component_data, 0,
-                        result.component_data, 0,
-                        profileInfo.components[i].component_data.length);
-                return result;
-            }
+        for (TaggedComponent tc: profileInfo.components) {
+            if (tc.tag != id) continue;
+            return new TaggedComponent(tc.tag, copyOf(tc.component_data, tc.component_data.length));
+        }
+        final Throwable t = new Throwable(String.format("id %d not found in components %s", id,
+                Arrays.toString(
+                        Arrays.stream(profileInfo.components)
+                                .map(tc -> tc.tag)
+                                .toArray())));
 
-        throw new BAD_PARAM(describeBadParam(MinorInvalidComponentId) + ": " + id, MinorInvalidComponentId, COMPLETED_NO);
+        throw Exceptions.as(BAD_PARAM::new, t, describeBadParam(MinorInvalidComponentId) + ": " + id, MinorInvalidComponentId, COMPLETED_NO);
     }
 
     // Return all TaggedComponents with the given ID in all profiles.
@@ -267,8 +268,8 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
         argStrategy.setArgsAvail(true);
         argStrategy.setExceptAvail(true);
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             for(ClientRequestInterceptor interceptor: interceptors) {
                 try {
                     interceptor.send_request(this);
@@ -295,8 +296,8 @@ final public class ClientRequestInfo_impl extends RequestInfo_impl implements Cl
             piCurrent._OB_pushSlotData(newThreadScopePICurrentSlotData);
         }
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             for (ClientRequestInterceptor i: CollectionExtras.removeInReverse(interceptors)) {
                 try {
                     switch (replyStatus) {

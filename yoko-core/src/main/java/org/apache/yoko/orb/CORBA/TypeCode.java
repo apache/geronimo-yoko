@@ -16,12 +16,11 @@
  */
 package org.apache.yoko.orb.CORBA;
 
+import org.apache.yoko.orb.OB.Util;
 import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.MinorCodes;
-import org.apache.yoko.orb.OB.Util;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.BAD_TYPECODE;
-import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.TypeCodePackage.Bounds;
@@ -29,6 +28,62 @@ import org.omg.CORBA.TypeCodePackage.Bounds;
 import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.Vector;
+import java.util.stream.Stream;
+
+import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.MinorCodes.MinorIncompleteTypeCode;
+import static org.apache.yoko.util.MinorCodes.describeBadTypecode;
+import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
+import static org.omg.CORBA.TCKind._tk_Principal;
+import static org.omg.CORBA.TCKind._tk_TypeCode;
+import static org.omg.CORBA.TCKind._tk_abstract_interface;
+import static org.omg.CORBA.TCKind._tk_alias;
+import static org.omg.CORBA.TCKind._tk_any;
+import static org.omg.CORBA.TCKind._tk_array;
+import static org.omg.CORBA.TCKind._tk_boolean;
+import static org.omg.CORBA.TCKind._tk_char;
+import static org.omg.CORBA.TCKind._tk_double;
+import static org.omg.CORBA.TCKind._tk_enum;
+import static org.omg.CORBA.TCKind._tk_except;
+import static org.omg.CORBA.TCKind._tk_fixed;
+import static org.omg.CORBA.TCKind._tk_float;
+import static org.omg.CORBA.TCKind._tk_long;
+import static org.omg.CORBA.TCKind._tk_longdouble;
+import static org.omg.CORBA.TCKind._tk_longlong;
+import static org.omg.CORBA.TCKind._tk_native;
+import static org.omg.CORBA.TCKind._tk_null;
+import static org.omg.CORBA.TCKind._tk_objref;
+import static org.omg.CORBA.TCKind._tk_octet;
+import static org.omg.CORBA.TCKind._tk_sequence;
+import static org.omg.CORBA.TCKind._tk_short;
+import static org.omg.CORBA.TCKind._tk_string;
+import static org.omg.CORBA.TCKind._tk_struct;
+import static org.omg.CORBA.TCKind._tk_ulong;
+import static org.omg.CORBA.TCKind._tk_ulonglong;
+import static org.omg.CORBA.TCKind._tk_union;
+import static org.omg.CORBA.TCKind._tk_ushort;
+import static org.omg.CORBA.TCKind._tk_value;
+import static org.omg.CORBA.TCKind._tk_value_box;
+import static org.omg.CORBA.TCKind._tk_void;
+import static org.omg.CORBA.TCKind._tk_wchar;
+import static org.omg.CORBA.TCKind._tk_wstring;
+import static org.omg.CORBA.TCKind.tk_abstract_interface;
+import static org.omg.CORBA.TCKind.tk_alias;
+import static org.omg.CORBA.TCKind.tk_array;
+import static org.omg.CORBA.TCKind.tk_enum;
+import static org.omg.CORBA.TCKind.tk_except;
+import static org.omg.CORBA.TCKind.tk_fixed;
+import static org.omg.CORBA.TCKind.tk_native;
+import static org.omg.CORBA.TCKind.tk_objref;
+import static org.omg.CORBA.TCKind.tk_sequence;
+import static org.omg.CORBA.TCKind.tk_string;
+import static org.omg.CORBA.TCKind.tk_struct;
+import static org.omg.CORBA.TCKind.tk_union;
+import static org.omg.CORBA.TCKind.tk_value;
+import static org.omg.CORBA.TCKind.tk_value_box;
+import static org.omg.CORBA.TCKind.tk_wstring;
+import static org.omg.CORBA_2_4.TCKind._tk_local_interface;
+import static org.omg.CORBA_2_4.TCKind.tk_local_interface;
 
 // Note: TypeCodes are (supposed to be) immutable, so I don't need thread synchronization
 final public class TypeCode extends org.omg.CORBA.TypeCode {
@@ -77,18 +132,18 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
     private StringBuilder describe(StringBuilder sb, String prefix) {
         final String indent = prefix + "\t";
-        sb.append("TypeCode{\n");
-        if (kind_ != null) sb.append(indent).append("kind: ").append(kind_).append("\n");
-        if (id_ != null) sb.append(indent).append("id: ").append(id_).append("\n");
-        if (name_ != null) sb.append(indent).append("name: ").append(name_).append("\n");
-        if (recId_ != null) sb.append(indent).append("recursive id: ").append(recId_).append("\n");
-        if (typeModifier_ != 0) sb.append(indent).append("type modifier: ").append(typeModifier_).append("\n");
-        if (length_ != 0) sb.append(indent).append("length: ").append(length_).append("\n");
-        if (fixedDigits_ != 0) sb.append(indent).append("fixed digits: ").append(fixedDigits_).append("\n");
-        if (fixedScale_ != 0) sb.append(indent).append("fixed scale: ").append(fixedScale_).append("\n");
-        if (memberNames_ != null) {
-            int visCount = memberVisibility_ == null ? 0 : memberVisibility_.length;
-            if (memberTypes_ == null) {
+        sb.append("TypeCode {\n");
+        if (null != kind_) sb.append(indent).append("kind: ").append(kind_).append("\n");
+        if (null != id_) sb.append(indent).append("id: ").append(id_).append("\n");
+        if (null != name_) sb.append(indent).append("name: ").append(name_).append("\n");
+        if (null != recId_) sb.append(indent).append("recursive id: ").append(recId_).append("\n");
+        if (0 != typeModifier_) sb.append(indent).append("type modifier: ").append(typeModifier_).append("\n");
+        if (0 != length_) sb.append(indent).append("length: ").append(length_).append("\n");
+        if (0 != fixedDigits_) sb.append(indent).append("fixed digits: ").append(fixedDigits_).append("\n");
+        if (0 != fixedScale_) sb.append(indent).append("fixed scale: ").append(fixedScale_).append("\n");
+        if (null != memberNames_) {
+            int visCount = null == memberVisibility_ ? 0 : memberVisibility_.length;
+            if (null == memberTypes_) {
                 sb.append(indent).append("members: ").append(Arrays.toString(memberNames_)).append("\n");
             } else for (int i = 0; i < memberNames_.length; i++) {
                 TypeCode tc = i < memberTypes_.length ? memberTypes_[i] : null;
@@ -98,10 +153,10 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             }
         }
 //        if (labels_ != null) sb.append(indent).append("labels: ").append(Arrays.toString(labels_)).append("\n");
-        if (recType_ != null) appendTC(sb, "recursive typecode: ", recType_, indent).append("\n");
-        if (discriminatorType_ != null) appendTC(sb, "discriminator type: ", discriminatorType_, indent).append("\n");
-        if (contentType_ != null) appendTC(sb, "content type: ", contentType_, indent).append("\n");
-        if (concreteBaseType_ != null) appendTC(sb, "concrete base type: ", concreteBaseType_, indent).append("\n");
+        if (null != recType_) appendTC(sb, "recursive typecode: ", recType_, indent).append("\n");
+        if (null != discriminatorType_) appendTC(sb, "discriminator type: ", discriminatorType_, indent).append("\n");
+        if (null != contentType_) appendTC(sb, "content type: ", contentType_, indent).append("\n");
+        if (null != concreteBaseType_) appendTC(sb, "concrete base type: ", concreteBaseType_, indent).append("\n");
         return sb.append(prefix).append("}");
     }
 
@@ -113,7 +168,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     private boolean equivalentRecHelper(org.omg.CORBA.TypeCode t,
-                                        Vector history, Vector otherHistory) {
+                                        Vector<org.omg.CORBA.TypeCode> history, Vector<org.omg.CORBA.TypeCode> otherHistory) {
         if (t == null)
             return false;
 
@@ -145,31 +200,30 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     private boolean equivalentRec(org.omg.CORBA.TypeCode t,
-            Vector history, Vector otherHistory) {
-        TypeCode tc = null;
+            Vector<org.omg.CORBA.TypeCode> history, Vector<org.omg.CORBA.TypeCode> otherHistory) {
+        TypeCode tc;
         try {
             tc = (TypeCode) t;
         } catch (ClassCastException ex) {
             tc = _OB_convertForeignTypeCode(t);
         }
 
-        if (recId_ != null) {
-            if (recType_ == null)
+        if (null != recId_) {
+            if (null == recType_)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.equivalentRecHelper(t, history, otherHistory);
         }
 
-        if (tc.recId_ != null) {
-            if (tc.recType_ == null)
+        if (null != tc.recId_) {
+            if (null == tc.recType_)
                 throw new BAD_PARAM(
                         MinorCodes
                                 .describeBadParam(MinorCodes.MinorIncompleteTypeCodeParameter),
                         MinorCodes.MinorIncompleteTypeCodeParameter,
-                        CompletionStatus.COMPLETED_NO);
+                        COMPLETED_NO);
             return equivalentRecHelper(tc.recType_, history, otherHistory);
         }
 
@@ -179,31 +233,28 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (tc1.kind_ != tc2.kind_)
             return false;
 
-        if (tc1.kind_ == TCKind.tk_objref
-                || tc1.kind_ == TCKind.tk_struct
-                || tc1.kind_ == TCKind.tk_union
-                || tc1.kind_ == TCKind.tk_enum
-                || tc1.kind_ == TCKind.tk_alias
-                || tc1.kind_ == TCKind.tk_value
-                || tc1.kind_ == TCKind.tk_value_box
-                || tc1.kind_ == TCKind.tk_native
-                || tc1.kind_ == TCKind.tk_abstract_interface
-                || tc1.kind_ == TCKind.tk_except
-                || tc1.kind_ == org.omg.CORBA_2_4.TCKind.tk_local_interface) {
+        if (tk_objref == tc1.kind_
+                || tk_struct == tc1.kind_
+                || tk_union == tc1.kind_
+                || tk_enum == tc1.kind_
+                || tk_alias == tc1.kind_
+                || tk_value == tc1.kind_
+                || tk_value_box == tc1.kind_
+                || tk_native == tc1.kind_
+                || tk_abstract_interface == tc1.kind_
+                || tk_except == tc1.kind_
+                || tk_local_interface == tc1.kind_) {
             if (!tc1.id_.equals("") && !tc2.id_.equals("")) {
-                if (tc1.id_.equals(tc2.id_))
-                    return true;
-                else
-                    return false;
+                return tc1.id_.equals(tc2.id_);
             }
         }
 
         // names_ and memberNames_ must be ignored
 
-        if (tc1.kind_ == TCKind.tk_struct
-                || tc1.kind_ == TCKind.tk_union
-                || tc1.kind_ == TCKind.tk_value
-                || tc1.kind_ == TCKind.tk_except) {
+        if (tk_struct == tc1.kind_
+                || tk_union == tc1.kind_
+                || tk_value == tc1.kind_
+                || tk_except == tc1.kind_) {
             if (tc1.memberTypes_.length != tc2.memberTypes_.length)
                 return false;
 
@@ -214,7 +265,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             }
         }
 
-        if (tc1.kind_ == TCKind.tk_union) {
+        if (tk_union == tc1.kind_) {
             if (tc1.labels_.length != tc2.labels_.length)
                 return false;
 
@@ -233,20 +284,19 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
                 ltc1 = _OB_getOrigType(ltc1);
                 switch (ltc1.kind().value()) {
-                case TCKind._tk_short:
-                case TCKind._tk_ushort:
-                case TCKind._tk_long:
-                case TCKind._tk_ulong:
-                case TCKind._tk_enum:
-                case TCKind._tk_longlong:
-                case TCKind._tk_ulonglong:
-                case TCKind._tk_char:
-                case TCKind._tk_boolean:
-                    if (!v1.equals(v2))
-                        return false;
+                case _tk_short:
+                case _tk_ushort:
+                case _tk_long:
+                case _tk_ulong:
+                case _tk_enum:
+                case _tk_longlong:
+                case _tk_ulonglong:
+                case _tk_char:
+                case _tk_boolean:
+                    if (!v1.equals(v2)) return false;
                     break;
 
-                case TCKind._tk_octet:
+                case _tk_octet:
                     break;
 
                 default:
@@ -257,68 +307,51 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             //
             // Don't use equivalentRecHelper here
             //
-            if (!tc1.discriminatorType_.equivalent(tc2.discriminatorType_))
-                return false;
+            if (!tc1.discriminatorType_.equivalent(tc2.discriminatorType_)) return false;
         }
 
-        if (tc1.kind_ == TCKind.tk_string
-                || tc1.kind_ == TCKind.tk_wstring
-                || tc1.kind_ == TCKind.tk_sequence
-                || tc1.kind_ == TCKind.tk_array) {
-            if (tc1.length_ != tc2.length_)
-                return false;
+        if (tc1.kind_ == tk_string
+                || tk_wstring == tc1.kind_
+                || tk_sequence == tc1.kind_
+                || tk_array == tc1.kind_) {
+            if (tc1.length_ != tc2.length_) return false;
         }
 
-        if (tc1.kind_ == TCKind.tk_sequence
-                || tc1.kind_ == TCKind.tk_array
-                || tc1.kind_ == TCKind.tk_value_box
-                || tc1.kind_ == TCKind.tk_alias) {
-            if (!(tc1.contentType_.equivalentRecHelper(tc2.contentType_,
-                    history, otherHistory)))
-                return false;
+        if (tk_sequence == tc1.kind_
+                || tk_array == tc1.kind_
+                || tk_value_box == tc1.kind_
+                || tk_alias == tc1.kind_) {
+            if (!(tc1.contentType_.equivalentRecHelper(tc2.contentType_, history, otherHistory))) return false;
         }
 
-        if (tc1.kind_ == TCKind.tk_fixed) {
-            if (tc1.fixedDigits_ != tc2.fixedDigits_
-                    || tc1.fixedScale_ != tc2.fixedScale_)
-                return false;
+        if (tk_fixed == tc1.kind_) {
+            if (tc1.fixedDigits_ != tc2.fixedDigits_ || tc1.fixedScale_ != tc2.fixedScale_) return false;
         }
 
-        if (tc1.kind_ == TCKind.tk_value) {
-            if (tc1.memberVisibility_.length != tc2.memberVisibility_.length)
-                return false;
+        if (tk_value == tc1.kind_) {
+            if (tc1.memberVisibility_.length != tc2.memberVisibility_.length) return false;
 
             for (int i = 0; i < tc1.memberVisibility_.length; i++)
-                if (tc1.memberVisibility_[i] != tc2.memberVisibility_[i])
-                    return false;
+                if (tc1.memberVisibility_[i] != tc2.memberVisibility_[i]) return false;
 
-            if (tc1.typeModifier_ != tc2.typeModifier_)
-                return false;
+            if (tc1.typeModifier_ != tc2.typeModifier_) return false;
 
-            if (tc1.concreteBaseType_ != null || tc2.concreteBaseType_ != null) {
-                if (!(tc1.concreteBaseType_ != null && tc2.concreteBaseType_ != null))
-                    return false;
+            if (null != tc1.concreteBaseType_ || null != tc2.concreteBaseType_) {
+                if (!(null != tc1.concreteBaseType_ && null != tc2.concreteBaseType_)) return false;
 
                 //
                 // Don't use equivalentRecHelper here
                 //
-                if (!(tc1.concreteBaseType_.equivalent(tc2.concreteBaseType_)))
-                    return false;
+                return tc1.concreteBaseType_.equivalent(tc2.concreteBaseType_);
             }
         }
 
         return true;
     }
 
-    private TypeCode getCompactTypeCodeRec(Vector history,
-                                           Vector compacted) {
-        if (recId_ != null) {
-            if (recType_ == null)
-                throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+    private TypeCode getCompactTypeCodeRec(Vector<org.omg.CORBA.TypeCode> history, Vector<org.omg.CORBA.TypeCode> compacted) {
+        if (null != recId_) {
+            if (null == recType_) throw new BAD_TYPECODE(describeBadTypecode(MinorIncompleteTypeCode), MinorIncompleteTypeCode, COMPLETED_NO);
             return recType_.getCompactTypeCodeRec(history, compacted);
         }
 
@@ -339,10 +372,11 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         compacted.addElement(result);
 
         String[] names = null;
-        if (memberNames_ != null) {
+        if (null != memberNames_) {
+            Stream.generate(() -> "")
+                    .limit(memberNames_.length);
             names = new String[memberNames_.length];
-            for (int i = 0; i < memberNames_.length; i++)
-                names[i] = "";
+            for (int i = 0; i < memberNames_.length; i++) names[i] = "";
         }
 
         TypeCode[] types = null;
@@ -377,44 +411,44 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                     compacted);
 
         switch (kind_.value()) {
-        case TCKind._tk_null:
-        case TCKind._tk_void:
-        case TCKind._tk_short:
-        case TCKind._tk_long:
-        case TCKind._tk_longlong:
-        case TCKind._tk_ushort:
-        case TCKind._tk_ulong:
-        case TCKind._tk_ulonglong:
-        case TCKind._tk_float:
-        case TCKind._tk_double:
-        case TCKind._tk_longdouble:
-        case TCKind._tk_boolean:
-        case TCKind._tk_char:
-        case TCKind._tk_wchar:
-        case TCKind._tk_octet:
-        case TCKind._tk_any:
-        case TCKind._tk_TypeCode:
-        case TCKind._tk_Principal:
+        case _tk_null:
+        case _tk_void:
+        case _tk_short:
+        case _tk_long:
+        case _tk_longlong:
+        case _tk_ushort:
+        case _tk_ulong:
+        case _tk_ulonglong:
+        case _tk_float:
+        case _tk_double:
+        case _tk_longdouble:
+        case _tk_boolean:
+        case _tk_char:
+        case _tk_wchar:
+        case _tk_octet:
+        case _tk_any:
+        case _tk_TypeCode:
+        case _tk_Principal:
             result.kind_ = kind_;
             break;
 
-        case TCKind._tk_fixed:
+        case _tk_fixed:
             result.kind_ = kind_;
             result.fixedDigits_ = fixedDigits_;
             result.fixedScale_ = fixedScale_;
             break;
 
-        case TCKind._tk_objref:
-        case TCKind._tk_abstract_interface:
-        case TCKind._tk_native:
-        case org.omg.CORBA_2_4.TCKind._tk_local_interface:
+        case _tk_objref:
+        case _tk_abstract_interface:
+        case _tk_native:
+        case _tk_local_interface:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
             break;
 
-        case TCKind._tk_struct:
-        case TCKind._tk_except:
+        case _tk_struct:
+        case _tk_except:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
@@ -422,7 +456,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             result.memberTypes_ = types;
             break;
 
-        case TCKind._tk_union:
+        case _tk_union:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
@@ -432,35 +466,35 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             result.discriminatorType_ = discriminator;
             break;
 
-        case TCKind._tk_enum:
+        case _tk_enum:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
             result.memberNames_ = names;
             break;
 
-        case TCKind._tk_string:
-        case TCKind._tk_wstring:
+        case _tk_string:
+        case _tk_wstring:
             result.kind_ = kind_;
             result.length_ = length_;
             break;
 
-        case TCKind._tk_sequence:
-        case TCKind._tk_array:
+        case _tk_sequence:
+        case _tk_array:
             result.kind_ = kind_;
             result.length_ = length_;
             result.contentType_ = content;
             break;
 
-        case TCKind._tk_alias:
-        case TCKind._tk_value_box:
+        case _tk_alias:
+        case _tk_value_box:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
             result.contentType_ = content;
             break;
 
-        case TCKind._tk_value:
+        case _tk_value:
             result.kind_ = kind_;
             result.id_ = id_;
             result.name_ = "";
@@ -492,14 +526,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.equal(t);
         }
 
-        TypeCode tc = null;
+        TypeCode tc;
         try {
             tc = (TypeCode) t;
         } catch (ClassCastException ex) {
@@ -512,29 +545,26 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                         MinorCodes
                                 .describeBadParam(MinorCodes.MinorIncompleteTypeCodeParameter),
                         MinorCodes.MinorIncompleteTypeCodeParameter,
-                        CompletionStatus.COMPLETED_NO);
+                        COMPLETED_NO);
             return equal(tc.recType_);
         }
 
         if (kind_ != tc.kind_)
             return false;
 
-        if (kind_ == TCKind.tk_objref
-                || kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_alias
-                || kind_ == TCKind.tk_value
-                || kind_ == TCKind.tk_value_box
-                || kind_ == TCKind.tk_native
-                || kind_ == TCKind.tk_abstract_interface
-                || kind_ == TCKind.tk_except
-                || kind_ == org.omg.CORBA_2_4.TCKind.tk_local_interface) {
+        if (kind_ == tk_objref
+                || kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_alias
+                || kind_ == tk_value
+                || kind_ == tk_value_box
+                || kind_ == tk_native
+                || kind_ == tk_abstract_interface
+                || kind_ == tk_except
+                || kind_ == tk_local_interface) {
             if (!id_.equals("") || !tc.id_.equals("")) {
-                if (id_.equals(tc.id_))
-                    return true;
-                else
-                    return false;
+                return id_.equals(tc.id_);
             }
 
             if (!name_.equals("") || !tc.name_.equals("")) {
@@ -543,11 +573,11 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             }
         }
 
-        if (kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_value
-                || kind_ == TCKind.tk_except) {
+        if (kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_value
+                || kind_ == tk_except) {
             if (memberNames_.length != tc.memberNames_.length)
                 return false;
 
@@ -560,10 +590,10 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             }
         }
 
-        if (kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_value
-                || kind_ == TCKind.tk_except) {
+        if (kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_value
+                || kind_ == tk_except) {
             if (memberTypes_.length != tc.memberTypes_.length)
                 return false;
 
@@ -572,7 +602,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                     return false;
         }
 
-        if (kind_ == TCKind.tk_union) {
+        if (kind_ == tk_union) {
             if (labels_.length != tc.labels_.length)
                 return false;
 
@@ -588,29 +618,29 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 return false;
         }
 
-        if (kind_ == TCKind.tk_string
-                || kind_ == TCKind.tk_wstring
-                || kind_ == TCKind.tk_sequence
-                || kind_ == TCKind.tk_array) {
+        if (kind_ == tk_string
+                || kind_ == tk_wstring
+                || kind_ == tk_sequence
+                || kind_ == tk_array) {
             if (length_ != tc.length_)
                 return false;
         }
 
-        if (kind_ == TCKind.tk_sequence
-                || kind_ == TCKind.tk_array
-                || kind_ == TCKind.tk_value_box
-                || kind_ == TCKind.tk_alias) {
+        if (kind_ == tk_sequence
+                || kind_ == tk_array
+                || kind_ == tk_value_box
+                || kind_ == tk_alias) {
             if (!contentType_.equal(tc.contentType_))
                 return false;
         }
 
-        if (kind_ == TCKind.tk_fixed) {
+        if (kind_ == tk_fixed) {
             if (fixedDigits_ != tc.fixedDigits_
                     || fixedScale_ != tc.fixedScale_)
                 return false;
         }
 
-        if (kind_ == TCKind.tk_value) {
+        if (kind_ == tk_value) {
             if (memberVisibility_.length != tc.memberVisibility_.length)
                 return false;
 
@@ -625,8 +655,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 if (!(concreteBaseType_ != null && tc.concreteBaseType_ != null))
                     return false;
 
-                if (!(concreteBaseType_.equal(tc.concreteBaseType_)))
-                    return false;
+                return concreteBaseType_.equal(tc.concreteBaseType_);
             }
         }
 
@@ -634,20 +663,20 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     public boolean equivalent(org.omg.CORBA.TypeCode t) {
-        Vector history = new Vector();
-        Vector otherHistory = new Vector();
+        Vector<org.omg.CORBA.TypeCode> history = new Vector<>();
+        Vector<org.omg.CORBA.TypeCode> otherHistory = new Vector<>();
 
         boolean result = equivalentRecHelper(t, history, otherHistory);
 
-        Assert.ensure(history.size() == 0);
-        Assert.ensure(otherHistory.size() == 0);
+        ensure(history.size() == 0);
+        ensure(otherHistory.size() == 0);
 
         return result;
     }
 
     public org.omg.CORBA.TypeCode get_compact_typecode() {
-        Vector history = new Vector();
-        Vector compacted = new Vector();
+        Vector<org.omg.CORBA.TypeCode> history = new Vector<>();
+        Vector<org.omg.CORBA.TypeCode> compacted = new Vector<>();
 
         return getCompactTypeCodeRec(history, compacted);
     }
@@ -656,10 +685,9 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.kind();
         }
 
@@ -670,23 +698,22 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.id();
         }
 
-        if (!(kind_ == TCKind.tk_objref
-                || kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_alias
-                || kind_ == TCKind.tk_value
-                || kind_ == TCKind.tk_value_box
-                || kind_ == TCKind.tk_native
-                || kind_ == TCKind.tk_abstract_interface
-                || kind_ == TCKind.tk_except || kind_ == org.omg.CORBA_2_4.TCKind.tk_local_interface))
+        if (!(kind_ == tk_objref
+                || kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_alias
+                || kind_ == tk_value
+                || kind_ == tk_value_box
+                || kind_ == tk_native
+                || kind_ == tk_abstract_interface
+                || kind_ == tk_except || kind_ == tk_local_interface))
             throw new BadKind();
 
         return id_;
@@ -696,23 +723,22 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.name();
         }
 
-        if (!(kind_ == TCKind.tk_objref
-                || kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_alias
-                || kind_ == TCKind.tk_value
-                || kind_ == TCKind.tk_value_box
-                || kind_ == TCKind.tk_native
-                || kind_ == TCKind.tk_abstract_interface
-                || kind_ == TCKind.tk_except || kind_ == org.omg.CORBA_2_4.TCKind.tk_local_interface))
+        if (!(kind_ == tk_objref
+                || kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_alias
+                || kind_ == tk_value
+                || kind_ == tk_value_box
+                || kind_ == tk_native
+                || kind_ == tk_abstract_interface
+                || kind_ == tk_except || kind_ == tk_local_interface))
             throw new BadKind();
 
         return name_;
@@ -722,17 +748,16 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.member_count();
         }
 
-        if (!(kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_value || kind_ == TCKind.tk_except))
+        if (!(kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_value || kind_ == tk_except))
             throw new BadKind();
 
         return memberNames_.length;
@@ -744,17 +769,16 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.member_name(index);
         }
 
-        if (!(kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_enum
-                || kind_ == TCKind.tk_value || kind_ == TCKind.tk_except))
+        if (!(kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_enum
+                || kind_ == tk_value || kind_ == tk_except))
             throw new BadKind();
 
         try {
@@ -770,16 +794,15 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.member_type(index);
         }
 
-        if (!(kind_ == TCKind.tk_struct
-                || kind_ == TCKind.tk_union
-                || kind_ == TCKind.tk_value || kind_ == TCKind.tk_except))
+        if (!(kind_ == tk_struct
+                || kind_ == tk_union
+                || kind_ == tk_value || kind_ == tk_except))
             throw new BadKind();
 
         try {
@@ -795,14 +818,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.member_label(index);
         }
 
-        if (!(kind_ == TCKind.tk_union))
+        if (!(kind_ == tk_union))
             throw new BadKind();
 
         try {
@@ -817,14 +839,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.discriminator_type();
         }
 
-        if (!(kind_ == TCKind.tk_union))
+        if (!(kind_ == tk_union))
             throw new BadKind();
 
         return discriminatorType_;
@@ -834,14 +855,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.default_index();
         }
 
-        if (!(kind_ == TCKind.tk_union))
+        if (!(kind_ == tk_union))
             throw new BadKind();
 
         for (int i = 0; i < labels_.length; i++) {
@@ -857,16 +877,15 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.length();
         }
 
-        if (!(kind_ == TCKind.tk_string
-                || kind_ == TCKind.tk_wstring
-                || kind_ == TCKind.tk_sequence || kind_ == TCKind.tk_array))
+        if (!(kind_ == tk_string
+                || kind_ == tk_wstring
+                || kind_ == tk_sequence || kind_ == tk_array))
             throw new BadKind();
 
         return length_;
@@ -876,16 +895,15 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.content_type();
         }
 
-        if (!(kind_ == TCKind.tk_sequence
-                || kind_ == TCKind.tk_array
-                || kind_ == TCKind.tk_value_box || kind_ == TCKind.tk_alias))
+        if (!(kind_ == tk_sequence
+                || kind_ == tk_array
+                || kind_ == tk_value_box || kind_ == tk_alias))
             throw new BadKind();
 
         return contentType_;
@@ -895,14 +913,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.fixed_digits();
         }
 
-        if (!(kind_ == TCKind.tk_fixed))
+        if (!(kind_ == tk_fixed))
             throw new BadKind();
 
         return fixedDigits_;
@@ -912,14 +929,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.fixed_scale();
         }
 
-        if (!(kind_ == TCKind.tk_fixed))
+        if (!(kind_ == tk_fixed))
             throw new BadKind();
 
         return fixedScale_;
@@ -931,14 +947,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.member_visibility(index);
         }
 
-        if (!(kind_ == TCKind.tk_value))
+        if (!(kind_ == tk_value))
             throw new BadKind();
 
         try {
@@ -952,14 +967,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.type_modifier();
         }
 
-        if (!(kind_ == TCKind.tk_value))
+        if (!(kind_ == tk_value))
             throw new BadKind();
 
         return typeModifier_;
@@ -970,14 +984,13 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         if (recId_ != null) {
             if (recType_ == null)
                 throw new BAD_TYPECODE(
-                        MinorCodes
-                                .describeBadTypecode(MinorCodes.MinorIncompleteTypeCode),
-                        MinorCodes.MinorIncompleteTypeCode,
-                        CompletionStatus.COMPLETED_NO);
+                        describeBadTypecode(MinorIncompleteTypeCode),
+                        MinorIncompleteTypeCode,
+                        COMPLETED_NO);
             return recType_.concrete_base_type();
         }
 
-        if (!(kind_ == TCKind.tk_value))
+        if (!(kind_ == tk_value))
             throw new BadKind();
 
         return concreteBaseType_;
@@ -996,12 +1009,12 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     public TypeCode _OB_getOrigType() {
-        return (TypeCode) _OB_getOrigType(this);
+        return _OB_getOrigType(this);
     }
 
     static public org.omg.CORBA.TypeCode _OB_getOrigType(org.omg.CORBA.TypeCode tc) {
         try {
-            while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
+            while (tc.kind() == tk_alias) tc = tc.content_type();
         } catch (BadKind ex) {
             throw Assert.fail(ex);
         }
@@ -1011,7 +1024,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
     static public TypeCode _OB_getOrigType(TypeCode tc) {
         try {
-            while (tc.kind() == TCKind.tk_alias) tc = tc.content_type();
+            while (tc.kind() == tk_alias) tc = tc.content_type();
         } catch (BadKind ex) {
             throw Assert.fail(ex);
         }
@@ -1020,19 +1033,16 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     public boolean _OB_isSystemException() {
-        if (kind_ != TCKind.tk_except)
-            return false;
-
+        if (kind_ != tk_except) return false;
         return Util.isSystemException(id_);
     }
 
     static private TypeCode _OB_convertForeignTypeCodeHelper(
-            org.omg.CORBA.TypeCode tc, Hashtable history,
-            Vector recHistory) {
-        if (tc instanceof TypeCode)
-            return (TypeCode) tc;
+            org.omg.CORBA.TypeCode tc, Hashtable<org.omg.CORBA.TypeCode, TypeCode> history,
+            Vector<org.omg.CORBA.TypeCode> recHistory) {
+        if (tc instanceof TypeCode) return (TypeCode) tc;
 
-        TypeCode result = null;
+        TypeCode result;
 
         try {
             TCKind kind = tc.kind();
@@ -1041,17 +1051,16 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             //
             // Check for recursion
             //
-            if (kindValue == TCKind._tk_struct
-                    || kindValue == TCKind._tk_except
-                    || kindValue == TCKind._tk_union
-                    || kindValue == TCKind._tk_value) {
+            if (kindValue == _tk_struct
+                    || kindValue == _tk_except
+                    || kindValue == _tk_union
+                    || kindValue == _tk_value) {
                 for (int i = 0; i < recHistory.size(); i++)
                     if (tc == recHistory.elementAt(i)) {
                         result = new TypeCode();
                         result.recId_ = tc.id();
-                        result.recType_ = (TypeCode) history.get(tc);
-                        Assert
-                                .ensure(result.recType_ != null);
+                        result.recType_ = history.get(tc);
+                        ensure(result.recType_ != null);
                         return result;
                     }
             }
@@ -1059,7 +1068,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             //
             // Avoid creating the TypeCode again
             //
-            result = (TypeCode) history.get(tc);
+            result = history.get(tc);
             if (result != null)
                 return result;
 
@@ -1067,44 +1076,44 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
             history.put(tc, result);
 
             switch (kindValue) {
-            case TCKind._tk_null:
-            case TCKind._tk_void:
-            case TCKind._tk_short:
-            case TCKind._tk_long:
-            case TCKind._tk_longlong:
-            case TCKind._tk_ushort:
-            case TCKind._tk_ulong:
-            case TCKind._tk_ulonglong:
-            case TCKind._tk_float:
-            case TCKind._tk_double:
-            case TCKind._tk_longdouble:
-            case TCKind._tk_boolean:
-            case TCKind._tk_char:
-            case TCKind._tk_wchar:
-            case TCKind._tk_octet:
-            case TCKind._tk_any:
-            case TCKind._tk_TypeCode:
-            case TCKind._tk_Principal:
+            case _tk_null:
+            case _tk_void:
+            case _tk_short:
+            case _tk_long:
+            case _tk_longlong:
+            case _tk_ushort:
+            case _tk_ulong:
+            case _tk_ulonglong:
+            case _tk_float:
+            case _tk_double:
+            case _tk_longdouble:
+            case _tk_boolean:
+            case _tk_char:
+            case _tk_wchar:
+            case _tk_octet:
+            case _tk_any:
+            case _tk_TypeCode:
+            case _tk_Principal:
                 result.kind_ = kind;
                 break;
 
-            case TCKind._tk_fixed:
+            case _tk_fixed:
                 result.kind_ = kind;
                 result.fixedDigits_ = tc.fixed_digits();
                 result.fixedScale_ = tc.fixed_scale();
                 break;
 
-            case TCKind._tk_objref:
-            case TCKind._tk_abstract_interface:
-            case TCKind._tk_native:
-            case org.omg.CORBA_2_4.TCKind._tk_local_interface:
+            case _tk_objref:
+            case _tk_abstract_interface:
+            case _tk_native:
+            case _tk_local_interface:
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
                 break;
 
-            case TCKind._tk_struct:
-            case TCKind._tk_except: {
+            case _tk_struct:
+            case _tk_except: {
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
@@ -1121,7 +1130,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 break;
             }
 
-            case TCKind._tk_union: {
+            case _tk_union: {
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
@@ -1146,7 +1155,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 break;
             }
 
-            case TCKind._tk_enum: {
+            case _tk_enum: {
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
@@ -1157,22 +1166,22 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                 break;
             }
 
-            case TCKind._tk_string:
-            case TCKind._tk_wstring:
+            case _tk_string:
+            case _tk_wstring:
                 result.kind_ = kind;
                 result.length_ = tc.length();
                 break;
 
-            case TCKind._tk_sequence:
-            case TCKind._tk_array:
+            case _tk_sequence:
+            case _tk_array:
                 result.kind_ = kind;
                 result.length_ = tc.length();
                 result.contentType_ = _OB_convertForeignTypeCodeHelper(tc
                         .content_type(), history, recHistory);
                 break;
 
-            case TCKind._tk_alias:
-            case TCKind._tk_value_box:
+            case _tk_alias:
+            case _tk_value_box:
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
@@ -1180,7 +1189,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
                         .content_type(), history, recHistory);
                 break;
 
-            case TCKind._tk_value:
+            case _tk_value:
                 result.kind_ = kind;
                 result.id_ = tc.id();
                 result.name_ = tc.name();
@@ -1213,10 +1222,10 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
     }
 
     static public TypeCode _OB_convertForeignTypeCode(org.omg.CORBA.TypeCode tc) {
-        Assert.ensure(!(tc instanceof TypeCode));
+        ensure(!(tc instanceof TypeCode));
 
-        Hashtable history = new Hashtable(7);
-        Vector recHistory = new Vector();
+        Hashtable<org.omg.CORBA.TypeCode, TypeCode> history = new Hashtable<>(7);
+        Vector<org.omg.CORBA.TypeCode> recHistory = new Vector<>();
 
         return _OB_convertForeignTypeCodeHelper(tc, history, recHistory);
     }
@@ -1229,70 +1238,57 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         //
         // Recursive placeholder TypeCodes are illegal as "outer" argument
         //
-        Assert.ensure(outer.recId_ == null);
+        ensure(outer.recId_ == null);
 
         //
         // Check for illegal recursion
         //
-        if (!(outer.kind_ == TCKind.tk_struct
-                || outer.kind_ == TCKind.tk_except
-                || outer.kind_ == TCKind.tk_union || outer.kind_ == TCKind.tk_value)) {
+        if (!(tk_struct == outer.kind_ || tk_except == outer.kind_ || tk_union == outer.kind_ || tk_value == outer.kind_)) {
             throw new BAD_TYPECODE("Illegal recursion");
         }
 
         _OB_embedRecTC(outer, outer);
     }
 
-    static public void _OB_embedRecTC(TypeCode outer, TypeCode inner) {
+    static public void _OB_embedRecTC(final TypeCode outer, final TypeCode inner) {
         //
         // Embed recursive placeholder TypeCodes
         //
-        if (inner.recId_ != null) {
+        if (null != inner.recId_) {
             if (inner.recId_.equals(outer.id_)) {
-                if (inner.recType_ != null) {
-                    // Recursive TC already embedded - ensure it's the right one
-                    Assert
-                            .ensure(inner.recType_ == outer);
-                } else {
+                if (null == inner.recType_) {
                     //
                     // Embed the recursive placeholder TypeCode
                     //
                     inner.recType_ = outer;
+                } else {
+                    // Recursive TC already embedded - ensure it's the right one
+                    ensure(inner.recType_ == outer);
                 }
             }
         } else {
             //
             // Embed content type
             //
-            if (inner.kind_ == TCKind.tk_sequence
-                    || inner.kind_ == TCKind.tk_value_box
-                    || inner.kind_ == TCKind.tk_array
-                    || inner.kind_ == TCKind.tk_alias) {
-                Assert
-                        .ensure(inner.contentType_ != outer);
+            switch (inner.kind().value()) {
+            case _tk_sequence:
+            case _tk_value_box:
+            case _tk_array:
+            case _tk_alias:
+                ensure(outer != inner.contentType_);
                 _OB_embedRecTC(outer, inner.contentType_);
-            }
-
-            //
-            // Embed member types
-            //
-            if (inner.kind_ == TCKind.tk_struct
-                    || inner.kind_ == TCKind.tk_union
-                    || inner.kind_ == TCKind.tk_value
-                    || inner.kind_ == TCKind.tk_except) {
-                for (int i = 0; i < inner.memberTypes_.length; i++) {
-                    Assert
-                            .ensure(inner.memberTypes_[i] != outer);
-                    _OB_embedRecTC(outer, inner.memberTypes_[i]);
+                break;
+            case _tk_struct:
+            case _tk_union:
+            case _tk_value:
+            case _tk_except:
+                for (TypeCode tc: inner.memberTypes_) {
+                    ensure(outer != tc);
+                    _OB_embedRecTC(outer, tc);
                 }
+                if (inner.kind() == tk_value && null != inner.concreteBaseType_) _OB_embedRecTC(outer, inner.concreteBaseType_);
+                break;
             }
-
-            //
-            // Embed base valuetype
-            //
-            if (inner.kind_ == TCKind.tk_value
-                    && inner.concreteBaseType_ != null)
-                _OB_embedRecTC(outer, inner.concreteBaseType_);
         }
     }
 }

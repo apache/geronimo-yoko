@@ -27,40 +27,36 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.util.Assert;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.LocalObject;
+import org.omg.CORBA.ORB;
+import org.omg.PortableInterceptor.Current;
+import org.omg.PortableInterceptor.InvalidSlot;
 
 import java.util.logging.Logger;
 
-final public class Current_impl extends org.omg.CORBA.LocalObject implements
-        org.omg.PortableInterceptor.Current {
-    // the real logger backing instance.  We use the interface class as the locator
-    static final Logger logger = Logger.getLogger(Current_impl.class.getName());
-    
-    private class SlotData {
-        org.omg.CORBA.Any[] slots;
+import static java.util.logging.Logger.getLogger;
 
+final public class Current_impl extends LocalObject implements Current {
+    // the real logger backing instance.  We use the interface class as the locator
+    static final Logger logger = getLogger(Current_impl.class.getName());
+    
+    private static class SlotData {
+        Any[] slots;
         SlotData next;
 
-        SlotData(org.omg.CORBA.Any[] s) {
+        SlotData(Any[] s) {
             slots = s;
-        }
-
-        SlotData() {
-            slots = new org.omg.CORBA.Any[0];
         }
     }
 
-    private class SlotDataHolder {
+    private static class SlotDataHolder {
         SlotData head;
     }
 
-    //
-    // The WeakHashMap is not thread-safe so we need to utilize one of
-    // these thread-safe wrappers
-    // 
-    private java.util.Map stateKey_ = java.util.Collections
-            .synchronizedMap(new java.util.WeakHashMap());
+    private final ThreadLocal<SlotDataHolder> stateKey = new ThreadLocal<>();
 
-    private org.omg.CORBA.ORB orb_; // Java only
+    private final ORB orb_; // Java only
 
     private int maxSlots_;
 
@@ -68,71 +64,43 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
     // Private member implementations
     // ------------------------------------------------------------------
 
-    private SlotDataHolder establishTSD(boolean partial) {
-        Thread t = Thread.currentThread();
-        SlotDataHolder holder_ = (SlotDataHolder) stateKey_.get(t);
+    private SlotDataHolder establishTSD() {
+        SlotDataHolder holder = stateKey.get();
 
-        //
-        // If the data isn't already allocated then allocate a new
-        // SlotDataHolder and a new set of slots
-        //
-        if (holder_ == null) {
-            holder_ = new SlotDataHolder();
-            stateKey_.put(t, holder_);
+        if (null == holder) {
+            holder = new SlotDataHolder();
+            stateKey.set(holder);
 
-            org.omg.CORBA.Any[] slots = null;
-
-            //
-            // This is an optimization. If this is a partial allocation
-            // then it's not necessary to allocate data for the actual
-            // slots.
-            //
-            if (!partial) {
-                slots = new org.omg.CORBA.Any[maxSlots_];
-            }
-
-            holder_.head = new SlotData(slots);
-            holder_.head.next = null;
+            Any[] slots = new Any[maxSlots_];
+            holder.head = new SlotData(slots);
+            holder.head.next = null;
         }
 
-        return holder_;
+        return holder;
     }
 
     // ------------------------------------------------------------------
     // Public member implementations
     // ------------------------------------------------------------------
 
-    public org.omg.CORBA.Any get_slot(int id)
-            throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
-        }
+    public Any get_slot(int id) throws InvalidSlot {
+        if (id >= maxSlots_ || id < 0) throw new InvalidSlot("No slot for id " + id);
 
         logger.fine("getting slot " + id); 
         
-        SlotDataHolder holder = establishTSD(false);
+        SlotDataHolder holder = establishTSD();
 
-        org.omg.CORBA.Any result;
-        org.omg.CORBA.Any slot = holder.head.slots[id];
-        if (slot == null) {
-            result = orb_.create_any();
-        }
-        else {
-            result = new org.apache.yoko.orb.CORBA.Any(slot);
-        }
-
-        return result;
+        Any slot = holder.head.slots[id];
+        if (slot == null) return orb_.create_any();
+        return new org.apache.yoko.orb.CORBA.Any(slot);
     }
 
-    public void set_slot(int id, org.omg.CORBA.Any any)
-            throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
-        }
-        
+    public void set_slot(int id, Any any) throws InvalidSlot {
+        if (id >= maxSlots_ || id < 0) throw new InvalidSlot("No slot for id " + id);
+
         logger.fine("setting slot " + id); 
 
-        SlotDataHolder holder = establishTSD(false);
+        SlotDataHolder holder = establishTSD();
 
         holder.head.slots[id] = new org.apache.yoko.orb.CORBA.Any(any);
     }
@@ -142,16 +110,14 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
     // Application programs must not use these functions directly
     // ------------------------------------------------------------------
 
-    public Current_impl(org.omg.CORBA.ORB orb) {
-        orb_ = orb;
-    }
+    public Current_impl(ORB orb) { orb_ = orb; }
 
-    org.omg.CORBA.Any[] _OB_currentSlotData() {
-        SlotDataHolder holder = establishTSD(false);
+    Any[] _OB_currentSlotData() {
+        SlotDataHolder holder = establishTSD();
 
-        org.omg.CORBA.Any[] data = new org.omg.CORBA.Any[holder.head.slots.length];
+        Any[] data = new Any[holder.head.slots.length];
         for (int i = 0; i < holder.head.slots.length; i++) {
-            org.omg.CORBA.Any slot = holder.head.slots[i];
+            Any slot = holder.head.slots[i];
             if (slot != null) {
                 data[i] = new org.apache.yoko.orb.CORBA.Any(slot);
             }
@@ -167,9 +133,9 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
     // On the server side the set of slots are shared between the
     // interceptor and the server side PICurrent
     //
-    void _OB_pushSlotData(org.omg.CORBA.Any[] slots) {
+    void _OB_pushSlotData(Any[] slots) {
         logger.fine("pushing slot data"); 
-        SlotDataHolder holder = establishTSD(false);
+        SlotDataHolder holder = establishTSD();
 
         SlotData newSlots = new SlotData(slots);
         newSlots.next = holder.head;
@@ -178,14 +144,14 @@ final public class Current_impl extends org.omg.CORBA.LocalObject implements
 
     void _OB_popSlotData() {
         logger.fine("popping slot data"); 
-        SlotDataHolder holder = establishTSD(false);
+        SlotDataHolder holder = establishTSD();
 
         holder.head = holder.head.next;
         Assert.ensure(holder.head != null);
     }
 
-    org.omg.CORBA.Any[] _OB_newSlotTable() {
-        return new org.omg.CORBA.Any[maxSlots_];
+    Any[] _OB_newSlotTable() {
+        return new Any[maxSlots_];
     }
 
     public void _OB_setMaxSlots(int max) {

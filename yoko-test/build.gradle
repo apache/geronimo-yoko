@@ -7,7 +7,7 @@ apply plugin: "biz.aQute.bnd.builder"
 dependencies {
   compile 'org.osgi:osgi.enroute.junit.wrapper:4.12.0'
   compile 'org.osgi:osgi.enroute.hamcrest.wrapper:1.3.0'
-  runtime 'org.apache.felix:org.apache.felix.framework:6.0.1'
+  runtime 'org.apache.felix:org.apache.felix.framework:7.0.3'
   // runtime 'org.eclipse.platform:org.eclipse.osgi:3.13.0'
   // the bundles we will need should all be transitive dependencies of yoko-core
   compile project(':yoko-core')

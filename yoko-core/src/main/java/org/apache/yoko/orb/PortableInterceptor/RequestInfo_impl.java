@@ -18,9 +18,9 @@
 package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.Downcall;
 import org.apache.yoko.orb.OB.ORBInstance;
+import org.apache.yoko.util.Assert;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
 import org.omg.CORBA.BAD_PARAM;
@@ -38,7 +38,6 @@ import org.omg.PortableInterceptor.RequestInfo;
 
 import java.util.logging.Logger;
 
-import static org.apache.yoko.util.Assert.ensure;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidServiceContextId;
 import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
@@ -274,16 +273,13 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public Any get_slot(int id)
-            throws InvalidSlot {
-        if (id >= requestSlotData.length) {
-            throw new InvalidSlot();
-        }
-        
+    public Any get_slot(int id) throws InvalidSlot {
+        if (id >= requestSlotData.length || id < 0) throw new InvalidSlot("No slot for id " + id);
+
         logger.fine("getting slot " + id + " for operation " + operationName);
 
         Any result = orb.create_any();
-        if (requestSlotData[id] != null) {
+        if (null != requestSlotData[id]) {
             result.read_value(requestSlotData[id].create_input_stream(), requestSlotData[id].type());
         }
         return result;

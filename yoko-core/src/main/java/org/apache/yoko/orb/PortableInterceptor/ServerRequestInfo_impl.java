@@ -19,12 +19,12 @@ package org.apache.yoko.orb.PortableInterceptor;
 
 import org.apache.yoko.orb.CORBA.Delegate;
 import org.apache.yoko.orb.IOP.ServiceContexts;
-import org.apache.yoko.util.Assert;
 import org.apache.yoko.orb.OB.LocationForward;
 import org.apache.yoko.orb.OB.ORBInstance;
 import org.apache.yoko.orb.OB.ParameterDesc;
 import org.apache.yoko.orb.OB.Util;
 import org.apache.yoko.orb.OCI.TransportInfo;
+import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal;
 import org.apache.yoko.util.cmsf.CmsfThreadLocal.CmsfOverride;
 import org.apache.yoko.util.yasf.YasfThreadLocal;
@@ -55,15 +55,14 @@ import org.omg.PortableServer.Servant;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.apache.yoko.util.Assert.ensure;
+import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
+import static org.apache.yoko.util.CollectionExtras.removeInReverse;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
 import static org.apache.yoko.util.MinorCodes.MinorNoPolicyFactory;
 import static org.apache.yoko.util.MinorCodes.MinorUnknownUserException;
 import static org.apache.yoko.util.MinorCodes.describeBadInvOrder;
 import static org.apache.yoko.util.MinorCodes.describeInvPolicy;
 import static org.apache.yoko.util.MinorCodes.describeUnknown;
-import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
-import static org.apache.yoko.util.CollectionExtras.removeInReverse;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_YES;
 
@@ -207,9 +206,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     public void set_slot(int id, Any data) throws InvalidSlot {
-        if (id >= requestSlotData.length) {
-            throw new InvalidSlot();
-        }
+        if (id >= requestSlotData.length || id < 0) throw new InvalidSlot("No slot for id " + id);
         logger.fine("setting slot " + id + " for operation " + operationName);
         requestSlotData[id] = new org.apache.yoko.orb.CORBA.Any(data);
     }
@@ -278,8 +275,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         argStrategy.setArgsAvail(false);
         argStrategy.setExceptAvail(false);
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             for (ServerRequestInterceptor i: interceptors) {
                 i.receive_request_service_contexts(this);
                 this.interceptors.add(i);
@@ -298,8 +295,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         argStrategy.setExceptAvail(true);
         replyStatus = NO_REPLY;
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             for (ServerRequestInterceptor sri: interceptors)
                 sri.receive_request(this);
         } catch (ForwardRequest ex) {
@@ -315,8 +312,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         // The servant is no longer available
         servant = null;
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
                 i.send_reply(this);
             }
@@ -331,8 +328,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         // The servant is no longer available
         servant = null;
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             Assert.ensure(replyStatus == SYSTEM_EXCEPTION.value || replyStatus == USER_EXCEPTION.value);
 
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
@@ -353,8 +350,8 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
         // The servant is no longer available
         servant = null;
 
-        try (CmsfOverride cmsfo = CmsfThreadLocal.override();
-             YasfOverride yasfo = YasfThreadLocal.override()) {
+        try (CmsfOverride ignored = CmsfThreadLocal.override();
+             YasfOverride ignored1 = YasfThreadLocal.override()) {
             Assert.ensure(replyStatus == LOCATION_FORWARD.value || replyStatus == TRANSPORT_RETRY.value);
 
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
