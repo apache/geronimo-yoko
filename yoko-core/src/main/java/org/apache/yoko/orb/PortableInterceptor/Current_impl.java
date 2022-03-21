@@ -83,11 +83,8 @@ final public class Current_impl extends LocalObject implements Current {
     // Public member implementations
     // ------------------------------------------------------------------
 
-    public org.omg.CORBA.Any get_slot(int id)
-            throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
-        }
+    public Any get_slot(int id) throws InvalidSlot {
+        if (id >= maxSlots_ || id < 0) throw new InvalidSlot("No slot for id " + id);
 
         logger.fine("getting slot " + id); 
         
@@ -98,12 +95,9 @@ final public class Current_impl extends LocalObject implements Current {
         return new org.apache.yoko.orb.CORBA.Any(slot);
     }
 
-    public void set_slot(int id, org.omg.CORBA.Any any)
-            throws org.omg.PortableInterceptor.InvalidSlot {
-        if (id >= maxSlots_) {
-            throw new org.omg.PortableInterceptor.InvalidSlot();
-        }
-        
+    public void set_slot(int id, Any any) throws InvalidSlot {
+        if (id >= maxSlots_ || id < 0) throw new InvalidSlot("No slot for id " + id);
+
         logger.fine("setting slot " + id); 
 
         SlotDataHolder holder = establishTSD();

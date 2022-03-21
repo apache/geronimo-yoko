@@ -206,9 +206,7 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     public void set_slot(int id, Any data) throws InvalidSlot {
-        if (id >= requestSlotData.length) {
-            throw new InvalidSlot();
-        }
+        if (id >= requestSlotData.length || id < 0) throw new InvalidSlot("No slot for id " + id);
         logger.fine("setting slot " + id + " for operation " + operationName);
         requestSlotData[id] = new org.apache.yoko.orb.CORBA.Any(data);
     }

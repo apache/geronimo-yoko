@@ -273,12 +273,9 @@ public class RequestInfo_impl extends LocalObject implements RequestInfo {
     // receive_request_service_contexts: yes receive_request: yes
     // send_reply: yes send_exception: yes send_other: yes
     //
-    public Any get_slot(int id)
-            throws InvalidSlot {
-        if (id >= requestSlotData.length) {
-            throw new InvalidSlot();
-        }
-        
+    public Any get_slot(int id) throws InvalidSlot {
+        if (id >= requestSlotData.length || id < 0) throw new InvalidSlot("No slot for id " + id);
+
         logger.fine("getting slot " + id + " for operation " + operationName);
 
         Any result = orb.create_any();
