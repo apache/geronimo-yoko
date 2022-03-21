@@ -28,7 +28,10 @@ import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.portable.Streamable;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.logging.Logger;
 
@@ -116,6 +119,26 @@ final public class Any extends org.omg.CORBA.Any {
     private TypeCode yokoTypeCode;
     private TypeCode origTypeCode;
     private Object value;
+
+    @Override
+    public String toString() {
+        try (StringWriter sw = new StringWriter();
+             PrintWriter pw = new PrintWriter(sw)) {
+            pw.println("Any {");
+            pw.printf("\t%s = %s%n", "tc", typeCode);
+            pw.printf("\t%s = %s%n", "ytc", equalTypeCodes(yokoTypeCode, typeCode) ? "tc" : yokoTypeCode);
+            pw.printf("\t%s = %s%n", "otc", equalTypeCodes(origTypeCode, typeCode) ? "tc" : equalTypeCodes(origTypeCode, yokoTypeCode) ? "ytc" : origTypeCode);
+            pw.printf("\t%s = %s%n", "value", value);
+            pw.println("}");
+            return sw.toString();
+        } catch(IOException ignored) { return "Any { ???? }"; }
+    }
+
+    private boolean equalTypeCodes(org.omg.CORBA.TypeCode tc1, org.omg.CORBA.TypeCode tc2) {
+        try {
+            return (null != tc1) && tc1.equal(tc2);
+        } catch (Throwable t) { return false; }
+    }
 
     private void checkValue(TCKind kind) throws BAD_OPERATION {
         if (!requireNonNull(kind).equals(origTypeCode.kind()))
