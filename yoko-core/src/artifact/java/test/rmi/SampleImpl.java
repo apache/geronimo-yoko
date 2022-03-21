@@ -20,16 +20,8 @@ package test.rmi;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.HashMap;
 
-import javax.rmi.PortableRemoteObject;
-
-public class SampleImpl extends PortableRemoteObject implements
-		Sample {
-	public SampleImpl() throws RemoteException {
-		super();
-	}
-	
+public class SampleImpl  implements Sample {
 	boolean bool = false;
 	byte b = 0;
 	short s = 0;
