@@ -16,6 +16,9 @@
  */
 package org.apache.yoko.util;
 
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.rmi.RemoteException;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -47,6 +50,13 @@ public enum Exceptions {
     public static <EXC extends Throwable, ARG1, ARG2, ARG3> EXC as(TriFunction<ARG1, ARG2, ARG3, EXC> constructor, Throwable cause, ARG1 arg1, ARG2 arg2, ARG3 arg3) {
         EXC exc = constructor.apply(arg1, arg2, arg3);
         return withCause(exc, cause);
+    }
+
+    public static String describeException(Throwable e) {
+        try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
+            e.printStackTrace(pw);
+            return sw.toString();
+        } catch (IOException ignored) { return ""; }
     }
 
     private static <EXC extends Throwable> EXC withCause(EXC exc, Throwable cause) {
