@@ -19,6 +19,7 @@ package org.apache.yoko.orb.OB;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INTERNAL;
 import org.omg.PortableInterceptor.ForwardRequest;
 import org.omg.PortableInterceptor.ServerRequestInfo;
@@ -50,14 +51,19 @@ public class TestInterceptorsThatThrow {
         receive_request_service_contexts(Target::receive_request_service_contexts),
         receive_request(Target::receive_request),
         send_reply(Target::send_reply),
-        send_exception(Target::send_exception),
-        send_other(Target::send_other)
+        send_exception(Target::send_exception, COMPLETED_NO),
+        send_other(Target::send_other, COMPLETED_NO)
         ;
 
         private interface Invoker<T> { void invoke(T t) throws RemoteException; }
         private final Invoker<Target> invoker;
         final int minor = 1000000000 + this.ordinal();
-        InterceptionPoint(Invoker<Target> invoker) {this.invoker = invoker;}
+        final CompletionStatus expectedStatus;
+        InterceptionPoint(Invoker<Target> invoker, CompletionStatus expectedStatus) {
+            this.invoker = invoker;
+            this.expectedStatus = expectedStatus;
+        }
+        InterceptionPoint(Invoker<Target> invoker) { this(invoker, COMPLETED_MAYBE); }
     }
 
     @UseWithOrb("server orb")
@@ -84,6 +90,8 @@ public class TestInterceptorsThatThrow {
             if (current == configured) {
                 System.out.println("Deliberately throwing exception from interception point: " + current);
                 throw new INTERNAL(current.minor, COMPLETED_MAYBE);
+                // in send_exception(), this interceptor should copy the completion status,
+                // but the ORB corrects this for us anyway, so we'll test that mechanism
             }
             if (current == receive_request) {
                 switch (configured) {
@@ -137,7 +145,7 @@ public class TestInterceptorsThatThrow {
             }
         } catch (INTERNAL e) {
             assertThat(e.minor, equalTo(interceptionPoint.minor));
-            assertThat(e.completed, equalTo(COMPLETED_MAYBE));
+            assertThat(e.completed, equalTo(interceptionPoint.expectedStatus));
         }
     }
 }

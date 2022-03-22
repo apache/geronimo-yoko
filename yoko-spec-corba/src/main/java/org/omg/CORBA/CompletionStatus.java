@@ -65,4 +65,14 @@ public final class CompletionStatus implements org.omg.CORBA.portable.IDLEntity
     {
         return from_int(value());
     }
+
+    @Override
+    public String toString() {
+        switch (value_) {
+            case _COMPLETED_NO: return "COMPLETED_NO";
+            case _COMPLETED_MAYBE: return "COMPLETED_MAYBE";
+            case _COMPLETED_YES: return "COMPLETED_YES";
+            default: return "CompletionStatus{" + value_ + "}";
+        }
+    }
 }

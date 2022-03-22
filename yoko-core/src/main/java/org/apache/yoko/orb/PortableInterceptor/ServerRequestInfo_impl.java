@@ -31,10 +31,12 @@ import org.apache.yoko.util.yasf.YasfThreadLocal;
 import org.apache.yoko.util.yasf.YasfThreadLocal.YasfOverride;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.CompletionStatus;
 import org.omg.CORBA.INV_POLICY;
 import org.omg.CORBA.NVList;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.TypeCode;
 import org.omg.CORBA.UNKNOWN;
 import org.omg.CORBA.UnknownUserException;
@@ -55,6 +57,7 @@ import org.omg.PortableServer.Servant;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.apache.yoko.logging.VerboseLogging.REQ_OUT_LOG;
 import static org.apache.yoko.util.CollectionExtras.newSynchronizedList;
 import static org.apache.yoko.util.CollectionExtras.removeInReverse;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidPICall;
@@ -332,14 +335,29 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
              YasfOverride ignored1 = YasfThreadLocal.override()) {
             Assert.ensure(replyStatus == SYSTEM_EXCEPTION.value || replyStatus == USER_EXCEPTION.value);
 
-            for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
-                i.send_exception(this);
+            for (ServerRequestInterceptor i : removeInReverse(interceptors)) {
+                try {
+                    i.send_exception(this);
+                } catch (ForwardRequest fr) {
+                    Delegate p = (Delegate) (((ObjectImpl) fr.forward)._get_delegate());
+                    throw new LocationForward(p._OB_IOR(), false);
+                } catch (SystemException newE) {
+                    Exception oldE = this.receivedException;
+                    // for better trace
+                    if (null != oldE) newE.addSuppressed(oldE);
+                    // correct completion status
+                    CompletionStatus expected = oldE instanceof SystemException ? ((SystemException)oldE).completed : COMPLETED_YES;
+                    if (expected != newE.completed) {
+                        REQ_OUT_LOG.warning("Correcting completion status on new exception from interceptor " + i.getClass() + ": was " + newE.completed + " and is: " + expected);
+                        newE.completed = expected;
+                    }
+                    throw newE;
+                } catch (Throwable suppressed) {
+                    this.receivedException.addSuppressed(suppressed);
+                }
             }
-
-            popCurrent();
-        } catch (ForwardRequest ex) {
-            Delegate p = (Delegate) (((ObjectImpl) ex.forward)._get_delegate());
-            throw new LocationForward(p._OB_IOR(), false);
+        } finally {
+            if (interceptors.isEmpty()) popCurrent();
         }
     }
 
@@ -355,13 +373,25 @@ final public class ServerRequestInfo_impl extends RequestInfo_impl implements Se
             Assert.ensure(replyStatus == LOCATION_FORWARD.value || replyStatus == TRANSPORT_RETRY.value);
 
             for (ServerRequestInterceptor i: removeInReverse(interceptors)) {
-                i.send_other(this);
+                try {
+                    i.send_other(this);
+                } catch (ForwardRequest fr) {
+                    Delegate p = (Delegate) (((ObjectImpl) fr.forward)._get_delegate());
+                    throw new LocationForward(p._OB_IOR(), false);
+                } catch (SystemException newE) {
+                    // correct completion status
+                    if (COMPLETED_NO != newE.completed) {
+                        REQ_OUT_LOG.warning("Correcting completion status on new exception from interceptor " + i.getClass() + ": was " + newE.completed + " and is: " + COMPLETED_NO);
+                        newE.completed = COMPLETED_NO;
+                    }
+                    throw newE;
+                } catch (Throwable suppressed) {
+                    this.receivedException.addSuppressed(suppressed);
+                }
             }
 
-            popCurrent();
-        } catch (ForwardRequest ex) {
-            Delegate p = (Delegate) (((ObjectImpl) ex.forward)._get_delegate());
-            throw new LocationForward(p._OB_IOR(), false);
+        } finally {
+            if (interceptors.isEmpty()) popCurrent();
         }
     }
 
