@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.INVALID;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.REQUIRED;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.ROLLBACK;
+import static org.apache.yoko.util.Exceptions.describeException;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.notNullValue;
@@ -109,7 +110,7 @@ public class RemoteTransactionExceptionTest {
     }
 
     @BeforeAll
-    public static void initClient() throws Exception {
+    public static void initClient() {
         // populate the stubs enum map
         Stream.of(Loader.values())
                 .forEach(key -> stubs.computeIfAbsent(key, l -> {
@@ -163,7 +164,7 @@ public class RemoteTransactionExceptionTest {
             p.performRemotely(() -> exceptionType.throwRemoteException(server));
             fail();
         } catch (RemoteException e) {
-            assertThat(e.getClass().getName(), equalTo(exceptionType.remoteExceptionNames.get(client)));
+            assertThat(describeException(e), e.getClass().getName(), equalTo(exceptionType.remoteExceptionNames.get(client)));
             assertThat(e.getCause(), notNullValue());
             assertThat(e.getCause(), instanceOf(exceptionType.systemExceptionClass));
         }
