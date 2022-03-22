@@ -31,30 +31,16 @@ import static java.util.Collections.synchronizedList;
 public enum CollectionExtras {
     ;
 
-    public static final <T> Iterable<T> removeInReverse(final List<T> list) {
+    public static <T> Iterable<T> removeInReverse(final List<T> list) {
         final ListIterator<T> listIterator = list.listIterator(list.size());
-        return new Iterable<T>() {
-            @Override
-            public Iterator<T> iterator() {
-                return new Iterator<T>() {
-                    @Override
-                    public boolean hasNext() {
-                        return listIterator.hasPrevious();
-                    }
-
-                    @Override
-                    public T next() {
-                        final T result = listIterator.previous();
-                        listIterator.remove();
-                        return result;
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException("remove");
-                    }
-                };
+        return () -> new Iterator<T>() {
+            public boolean hasNext() { return listIterator.hasPrevious(); }
+            public T next() {
+                final T result = listIterator.previous();
+                listIterator.remove();
+                return result;
             }
+            public void remove() { throw new UnsupportedOperationException(); }
         };
     }
 
@@ -63,65 +49,43 @@ public enum CollectionExtras {
     }
 
     public static <T> Iterable<T> allOf(final Iterable<? extends T>... iterables) {
-        return new Iterable<T>() {
-            public Iterator<T> iterator() {
-                return new Iterator<T>() {
-                    final Iterator<Iterable<? extends T>> metaIterator = asList(iterables).iterator();
-                    Iterator<? extends T> iterator = emptyIterator();
-
-                    public boolean hasNext() {
-                        for (; ; ) {
-                            if (iterator.hasNext()) return true;
-                            if (!metaIterator.hasNext()) return false;
-                            iterator = metaIterator.next().iterator();
-                        }
-                    }
-
-                    public T next() {
-                        return iterator.next();
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException("remove");
-                    }
-                };
+        return () -> new Iterator<T>() {
+            final Iterator<Iterable<? extends T>> metaIterator = asList(iterables).iterator();
+            Iterator<? extends T> iterator = emptyIterator();
+            public boolean hasNext() {
+                for (;;) {
+                    if (iterator.hasNext()) return true;
+                    if (!metaIterator.hasNext()) return false;
+                    iterator = metaIterator.next().iterator();
+                }
             }
+            public T next() { return iterator.next(); }
+            public void remove() { throw new UnsupportedOperationException(); }
         };
     }
 
     public static <U, T extends U> Iterable<T> filterByType(final Iterable<U> iterable, final Class<T> type) {
-        return new Iterable<T>() {
-            public Iterator<T> iterator() {
-                return new Iterator<T>() {
-                    Iterator<U> iterator = iterable.iterator();
-                    T next = null;
-
-                    public boolean hasNext() {
-                        if (next != null) return true;
-                        while (iterator.hasNext()) {
-                            U elem = iterator.next();
-                            if (!type.isInstance(elem)) continue;
-                            next = type.cast(elem);
-                            return true;
-                        }
-                        return false;
-                    }
-
-                    public T next() {
-                        try {
-                            return next;
-                        } finally {
-                            next = null;
-                        }
-                    }
-
-                    @Override
-                    public void remove() {
-                        throw new UnsupportedOperationException("remove");
-                    }
-                };
+        return () -> new Iterator<T>() {
+            Iterator<U> iterator = iterable.iterator();
+            T next = null;
+            public boolean hasNext() {
+                if (null != next) return true;
+                while (iterator.hasNext()) {
+                    U elem = iterator.next();
+                    if (!type.isInstance(elem)) continue;
+                    next = type.cast(elem);
+                    return true;
+                }
+                return false;
             }
+            public T next() {
+                try {
+                    return next;
+                } finally {
+                    next = null;
+                }
+            }
+            public void remove() { throw new UnsupportedOperationException(); }
         };
     }
 
