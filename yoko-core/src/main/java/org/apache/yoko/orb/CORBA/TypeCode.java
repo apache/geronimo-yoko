@@ -21,15 +21,18 @@ import org.apache.yoko.util.Assert;
 import org.apache.yoko.util.MinorCodes;
 import org.omg.CORBA.BAD_PARAM;
 import org.omg.CORBA.BAD_TYPECODE;
+import org.omg.CORBA.PRIVATE_MEMBER;
 import org.omg.CORBA.TCKind;
 import org.omg.CORBA.TypeCodePackage.BadKind;
 import org.omg.CORBA.TypeCodePackage.Bounds;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Set;
 import java.util.Vector;
-import java.util.stream.Stream;
 
+import static java.lang.String.format;
 import static org.apache.yoko.util.Assert.ensure;
 import static org.apache.yoko.util.MinorCodes.MinorIncompleteTypeCode;
 import static org.apache.yoko.util.MinorCodes.describeBadTypecode;
@@ -127,43 +130,64 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
     @Override
     public String toString() {
-        return describe(new StringBuilder(), "").toString();
+        return describe(new StringBuilder(), "", new HashSet<>()).toString();
     }
 
-    private StringBuilder describe(StringBuilder sb, String prefix) {
+    private static final String[] tcKindDesc = {
+            "tk_null", "tk_void", "tk_short", "tk_long", "tk_ushort", "tk_ulong", "tk_float", "tk_double",
+            "tk_boolean", "tk_char", "tk_octet", "tk_any", "tk_TypeCode", "tk_Principal", "tk_objref",
+            "tk_struct", "tk_union", "tk_enum", "tk_string", "tk_sequence", "tk_array", "tk_alias",
+            "tk_except", "tk_longlong", "tk_ulonglong", "tk_longdouble", "tk_wchar", "tk_wstring",
+            "tk_fixed", "tk_value", "tk_value_box", "tk_native", "tk_abstract_interface", "tk_local_interface"
+    };
+
+    private static final String NL = System.lineSeparator();
+
+    private StringBuilder describe(StringBuilder sb, String prefix, Set<String> describedIds) {
         final String indent = prefix + "\t";
-        sb.append("TypeCode {\n");
-        if (null != kind_) sb.append(indent).append("kind: ").append(kind_).append("\n");
-        if (null != id_) sb.append(indent).append("id: ").append(id_).append("\n");
-        if (null != name_) sb.append(indent).append("name: ").append(name_).append("\n");
-        if (null != recId_) sb.append(indent).append("recursive id: ").append(recId_).append("\n");
-        if (0 != typeModifier_) sb.append(indent).append("type modifier: ").append(typeModifier_).append("\n");
-        if (0 != length_) sb.append(indent).append("length: ").append(length_).append("\n");
-        if (0 != fixedDigits_) sb.append(indent).append("fixed digits: ").append(fixedDigits_).append("\n");
-        if (0 != fixedScale_) sb.append(indent).append("fixed scale: ").append(fixedScale_).append("\n");
-        if (null != memberNames_) {
-            int visCount = null == memberVisibility_ ? 0 : memberVisibility_.length;
-            if (null == memberTypes_) {
-                sb.append(indent).append("members: ").append(Arrays.toString(memberNames_)).append("\n");
-            } else for (int i = 0; i < memberNames_.length; i++) {
-                TypeCode tc = i < memberTypes_.length ? memberTypes_[i] : null;
-                sb.append(indent).append(memberNames_[i]);
-                if (i < visCount) sb.append(" (visibility = ").append(memberVisibility_[i]).append(")");
-                appendTC(sb, ": ", tc, indent).append("\n");
-            }
-        }
-//        if (labels_ != null) sb.append(indent).append("labels: ").append(Arrays.toString(labels_)).append("\n");
-        if (null != recType_) appendTC(sb, "recursive typecode: ", recType_, indent).append("\n");
-        if (null != discriminatorType_) appendTC(sb, "discriminator type: ", discriminatorType_, indent).append("\n");
-        if (null != contentType_) appendTC(sb, "content type: ", contentType_, indent).append("\n");
-        if (null != concreteBaseType_) appendTC(sb, "concrete base type: ", concreteBaseType_, indent).append("\n");
+        sb.append("TypeCode {").append(NL);
+        if (null != kind_) sb.append(indent).append("kind: ").append(tcKindDesc[kind_.value()]).append(NL);
+        if (null != id_) sb.append(indent).append("id: ").append(id_).append(NL);
+        if (null != name_) sb.append(indent).append("name: ").append(name_).append(NL);
+        if (null != recId_) sb.append(indent).append("recursive id: ").append(recId_).append(NL);
+        if (0 != typeModifier_) sb.append(indent).append("type modifier: ").append(typeModifier_).append(NL);
+        if (0 != length_) sb.append(indent).append("length: ").append(length_).append(NL);
+        if (0 != fixedDigits_) sb.append(indent).append("fixed digits: ").append(fixedDigits_).append(NL);
+        if (0 != fixedScale_) sb.append(indent).append("fixed scale: ").append(fixedScale_).append(NL);
+        describe2(sb, indent, describedIds);
         return sb.append(prefix).append("}");
     }
 
-    private static StringBuilder appendTC(StringBuilder sb, String prefix, TypeCode tc, String indent) {
-        sb.append(prefix);
+    private void describe2(StringBuilder sb, String indent, Set<String> describedIds) {
+        if (null != id_) {
+            if (describedIds.contains(id_)) {
+                sb.append(indent).append("[already described]").append(NL);
+                return;
+            }
+            describedIds.add(id_);
+        }
+        if (null != memberNames_) {
+            int visCount = null == memberVisibility_ ? 0 : memberVisibility_.length;
+            if (null == memberTypes_) {
+                sb.append(indent).append("members: ").append(Arrays.toString(memberNames_)).append(NL);
+            } else for (int i = 0; i < memberNames_.length; i++) {
+                TypeCode tc = i < memberTypes_.length ? memberTypes_[i] : null;
+                String prefix = format("%s%s: ", memberNames_[i],
+                        (i < visCount) ? ((PRIVATE_MEMBER.value == memberVisibility_[i]) ? "[private]" : "[public]"): "");
+                appendTC(sb, prefix, tc, indent, describedIds).append(NL);
+            }
+        }
+//        if (labels_ != null) sb.append(indent).append("labels: ").append(Arrays.toString(labels_)).append(NL);
+        if (null != recType_) appendTC(sb, "recursive typecode: ", recType_, indent, describedIds).append(NL);
+        if (null != discriminatorType_) appendTC(sb, "discriminator type: ", discriminatorType_, indent, describedIds).append(NL);
+        if (null != contentType_) appendTC(sb, "content type: ", contentType_, indent, describedIds).append(NL);
+        if (null != concreteBaseType_) appendTC(sb, "concrete base type: ", concreteBaseType_, indent, describedIds).append(NL);
+    }
+
+    private static StringBuilder appendTC(StringBuilder sb, String prefix, TypeCode tc, String indent, Set<String> describedIds) {
+        sb.append(indent).append(prefix);
         if (tc == null) sb.append("typecode was null");
-        else tc.describe(sb, indent);
+        else tc.describe(sb, indent, describedIds);
         return sb;
     }
 
@@ -364,51 +388,24 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
 
         history.addElement(this);
 
-        //
-        // Create the new compacted type code (needed for recursive type
-        // codes).
-        //
+        // Create the new compacted type code (needed for recursive type codes).
         TypeCode result = new TypeCode();
         compacted.addElement(result);
 
-        String[] names = null;
-        if (null != memberNames_) {
-            Stream.generate(() -> "")
-                    .limit(memberNames_.length);
-            names = new String[memberNames_.length];
-            for (int i = 0; i < memberNames_.length; i++) names[i] = "";
-        }
+        String[] names = (null == memberNames_) ?
+                null : Arrays.stream(memberNames_).map(n -> "").toArray(String[]::new);
 
-        TypeCode[] types = null;
-        if (memberTypes_ != null) {
-            types = new TypeCode[memberTypes_.length];
-            for (int i = 0; i < memberTypes_.length; i++)
-                types[i] = memberTypes_[i].getCompactTypeCodeRec(history,
-                        compacted);
-        }
+        TypeCode[] types = (null == memberTypes_) ?
+                null : Arrays.stream(memberTypes_).map(t -> t.getCompactTypeCodeRec(history, compacted)).toArray(TypeCode[]::new);
 
-        //
-        // Compact content type
-        //
-        TypeCode content = null;
-        if (contentType_ != null)
-            content = contentType_.getCompactTypeCodeRec(history, compacted);
+        TypeCode content = (null == contentType_) ? null : contentType_.getCompactTypeCodeRec(history, compacted);
 
-        //
-        // Compact discriminator type
-        //
-        TypeCode discriminator = null;
-        if (discriminatorType_ != null)
-            discriminator = discriminatorType_.getCompactTypeCodeRec(history,
-                    compacted);
+        TypeCode discriminator = (null == discriminatorType_) ? null : discriminatorType_.getCompactTypeCodeRec(history, compacted);
 
         //
         // Compact concrete base type
         //
-        TypeCode concrete = null;
-        if (concreteBaseType_ != null)
-            concrete = concreteBaseType_.getCompactTypeCodeRec(history,
-                    compacted);
+        TypeCode concrete = (null == concreteBaseType_) ? null : concreteBaseType_.getCompactTypeCodeRec(history, compacted);
 
         switch (kind_.value()) {
         case _tk_null:
@@ -1032,6 +1029,7 @@ final public class TypeCode extends org.omg.CORBA.TypeCode {
         return tc;
     }
 
+    @SuppressWarnings("unused")
     public boolean _OB_isSystemException() {
         if (kind_ != tk_except) return false;
         return Util.isSystemException(id_);
