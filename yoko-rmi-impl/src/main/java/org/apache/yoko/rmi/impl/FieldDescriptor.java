@@ -18,15 +18,15 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.ValueMember;
+
 import java.io.IOException;
 import java.io.ObjectStreamField;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Map;
-import java.util.logging.Logger;
 import java.util.logging.Level;
-
-import org.omg.CORBA.ValueMember;
+import java.util.logging.Logger;
 
 abstract class FieldDescriptor extends ModelElement implements Comparable {
     static Logger logger = Logger.getLogger(FieldDescriptor.class.getName());
@@ -126,14 +126,14 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
         return get(f.getDeclaringClass(), f.getType(), f.getName(), f, repository);
     }
 
-    static FieldDescriptor get(Class declaringClass, ObjectStreamField field, TypeRepository repository) {
+    static FieldDescriptor getForSerialPersistentField(Class declaringClass, ObjectStreamField field, TypeRepository repository) {
         Field f = null;
         try {
             f = declaringClass.getDeclaredField(field.getName());
-        } catch (Exception ex) {
-            logger.log(Level.FINER, "Cannot get java field \"" + field.getName()
-                    + "\" for class \"" + declaringClass.getName() + "\""
-                    + "\n" + ex, ex);
+        } catch (NoSuchFieldException e) {
+            logger.log(Level.FINER, "Cannot find java field \"" + field.getName()
+                    + "\" in class \"" + declaringClass.getName() + "\""
+                    + " - perhaps it is handled in readObject()/writeObject()");
         }
         return get(declaringClass, field.getType(), field.getName(), f, repository);
     }
@@ -294,7 +294,7 @@ class RemoteFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         java.rmi.Remote value = (java.rmi.Remote) reader
@@ -303,7 +303,7 @@ class RemoteFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         java.rmi.Remote value = (java.rmi.Remote) map.get(java_name);
@@ -375,7 +375,7 @@ class AnyFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         org.omg.CORBA.Any value = (org.omg.CORBA.Any) reader.readAny();
@@ -383,7 +383,7 @@ class AnyFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         org.omg.CORBA.Any value = (org.omg.CORBA.Any) map.get(java_name);
@@ -436,7 +436,7 @@ class ValueFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         java.io.Serializable value = (java.io.Serializable) reader
@@ -445,7 +445,7 @@ class ValueFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         java.io.Serializable value = (java.io.Serializable) map
@@ -489,7 +489,7 @@ class StringFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         String value = (String) reader.readValueObject();
@@ -497,7 +497,7 @@ class StringFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         String value = (String) map.get(java_name);
@@ -551,7 +551,7 @@ class ObjectFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Object value = (Object) reader.readAbstractObject();
@@ -559,7 +559,7 @@ class ObjectFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Object value = (Object) map.get(java_name);
@@ -619,14 +619,14 @@ class BooleanFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Boolean.valueOf(reader.readBoolean()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Boolean value = (Boolean) map.get(java_name);
@@ -690,14 +690,14 @@ class ByteFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Byte.valueOf(reader.readByte()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Byte value = (Byte) map.get(java_name);
@@ -761,14 +761,14 @@ class ShortFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Short.valueOf(reader.readShort()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Short value = (Short) map.get(java_name);
@@ -836,14 +836,14 @@ class CharFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Character.valueOf(reader.readChar()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Character value = (Character) map.get(java_name);
@@ -908,14 +908,14 @@ class IntFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Integer.valueOf(reader.readInt()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Integer value = (Integer) map.get(java_name);
@@ -980,14 +980,14 @@ class LongFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         map.put(java_name, Long.valueOf(reader.readLong()));
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Long value = (Long) map.get(java_name);
@@ -1051,7 +1051,7 @@ class FloatFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Float value = Float.valueOf(reader.readFloat());
@@ -1059,7 +1059,7 @@ class FloatFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Float value = (Float) map.get(java_name);
@@ -1123,7 +1123,7 @@ class DoubleFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#readField(ObjectReader, Map)
+     * @see FieldDescriptor#readFieldIntoMap(ObjectReader, Map)
      */
     void readFieldIntoMap(ObjectReader reader, Map map) throws IOException {
         Double value = Double.valueOf(reader.readDouble());
@@ -1131,7 +1131,7 @@ class DoubleFieldDescriptor extends FieldDescriptor {
     }
 
     /**
-     * @see org.apache.yoko.rmi.impl.FieldDescriptor#writeField(ObjectWriter, Map)
+     * @see FieldDescriptor#writeFieldFromMap(ObjectWriter, Map)
      */
     void writeFieldFromMap(ObjectWriter writer, Map map) throws IOException {
         Double value = (Double) map.get(java_name);
