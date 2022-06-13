@@ -20,26 +20,20 @@ package org.omg.CORBA;
 //
 // IDL:omg.org/CORBA/ValueMember:1.0
 //
+
+import org.omg.CORBA.portable.IDLEntity;
+
 /***/
 
-final public class ValueMember implements org.omg.CORBA.portable.IDLEntity
+final public class ValueMember implements IDLEntity
 {
+    @SuppressWarnings("unused")
     private static final String _ob_id = "IDL:omg.org/CORBA/ValueMember:1.0";
+    private static final String NL = System.lineSeparator();
 
-    public
-    ValueMember()
-    {
-    }
+    public ValueMember() {}
 
-    public
-    ValueMember(String name,
-                String id,
-                String defined_in,
-                String version,
-                org.omg.CORBA.TypeCode type,
-                IDLType type_def,
-                short access)
-    {
+    public ValueMember(String name, String id, String defined_in, String version, TypeCode type, IDLType type_def, short access) {
         this.name = name;
         this.id = id;
         this.defined_in = defined_in;
@@ -53,7 +47,22 @@ final public class ValueMember implements org.omg.CORBA.portable.IDLEntity
     public String id;
     public String defined_in;
     public String version;
-    public org.omg.CORBA.TypeCode type;
+    public TypeCode type;
     public IDLType type_def;
     public short access;
+
+    @Override
+    public String toString() {
+        return new StringBuilder()
+                .append("ValueMember {").append(NL)
+                .append("\tname = ").append(name).append(NL)
+                .append("\tid = ").append(id).append(NL)
+                .append("\tdefined_in = ").append(defined_in).append(NL)
+                .append("\tversion = ").append(version).append(NL)
+                .append("\ttype = ").append(type.toString().replace(NL, NL + "\t")).append(NL)
+                .append("\ttype_def = ").append(type_def).append(NL)
+                .append("\taccess = ").append(String.format("%02x", access)).append(NL)
+                .append("}")
+                .toString();
+    }
 }
