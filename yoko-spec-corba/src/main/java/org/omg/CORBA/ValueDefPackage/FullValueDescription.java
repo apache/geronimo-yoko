@@ -20,34 +20,30 @@ package org.omg.CORBA.ValueDefPackage;
 //
 // IDL:omg.org/CORBA/ValueDef/FullValueDescription:1.0
 //
+
+import org.omg.CORBA.AttributeDescription;
+import org.omg.CORBA.Initializer;
+import org.omg.CORBA.OperationDescription;
+import org.omg.CORBA.TypeCode;
+import org.omg.CORBA.ValueMember;
+import org.omg.CORBA.portable.IDLEntity;
+
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 /***/
 
-final public class FullValueDescription implements org.omg.CORBA.portable.IDLEntity
-{
+final public class FullValueDescription implements IDLEntity {
+    @SuppressWarnings("unused")
     private static final String _ob_id = "IDL:omg.org/CORBA/ValueDef/FullValueDescription:1.0";
+    private static final String NL = System.lineSeparator();
 
-    public
-    FullValueDescription()
-    {
-    }
+    public FullValueDescription() {}
 
-    public
-    FullValueDescription(String name,
-                         String id,
-                         boolean is_abstract,
-                         boolean is_custom,
-                         String defined_in,
-                         String version,
-                         org.omg.CORBA.OperationDescription[] operations,
-                         org.omg.CORBA.AttributeDescription[] attributes,
-                         org.omg.CORBA.ValueMember[] members,
-                         org.omg.CORBA.Initializer[] initializers,
-                         String[] supported_interfaces,
-                         String[] abstract_base_values,
-                         boolean is_truncatable,
-                         String base_value,
-                         org.omg.CORBA.TypeCode type)
-    {
+    public FullValueDescription(String name, String id, boolean is_abstract, boolean is_custom, String defined_in,
+                                String version, OperationDescription[] operations, AttributeDescription[] attributes,
+                                ValueMember[] members, Initializer[] initializers, String[] supported_interfaces,
+                                String[] abstract_base_values, boolean is_truncatable, String base_value, TypeCode type) {
         this.name = name;
         this.id = id;
         this.is_abstract = is_abstract;
@@ -71,13 +67,37 @@ final public class FullValueDescription implements org.omg.CORBA.portable.IDLEnt
     public boolean is_custom;
     public String defined_in;
     public String version;
-    public org.omg.CORBA.OperationDescription[] operations;
-    public org.omg.CORBA.AttributeDescription[] attributes;
-    public org.omg.CORBA.ValueMember[] members;
-    public org.omg.CORBA.Initializer[] initializers;
+    public OperationDescription[] operations;
+    public AttributeDescription[] attributes;
+    public ValueMember[] members;
+    public Initializer[] initializers;
     public String[] supported_interfaces;
     public String[] abstract_base_values;
     public boolean is_truncatable;
     public String base_value;
-    public org.omg.CORBA.TypeCode type;
+    public TypeCode type;
+
+    @SuppressWarnings("StringBufferReplaceableByString")
+    @Override
+    public String toString() {
+        return new StringBuilder()
+                .append("FullValueDescription {").append(NL)
+                .append("\tid = ").append(id).append(NL)
+                .append("\tname = ").append(name).append(NL)
+                .append("\tis_abstract = ").append(is_abstract).append(NL)
+                .append("\tis_custom = ").append(is_custom).append(NL)
+                .append("\tdefined_in = ").append(defined_in).append(NL)
+                .append("\tversion = ").append(version).append(NL)
+                .append("\toperations = ").append(Arrays.deepToString(operations)).append(NL)
+                .append("\tattributes = ").append(Arrays.deepToString(attributes)).append(NL)
+                .append("\tmembers = ").append(Arrays.stream(members).map(ValueMember::toString).collect(Collectors.joining("," + NL, "[ ", " ]"))).append(NL)
+                .append("\tinitializers = ").append(Arrays.deepToString(initializers)).append(NL)
+                .append("\tsupported_interfaces = ").append(Arrays.deepToString(supported_interfaces)).append(NL)
+                .append("\tabstract_base_values = ").append(Arrays.deepToString(abstract_base_values)).append(NL)
+                .append("\tis_truncatable = ").append(is_truncatable).append(NL)
+                .append("\tbase_value = ").append(base_value).append(NL)
+                .append("\ttype = ").append(type.toString().replace(NL, NL + "\t")).append(NL)
+                .append("}")
+                .toString();
+    }
 }
