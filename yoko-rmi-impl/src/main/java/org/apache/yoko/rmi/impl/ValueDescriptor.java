@@ -184,9 +184,6 @@ class ValueDescriptor extends TypeDescriptor {
             public Object run() {
 
                 for (Class<?> curr = type; curr != null; curr = curr.getSuperclass()) {
-                    //
-                    // get writeReplace, if any
-                    //
                     try {
                         _write_replace_method = curr.getDeclaredMethod("writeReplace");
                         _write_replace_method.setAccessible(true);
@@ -196,9 +193,6 @@ class ValueDescriptor extends TypeDescriptor {
                     }
                 }
 
-                //
-                // Get readResolve, if present
-                //
                 try {
                     _read_resolve_method = type.getDeclaredMethod("readResolve");
                     _read_resolve_method.setAccessible(true);
@@ -206,27 +200,18 @@ class ValueDescriptor extends TypeDescriptor {
                 } catch (NoSuchMethodException ignored) {
                 }
 
-                // 
-                // get readObject
-                //
                 try {
                     _read_object_method = type.getDeclaredMethod("readObject", ObjectInputStream.class);
                     _read_object_method.setAccessible(true);
                 } catch (NoSuchMethodException ignored) {
                 }
 
-                // 
-                // get readObject
-                //
                 try {
                     _write_object_method = type.getDeclaredMethod("writeObject", ObjectOutputStream.class);
                     _write_object_method.setAccessible(true);
                 } catch (NoSuchMethodException ignored) {
                 }
 
-                // 
-                // validate readObject
-                //
                 if ((_write_object_method == null) || !Modifier.isPrivate(_write_object_method.getModifiers())
                         || Modifier.isStatic(_write_object_method.getModifiers()) || (_write_object_method.getDeclaringClass() != type)) {
 
@@ -234,18 +219,12 @@ class ValueDescriptor extends TypeDescriptor {
 
                 }
 
-                // 
-                // validate writeObject
-                //
                 if ((_read_object_method == null) || !Modifier.isPrivate(_read_object_method.getModifiers())
                         || Modifier.isStatic(_read_object_method.getModifiers())) {
 
                     _read_object_method = null;
                 }
 
-                // 
-                // get serialVersionUID field
-                //
                 try {
                     _serial_version_uid_field = type.getDeclaredField("serialVersionUID");
                     if (Modifier.isStatic(_serial_version_uid_field.getModifiers())) {
@@ -254,12 +233,8 @@ class ValueDescriptor extends TypeDescriptor {
                         _serial_version_uid_field = null;
                     }
                 } catch (NoSuchFieldException ex) {
-                    // skip //
                 }
 
-                // 
-                // get serialPersistentFields field
-                //
                 ObjectStreamField[] serial_persistent_fields = null;
                 try {
                     Field _serial_persistent_fields_field = type.getDeclaredField("serialPersistentFields");
@@ -268,13 +243,9 @@ class ValueDescriptor extends TypeDescriptor {
                     serial_persistent_fields = (ObjectStreamField[]) _serial_persistent_fields_field.get(null);
 
                 } catch (IllegalAccessException | NoSuchFieldException ex) {
-                    // skip //
                 }
 
                 if (_is_externalizable) {
-                    //
-                    // Get the default constructor
-                    //
                     try {
                         _constructor = type.getDeclaredConstructor();
                         _constructor.setAccessible(true);
@@ -323,11 +294,6 @@ class ValueDescriptor extends TypeDescriptor {
                 }
 
                 if (serial_persistent_fields == null) {
-
-                    //
-                    // Get relevant field definitions
-                    //
-
                     Field[] ff = type.getDeclaredFields();
 
                     if ((ff == null) || (ff.length == 0)) {
@@ -350,12 +316,8 @@ class ValueDescriptor extends TypeDescriptor {
                         _fields = new FieldDescriptor[flist.size()];
                         _fields = flist.toArray(_fields);
 
-                        //
-                        // sort the fields
-                        //
                         Arrays.sort(_fields);
                     }
-
                 } else {
                     _fields = new FieldDescriptor[serial_persistent_fields.length];
 
@@ -375,28 +337,15 @@ class ValueDescriptor extends TypeDescriptor {
                         }
 
                         if (fd == null) {
-                            fd = FieldDescriptor.get(type, f, repo);
+                            fd = FieldDescriptor.getForSerialPersistentField(type, f, repo);
                         }
                         _fields[i] = fd;
                     }
-
-                    //
-                    // sort the fields (this is also the case for serial
-                    // persistent
-                    // fields, because they have to map to some foreign
-                    // IDL).
-                    //
                     Arrays.sort(_fields);
                 }
 
-                //
-                // Compute the structural hash
-                //
                 _hash_code = computeHashCode();
 
-                // 
-                // Setup the default deserializer
-                //
                 _object_deserializer = new ObjectDeserializer(ValueDescriptor.this);
 
                 return null;
@@ -637,12 +586,7 @@ class ValueDescriptor extends TypeDescriptor {
     }
 
     protected void defaultReadValue(ObjectReader reader, Serializable value) throws IOException {
-        // System.out.println ("defaultReadValue "+getJavaClass());
-
-        if (_fields == null) {
-            // System.out.println ("fields == null for "+getJavaClass ());
-            return;
-        }
+        if (null == _fields) return;
 
         logger.fine("reading fields for " + type.getName());
 
