@@ -692,8 +692,12 @@ final public class InputStream extends InputStreamWithOffsets {
         if (readBuffer.available() < 1) throw newMarshalError(MinorReadBooleanOverflow);
 
         if (logger.isLoggable(Level.FINEST))
-            logger.finest(String.format("Boolean value is %b from position 0x%x", readBuffer.peekByte(), readBuffer.getPosition()));
-        return readBuffer.readByte() != (byte) 0;
+            logger.finest(String.format("Boolean value is %b from position 0x%x", toBoolean(readBuffer.peekByte()), readBuffer.getPosition()));
+        return toBoolean(readBuffer.readByte());
+    }
+
+    private static boolean toBoolean(byte b) {
+        return b != (byte)0;
     }
 
     public char read_char() {
