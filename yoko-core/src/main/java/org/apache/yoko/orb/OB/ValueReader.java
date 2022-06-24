@@ -987,8 +987,8 @@ public final class ValueReader {
 
     public Serializable readValue(Class<? extends Serializable> clz) {
         if (MARSHAL_LOG.isLoggable(FINE))
-            MARSHAL_LOG.fine(String.format("Reading value of type \"%s\"", clz.getName()));
-        if (clz.equals(String.class)) {
+            MARSHAL_LOG.fine(String.format("Reading value of type \"%s\"", (null == clz) ? "" : clz.getName()));
+        if (String.class.equals(clz)) {
             return WStringValueHelper.read(in_);
         }
         final ClassCreationStrategy strategy = new ClassCreationStrategy(this, in_, clz);
@@ -1003,7 +1003,7 @@ public final class ValueReader {
                 throw marshalex;
             }
         }
-        return result;
+        return (null == clz) ? result : clz.cast(result);
     }
 
     public Serializable readValueBox(BoxedValueHelper helper) {
