@@ -72,6 +72,7 @@ public enum MessageType {
                     describeTargetAddress(sb, in);
                     OPERATION.describeString(sb, "\t", in);
                     describeServiceContextList(sb, in);
+                    if (0 == in.available()) break; // no request body
                     // in GIOP 1.2 the request body is aligned on an 8-octet boundary
                     in.skipAlign(EIGHT_BYTE_BOUNDARY);
             }
@@ -96,6 +97,7 @@ public enum MessageType {
                     describeReqId(sb, in);
                     describeReplyStatus(sb, in);
                     describeServiceContextList(sb, in);
+                    if (0 == in.available()) break; // no reply body
                     // in GIOP 1.2 the reply body is aligned on an 8-octet boundary
                     in.skipAlign(EIGHT_BYTE_BOUNDARY);
             }
