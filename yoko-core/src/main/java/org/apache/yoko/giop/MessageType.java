@@ -36,6 +36,12 @@ import static org.apache.yoko.logging.VerboseLogging.DATA_IN_LOG;
 import static org.apache.yoko.logging.VerboseLogging.DATA_OUT_LOG;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_0;
 import static org.apache.yoko.orb.OCI.GiopVersion.GIOP1_2;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_NEEDS_ADDRESSING_MODE;
+import static org.omg.GIOP.LocateStatusType_1_2._LOC_SYSTEM_EXCEPTION;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_FORWARD_PERM;
+import static org.omg.GIOP.LocateStatusType_1_2._OBJECT_HERE;
+import static org.omg.GIOP.LocateStatusType_1_2._UNKNOWN_OBJECT;
 import static org.omg.GIOP.MsgType_1_1._CancelRequest;
 import static org.omg.GIOP.MsgType_1_1._CloseConnection;
 import static org.omg.GIOP.MsgType_1_1._Fragment;
@@ -127,11 +133,12 @@ public enum MessageType {
         String getLocateStatus(InputStream in) {
             int locStat = in.read_long();
             switch (locStat) {
-                case 0: return "LOCATE STATUS = UNKNOWN_OBJECT";
-                case 2: return "LOCATE STATUS = OBJECT_FORWARD";
-                case 3: return "LOCATE STATUS = OBJECT_FORWARD_PERM";
-                case 4: return "LOCATE STATUS = LOC_SYSTEM_EXCEPTION";
-                case 5: return "LOCATE STATUS = LOC_NEEDS_ADDRESSING_MODE";
+                case _UNKNOWN_OBJECT: return "LOCATE STATUS = UNKNOWN_OBJECT";
+                case _OBJECT_FORWARD: return "LOCATE STATUS = OBJECT_FORWARD";
+                case _OBJECT_HERE: return "LOCATE STATUS = OBJECT_HERE";
+                case _OBJECT_FORWARD_PERM: return "LOCATE STATUS = OBJECT_FORWARD_PERM";
+                case _LOC_SYSTEM_EXCEPTION: return "LOCATE STATUS = LOC_SYSTEM_EXCEPTION";
+                case _LOC_NEEDS_ADDRESSING_MODE: return "LOCATE STATUS = LOC_NEEDS_ADDRESSING_MODE";
                 default: return String.format("error parsing locate status flag: 0x%08x", locStat);
             }
         }
