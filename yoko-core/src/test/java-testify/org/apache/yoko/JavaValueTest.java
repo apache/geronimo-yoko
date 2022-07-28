@@ -3,9 +3,9 @@ package org.apache.yoko;
 import org.apache.yoko.orb.CORBA.InputStream;
 import org.apache.yoko.orb.CORBA.OutputStream;
 import org.apache.yoko.orb.OCI.GiopVersion;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.omg.CosNaming.NameComponent;
 
 import java.util.ArrayList;
@@ -16,10 +16,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.sameInstance;
 import static org.hamcrest.CoreMatchers.theInstance;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static testify.hex.HexParser.HEX_DUMP;
 
 /**
@@ -63,13 +63,13 @@ public class JavaValueTest {
         static void assertEquals(NameComponent actual, NameComponent expected) {
             assertNotNull(expected);
             assertNotSame(actual, expected);
-            Assert.assertEquals(nameToString(actual), nameToString(expected));
+            Assertions.assertEquals(nameToString(actual), nameToString(expected));
         }
 
         static void assertEquals(NameComponent[] actual, NameComponent[] expected) {
             assertNotNull(expected);
             assertNotSame(actual, expected);
-            Assert.assertEquals(pathToString(actual), pathToString(expected));
+            Assertions.assertEquals(pathToString(actual), pathToString(expected));
         }
     }
 
@@ -79,7 +79,7 @@ public class JavaValueTest {
         out = null;
     }
 
-    @Before
+    @BeforeEach
     public void setupStreams() {
         out = new OutputStream(null, GiopVersion.GIOP1_2);
     }
