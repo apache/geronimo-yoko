@@ -75,8 +75,14 @@ public class JavaValueTest {
 
     private void finishWriting() {
         System.out.println(out.getBufferReader().dumpAllData());
-        in = (InputStream) out.create_input_stream();
+        in = out.create_input_stream();
         out = null;
+    }
+
+    private void writeHex(String hex) {
+        byte[] bytes = HEX_DUMP.parse(hex);
+        out.write_octet_array(bytes, 0, bytes.length);
+        finishWriting();
     }
 
     @BeforeEach
@@ -99,7 +105,6 @@ public class JavaValueTest {
         assertThat(l4, not(sameInstance(l2)));
         assertThat(l4, not(sameInstance(l3)));
     }
-
 
     @Test
     public void marshalTheSameLongTwiceToTestValueIndirection() {
@@ -185,12 +190,6 @@ public class JavaValueTest {
         assertThat(actual1, is(2L));
         assertThat(actual2, is(2L));
         assertThat(actual1, is(theInstance(actual2)));
-    }
-
-    private void writeHex(String hex) {
-        byte[] bytes = HEX_DUMP.parse(hex);
-        out.write_octet_array(bytes, 0, bytes.length);
-        finishWriting();
     }
 
     @Test
