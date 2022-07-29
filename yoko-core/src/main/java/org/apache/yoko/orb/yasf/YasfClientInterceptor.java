@@ -21,7 +21,7 @@ public class YasfClientInterceptor extends LocalObject implements ClientRequestI
 
         YasfThreadLocal.push(Yasf.toSet(yasfData));
 
-        YasfHelper.addSc(ri, Yasf.supported());
+        YasfHelper.addSc(ri);
     }
 
     @Override

@@ -1,6 +1,5 @@
 package org.apache.yoko.util.yasf;
 
-import java.util.BitSet;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;

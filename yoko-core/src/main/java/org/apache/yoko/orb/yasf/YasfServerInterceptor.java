@@ -36,21 +36,21 @@ public class YasfServerInterceptor extends LocalObject implements ServerRequestI
     public void send_reply(ServerRequestInfo ri) {
         YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
         // Adding for diagnostic purposes
-        YasfHelper.addSc(ri, Yasf.supported());
+        YasfHelper.addSc(ri);
     }
 
     @Override
     public void send_exception(ServerRequestInfo ri) throws ForwardRequest {
         YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
         // Adding for diagnostic purposes
-        YasfHelper.addSc(ri, Yasf.supported());
+        YasfHelper.addSc(ri);
     }
 
     @Override
     public void send_other(ServerRequestInfo ri) throws ForwardRequest {
         YasfThreadLocal.push(Yasf.toSet(YasfHelper.getSlot(slotId, ri)));
         // Adding for diagnostic purposes
-        YasfHelper.addSc(ri, Yasf.supported());
+        YasfHelper.addSc(ri);
     }
 
     @Override
