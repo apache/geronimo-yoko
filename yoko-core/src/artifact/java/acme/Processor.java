@@ -54,5 +54,5 @@ public interface Processor extends Remote {
      * run the provided {@link UnaryOp} on it,
      * and marshal the return value as a value type.
      */
-    <T extends Value> T processValue(UnaryOp<T> op, T operand) throws RemoteException;
+    <T extends AbstractValue> T processValue(UnaryOp<T> op, T operand) throws RemoteException;
 }

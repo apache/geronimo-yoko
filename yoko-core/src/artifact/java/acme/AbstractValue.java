@@ -2,6 +2,6 @@ package acme;
 
 import java.io.Serializable;
 
-public interface Value extends Serializable {
+public interface AbstractValue extends Serializable {
     String toString();
 }
