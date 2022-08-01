@@ -40,7 +40,7 @@ public interface Processor extends Remote {
      * run the provided {@link UnaryOp} on it,
      * and marshal the return value as an abstract.
      */
-    <T extends Abstract> T processAbstract(UnaryOp<T> op, T operand) throws RemoteException;
+    <T extends AbstractInterface> T processAbstract(UnaryOp<T> op, T operand) throws RemoteException;
 
     /**
      * Marshal <code>t</code> as an Any,

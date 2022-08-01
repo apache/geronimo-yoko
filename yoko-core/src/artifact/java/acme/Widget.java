@@ -1,5 +1,5 @@
 package acme;
 
-public interface Widget extends Abstract, Value {
+public interface Widget extends AbstractInterface, Value {
     Widget validateAndReplace();
 }
