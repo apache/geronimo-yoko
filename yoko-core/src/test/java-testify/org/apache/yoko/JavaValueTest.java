@@ -27,7 +27,7 @@ import static testify.hex.HexParser.HEX_DUMP;
  * This test was created in response to a bug where indirections
  * were not supported in CDR streams
  */
-public class JavaValueTest {
+class JavaValueTest {
     OutputStream out;
     InputStream in;
 
@@ -86,12 +86,12 @@ public class JavaValueTest {
     }
 
     @BeforeEach
-    public void setupStreams() {
+    void setupStreams() {
         out = new OutputStream(null, GiopVersion.GIOP1_2);
     }
 
     @Test
-    public void marshalTwoDistinctLongs() {
+    void marshalTwoDistinctLongs() {
         Long l1 = new Long(2);
         Long l2 = new Long(2);
         out.write_value(l1, Long.class);
@@ -107,7 +107,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void marshalTheSameLongTwiceToTestValueIndirection() {
+    void marshalTheSameLongTwiceToTestValueIndirection() {
         Long l1 = new Long(2);
         Long l2 = l1;
         out.write_value(l1, Long.class);
@@ -123,7 +123,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void marshalNameComponentAsValue() {
+    void marshalNameComponentAsValue() {
         NameComponent actual = NameComponents.stringToName("hello.world");
         out.write_value(actual, NameComponent.class);
         finishWriting();
@@ -132,7 +132,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void marshalNameComponentArrayAsValue() {
+    void marshalNameComponentArrayAsValue() {
         NameComponent[] actual = NameComponents.stringToPath("hello.dir/world.dir/text.object");
         out.write_value(actual, NameComponent[].class);
         finishWriting();
@@ -141,7 +141,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void marshalWstringWithNulls() {
+    void marshalWstringWithNulls() {
         String expected = "Hello\0world";
         out.write_wstring(expected);
         finishWriting();
@@ -152,7 +152,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void marshalWstringWithSurrogates() {
+    void marshalWstringWithSurrogates() {
         String expected = new String(Character.toChars(Character.MIN_SURROGATE)) + new String(Character.toChars(Character.MAX_CODE_POINT));
         out.write_wstring(expected);
         finishWriting();
@@ -163,7 +163,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalTwoLongValues() {
+    void unmarshalTwoLongValues() {
         writeHex("" +
                 "    7fffff02 00000035 524d493a 6a617661  \".......5RMI:java\"\n" +
                 "    2e6c616e 672e4c6f 6e673a32 30354636  \".lang.Long:205F6\"\n" +
@@ -178,7 +178,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalLongValueAndIndirection() throws Exception {
+    void unmarshalLongValueAndIndirection() throws Exception {
         writeHex("" +
                 "    7fffff02 00000035 524d493a 6a617661  \".......5RMI:java\"\n" +
                 "    2e6c616e 672e4c6f 6e673a32 30354636  \".lang.Long:205F6\"\n" +
@@ -193,7 +193,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalNameComponentValue() {
+    void unmarshalNameComponentValue() {
         writeHex("" +
                 "    7fffff02 00000046 524d493a 6f72672e  \".......FRMI:org.\"\n" +
                 "    6f6d672e 436f734e 616d696e 672e4e61  \"omg.CosNaming.Na\"\n" +
@@ -208,7 +208,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalNameComponentChunkedValue() {
+    void unmarshalNameComponentChunkedValue() {
         writeHex("" +
                 "    7fffff0a 00000046 524d493a 6f72672e  \".......FRMI:org.\"\n" +
                 "    6f6d672e 436f734e 616d696e 672e4e61  \"omg.CosNaming.Na\"\n" +
@@ -223,7 +223,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalNameComponentArray() {
+    void unmarshalNameComponentArray() {
         writeHex("" +
                 "7fffff02 00000049 524d493a 5b4c6f72  \".......IRMI:[Lor\"\n" +
                 "672e6f6d 672e436f 734e616d 696e672e  \"g.omg.CosNaming.\"\n" +
@@ -244,7 +244,7 @@ public class JavaValueTest {
     }
 
     @Test
-    public void unmarshalNameComponentArrayFromNeo() {
+    void unmarshalNameComponentArrayFromNeo() {
         writeHex("" +
                 "7fffff02 00000049 524d493a 5b4c6f72  \".......IRMI:[Lor\"\n" +
                 "672e6f6d 672e436f 734e616d 696e672e  \"g.omg.CosNaming.\"\n" +
