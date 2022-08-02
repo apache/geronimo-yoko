@@ -26,6 +26,8 @@ public enum ByteArrayMatchers {;
     }
 
     private static String prettify(String hex) {
+        // remove indices
+        hex = hex.replaceAll("[0-9A-F]{4,8}: +", "");
         // remove quoted ASCII representation
         hex = hex.replaceAll("\".{1,16}\"", "");
         // remove non-hex chars

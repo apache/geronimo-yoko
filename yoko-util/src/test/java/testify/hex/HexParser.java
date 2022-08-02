@@ -8,6 +8,7 @@ import java.io.StringReader;
 import java.math.BigInteger;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.lang.Character.toUpperCase;
@@ -67,7 +68,7 @@ public enum HexParser {
 
     private static class HexLineParser {
         private static final String COMMENT = "--";
-        private static final Pattern HEX_LINE = Pattern.compile("([0-9 a-f]{8} ){4} \".{1,16}\"");
+        private static final Pattern HEX_LINE = Pattern.compile("(?:[0-9A-F]{4,8}: {2})?((?:[0-9 a-f]{8} ){4} \".{1,16}\")");
         private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
         static { Arrays.sort(HEX_CHARS); }
         private static final byte[] HI_NYBL = new byte['g'];
@@ -81,17 +82,11 @@ public enum HexParser {
         }
 
         static HexLineParser parse(String line) throws ParseException {
-            if (line.isEmpty()) {
-                // ignore blank lines
-                return null;
-            } else if (line.startsWith(COMMENT)) {
-                // ignore comment lines
-                return null;
-            } else if (HEX_LINE.matcher(line).matches()) {
-                return new HexLineParser(line);
-            } else {
-                throw new ParseException(line, 0);
-            }
+            if (line.isEmpty()) return null; // ignore blank lines
+            if (line.startsWith(COMMENT)) return null; // ignore comment lines
+            Matcher m = HEX_LINE.matcher(line);
+            if (m.matches()) return new HexLineParser(m.group(1));
+            throw new ParseException(line, 0);
         }
 
         final char[] chars;
