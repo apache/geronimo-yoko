@@ -14,19 +14,25 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- */ 
+ */
 
 package org.apache.yoko.rmi.impl;
 
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.SystemException;
 import org.omg.CORBA.ValueMember;
 
 import java.io.IOException;
 import java.io.ObjectStreamField;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static org.apache.yoko.util.Exceptions.as;
+import static org.apache.yoko.util.yasf.Yasf.NON_SERIALIZABLE_FIELD_IS_ABSTRACT_VALUE;
 
 abstract class FieldDescriptor extends ModelElement implements Comparable {
     static Logger logger = Logger.getLogger(FieldDescriptor.class.getName());
@@ -100,7 +106,7 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
 
         //
         // fields of the same kind are ordered lexicographically
-        //	
+        //
         return java_name.compareTo(desc.java_name);
     }
 
@@ -178,7 +184,7 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
                     || java.io.Serializable.class.equals(type)) {
                 return new AnyFieldDescriptor(owner, type, name, f,repository);
 
-            } else if (java.rmi.Remote.class.isAssignableFrom(type) 
+            } else if (java.rmi.Remote.class.isAssignableFrom(type)
                     || java.rmi.Remote.class.equals(type))
             {
                 return new RemoteFieldDescriptor(owner, type, name, f, repository);
@@ -188,11 +194,17 @@ abstract class FieldDescriptor extends ModelElement implements Comparable {
 
             } else if (java.io.Serializable.class.isAssignableFrom(type)) {
                 return new ValueFieldDescriptor(owner, type, name, f, repository);
-            } else if (type.isInterface() && type.getMethods().length > 0) {
-                // interface classes that define methods 
-                return new ValueFieldDescriptor(owner, type, name, f, repository);
-            } else {
+            } else if (type.isInterface() && type.getMethods().length == 0) {
+                // TODO: make this spec-compliant
+                // See Java-to-IDL 1.4 section 4.3.11 "Mapping Abstract Interfaces".
+                // This check should include methods from parent interfaces,
+                // and exclude methods that throw RemoteException (or a superclass of it).
+                // Fixing this will require a further Yasf setting and may break
+                // compatibility with how other ORBs marshal null values.
                 return new ObjectFieldDescriptor(owner, type, name, f, repository);
+            } else {
+                // interface classes with methods and non-serializable classes
+                return new ValueFieldDescriptor(owner, type, name, f, repository);
             }
         }
     }
@@ -398,20 +410,37 @@ class ValueFieldDescriptor extends FieldDescriptor {
         super(owner, type, name, f, repository);
     }
 
-    public void read(ObjectReader reader, Object obj)
-            throws java.io.IOException {
+    public void read(ObjectReader reader, Object obj) throws java.io.IOException {
         try {
-            field.set(obj, reader.readValueObject(getType()));
+            if (NON_SERIALIZABLE_FIELD_IS_ABSTRACT_VALUE.isSupported()
+                    || type.isInterface()
+                    || Serializable.class.isAssignableFrom(type)) {
+                field.set(obj, reader.readValueObject(getType()));
+            } else {
+                // older versions of Yoko treat non-serializable classes as abstract objects
+                field.set(obj, reader.readAbstractObject());
+            }
         } catch (IllegalAccessException ex) {
             throw (org.omg.CORBA.MARSHAL)new org.omg.CORBA.MARSHAL(ex.getMessage()).initCause(ex);
         }
     }
 
-    public void write(ObjectWriter writer, Object obj)
-            throws java.io.IOException {
-
+    public void write(ObjectWriter writer, Object obj) throws java.io.IOException {
         try {
-            writer.writeValueObject(field.get(obj));
+            if (NON_SERIALIZABLE_FIELD_IS_ABSTRACT_VALUE.isSupported()
+                    || type.isInterface()
+                    || Serializable.class.isAssignableFrom(type)) {
+                try {
+                    writer.writeValueObject(field.get(obj));
+                } catch (SystemException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw as(MARSHAL::new, e, "Object of class " + obj.getClass().getName() + " is not a valuetype");
+                }
+            } else {
+                // older versions of Yoko treat non-serializable classes as abstract objects
+                writer.writeObject(field.get(obj));
+            }
         } catch (IllegalAccessException ex) {
             throw (IOException)new IOException(ex.getMessage()).initCause(ex);
         }
@@ -870,7 +899,7 @@ class IntFieldDescriptor extends FieldDescriptor {
         }
         try {
             int value = reader.readInt();
-            logger.finest("Read int field value " + value); 
+            logger.finest("Read int field value " + value);
             field.setInt(obj, value);
         } catch (IllegalAccessException ex) {
             throw (IOException)new IOException(ex.getMessage()).initCause(ex);
@@ -942,7 +971,7 @@ class LongFieldDescriptor extends FieldDescriptor {
         }
         try {
             long value = reader.readLong();
-            logger.finest("Read long field value " + value); 
+            logger.finest("Read long field value " + value);
             field.setLong(obj, value);
         } catch (IllegalAccessException ex) {
             throw (IOException)new IOException(ex.getMessage()).initCause(ex);

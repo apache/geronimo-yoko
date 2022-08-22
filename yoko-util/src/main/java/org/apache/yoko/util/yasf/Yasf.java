@@ -20,6 +20,7 @@ import static org.apache.yoko.util.Collectors.toUnmodifiableEnumSet;
  */
 public enum Yasf {
     ENUM_FIXED(0),
+    NON_SERIALIZABLE_FIELD_IS_ABSTRACT_VALUE(1),
     ;
     // TODO - Get ids from OMG assigned for these values
     public static final int TAG_YOKO_AUXILIARY_STREAM_FORMAT = 0xeeeeeeee;
@@ -32,6 +33,16 @@ public enum Yasf {
     public final int itemIndex;
 
     Yasf(int itemIndex) { this.itemIndex = itemIndex; }
+
+    public boolean isSupported() {
+        Set<Yasf> set = YasfThreadLocal.get();
+        // When there is no thread local set, assume the format is ON.
+        return set == null || set.contains(this);
+    }
+
+    public boolean isUnsupported() {
+        return !isSupported();
+    }
 
     public static Set<Yasf> toSet(byte[] data) {
         if (data == null) return null;

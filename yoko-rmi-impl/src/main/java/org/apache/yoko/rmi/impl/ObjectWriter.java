@@ -18,6 +18,8 @@
 
 package org.apache.yoko.rmi.impl;
 
+import org.apache.yoko.util.cmsf.CmsfThreadLocal;
+
 import java.io.Externalizable;
 import java.io.IOException;
 import java.io.NotActiveException;
@@ -28,11 +30,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
-
-import org.apache.yoko.util.cmsf.CmsfThreadLocal;
-import org.apache.yoko.util.yasf.Yasf;
-import org.apache.yoko.util.yasf.YasfThreadLocal;
 
 abstract class ObjectWriter extends ObjectOutputStream {
     protected final Serializable object;
@@ -44,7 +41,6 @@ abstract class ObjectWriter extends ObjectOutputStream {
     private WriteObjectState state = WriteObjectState.NOT_IN_WRITE_OBJECT;
 
     final byte cmsf;
-    final Set<Yasf> yasfSet;
 
     private enum WriteObjectState {
         NOT_IN_WRITE_OBJECT {
@@ -149,7 +145,6 @@ abstract class ObjectWriter extends ObjectOutputStream {
     ObjectWriter(Serializable obj) throws IOException {
         object = obj;
         cmsf = CmsfThreadLocal.get();
-        yasfSet = YasfThreadLocal.get();
     }
 
     abstract ObjectReader getObjectReader(Object newObject);
