@@ -16,6 +16,8 @@
  */
 package acme;
 
-public interface Widget extends AbstractInterface, AbstractValue {
-    Widget validateAndReplace();
+import java.io.Serializable;
+
+public interface AbstractValue extends Serializable {
+    String toString();
 }

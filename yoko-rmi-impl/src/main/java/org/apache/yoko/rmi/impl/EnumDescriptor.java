@@ -18,10 +18,10 @@
 
 package org.apache.yoko.rmi.impl;
 
-import org.apache.yoko.util.yasf.Yasf;
-
 import java.io.IOException;
 import java.io.Serializable;
+
+import static org.apache.yoko.util.yasf.Yasf.ENUM_FIXED;
 
 class EnumDescriptor extends ValueDescriptor {
     public EnumDescriptor(Class<?> type, TypeRepository repo) {
@@ -56,8 +56,8 @@ class EnumDescriptor extends ValueDescriptor {
 
     @Override
     protected void defaultWriteValue(ObjectWriter writer, Serializable val) throws IOException {
-        if ((writer.yasfSet != null) && !!!writer.yasfSet.contains(Yasf.ENUM_FIXED)) {
-            // talking to an old yoko that expects an ordinal field to be written;
+        if (ENUM_FIXED.isUnsupported()) {
+            // talking to an old yoko that expects an ordinal field to be written
             ordinalField.write(writer, val);
         }
         nameField.write(writer, val);

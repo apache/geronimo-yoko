@@ -5,7 +5,6 @@ import java.io.NotSerializableException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-import org.apache.yoko.util.yasf.Yasf;
 import org.omg.CORBA.LocalObject;
 import org.omg.PortableInterceptor.IORInfo;
 import org.omg.PortableInterceptor.IORInterceptor;
@@ -15,7 +14,7 @@ public class YasfIORInterceptor extends LocalObject implements IORInterceptor {
 
     @Override
     public void establish_components(IORInfo info) {
-        YasfHelper.addTc(info, Yasf.supported());
+        YasfHelper.addTc(info);
     }
 
     @Override

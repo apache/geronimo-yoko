@@ -12,39 +12,34 @@ import org.omg.PortableInterceptor.IORInfo;
 import org.omg.PortableInterceptor.InvalidSlot;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 
-import java.util.Set;
-
 import static org.apache.yoko.util.MinorCodes.MinorInvalidComponentId;
 import static org.apache.yoko.util.MinorCodes.MinorInvalidServiceContextId;
 
-/**
- * Created by nrichard on 23/03/16.
- */
 public enum YasfHelper {
     ;
 
-    public static void addTc(IORInfo info, Set<Yasf> set) {
-        TaggedComponent tc = new TaggedComponent(Yasf.TAG_YOKO_AUXILLIARY_STREAM_FORMAT, Yasf.toData(set));
+    public static void addTc(IORInfo info) {
+        TaggedComponent tc = new TaggedComponent(Yasf.TAG_YOKO_AUXILIARY_STREAM_FORMAT, Yasf.toData());
         info.add_ior_component(tc);
     }
 
-    private static ServiceContext sc(Set<Yasf> set) {
-        return new ServiceContext(Yasf.YOKO_AUXIllIARY_STREAM_FORMAT_SC, Yasf.toData(set));
+    private static ServiceContext sc() {
+        return new ServiceContext(Yasf.YOKO_AUXILIARY_STREAM_FORMAT_SC, Yasf.toData());
     }
 
-    public static void addSc(ClientRequestInfo ri, Set<Yasf> set) {
-        ServiceContext sc = sc(set);
+    public static void addSc(ClientRequestInfo ri) {
+        ServiceContext sc = sc();
         ri.add_request_service_context(sc, false);
     }
 
-    public static void addSc(ServerRequestInfo ri, Set<Yasf> set) {
-        ServiceContext sc = sc(set);
+    public static void addSc(ServerRequestInfo ri) {
+        ServiceContext sc = sc();
         ri.add_reply_service_context(sc, false);
     }
 
     public static byte[] readData(ClientRequestInfo ri) {
         try {
-            TaggedComponent tc = ri.get_effective_component(Yasf.TAG_YOKO_AUXILLIARY_STREAM_FORMAT);
+            TaggedComponent tc = ri.get_effective_component(Yasf.TAG_YOKO_AUXILIARY_STREAM_FORMAT);
             return tc.component_data;
         } catch (BAD_PARAM e) {
             if (e.minor != MinorInvalidComponentId) {
@@ -56,7 +51,7 @@ public enum YasfHelper {
 
     public static byte[] readData(ServerRequestInfo ri) {
         try {
-            ServiceContext sc = ri.get_request_service_context(Yasf.YOKO_AUXIllIARY_STREAM_FORMAT_SC);
+            ServiceContext sc = ri.get_request_service_context(Yasf.YOKO_AUXILIARY_STREAM_FORMAT_SC);
             return sc.context_data;
         } catch (BAD_PARAM e) {
             if (e.minor != MinorInvalidServiceContextId) {
