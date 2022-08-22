@@ -5,7 +5,9 @@ import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 
 import java.util.Formatter;
+import java.util.stream.IntStream;
 
+import static java.lang.Integer.toHexString;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.Matchers.equalToIgnoringCase;
 
@@ -62,8 +64,8 @@ public enum ByteArrayMatchers {;
      *     </strong>
      */
     public static Matcher<byte[]> matchesHex(String hex) {
-        final String prettyHex = prettify(hex);
-        final Matcher<String> hexMtchr = equalToIgnoringCase(prettyHex);
+        final String expectedHex = prettify(hex);
+        final Matcher<String> hexMtchr = equalToIgnoringCase(expectedHex);
         return new BaseMatcher<byte[]>() {
             @Override
             public boolean matches(Object data) {
@@ -74,14 +76,33 @@ public enum ByteArrayMatchers {;
             public void describeTo(Description description) {
                 description
                         .appendText("\n")
-                        .appendText(indent(prettyHex, 2));
+                        .appendText(indent(expectedHex, 2));
             }
 
             @Override
             public void describeMismatch(Object item, Description description) {
+                String actualHex = prettify((byte[]) item);
+                // only compare up to the length of the shorter string
+                int minLen = Math.min(actualHex.length(), expectedHex.length());
+                // compute the first difference
+                int cpl = IntStream.range(0, minLen)
+                        .filter(i -> actualHex.charAt(i) != expectedHex.charAt(i))
+                        .findFirst()
+                        // if there is no difference, use the length of the shorter string
+                        .orElse(minLen);
+                // compute the byte index
+                String byteIndex = "0x" + toHexString(16 * (cpl/36) + 4 * (cpl % 36 / 9) + (cpl % 9 / 2));
+                // calculate the padding to align the suffixes correctly
+                String spacing = cpl % 36 == 0 ? "" : String.format("%" + cpl%36 + "s", "");
                 description
-                        .appendText("got:\n")
-                        .appendText(indent(prettify((byte[]) item), 2))
+                        .appendText("actual bytes differed at byte ")
+                        .appendText(byteIndex)
+                        .appendText("\ncommon prefix:\n")
+                        .appendText(indent(expectedHex.substring(0, cpl), 2))
+                        .appendText("\nexpected suffix:\n")
+                        .appendText(indent(spacing + expectedHex.substring(cpl), 2))
+                        .appendText("\nactual suffix:\n")
+                        .appendText(indent(spacing + actualHex.substring(cpl), 2))
                         .appendText("\n");
             }
         };
