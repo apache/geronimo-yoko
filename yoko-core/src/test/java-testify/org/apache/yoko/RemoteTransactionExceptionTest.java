@@ -57,7 +57,7 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
-import static testify.util.Names.toCosName;
+import static org.apache.yoko.util.Names.toCosName;
 
 @ConfigureServer(
         separation = Separation.INTER_ORB,

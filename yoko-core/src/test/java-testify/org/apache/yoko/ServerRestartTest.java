@@ -34,7 +34,7 @@ import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
 import testify.jupiter.annotation.iiop.ServerControl;
 import testify.jupiter.annotation.logging.Logging;
-import testify.util.Stubs;
+import org.apache.yoko.util.Stubs;
 
 import java.rmi.RemoteException;
 import java.util.concurrent.ForkJoinPool;

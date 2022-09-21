@@ -14,20 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.util;
+package org.apache.yoko.util;
 
-import org.omg.CosNaming.NameComponent;
+import org.omg.CORBA.ORB;
 
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import javax.rmi.PortableRemoteObject;
 
-public enum Names {
+public enum Stubs {
     ;
 
-    public static NameComponent[] toCosName(String...parts) {
-        return Stream.of(parts)
-                .map(s -> new NameComponent(s, ""))
-                .collect(Collectors.toList())
-                .toArray(new NameComponent[0]);
+    public static <T> T toStub(String stringifiedForm, ORB orb, Class<T> intf) {
+        Object o = orb.string_to_object(stringifiedForm);
+        return intf.cast(PortableRemoteObject.narrow(o, intf));
     }
 }

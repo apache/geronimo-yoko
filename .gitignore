@@ -9,6 +9,7 @@ eclipse-classes
 bin
 *.log
 *~
+.vscode
 
 # ignore Gradle stuff
 .gradle

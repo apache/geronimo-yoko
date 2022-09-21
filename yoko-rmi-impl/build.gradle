@@ -11,5 +11,6 @@ dependencies {
   // yoko-core impl classes in Java 11 onwards (which has no ORB).
   testRuntimeOnly project(":yoko-core")
   // use shared test utilities
+  testImplementation project(":yoko-testify")
   testImplementation project(":yoko-util").sourceSets.test.output
 }
