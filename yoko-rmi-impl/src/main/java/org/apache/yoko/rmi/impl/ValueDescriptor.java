@@ -157,6 +157,8 @@ class ValueDescriptor extends TypeDescriptor {
                 throw new RuntimeException("fields==null after init!");
             }
 
+        } catch (INTERNAL internal) {
+            throw internal;
         } catch (RuntimeException | Error ex) {
             throw as(INTERNAL::new, ex);
         }
