@@ -41,7 +41,7 @@ def getGitHash(length) {
     return stdout.toString().trim()
 }
 
-def testProjects = "osgi util rmi-impl core test".split(" ").collect{s->project(":yoko-" + s)}
+def testProjects = "osgi util rmi-impl core test testify".split(" ").collect{s->project(":yoko-" + s)}
 def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core testify".split(" ").collect{s->project(":yoko-" + s)}
 
 /* Standard configuration for each subproject */

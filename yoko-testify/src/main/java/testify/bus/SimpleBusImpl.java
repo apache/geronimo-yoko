@@ -170,40 +170,4 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
 
     @Override
     public String toString() { return label; }
-
-    private enum Test {
-        ;
-        public static void main(String...args) throws ExecutionException, InterruptedException {
-            try (SimpleBusImpl simpleBus = new SimpleBusImpl()) {
-
-                // try an asynchronous get
-                final ExecutorService xs = Executors.newSingleThreadExecutor();
-                try {
-                    final Future<String> msg = xs.submit(() -> simpleBus.get("msg"));
-                    Assertions.assertFalse(msg.isDone());
-                    simpleBus.put("msg", "hello");
-                    Assertions.assertTrue(msg.isDone());
-                    Assertions.assertEquals("hello", msg.get());
-                    System.out.println("Correctly retrieved message: " + msg.get());
-                } finally {
-                    xs.shutdown();
-                }
-
-                {
-                    // register a callback
-                    CompletableFuture<String> msg = new CompletableFuture<>();
-                    simpleBus.onMsg("msg", msg::complete);
-                    // check the callback has not been called
-                    Assertions.assertFalse(msg.isDone());
-                    // put a new message
-                    simpleBus.put("msg", "world");
-                    // wait for the callback to be called
-                    // check the callback has been called correctly
-                    Assertions.assertEquals("world", msg.get());
-                    System.out.println("Correctly retrieved message: " + msg.get());
-                }
-            }
-
-        }
-    }
 }
