@@ -92,6 +92,10 @@ configure(testProjects) {
       dependsOn stageEndorsed
       jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
     }
+  } else {
+    tasks.withType(Test) {
+      jvmArgs "--illegal-access=permit"
+    }
   }
 
   // ensure tests run under $buildDir somewhere
@@ -196,7 +200,7 @@ configure(shipProjects) {
       instruction 'Bundle-DocURL'          , "https://geronimo.apache.org/maven/yoko/$project.version/$project.name"
       instruction 'Bundle-License'         , 'https://www.apache.org/licenses/LICENSE-2.0.txt'
       instruction 'Bundle-Vendor'          , 'The Apache Software Foundation'
-      instruction 'Import-Package'         , '!sun.*', '*'
+      instruction 'Import-Package'         , 'sun.*;resolution:=optional,*'
     }
   }
 
