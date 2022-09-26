@@ -27,7 +27,7 @@ abstract class ModelElement {
         this.java_name = java_name;
     }
 
-    private boolean initComplete = false;
+    private volatile boolean initComplete = false;
     /** It is the caller's responsibility to ensure this method is called from only one thread at a time. */
     final boolean doInitOnce() {
         if (initComplete) return false;

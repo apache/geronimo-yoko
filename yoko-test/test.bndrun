@@ -1,9 +1,12 @@
 -runfw: org.apache.felix.framework
 -runee: JavaSE-1.8
 
+# enable logging for yoko
+logprops=${workspace}/yoko-test/yoko-logging.props
+-runvm: -Djava.util.logging.config.file=${logprops}
+
 # We don't have any resolution happening here so
 # we must list all the bundles we need explicitly.
-#
 -runbundles: \
   osgi.enroute.junit.wrapper,         \
   osgi.enroute.hamcrest.wrapper,      \

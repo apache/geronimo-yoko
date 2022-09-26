@@ -157,6 +157,8 @@ class ValueDescriptor extends TypeDescriptor {
                 throw new RuntimeException("fields==null after init!");
             }
 
+        } catch (INTERNAL internal) {
+            throw internal;
         } catch (RuntimeException | Error ex) {
             throw as(INTERNAL::new, ex);
         }
@@ -296,7 +298,7 @@ class ValueDescriptor extends TypeDescriptor {
                 if (serial_persistent_fields == null) {
                     Field[] ff = type.getDeclaredFields();
 
-                    if ((ff == null) || (ff.length == 0)) {
+                    if ((!Serializable.class.isAssignableFrom(type)) || (ff == null) || (ff.length == 0)) {
                         _fields = new FieldDescriptor[0];
 
                     } else {
