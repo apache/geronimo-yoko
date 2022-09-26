@@ -45,5 +45,22 @@ jobs:
     - name: Link to Test-hub.io
       if: always()
       run: echo "https://test-hub.io/OpenLiberty/projects/yoko/runs/$GITHUB_RUN_NUMBER"
-
-
+    - name: Check JAR licenses
+      run: |
+        JARS=$(find ./ -name '*.jar' -type f | grep yoko | grep libs)
+        SHIPPED_JARS=("osgi" "util" "spec-corba" "rmi-spec" "rmi-impl" "core" "testify")
+        for shippedJar in ${SHIPPED_JARS[@]}; do
+            for jar in $JARS; do
+                if [[ $(basename $jar) == *"$shippedJar"* ]]; then
+                    echo "Checking $(basename $jar)"
+                    if $(unzip -p $jar META-INF/MANIFEST.MF | grep -q "Bundle-License: https://www.apache.org/licenses/LICENSE-2.0.txt"); then
+                        echo "License found"
+                    else
+                        echo "License not found"
+                        exit 1
+                    fi
+                else
+                    continue
+                fi
+            done
+        done
