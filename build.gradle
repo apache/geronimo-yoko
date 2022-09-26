@@ -15,6 +15,11 @@ ext {
   skippedTestCount = 0
 }
 
+wrapper {
+    jarFile = rootProject.file('.gradle-wrapper/gradle-wrapper.jar')
+    distributionType = Wrapper.DistributionType.ALL
+}
+
 /**
  * Compute a hash no longer than <code>length</code> for the git repository.
  * @param length
