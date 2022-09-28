@@ -16,7 +16,6 @@ ext {
 }
 
 wrapper {
-    jarFile = rootProject.file('.gradle-wrapper/gradle-wrapper.jar')
     distributionType = Wrapper.DistributionType.ALL
 }
 
