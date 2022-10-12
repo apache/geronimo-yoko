@@ -1,0 +1,30 @@
+plugins {
+    id 'application'
+}
+
+apply plugin : 'java'
+ext {
+    javaMainClass = 'com.acme.hello.HelloImpl'
+}
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.apache.yoko:yoko-testify:1.5.0.9cce293956'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-runner:1.8.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+application {
+    mainClassName = javaMainClass
+}
