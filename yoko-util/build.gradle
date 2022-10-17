@@ -1,13 +1,5 @@
 dependencies {
-    // depend on the Yoko spec jars
-  spec project(':yoko-rmi-spec')
-
+  implementation project(':yoko-spec-corba')
+  implementation project(':yoko-rmi-spec')
   testImplementation project(":yoko-core")
-}
-
-jar {
-  manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko Implementation Utilities'
-    instruction 'Export-Package'     , '*'
-  }
 }

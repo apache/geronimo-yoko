@@ -1,17 +1,7 @@
 dependencies {
-  compile project(":yoko-osgi")
+  api project(":yoko-osgi")
 }
 
 sourceSets.main.java {
   srcDirs 'src/main/generated-sources/idl'
-}
-
-jar {
-  manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko CORBA Spec'
-    instruction 'Bundle-Activator'   , 'org.apache.yoko.Activator'
-    instruction 'Export-Package'     ,
-      'org.omg.*;version=2.4',
-      'org.apache.*;version=1.0'
-  }
 }

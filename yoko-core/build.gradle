@@ -1,16 +1,17 @@
 sourceSets {
+  // declare additional source sets, and set their classpaths
   artifact.compileClasspath += main.output.classesDirs
   v0.compileClasspath += main.output + artifact.output
   v1.compileClasspath += main.output + artifact.output + v0.output
   v2.compileClasspath += main.output + artifact.output + v0.output
-  test.java.srcDir "src/test/java-testify"  // new framework tests, segregated during transition
+  test.java.srcDir "src/test/java-testify"  // separate ported tests until porting is complete
   test.compileClasspath += artifact.output
 }
 
 testClasses.dependsOn v0Classes, v1Classes, v2Classes
 
 configurations {
-  artifactImplementation.extendsFrom compile, testLib
+  artifactImplementation.extendsFrom implementation, testLib
   v0Implementation.extendsFrom artifactImplementation
   v1Implementation.extendsFrom artifactImplementation
   v2Implementation.extendsFrom artifactImplementation
@@ -18,10 +19,13 @@ configurations {
 
 dependencies {
   // depend on the Yoko spec jars
-  spec project(':yoko-rmi-spec')
+  implementation project(':yoko-osgi')
+  implementation project(':yoko-spec-corba')
+  implementation project(':yoko-rmi-spec')
 
-  // compile against Yoko implementation
-  compile project(":yoko-rmi-impl")
+  // and the rest of the Yoko implementation
+  implementation project(":yoko-util")
+  implementation project(":yoko-rmi-impl")
 
   artifactImplementation sourceSets.main.output
 
@@ -29,14 +33,6 @@ dependencies {
   testLib project(":yoko-util").sourceSets.test.output
   testLib project(":yoko-rmi-impl").sourceSets.test.output
   testImplementation sourceSets.artifact.output
-}
-
-jar {
-  manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko Core'
-    instruction 'Bundle-Activator'   , 'org.apache.yoko.orb.activator.Activator'
-    instruction 'Export-Package'     , 'org.apache.yoko.orb.*'
-  }
 }
 
 test {

@@ -1,11 +1,3 @@
 dependencies {
-  // compile against OSGi but assume that is provided by the framework
-  provided 'org.osgi:org.osgi.core:6.0.0'
-}
-
-jar {
-  manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko OSGi Utilities'
-    instruction 'Export-Package'     , 'org.apache.yoko.osgi.*;version=1.0.0'
-  }
+  api 'org.osgi:org.osgi.core:6.0.0'
 }
