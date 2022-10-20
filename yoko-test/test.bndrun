@@ -17,4 +17,4 @@ logprops=${workspace}/yoko-test/yoko-logging.props
   org.apache.yoko.core,               \
   org.apache.yoko.util,               \
   org.apache.servicemix.bundles.bcel, \
-  yoko.test
+  org.apache.yoko.test

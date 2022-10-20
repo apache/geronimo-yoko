@@ -8,6 +8,10 @@ buildscript {
   }
 }
 
+plugins {
+  id "biz.aQute.bnd.builder" version "6.3.1" apply false
+}
+
 ext {
   testCount = 0
   successfulTestCount = 0
@@ -34,11 +38,13 @@ def getGitHash(length) {
 }
 
 def testProjects = "osgi util rmi-impl core test".split(" ").collect{s->project(":yoko-" + s)}
-def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core jdk-supplement".split(" ").collect{s->project(":yoko-" + s)}
+def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core".split(" ").collect{s->project(":yoko-" + s)}
+
+
 
 /* Standard configuration for each subproject */
-subprojects {
-  apply plugin: 'java'
+subprojects { sp ->
+  apply plugin: 'java-library'
   sourceCompatibility = 1.8
   targetCompatibility = 1.8
 
@@ -49,18 +55,19 @@ subprojects {
   }
 
   configurations {
-    // declare a new configuration to map to Maven's provided scope
-    provided.transitive = true
-    compile.extendsFrom provided
-    // declare a new configuration to use for spec API jars
-    spec.transitive = true
-    compile.extendsFrom spec
     // declare a test library configuration
     testLib
     testImplementation.extendsFrom testLib
   }
 
-  sourceSets.main.compileClasspath += configurations.provided
+  // additional configuration for projects that have bnd.bnd files
+  if (sp.file("bnd.bnd").exists()) {
+    apply plugin: 'biz.aQute.bnd.builder'
+    group = 'org.apache.yoko'
+    // to extend the project with a new property, use project.ext.<new property name>
+    project.ext.symbolicName = project.name.replaceFirst("^yoko-", project.group.toString() + ".")
+    version = '1.5.0.' + getGitHash(10)
+  }
 }
 
 /* Standard configuration for subprojects with tests */
@@ -73,8 +80,8 @@ configure(testProjects) {
     testLib "org.hamcrest:hamcrest:2.1"
     testLib "org.junit.jupiter:junit-jupiter:5.8.2"
     testLib "org.junit.platform:junit-platform-runner:1.8.2"
-    testRuntime "org.junit.jupiter:junit-jupiter-engine:5.8.2"
-    testRuntime "org.junit.vintage:junit-vintage-engine:5.8.2"
+    testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:5.8.2"
+    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:5.8.2"
   }
 
   if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
@@ -148,10 +155,7 @@ configure(testProjects) {
 
 /* Standard configuration for subprojects with shippable outputs */
 configure(shipProjects) {
-  apply plugin: 'osgi'
   apply plugin: 'maven-publish'
-  group = 'org.apache.yoko'
-  version = '1.5.0.' + getGitHash(10)
   publishing {
     publications {
       maven(MavenPublication) {
@@ -168,20 +172,10 @@ configure(shipProjects) {
           def depsNode = rootNode.dependencies[0] ?:
                   rootNode.appendNode('dependencies')
 
-          // declare 'provided' scope dependencies in the pom.xml
-          // Note: the 'provided' scope is built into Maven,
-          // but it is a custom configuration in this Gradle
-          configurations.provided.allDependencies.each {
-            def depNode = depsNode.appendNode('dependency')
-            depNode.appendNode('groupId', it.group)
-            depNode.appendNode('artifactId', it.name)
-            depNode.appendNode('version', it.version)
-            depNode.appendNode('scope', 'provided')
-          }
 
           // declare compile scope dependencies in the pom.xml
           // as compile dependencies
-          configurations.compile.allDependencies.each {
+          configurations.implementation.allDependencies.each {
             def depNode = depsNode.appendNode('dependency')
             depNode.appendNode('groupId', it.group)
             depNode.appendNode('artifactId', it.name)
@@ -200,12 +194,6 @@ configure(shipProjects) {
       from 'build/publications/maven'
       rename "pom-default.xml", "pom.xml"
     }
-    manifest {
-      instruction 'Bundle-DocURL'          , "https://geronimo.apache.org/maven/yoko/$project.version/$project.name"
-      instruction 'Bundle-License'         , 'https://www.apache.org/licenses/LICENSE-2.0.txt'
-      instruction 'Bundle-Vendor'          , 'The Apache Software Foundation'
-      instruction 'Import-Package'         , 'sun.*;resolution:=optional,*'
-    }
   }
 
   publish.dependsOn build
@@ -216,10 +204,10 @@ configure(shipProjects) {
 }
 
 // Summarise the number of tests
-gradle.buildFinished {
-  if (testCount == 0) return
-  def output = "FINAL RESULT: ${failedTestCount ? "FAILURE" : "SUCCESS"} (${testCount} tests, ${successfulTestCount} successes, ${failedTestCount} failures, ${skippedTestCount} skipped)"
-  def startItem = '|  ', endItem = '  |'
-  def repeatLength = startItem.length() + output.length() + endItem.length()
-  println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
-}
+//gradle.buildFinished {
+//  if (testCount == 0) return
+//  def output = "FINAL RESULT: ${failedTestCount ? "FAILURE" : "SUCCESS"} (${testCount} tests, ${successfulTestCount} successes, ${failedTestCount} failures, ${skippedTestCount} skipped)"
+//  def startItem = '|  ', endItem = '  |'
+//  def repeatLength = startItem.length() + output.length() + endItem.length()
+//  println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
+//}

@@ -1,26 +1,15 @@
 dependencies {
   // provided 'org.osgi:org.osgi.core:5.0.0'
-  compile 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.bcel:5.2_2'
-  compile project(":yoko-util")
-  compile project(":yoko-rmi-spec")
+  implementation 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.bcel:5.2_2'
+  implementation project(":yoko-osgi")
+  implementation project(":yoko-util")
+  implementation project(":yoko-spec-corba")
+  implementation project(":yoko-rmi-spec")
   compileOnly project(":yoko-jdk-supplement")
   // In Java <11 the tests run against the JDK ORB implementation classes.
   // We add the following dependency to allow the tests to run against the
   // yoko-core impl classes in Java 11 onwards (which has no ORB).
-  testRuntime project(":yoko-core")
+  testRuntimeOnly project(":yoko-core")
   // use shared test utilities
-  testCompile project(":yoko-util").sourceSets.test.output
-}
-
-jar {
-  manifest {
-    instruction 'Bundle-Description' , 'Apache Yoko RMI Implementation'
-    instruction 'Bundle-Activator'   , 'org.apache.yoko.rmi.osgi.activator.Activator'
-    instruction 'Export-Package'     ,
-      'org.apache.yoko.rmi.api;version=1.0',
-      'org.apache.yoko.rmi.impl;version=1.0',
-      'org.apache.yoko.rmi.util;version=1.0',
-      'org.apache.yoko.rmi.util.corba;version=1.0',
-      'org.apache.yoko.rmi.util.stub;version=1.0'
-  }
+  testImplementation project(":yoko-util").sourceSets.test.output
 }
