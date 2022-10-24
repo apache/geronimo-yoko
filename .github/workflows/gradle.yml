@@ -25,9 +25,14 @@ jobs:
       run: chmod +x gradlew
     - name: Build with Gradle
       run: ./gradlew build
-    - name: Upload reports on failure
+    - name: Upload test reports
       uses: actions/upload-artifact@v3.1.0
       if: always()
       with:
         name: reports
         path: '*/build/reports'
+    - name: Upload test results to Test-hub.io
+      if: always()   # make sure we run it every time even if test step fails
+      uses: testhub-io/testhub-io.action@v0.62
+      with:
+          test_result_pattern: "**/test-results/**/*.xml"
