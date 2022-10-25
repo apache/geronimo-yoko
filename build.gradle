@@ -89,29 +89,8 @@ configure(testProjects) {
     testRuntimeOnly "org.junit.vintage:junit-vintage-engine:5.8.2"
   }
 
-  if (JavaVersion.current() < JavaVersion.VERSION_1_9) {
-    // Add a task to copy the spec jars into a folder
-    // to use with the endorsed standards mechanism
-    task stageEndorsed(type: Sync) {
-      from configurations.spec
-      into temporaryDir
-    }
-
-    // Make all compilation tasks use the endorsed dir
-    tasks.withType(JavaCompile) {
-      dependsOn stageEndorsed
-      options.compilerArgs << "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
-    }
-
-    // Make execute tasks use the endorsed dir
-    tasks.withType(Test) {
-      dependsOn stageEndorsed
-      jvmArgs "-Djava.endorsed.dirs=$stageEndorsed.destinationDir"
-    }
-  } else {
-    tasks.withType(Test) {
-      jvmArgs "--illegal-access=permit"
-    }
+  if (JavaVersion.current() < JavaVersion.VERSION_11) {
+    throw new GradleException("This build must be run with java 11 or higher")
   }
 
   // ensure tests run under $buildDir somewhere
