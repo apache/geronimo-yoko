@@ -1,4 +1,7 @@
 /* Configure classpath to find 3rd party plugins */
+import groovy.time.TimeDuration
+import groovy.time.TimeCategory
+
 buildscript {
   repositories {
     mavenCentral()
@@ -17,6 +20,8 @@ ext {
   successfulTestCount = 0
   failedTestCount = 0
   skippedTestCount = 0
+  time = new TimeDuration(0,0,0,0)
+  testsResults = []
 }
 
 wrapper {
@@ -114,6 +119,7 @@ configure(testProjects) {
     useJUnitPlatform()
     workingDir = "$buildDir/testWorkingDir"
     doFirst {workingDir.mkdirs()}
+
     testLogging {
       // set options for log level LIFECYCLE
       events "skipped", "failed", "passed", "standardOut"
@@ -129,6 +135,7 @@ configure(testProjects) {
       }
       info.events = debug.events
       info.exceptionFormat = debug.exceptionFormat
+      ignoreFailures = true // Always try to run all tests for all modules
 
       afterTest { desc, result ->
         def totalTime = result.endTime - result.startTime
@@ -137,10 +144,31 @@ configure(testProjects) {
 
       afterSuite { desc, result ->
         if (!desc.parent) { // will match the outermost suite
+          def timeTaken = TimeCategory.minus(new Date(result.endTime), new Date(result.startTime))
+          String summary = "${desc.name}" +
+                  "\n" +
+                  "Results: ${result.resultType} " +
+                  "(" +
+                  "${result.testCount} tests, " +
+                  "${result.successfulTestCount} successes, " +
+                  "${result.failedTestCount} failures, " +
+                  "${result.skippedTestCount} skipped" +
+                  ") " +
+                  "in ${timeTaken}" +
+                  "\n"
           rootProject.testCount += result.testCount
           rootProject.successfulTestCount += result.successfulTestCount
           rootProject.failedTestCount += result.failedTestCount
           rootProject.skippedTestCount += result.skippedTestCount
+          rootProject.time += timeTaken
+
+          // Add reports in `testsResults`, keep failed suites at the end
+          if (result.resultType == TestResult.ResultType.SUCCESS) {
+            rootProject.testsResults.add(0, summary)
+          } else {
+            rootProject.testsResults += summary
+          }
+
           def output = "Results: ${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} successes, ${result.failedTestCount} failures, ${result.skippedTestCount} skipped)"
           def startItem = '|  ', endItem = '  |'
           def repeatLength = startItem.length() + output.length() + endItem.length()
@@ -151,6 +179,43 @@ configure(testProjects) {
       }
     }
   }
+}
+
+gradle.buildFinished {
+  String overallSummary = "Total Summary" +
+          "\n" +
+          "Results: ${(failedTestCount == 0) ? "SUCCESS": "FAILURE"} " +
+          "(" +
+          "${rootProject.testCount} tests, " +
+          "${rootProject.successfulTestCount} successes, " +
+          "${rootProject.failedTestCount} failures, " +
+          "${rootProject.skippedTestCount} skipped" +
+          ") " +
+          "in ${rootProject.time}" +
+          "\n"
+  rootProject.testsResults.add(overallSummary)
+
+  def allResults = rootProject.testsResults
+  if (!allResults.isEmpty()) { // allResults will be empty if we didn't run tests
+    // print results
+    printResults rootProject.testsResults
+  }
+}
+
+private static void printResults(allResults) {
+  println "\n  \n Build Summary:"
+  // Max line length has to take lines from all items into account
+  def maxLength = allResults*.readLines().flatten().collect { it.length() }.max()
+
+  println "┌${"${"─" * maxLength}"}┐" // Top border
+
+  println allResults.collect {
+    it.readLines().collect { // Add left and right border to each _line_
+      "│" + it + " " * (maxLength - it.length()) + "│"
+    }.join("\n")
+  }.join("\n├${"${"─" * maxLength}"}┤\n") // Add separator between entries
+
+  println "└${"${"─" * maxLength}"}┘" // Print bottom border
 }
 
 /* Standard configuration for subprojects with shippable outputs */
