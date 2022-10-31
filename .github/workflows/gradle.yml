@@ -1,7 +1,7 @@
 # This workflow will build a Java project with Gradle
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-gradle
 
-name: Java CI with Gradle
+name: Gradle-CI
 
 on:
   push:
@@ -31,8 +31,16 @@ jobs:
       with:
         name: reports
         path: '*/build/reports'
+    - name: Upload xml test results
+      if: always()   # make sure we run it every time even if test step fails
+      uses: actions/upload-artifact@v3.1.0
+      with:
+          name: xml-report
+          path: "**/test-results/**/*.xml"
     - name: Upload test results to Test-hub.io
       if: always()   # make sure we run it every time even if test step fails
       uses: testhub-io/testhub-io.action@v0.62
       with:
-          test_result_pattern: "**/test-results/**/*.xml"
+        test_result_pattern: "**/test-results/**/*.xml"
+
+
