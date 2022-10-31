@@ -42,5 +42,8 @@ jobs:
       uses: testhub-io/testhub-io.action@v0.62
       with:
         test_result_pattern: "**/test-results/**/*.xml"
+    - name: Link to Test-hub.io
+      if: always()
+      run: echo "https://test-hub.io/OpenLiberty/projects/yoko/runs/$GITHUB_RUN_NUMBER"
 
 
