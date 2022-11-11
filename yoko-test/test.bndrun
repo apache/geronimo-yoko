@@ -16,5 +16,6 @@ logprops=${workspace}/yoko-test/yoko-logging.props
   org.apache.yoko.rmi-impl,           \
   org.apache.yoko.core,               \
   org.apache.yoko.util,               \
-  org.apache.servicemix.bundles.bcel, \
+  org.apache.bcel,                    \
+  org.apache.commons.lang3,           \
   org.apache.yoko.test

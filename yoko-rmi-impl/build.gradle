@@ -1,6 +1,6 @@
 dependencies {
   // provided 'org.osgi:org.osgi.core:5.0.0'
-  implementation 'org.apache.servicemix.bundles:org.apache.servicemix.bundles.bcel:5.2_2'
+  implementation 'org.apache.bcel:bcel:6.6.0'
   implementation project(":yoko-osgi")
   implementation project(":yoko-util")
   implementation project(":yoko-spec-corba")
