@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-Bundle-DocURL: https://geronimo.apache.org/maven/yoko/${project.version}/${project.name}
+Bundle-DocURL: https://github.com/OpenLiberty/yoko/wiki
 Bundle-License: https://www.apache.org/licenses/LICENSE-2.0.txt
-Bundle-Vendor: The Apache Software Foundation
+Bundle-Vendor: IBM
 Bundle-Name: ${project.name}
 Bundle-SymbolicName: ${project.symbolicName}
