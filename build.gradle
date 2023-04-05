@@ -41,9 +41,6 @@ def getGitHash(length) {
     return stdout.toString().trim()
 }
 
-def testProjects = "osgi util rmi-impl core test testify".split(" ").collect{s->project(":yoko-" + s)}
-def shipProjects = "osgi util spec-corba rmi-spec rmi-impl core testify".split(" ").collect{s->project(":yoko-" + s)}
-
 /* Standard configuration for each subproject */
 subprojects { sp ->
   apply plugin: 'java-library'
@@ -70,10 +67,7 @@ subprojects { sp ->
     project.ext.symbolicName = project.name.replaceFirst("^yoko-", project.group.toString() + ".")
     version = '1.5.0.' + getGitHash(10)
   }
-}
 
-/* Standard configuration for subprojects with tests */
-configure(testProjects) {
   // standardise the test deps here
   dependencies {
     testLib 'junit:junit:4.12'
@@ -194,7 +188,15 @@ private static void printResults(allResults) {
 }
 
 /* Standard configuration for subprojects with shippable outputs */
-configure(shipProjects) {
+configure([
+  project(':yoko-osgi'),
+  project(':yoko-util'),
+  project(':yoko-spec-corba'),
+  project(':yoko-rmi-spec'),
+  project(':yoko-rmi-impl'),
+  project(':yoko-core'),
+  project(':yoko-testify'),
+]) {
   apply plugin: 'maven-publish'
   publishing {
     publications {
@@ -242,12 +244,3 @@ configure(shipProjects) {
   publish.dependsOn "publishMavenPublicationToMavenLocal"
   publish.dependsOn "publishToMavenLocal"
 }
-
-// Summarise the number of tests
-//gradle.buildFinished {
-//  if (testCount == 0) return
-//  def output = "FINAL RESULT: ${failedTestCount ? "FAILURE" : "SUCCESS"} (${testCount} tests, ${successfulTestCount} successes, ${failedTestCount} failures, ${skippedTestCount} skipped)"
-//  def startItem = '|  ', endItem = '  |'
-//  def repeatLength = startItem.length() + output.length() + endItem.length()
-//  println('\n' + ('-' * repeatLength) + '\n' + startItem + output + endItem + '\n' + ('-' * repeatLength))
-//}
