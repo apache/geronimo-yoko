@@ -16,31 +16,32 @@
  */
 package org.apache.yoko;
 
-import acme.Processor;
-import acme.ProcessorImpl;
+import acme.RemoteRunnable;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.NO_RESPONSE;
 import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 
 import java.rmi.RemoteException;
 
+import static java.lang.Thread.sleep;
 import static testify.expect.ExceptionExpectation.expect;
 
 @ConfigureServer(
         clientOrb = @ConfigureOrb(props = "yoko.orb.policy.request_timeout=1")
 )
 public class TimeoutTest {
-    @ClientStub(ProcessorImpl.class)
-    public static Processor stub;
+    interface Sleeper extends RemoteRunnable {}
+
+    @RemoteImpl
+    public static final Sleeper IMPL = () -> sleep((1000));
 
     @Test
-    public void testTimeout() {
+    public void testTimeout(Sleeper stub) {
         expect(RemoteException.class)
                 .causedBy(NO_RESPONSE.class)
                 .rootCause(NO_RESPONSE.class)
-                .when(() -> stub.performRemotely(() -> Thread.sleep(1000)));
+                .when(stub::run);
     }
-
 }
