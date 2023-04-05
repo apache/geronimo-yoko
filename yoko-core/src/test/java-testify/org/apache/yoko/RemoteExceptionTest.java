@@ -16,8 +16,7 @@
  */
 package org.apache.yoko;
 
-import acme.Processor;
-import acme.ProcessorImpl;
+import acme.RemoteConsumer;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.omg.CORBA.BAD_PARAM;
@@ -29,7 +28,7 @@ import org.omg.CORBA.NO_PERMISSION;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.SystemException;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 
 import java.rmi.AccessException;
 import java.rmi.MarshalException;
@@ -43,9 +42,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 @ConfigureServer
 public class RemoteExceptionTest {
-    @ClientStub(ProcessorImpl.class)
-    public static Processor stub;
-
     enum Conversion {
         ACCESS(NO_PERMISSION.class, NO_PERMISSION::new, AccessException.class),
         MARSHAL1(MARSHAL.class, MARSHAL::new, MarshalException.class),
@@ -68,14 +64,19 @@ public class RemoteExceptionTest {
             this.remoteExceptionType = remoteExceptionType;
         }
 
-        public void throwSystemException() throws Throwable { throw factory.get(); }
+        public void throwSystemException() { throw factory.get(); }
     }
+
+    interface Thrower extends RemoteConsumer<Conversion> {}
+
+    @RemoteImpl
+    public static final Thrower IMPL = Conversion::throwSystemException;
 
     @ParameterizedTest
     @EnumSource(Conversion.class)
-    public void testConversion(Conversion conversion) {
+    public void testConversion(Conversion conversion, Thrower stub) {
         try {
-            stub.performRemotely(conversion::throwSystemException);
+            stub.accept(conversion);
             fail("Should have thrown " + conversion.remoteExceptionType.getName());
         } catch (RemoteException re) {
             assertThat(re, instanceOf(conversion.remoteExceptionType));

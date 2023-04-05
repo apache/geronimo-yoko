@@ -14,30 +14,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package org.apache.yoko;
+package acme;
 
-import acme.RemoteFunction;
-import org.junit.jupiter.api.Test;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
-
+import java.rmi.Remote;
 import java.rmi.RemoteException;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-@ConfigureServer
-public class EmojiTest {
-    interface Echo extends RemoteFunction<String, String>{}
-
-    @RemoteImpl
-    public static final Echo REMOTE = String::toString;
-
-    @Test
-    public void sendEmoji(Echo stub) throws RemoteException {
-        final char[] chars = Character.toChars(0x1f642);
-        assert chars.length == 2;
-        final String message = "Hello, world!" + chars[0] + chars[1];
-        String reply = stub.apply(message);
-        assertEquals(message, reply, "String should be transmitted and received correctly");
-    }
+@FunctionalInterface
+public interface RemoteFunction<T,R> extends Remote {
+    R apply(T t) throws RemoteException;
 }
