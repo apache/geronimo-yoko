@@ -16,12 +16,11 @@
  */
 package org.apache.yoko;
 
+import acme.RemoteFunction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import test.rmi.Sample;
-import test.rmi.SampleImpl;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 
 import java.io.InvalidClassException;
 import java.io.Serializable;
@@ -42,8 +41,10 @@ public class SerialFilterTest {
     public static final int MAX_ARR_LEN = 200;
     public static final int MAX_DEPTH = 100;
 
-    @ClientStub(SampleImpl.class)
-    public static Sample sample;
+    interface Sample<T extends Serializable> extends RemoteFunction<T, T> {}
+
+    @RemoteImpl
+    public static final Sample<? extends Serializable> IMPL = (s) -> s;
 
     public static class AllowedMessage implements Serializable {
         final String payload;
@@ -61,18 +62,17 @@ public class SerialFilterTest {
     }
 
     @Test
-    public void testSendingAllowedObject() throws Exception {
+    public void testSendingAllowedObject(Sample<AllowedMessage> sample) throws Exception {
         final String msg = "Hello, world!";
-        sample.setSerializable(new AllowedMessage(msg));
-        AllowedMessage actual = (AllowedMessage) sample.getSerializable();
+        AllowedMessage actual = sample.apply(new AllowedMessage(msg));
         assertThat(actual.payload, is(msg));
     }
 
     @Test
-    public void testSendingForbiddenObject() throws Throwable {
+    public void testSendingForbiddenObject(Sample sample) throws Throwable {
         final String msg = "Hello, world!";
         try {
-            sample.setSerializable(new ForbiddenMessage(msg));
+            sample.apply(new ForbiddenMessage(msg));
             Assertions.fail("ForbiddenMessage should not be demarshalled by the server.");
         } catch (RuntimeException re) {
             try {
@@ -84,9 +84,9 @@ public class SerialFilterTest {
     }
 
     @Test
-    public void testSendingOverlongArray() throws Throwable {
+    public void testSendingOverlongArray(Sample sample) throws Throwable {
         try {
-            sample.setSerializable(new Object[MAX_ARR_LEN + 1]);
+            sample.apply(new Object[MAX_ARR_LEN + 1]);
             Assertions.fail("demarshalling an Object[MAX_ARR_LEN + 1] should be blocked by the serial filter");
         } catch (RuntimeException re) {
             try {
@@ -98,14 +98,14 @@ public class SerialFilterTest {
     }
 
     @Test
-    public void testSendingOverlyDeepGraph() throws Throwable {
+    public void testSendingOverlyDeepGraph(Sample sample) throws Throwable {
         AllowedLink chain = null;
         for (int i = 0; i < MAX_DEPTH; i++) {
             chain = new AllowedLink(chain);
         }
         chain = new AllowedLink(chain);
         try {
-            sample.setSerializable(chain);
+            sample.apply(chain);
             Assertions.fail("demarshalling an Object graph nested (MAX_DEPTH + 1) deep should be blocked by the serial filter");
         } catch (RuntimeException re) {
             try {
