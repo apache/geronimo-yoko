@@ -27,6 +27,7 @@ import testify.iiop.TestServerRequestInterceptor;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
 import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 import testify.util.Stack;
 
 import javax.rmi.CORBA.Util;
@@ -119,23 +120,27 @@ public class TestInterceptorsThatThrow {
 
     public static class TargetImpl extends PortableRemoteObject implements Target {
         static void forwardToNewInstance() throws ForwardRequest {
+            TargetImpl result = newInstance();
+            throw new ForwardRequest(Util.getTie(result).thisObject());
+        }
+
+        public TargetImpl() throws Exception {}
+
+        static TargetImpl newInstance() {
             try {
-                TargetImpl result = new TargetImpl();
-                throw new ForwardRequest(Util.getTie(result).thisObject());
-            } catch (RemoteException e) {
+                return new TargetImpl();
+            } catch (Exception e) {
                 throw new Error(e);
             }
         }
-
-        public TargetImpl() throws RemoteException{}
     }
 
-    @ClientStub(TargetImpl.class)
-    public static Target stub;
+    @RemoteImpl
+    public static final Target IMPL = TargetImpl.newInstance();
 
     @ParameterizedTest
     @EnumSource(InterceptionPoint.class)
-    void testThrowFromInterceptor(InterceptionPoint interceptionPoint) throws Throwable {
+    void testThrowFromInterceptor(InterceptionPoint interceptionPoint, Target stub) throws Throwable {
         try {
             try {
                 interceptionPoint.invoker.invoke(stub);
