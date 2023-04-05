@@ -21,5 +21,5 @@ import java.rmi.RemoteException;
 
 @FunctionalInterface
 public interface RemoteRunnable extends Remote {
-    void run() throws RemoteException;
+    void run() throws Exception;
 }
