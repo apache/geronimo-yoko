@@ -28,6 +28,7 @@ jobs:
           pattern: '^(DEV|DOC|OPS|TFW|TST): .+$'
           flags: 'gm'
           error: 'Your first line has to start with a qualifier like "DEV: ". Valid qualifiers include DEV, DOC, OPS, TFW, TST'
+          excludeTitle: 'true' # optional: this excludes the title of a pull request
           excludeDescription: 'true' # optional: this excludes the description body of a pull request
           checkAllCommitMessages: 'true' # optional: this checks all commits associated with a pull request
           accessToken: ${{ secrets.GITHUB_TOKEN }} # github access token is only required if checkAllCommitMessages is true
