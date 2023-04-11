@@ -25,15 +25,15 @@ import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.opentest4j.AssertionFailedError;
-import testify.jupiter.annotation.RetriedTest;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.Control;
-import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceUrl;
-import testify.jupiter.annotation.iiop.ServerControl;
-import testify.jupiter.annotation.logging.Logging;
+import testify.annotation.RetriedTest;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.ClientStub;
+import testify.iiop.annotation.ConfigureServer.Control;
+import testify.iiop.annotation.ConfigureServer.CorbanameUrl;
+import testify.iiop.annotation.ConfigureServer.NameServiceUrl;
+import testify.iiop.annotation.ServerControl;
+import testify.annotation.logging.Logging;
 import org.apache.yoko.util.Stubs;
 
 import java.rmi.RemoteException;
@@ -44,8 +44,8 @@ import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
-import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINE;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
+import static testify.annotation.logging.Logging.LoggingLevel.FINE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 public class ServerRestartTest {

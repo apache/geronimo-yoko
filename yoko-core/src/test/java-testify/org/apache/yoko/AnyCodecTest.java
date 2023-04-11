@@ -24,7 +24,7 @@ import org.omg.IOP.CodecFactory;
 import org.omg.IOP.CodecFactoryHelper;
 import org.omg.IOP.ENCODING_CDR_ENCAPS;
 import org.omg.IOP.Encoding;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
+import testify.iiop.annotation.ConfigureOrb;
 
 import java.util.function.BiConsumer;
 import java.util.function.Function;

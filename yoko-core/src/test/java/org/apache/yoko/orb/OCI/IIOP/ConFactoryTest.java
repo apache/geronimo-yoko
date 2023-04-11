@@ -18,7 +18,7 @@ import org.omg.IOP.TAG_INTERNET_IOP;
 import org.omg.IOP.TaggedComponent;
 import org.omg.IOP.TaggedProfile;
 import testify.hex.HexParser;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
+import testify.iiop.annotation.ConfigureOrb;
 
 import static java.util.Arrays.stream;
 import static java.util.stream.Collectors.joining;

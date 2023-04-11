@@ -30,12 +30,12 @@ import org.omg.IOP.ENCODING_CDR_ENCAPS;
 import org.omg.IOP.Encoding;
 import org.omg.PortableInterceptor.ORBInitInfo;
 import test.iiopplugin.TestORBInitializer;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureOrb.NameService;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureOrb.NameService;
+import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.NameServiceStub;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import javax.rmi.CORBA.Stub;
 

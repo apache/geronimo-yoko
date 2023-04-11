@@ -30,11 +30,11 @@ import org.omg.PortableInterceptor.IORInfo;
 import testify.bus.Bus;
 import testify.bus.StringSpec;
 import testify.iiop.TestIORInterceptor;
-import testify.jupiter.annotation.Tracing;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.annotation.Tracing;
+import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.BeforeServer;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import java.io.IOException;
 import java.lang.reflect.Field;

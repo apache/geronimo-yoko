@@ -31,11 +31,11 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.Servant;
 import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.Separation;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.BeforeServer;
+import testify.iiop.annotation.ConfigureServer.NameServiceStub;
+import testify.iiop.annotation.ConfigureServer.Separation;
 import testify.util.Maps;
 
 import javax.rmi.CORBA.Tie;
@@ -56,7 +56,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 import static org.apache.yoko.util.Names.toCosName;
 
 @ConfigureServer(

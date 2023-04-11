@@ -17,8 +17,8 @@
 package org.apache.yoko;
 
 import org.junit.jupiter.api.Test;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import java.awt.image.RasterFormatException;
 import java.rmi.Remote;

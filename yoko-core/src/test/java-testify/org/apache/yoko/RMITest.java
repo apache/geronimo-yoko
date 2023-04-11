@@ -15,8 +15,8 @@ import test.rmi.SampleImpl;
 import test.rmi.SampleRemote;
 import test.rmi.SampleRemoteImpl;
 import test.rmi.SampleSerializable;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import javax.rmi.PortableRemoteObject;
 import java.io.Serializable;
