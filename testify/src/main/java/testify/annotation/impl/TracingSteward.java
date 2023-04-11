@@ -30,38 +30,23 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.logging;
+package testify.annotation.impl;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import org.junit.platform.commons.support.AnnotationSupport;
+import testify.annotation.Tracing;
+import testify.parts.PartRunner;
 
-/**
- * Generate code names (e.g. for threads) that are easy to distinguish
- * and that are named deterministically in encounter order.
- */
-class CodeNaming<T> {
-    final Map<T, String> names = new HashMap<>();
-    int index = 0;
-    char[] chars = new char[3];
+import java.lang.reflect.AnnotatedElement;
 
-    private String getNextName(T t) {
-        //noinspection SpellCheckingInspection
-        final String distinctChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        try {
-            Arrays.fill(chars, distinctChars.charAt(index));
-            return new String(chars);
-        } finally {
-            index++;
-            if (index == distinctChars.length()) {
-                index = 0;
-                chars = new char[chars.length + 1];
-            }
-        }
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+
+public enum TracingSteward {
+    ;
+    public static void addTraceSettings(PartRunner runner, AnnotatedElement elem) {
+        AnnotationSupport.findAnnotation(elem, Tracing.class).ifPresent(trc -> TracingSteward.addTraceSettings(runner, trc));
     }
-
-    synchronized String get(T t) {
-        // Synchronize to make sure some getNextName() results aren't discarded
-        return names.computeIfAbsent(t, this::getNextName);
+    private static void addTraceSettings(PartRunner runner, Tracing config) {
+        if (config.value().isEmpty()) return;
+        runner.enableLogging(config.level(), config.value());
     }
 }

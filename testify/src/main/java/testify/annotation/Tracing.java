@@ -30,22 +30,23 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation;
 
-import testify.jupiter.annotation.Tracing;
-import testify.parts.PartRunner;
+import testify.bus.LogLevel;
 
-import java.lang.reflect.AnnotatedElement;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static testify.bus.LogLevel.DEFAULT;
 
-public enum TracingSteward {
-    ;
-    public static void addTraceSettings(PartRunner runner, AnnotatedElement elem) {
-        findAnnotation(elem, Tracing.class).ifPresent(trc -> TracingSteward.addTraceSettings(runner, trc));
-    }
-    private static void addTraceSettings(PartRunner runner, Tracing config) {
-        if (config.value().isEmpty()) return;
-        runner.enableLogging(config.level(), config.value());
-    }
+@Target({ANNOTATION_TYPE, TYPE})
+@Retention(RUNTIME)
+public @interface Tracing {
+    /** A regular expression to match the classes to trace */
+    String value() default ".*";
+    LogLevel level() default DEFAULT;
 }
+

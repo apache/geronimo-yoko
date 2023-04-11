@@ -14,8 +14,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
+import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.INITIALIZE;
@@ -32,10 +33,7 @@ import testify.bus.LogLevel;
 import testify.bus.MethodSpec;
 import testify.bus.StringSpec;
 import testify.bus.TypeSpec;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.CorbanameUrl;
-import testify.jupiter.annotation.iiop.ConfigureServer.ServerName;
-import testify.jupiter.annotation.logging.TestLogger;
+import testify.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 import testify.util.Optionals;
 import testify.util.Stack;
@@ -71,7 +69,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.jupiter.annotation.iiop.ServerComms.ServerInfo.NAME_SERVICE_URL;
+import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newInstance;
 import static testify.util.Reflect.newMatchingInstance;
@@ -95,7 +93,7 @@ final class ServerComms implements Serializable {
     private static final Map<UUID, ORB> ORB_MAP = new ConcurrentHashMap<>();
 
     private final UUID uuid = UUID.randomUUID();
-    private final ServerName serverName;
+    private final ConfigureServer.ServerName serverName;
     private final Properties props;
     private final Map<Object, Object> originalProps;
     private final String[] args;
@@ -114,7 +112,7 @@ final class ServerComms implements Serializable {
 
     private transient ServerComms otherSide; // can only be populated if the server is in the same process as the client
 
-    ServerComms(ServerName serverName, Properties props, String[] args) {
+    ServerComms(ConfigureServer.ServerName serverName, Properties props, String[] args) {
         this.inClient = true;
         this.serverName = serverName;
         this.props = props;
@@ -158,7 +156,7 @@ final class ServerComms implements Serializable {
         bus.log("Received server shutdown");
     }
 
-    private void launch0(ServerName name) {
+    private void launch0(ConfigureServer.ServerName name) {
         this.bus.log("Server started");
         this.serverShutdown = new CountDownLatch(1);
         // register the control, method invocation, and field instantiation handlers
@@ -296,8 +294,8 @@ final class ServerComms implements Serializable {
         try {
             bus.log(LogLevel.INFO, "field = " + f);
             final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
-                    findAnnotation(f, ClientStub.class).map(ClientStub::value),
-                    findAnnotation(f, CorbanameUrl.class).map(CorbanameUrl::value));
+                    AnnotationSupport.findAnnotation(f, ConfigureServer.ClientStub.class).map(ConfigureServer.ClientStub::value),
+                    AnnotationSupport.findAnnotation(f, ConfigureServer.CorbanameUrl.class).map(ConfigureServer.CorbanameUrl::value));
 
             IMPL o = newInstance(implClass, serverRef.get().paramMap);
             boolean useNameService = f.getType() == String.class;

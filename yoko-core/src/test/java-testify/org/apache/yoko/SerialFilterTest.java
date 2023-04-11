@@ -19,15 +19,15 @@ package org.apache.yoko;
 import acme.RemoteFunction;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import java.io.InvalidClassException;
 import java.io.Serializable;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
+import static testify.iiop.annotation.ConfigureServer.Separation.INTER_PROCESS;
 
 @ConfigureServer(
         separation = INTER_PROCESS,

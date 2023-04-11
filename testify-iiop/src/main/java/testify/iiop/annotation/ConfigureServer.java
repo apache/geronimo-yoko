@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
 import org.junit.jupiter.api.extension.AfterAllCallback;
 import org.junit.jupiter.api.extension.AfterTestExecutionCallback;
@@ -28,8 +28,8 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 import org.omg.CORBA.ORB;
 import org.omg.PortableServer.POA;
 import testify.bus.Bus;
-import testify.jupiter.annotation.ConfigurePartRunner;
-import testify.jupiter.annotation.logging.LoggingExtension;
+import testify.annotation.ConfigurePartRunner;
+import testify.annotation.logging.LoggingExtension;
 import testify.util.Assertions;
 
 import java.lang.annotation.Inherited;
@@ -49,9 +49,9 @@ import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toSet;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
-import static testify.jupiter.annotation.iiop.ConfigureServer.ServerName.DEFAULT_SERVER;
-import static testify.jupiter.annotation.iiop.OrbSteward.getActivatedRootPoa;
+import static testify.iiop.annotation.ConfigureServer.Separation.INTER_ORB;
+import static testify.iiop.annotation.ConfigureServer.ServerName.DEFAULT_SERVER;
+import static testify.iiop.annotation.OrbSteward.getActivatedRootPoa;
 
 @ExtendWith({ LoggingExtension.class, ServerExtension.class }) // ensure ordering in case logging is enabled
 @Target({ANNOTATION_TYPE, TYPE})

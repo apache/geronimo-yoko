@@ -21,15 +21,15 @@ import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.PortableInterceptor.ClientRequestInfo;
 import testify.iiop.TestClientRequestInterceptor;
-import testify.jupiter.annotation.RetriedTest;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ServerControl;
+import testify.annotation.RetriedTest;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.BeforeServer;
+import testify.iiop.annotation.ServerControl;
 import testify.parts.PartRunner;
 
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 public class StringToObjectTest {

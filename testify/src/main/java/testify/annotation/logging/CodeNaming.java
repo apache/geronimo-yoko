@@ -30,21 +30,38 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.logging;
+package testify.annotation.logging;
 
-import java.util.LinkedList;
-import java.util.logging.LogRecord;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * A linked list of LogRecords with chronological ordering of first element.
+ * Generate code names (e.g. for threads) that are easy to distinguish
+ * and that are named deterministically in encounter order.
  */
-final class Journal extends LinkedList<LogRecord> implements Comparable<Journal> {
-    @Override
-    public int compareTo(Journal that) {
-        final LogRecord thisRec = this.peek();
-        final LogRecord thatRec = that.peek();
-        if (null == thisRec) return (null == thatRec) ? 0 : 1;
-        if (null == thatRec) return -1;
-        return Long.signum(thisRec.getMillis() - thatRec.getMillis());
+class CodeNaming<T> {
+    final Map<T, String> names = new HashMap<>();
+    int index = 0;
+    char[] chars = new char[3];
+
+    private String getNextName(T t) {
+        //noinspection SpellCheckingInspection
+        final String distinctChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        try {
+            Arrays.fill(chars, distinctChars.charAt(index));
+            return new String(chars);
+        } finally {
+            index++;
+            if (index == distinctChars.length()) {
+                index = 0;
+                chars = new char[chars.length + 1];
+            }
+        }
+    }
+
+    synchronized String get(T t) {
+        // Synchronize to make sure some getNextName() results aren't discarded
+        return names.computeIfAbsent(t, this::getNextName);
     }
 }

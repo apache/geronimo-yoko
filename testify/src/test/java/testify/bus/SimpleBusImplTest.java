@@ -34,7 +34,6 @@ package testify.bus;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import testify.jupiter.annotation.Tracing;
 
 import java.util.concurrent.*;
 
@@ -42,7 +41,6 @@ import static java.lang.Thread.sleep;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static testify.jupiter.annotation.impl.TracingSteward.addTraceSettings;
 
 class SimpleBusImplTest {
 

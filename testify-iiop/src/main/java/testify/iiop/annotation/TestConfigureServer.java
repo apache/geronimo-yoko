@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -23,17 +23,12 @@ import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
 import org.omg.PortableInterceptor.ORBInitInfo;
 import testify.iiop.TestORBInitializer;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCATED;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_ORB;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
 
 public class TestConfigureServer {
     @ConfigureServer(
@@ -44,7 +39,7 @@ public class TestConfigureServer {
         static ORB clientOrb, serverOrb;
         static String clientOrbId, serverOrbId;
 
-        @BeforeServer
+        @ConfigureServer.BeforeServer
         public static void recordServerOrb(ORB orb) {
             serverOrb = orb;
             System.out.println("### server ORB = " + serverOrb);
@@ -62,12 +57,12 @@ public class TestConfigureServer {
             clientOrbId = serverOrbId = null;
         }
 
-        @UseWithOrb("client orb")
+        @ConfigureOrb.UseWithOrb("client orb")
         public static class ClientOrbInitializer implements TestORBInitializer {
             public void pre_init(ORBInitInfo info) { clientOrbId = info.arguments()[0]; }
         }
 
-        @UseWithOrb("server orb")
+        @ConfigureOrb.UseWithOrb("server orb")
         public static class ServerOrbInitializer implements TestORBInitializer {
             public void pre_init(ORBInitInfo info) { serverOrbId = info.arguments()[0]; }
         }
@@ -75,7 +70,7 @@ public class TestConfigureServer {
 
     @Nested
     @ConfigureServer(
-            separation = INTER_ORB,
+            separation = ConfigureServer.Separation.INTER_ORB,
             clientOrb = @ConfigureOrb(value = "client orb", args = "inter-orb client orb"),
             serverOrb = @ConfigureOrb(value = "server orb", args = "inter-orb server orb")
     )
@@ -92,7 +87,7 @@ public class TestConfigureServer {
 
     @Nested
     @ConfigureServer(
-            separation = INTER_PROCESS,
+            separation = ConfigureServer.Separation.INTER_PROCESS,
             clientOrb = @ConfigureOrb(value = "client orb", args = "inter-process client orb"),
             serverOrb = @ConfigureOrb(value = "server orb", args = "inter-process server orb")
     )
@@ -109,7 +104,7 @@ public class TestConfigureServer {
 
     @Nested
     @ConfigureServer(
-            separation = COLLOCATED,
+            separation = ConfigureServer.Separation.COLLOCATED,
             serverOrb = @ConfigureOrb(value = "server orb", args = "collocated server orb"),
             clientOrb = @ConfigureOrb(value = "client orb", args = "collocated client orb")
     )

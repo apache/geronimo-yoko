@@ -53,7 +53,7 @@ gradle --refresh-dependencies
 ----
 import testify.bus.Bus;
 import testify.bus.TypeSpec;
-import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.annotation.ConfigurePartRunner;
 import testify.parts.PartRunner;
 ----
 
@@ -147,7 +147,7 @@ with:
 ----
 import testify.bus.Bus;
 import testify.bus.TypeSpec;
-import testify.jupiter.annotation.ConfigurePartRunner;
+import testify.annotation.ConfigurePartRunner;
 import testify.parts.PartRunner;
 ----
 

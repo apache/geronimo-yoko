@@ -30,34 +30,21 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation.logging;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-import testify.jupiter.annotation.ConfigurePartRunner;
-import testify.jupiter.annotation.Summoner;
-import testify.parts.PartRunner;
+import java.util.LinkedList;
+import java.util.logging.LogRecord;
 
-public class PartRunnerSteward implements ExtensionContext.Store.CloseableResource {
-    private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
-    private final PartRunner partRunner;
-    private final ConfigurePartRunner config;
-    private final Class<?> testClass;
-
-    private PartRunnerSteward(ConfigurePartRunner config, ExtensionContext context) {
-        this.config = config;
-        this.testClass = context.getRequiredTestClass();
-        this.partRunner = PartRunner.create();
-        TracingSteward.addTraceSettings(partRunner, testClass);
-    }
-
-    // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
-    // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
-    public void close() {
-        partRunner.join();
-    }
-
-    public static PartRunner getPartRunner(ExtensionContext ctx) {
-        // PartRunners are always one per test, so get one for the root context
-        return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new).partRunner;
+/**
+ * A linked list of LogRecords with chronological ordering of first element.
+ */
+final class Journal extends LinkedList<LogRecord> implements Comparable<Journal> {
+    @Override
+    public int compareTo(Journal that) {
+        final LogRecord thisRec = this.peek();
+        final LogRecord thatRec = that.peek();
+        if (null == thisRec) return (null == thatRec) ? 0 : 1;
+        if (null == thatRec) return -1;
+        return Long.signum(thisRec.getMillis() - thatRec.getMillis());
     }
 }

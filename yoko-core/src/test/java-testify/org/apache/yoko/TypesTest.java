@@ -22,9 +22,8 @@ import test.types.TestDynAny;
 import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
-import testify.bus.LogLevel;
-import testify.jupiter.annotation.ConfigurePartRunner;
-import testify.jupiter.annotation.Tracing;
+import testify.annotation.ConfigurePartRunner;
+import testify.annotation.Tracing;
 import testify.parts.PartRunner;
 
 @ConfigurePartRunner

@@ -14,22 +14,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Object;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import testify.bus.Bus;
-import testify.jupiter.annotation.Summoner;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.Control;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
-import testify.jupiter.annotation.iiop.ServerExtension.ParamType;
-import testify.jupiter.annotation.impl.AnnotationButler;
+import testify.annotation.Summoner;
+import testify.annotation.impl.AnnotationButler;
 import testify.parts.PartRunner;
 
 import javax.rmi.PortableRemoteObject;
@@ -49,13 +44,9 @@ import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_ONLY;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCATED;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.INTER_PROCESS;
-import static testify.jupiter.annotation.iiop.OrbSteward.args;
-import static testify.jupiter.annotation.iiop.OrbSteward.props;
-import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.iiop.annotation.OrbSteward.args;
+import static testify.iiop.annotation.OrbSteward.props;
+import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
 import static testify.util.Assertions.failf;
 import static testify.util.Reflect.setStaticField;
 
@@ -78,7 +69,7 @@ class ServerSteward {
         this.config = config;
         this.context = context;
         Class<?> testClass = context.getRequiredTestClass();
-        this.controlFields = AnnotationButler.forClass(Control.class)
+        this.controlFields = AnnotationButler.forClass(ConfigureServer.Control.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -86,11 +77,11 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.nameServiceFields = AnnotationButler.forClass(NameServiceStub.class)
+        this.nameServiceFields = AnnotationButler.forClass(ConfigureServer.NameServiceStub.class)
                 .requireTestAnnotation(ConfigureServer.class,
                         "the test server must have its name service configured",
                         cfg -> cfg.serverOrb().nameService(),
-                        anyOf(is(READ_ONLY), is(READ_WRITE)))
+                        anyOf(Matchers.is(ConfigureOrb.NameService.READ_ONLY), Matchers.is(ConfigureOrb.NameService.READ_WRITE)))
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(NamingContext.class)
@@ -101,7 +92,7 @@ class ServerSteward {
                 .requireTestAnnotation(ConfigureServer.class,
                         "the test server must have its name service configured",
                         cfg -> cfg.serverOrb().nameService(),
-                        anyOf(is(READ_ONLY), is(READ_WRITE)))
+                        anyOf(Matchers.is(ConfigureOrb.NameService.READ_ONLY), Matchers.is(ConfigureOrb.NameService.READ_WRITE)))
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(String.class)
@@ -112,14 +103,14 @@ class ServerSteward {
                 .requireTestAnnotation(ConfigureServer.class,
                         "the test server must have its name service configured",
                         cfg -> cfg.serverOrb().nameService(),
-                        anyOf(is(READ_ONLY), is(READ_WRITE)))
+                        anyOf(Matchers.is(ConfigureOrb.NameService.READ_ONLY), Matchers.is(ConfigureOrb.NameService.READ_WRITE)))
                 .assertPublic()
                 .assertStatic()
                 .assertFieldTypes(String.class)
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.clientStubFields = AnnotationButler.forClass(ClientStub.class)
+        this.clientStubFields = AnnotationButler.forClass(ConfigureServer.ClientStub.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -127,7 +118,7 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.remoteImplFields = AnnotationButler.forClass(RemoteImpl.class)
+        this.remoteImplFields = AnnotationButler.forClass(ConfigureServer.RemoteImpl.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
@@ -136,11 +127,11 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFieldsAsMap(testClass); // start with null values and initialize after server startup
-        this.beforeMethods = AnnotationButler.forClass(BeforeServer.class)
+        this.beforeMethods = AnnotationButler.forClass(ConfigureServer.BeforeServer.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
-                .assertParameterTypes(ParamType.SUPPORTED_TYPES)
+                .assertParameterTypes(ServerExtension.ParamType.SUPPORTED_TYPES)
                 .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
@@ -148,26 +139,26 @@ class ServerSteward {
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
-                .assertParameterTypes(ParamType.SUPPORTED_TYPES)
+                .assertParameterTypes(ServerExtension.ParamType.SUPPORTED_TYPES)
                 .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
         assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && remoteImplFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
-                + "\n - EITHER the test must annotate a public static method with @" + BeforeServer.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with @" + Control.class.getSimpleName()
-                + "\n - OR the test must annotate a public static field with @" + ClientStub.class.getSimpleName()
-                + "\n - OR the test must annotate a public static final field with @" + RemoteImpl.class.getSimpleName()
+                + "\n - EITHER the test must annotate a public static method with @" + ConfigureServer.BeforeServer.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with @" + ConfigureServer.Control.class.getSimpleName()
+                + "\n - OR the test must annotate a public static field with @" + ConfigureServer.ClientStub.class.getSimpleName()
+                + "\n - OR the test must annotate a public static final field with @" + ConfigureServer.RemoteImpl.class.getSimpleName()
         );
 
         // blow up if jvm args specified unnecessarily
-        if (config.separation() != INTER_PROCESS && config.jvmArgs().length > 0)
+        if (config.separation() != ConfigureServer.Separation.INTER_PROCESS && config.jvmArgs().length > 0)
             throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
-                    + " must not include JVM arguments unless it is configured as " + INTER_PROCESS);
+                    + " must not include JVM arguments unless it is configured as " + ConfigureServer.Separation.INTER_PROCESS);
 
         PartRunner runner = getPartRunner(context);
         // does this part run in a thread or a new process?
-        if (this.config.separation() == INTER_PROCESS) runner.useNewJVMWhenForking(this.config.jvmArgs());
+        if (this.config.separation() == ConfigureServer.Separation.INTER_PROCESS) runner.useNewJVMWhenForking(this.config.jvmArgs());
         else runner.useNewThreadWhenForking();
 
         final Properties props = props(this.config.serverOrb(), context.getRequiredTestClass(), this::isServerOrbModifier);
@@ -249,7 +240,7 @@ class ServerSteward {
 
     public ORB getClientOrb() {
         // TODO: make the client ORB a field that is initialized early
-        return config.separation() == COLLOCATED ? serverComms.getServerOrb().orElseThrow(Error::new) : OrbSteward.getOrb(context, config.clientOrb());
+        return config.separation() == ConfigureServer.Separation.COLLOCATED ? serverComms.getServerOrb().orElseThrow(Error::new) : OrbSteward.getOrb(context, config.clientOrb());
     }
 
     public void beforeEach(ExtensionContext ctx) {
@@ -270,9 +261,9 @@ class ServerSteward {
         switch (matches.size()) {
             case 1: return true;
             case 0:
-                throw failf("Cannot find any fields of type %s annotated with @%s", type, RemoteImpl.class.getSimpleName());
+                throw failf("Cannot find any fields of type %s annotated with @%s", type, ConfigureServer.RemoteImpl.class.getSimpleName());
             default:
-                throw failf("Found multiple fields matching %s annotated with @%s: %s", type, RemoteImpl.class.getSimpleName(),
+                throw failf("Found multiple fields matching %s annotated with @%s: %s", type, ConfigureServer.RemoteImpl.class.getSimpleName(),
                         matches.stream().map(Field::getName).collect(joining(", ")));
         }
     }
@@ -281,7 +272,7 @@ class ServerSteward {
         Field f = findMatchingRemoteImplFields(type)
                 .stream()
                 .findFirst()
-                .orElseThrow(() -> failf("Could not find any fields matching type %s annotated with @%s", type, RemoteImpl.class.getSimpleName()));
+                .orElseThrow(() -> failf("Could not find any fields matching type %s annotated with @%s", type, ConfigureServer.RemoteImpl.class.getSimpleName()));
 
         return Optional.of(f)
                 .map(remoteImplFields::get)

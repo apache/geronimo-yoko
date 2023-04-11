@@ -30,13 +30,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
-import testify.jupiter.annotation.Summoner;
+import testify.annotation.Summoner;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;

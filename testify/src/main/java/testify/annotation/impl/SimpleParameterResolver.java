@@ -30,23 +30,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation;
+package testify.annotation.impl;
 
-import testify.bus.LogLevel;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import java.lang.annotation.Retention;
-import java.lang.annotation.Target;
+public interface SimpleParameterResolver<P> extends ParameterResolver {
+    @Override
+    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
 
-import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
-import static java.lang.annotation.ElementType.TYPE;
-import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static testify.bus.LogLevel.DEFAULT;
+    @Override
+    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
 
-@Target({ANNOTATION_TYPE, TYPE})
-@Retention(RUNTIME)
-public @interface Tracing {
-    /** A regular expression to match the classes to trace */
-    String value() default ".*";
-    LogLevel level() default DEFAULT;
+    boolean supportsParameter(ParameterContext pCtx);
+    P resolveParameter(ExtensionContext ctx);
 }
-

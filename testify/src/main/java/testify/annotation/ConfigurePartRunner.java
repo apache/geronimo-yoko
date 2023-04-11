@@ -30,52 +30,34 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.logging;
+package testify.annotation;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import testify.annotation.impl.SimpleParameterResolver;
+import testify.parts.PartRunner;
 
-import java.lang.annotation.Repeatable;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Inherited;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.logging.Level;
 
-import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
-import static java.lang.annotation.ElementType.METHOD;
-import static java.lang.annotation.ElementType.TYPE;
+import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
 
-/**
- * On a class containing Junit 5 (Jupiter) tests,
- * this annotation will enable logging for all tests in that class.
- *
- * On a test method, it will add log settings for that test alone.
- * These settings will be processed after the class log settings, if any.
- */
-@ExtendWith(LoggingExtension.class)
-@Target({TYPE, METHOD, ANNOTATION_TYPE})
+@ExtendWith(PartRunnerExtension.class)
+@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(Logging.Container.class)
-public @interface Logging {
-    String value() default ""; // if unspecified, apply to the root logger
-    LoggingLevel level() default LoggingLevel.ALL;
-    enum LoggingLevel {
-        OFF(Level.OFF),
-        SEVERE(Level.SEVERE),
-        WARNING(Level.WARNING),
-        INFO(Level.INFO),
-        CONFIG(Level.CONFIG),
-        FINE(Level.FINE),
-        FINER(Level.FINER),
-        FINEST(Level.FINEST),
-        ALL(Level.ALL);
-        final Level level;
-        LoggingLevel(Level level) { this.level = level; }
-    }
+@Inherited
+public @interface ConfigurePartRunner {}
 
-    @Target({TYPE, METHOD, ANNOTATION_TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Container {
-        Logging[] value();
-    }
+class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
+    @Override
+    public boolean supportsParameter(ParameterContext ctx)  { return ctx.getParameter().getType() == PartRunner.class; }
+    @Override
+    // get the configured PartRunner for the context,
+    // but if the context has a test method, use its parent instead
+    // i.e. get an ORB for the test class, not for each test method
+    public PartRunner resolveParameter(ExtensionContext ctx) { return getPartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
 }
-

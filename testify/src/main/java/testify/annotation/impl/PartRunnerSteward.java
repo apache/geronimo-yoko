@@ -30,34 +30,34 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation;
+package testify.annotation.impl;
 
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import testify.jupiter.annotation.impl.SimpleParameterResolver;
+import testify.annotation.ConfigurePartRunner;
+import testify.annotation.Summoner;
 import testify.parts.PartRunner;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+public class PartRunnerSteward implements ExtensionContext.Store.CloseableResource {
+    private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
+    private final PartRunner partRunner;
+    private final ConfigurePartRunner config;
+    private final Class<?> testClass;
 
-import static testify.jupiter.annotation.impl.PartRunnerSteward.getPartRunner;
+    private PartRunnerSteward(ConfigurePartRunner config, ExtensionContext context) {
+        this.config = config;
+        this.testClass = context.getRequiredTestClass();
+        this.partRunner = PartRunner.create();
+        TracingSteward.addTraceSettings(partRunner, testClass);
+    }
 
-@ExtendWith(PartRunnerExtension.class)
-@Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
-@Retention(RetentionPolicy.RUNTIME)
-@Inherited
-public @interface ConfigurePartRunner {}
+    // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
+    // Note this happens *before* the correlated extension callback points (e.g. AfterEachCallback/AfterAllCallback)
+    public void close() {
+        partRunner.join();
+    }
 
-class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
-    @Override
-    public boolean supportsParameter(ParameterContext ctx)  { return ctx.getParameter().getType() == PartRunner.class; }
-    @Override
-    // get the configured PartRunner for the context,
-    // but if the context has a test method, use its parent instead
-    // i.e. get an ORB for the test class, not for each test method
-    public PartRunner resolveParameter(ExtensionContext ctx) { return getPartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
+    public static PartRunner getPartRunner(ExtensionContext ctx) {
+        // PartRunners are always one per test, so get one for the root context
+        return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new).partRunner;
+    }
 }

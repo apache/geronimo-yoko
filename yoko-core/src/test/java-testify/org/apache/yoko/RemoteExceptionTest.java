@@ -27,8 +27,8 @@ import org.omg.CORBA.NO_IMPLEMENT;
 import org.omg.CORBA.NO_PERMISSION;
 import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.omg.CORBA.SystemException;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import java.rmi.AccessException;
 import java.rmi.MarshalException;

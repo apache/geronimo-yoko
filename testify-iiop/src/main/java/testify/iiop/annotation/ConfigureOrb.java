@@ -14,7 +14,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
 import org.apache.yoko.orb.spi.naming.NameServiceInitializer;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,7 +28,7 @@ import java.util.Optional;
 import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
 import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.NONE;
+import static testify.iiop.annotation.ConfigureOrb.NameService.NONE;
 
 @ExtendWith(OrbExtension.class)
 @Target({ANNOTATION_TYPE, TYPE})

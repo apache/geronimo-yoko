@@ -31,8 +31,8 @@ import org.omg.IIOP.ProfileBody_1_1Helper;
 import org.omg.IOP.IOR;
 import org.omg.IOP.IORHelper;
 import org.omg.IOP.TaggedProfile;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
 
 import java.io.IOException;
 import java.net.ConnectException;

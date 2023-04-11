@@ -14,19 +14,19 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.iiop;
+package testify.iiop.annotation;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ParameterResolutionException;
+import org.junit.platform.commons.support.AnnotationSupport;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.PortableInterceptor.ORBInitializer;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
-import testify.jupiter.annotation.Summoner;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
+import testify.annotation.Summoner;
 import testify.util.ArrayUtils;
 import testify.util.Predicates;
 
@@ -89,8 +89,8 @@ class OrbSteward implements ExtensionContext.Store.CloseableResource {
     }
 
     private boolean isOrbModifier(Class<?> c) {
-        return findAnnotation(c, UseWithOrb.class)
-                .map(UseWithOrb::value)
+        return AnnotationSupport.findAnnotation(c, ConfigureOrb.UseWithOrb.class)
+                .map(ConfigureOrb.UseWithOrb::value)
                 .filter(orbName::matches)
                 .isPresent();
     }

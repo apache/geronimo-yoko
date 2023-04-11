@@ -30,7 +30,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation.impl;
 
 import org.hamcrest.Matcher;
 import org.junit.platform.commons.support.HierarchyTraversalMode;

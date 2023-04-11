@@ -36,24 +36,21 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.Servant;
 import testify.bus.Bus;
-import testify.jupiter.annotation.Tracing;
-import testify.jupiter.annotation.iiop.ConfigureOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.Separation;
-import testify.jupiter.annotation.logging.Logging;
+import testify.annotation.Tracing;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.BeforeServer;
+import testify.iiop.annotation.ConfigureServer.NameServiceStub;
+import testify.iiop.annotation.ConfigureServer.Separation;
+import testify.annotation.logging.Logging;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.Constructor;
 
-import static testify.jupiter.annotation.iiop.ConfigureOrb.NameService.READ_WRITE;
-import static testify.jupiter.annotation.logging.Logging.LoggingLevel.FINEST;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
+import static testify.annotation.logging.Logging.LoggingLevel.FINEST;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 @Tracing

@@ -24,10 +24,10 @@ import org.omg.CORBA.INTERNAL;
 import org.omg.PortableInterceptor.ForwardRequest;
 import org.omg.PortableInterceptor.ServerRequestInfo;
 import testify.iiop.TestServerRequestInterceptor;
-import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
-import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
-import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
+import testify.iiop.annotation.ConfigureServer;
+import testify.iiop.annotation.ConfigureServer.ClientStub;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 import testify.util.Stack;
 
 import javax.rmi.CORBA.Util;
@@ -40,7 +40,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_MAYBE;
 import static org.omg.CORBA.CompletionStatus.COMPLETED_NO;
-import static testify.jupiter.annotation.iiop.ConfigureServer.Separation.COLLOCATED;
+import static testify.iiop.annotation.ConfigureServer.Separation.COLLOCATED;
 
 @ConfigureServer
 public class TestInterceptorsThatThrow {

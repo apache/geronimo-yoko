@@ -30,17 +30,52 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation.logging;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.api.extension.ExtendWith;
 
-import java.util.stream.Stream;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.logging.Level;
 
-public interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
-    @Override
-    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 
-    Stream<P> provideArgs(ExtensionContext ctx);
+/**
+ * On a class containing Junit 5 (Jupiter) tests,
+ * this annotation will enable logging for all tests in that class.
+ *
+ * On a test method, it will add log settings for that test alone.
+ * These settings will be processed after the class log settings, if any.
+ */
+@ExtendWith(LoggingExtension.class)
+@Target({TYPE, METHOD, ANNOTATION_TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Repeatable(Logging.Container.class)
+public @interface Logging {
+    String value() default ""; // if unspecified, apply to the root logger
+    LoggingLevel level() default LoggingLevel.ALL;
+    enum LoggingLevel {
+        OFF(Level.OFF),
+        SEVERE(Level.SEVERE),
+        WARNING(Level.WARNING),
+        INFO(Level.INFO),
+        CONFIG(Level.CONFIG),
+        FINE(Level.FINE),
+        FINER(Level.FINER),
+        FINEST(Level.FINEST),
+        ALL(Level.ALL);
+        final Level level;
+        LoggingLevel(Level level) { this.level = level; }
+    }
+
+    @Target({TYPE, METHOD, ANNOTATION_TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @interface Container {
+        Logging[] value();
+    }
 }
+

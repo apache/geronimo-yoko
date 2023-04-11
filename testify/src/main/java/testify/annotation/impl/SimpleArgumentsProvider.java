@@ -30,19 +30,17 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package testify.jupiter.annotation.impl;
+package testify.annotation.impl;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolver;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
 
-public interface SimpleParameterResolver<P> extends ParameterResolver {
+import java.util.stream.Stream;
+
+public interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
     @Override
-    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
+    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
 
-    @Override
-    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
-
-    boolean supportsParameter(ParameterContext pCtx);
-    P resolveParameter(ExtensionContext ctx);
+    Stream<P> provideArgs(ExtensionContext ctx);
 }
