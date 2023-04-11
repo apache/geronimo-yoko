@@ -16,5 +16,5 @@
 -include ~../common.bnd
 
 Bundle-Description: Yoko Testify Framework IIOP Extensions for JUnit 5
-Export-Package: testify.*
+Export-Package: testify.iiop.*
 Sealed: true
