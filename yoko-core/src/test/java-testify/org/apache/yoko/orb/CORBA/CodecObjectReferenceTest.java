@@ -16,8 +16,7 @@
  */
 package org.apache.yoko.orb.CORBA;
 
-import acme.Echo;
-import acme.EchoImpl;
+import acme.RemoteFunction;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.Any;
 import org.omg.CORBA.INITIALIZE;
@@ -35,8 +34,8 @@ import testify.jupiter.annotation.iiop.ConfigureOrb;
 import testify.jupiter.annotation.iiop.ConfigureOrb.NameService;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
 import testify.jupiter.annotation.iiop.ConfigureServer.NameServiceStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 
 import javax.rmi.CORBA.Stub;
 
@@ -76,12 +75,13 @@ public class CodecObjectReferenceTest {
 
     @NameServiceStub
     public static NamingContext nameService;
+interface Echo extends RemoteFunction<String, String> {}
 
-    @ClientStub(EchoImpl.class)
-    public static Echo echo;
+    @RemoteImpl
+    public static final Echo REMOTE = String::toString;
 
     @Test
-    void testEncodeAndDecodeRmiObject() throws Exception {
+    void testEncodeAndDecodeRmiObject(Echo echo) throws Exception {
         final byte[] bytes = encodeRefUsingClientCodec((Stub)echo);
         // Decode the RMI object using the server-side codec
         Any serverAny = ServerOrbInitializer.codec.decode(bytes);
