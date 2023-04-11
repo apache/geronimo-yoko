@@ -195,7 +195,7 @@ configure([
   project(':yoko-rmi-spec'),
   project(':yoko-rmi-impl'),
   project(':yoko-core'),
-  project(':yoko-testify'),
+  project(':testify'),
 ]) {
   apply plugin: 'maven-publish'
   publishing {

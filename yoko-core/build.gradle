@@ -30,7 +30,7 @@ dependencies {
   artifactImplementation sourceSets.main.output
 
   // use shared test utilities
-  testLib project(":yoko-testify") // local tests use the production code from testify
+  testLib project(":testify") // local tests use the production code from testify
   testLib project(":yoko-util").sourceSets.test.output     // BUT they use the test code from yoko-util
   testLib project(":yoko-rmi-impl").sourceSets.test.output // and from yoko-rmi-impl
   testImplementation sourceSets.artifact.output

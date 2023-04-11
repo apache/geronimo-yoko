@@ -25,7 +25,7 @@ jobs:
       run: chmod +x gradlew
     - name: Check copyright Tag in Testify source files
       run: |
-        SRC=$(find yoko-testify/ -name '*.java')
+        SRC=$(find testify/ -name '*.java')
         export year_modified=`git log -n 1 --pretty=format:%cd --date=format:%Y $i`
         RC=0
         echo "Checking copyright"
