@@ -2,7 +2,7 @@
 -runee: JavaSE-1.8
 
 # enable logging for yoko
-logprops=${workspace}/yoko-test/yoko-logging.props
+logprops=${workspace}/test-osgi/yoko-logging.props
 -runvm: -Djava.util.logging.config.file=${logprops}
 
 # We don't have any resolution happening here so
@@ -18,4 +18,4 @@ logprops=${workspace}/yoko-test/yoko-logging.props
   org.apache.yoko.util,               \
   org.apache.bcel,                    \
   org.apache.commons.lang3,           \
-  org.apache.yoko.test
+  test-osgi

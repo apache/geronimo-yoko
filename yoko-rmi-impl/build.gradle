@@ -5,7 +5,7 @@ dependencies {
   implementation project(":yoko-util")
   implementation project(":yoko-spec-corba")
   implementation project(":yoko-rmi-spec")
-  compileOnly project(":yoko-jdk-supplement")
+  compileOnly project(":jdk-supplement")
   // In Java <11 the tests run against the JDK ORB implementation classes.
   // We add the following dependency to allow the tests to run against the
   // yoko-core impl classes in Java 11 onwards (which has no ORB).
