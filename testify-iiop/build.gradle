@@ -1,0 +1,9 @@
+dependencies {
+  implementation 'junit:junit:4.12'
+  implementation "org.hamcrest:hamcrest:2.1"
+  implementation "org.junit.jupiter:junit-jupiter:5.8.2"
+  implementation project(':yoko-spec-corba')
+  implementation project(':yoko-rmi-spec')
+  implementation project(":yoko-core")
+  implementation project(":testify")
+}
