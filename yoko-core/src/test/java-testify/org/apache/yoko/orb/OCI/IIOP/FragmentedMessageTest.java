@@ -16,8 +16,7 @@
  */
 package org.apache.yoko.orb.OCI.IIOP;
 
-import acme.Echo;
-import acme.EchoImpl;
+import acme.RemoteFunction;
 import org.apache.yoko.orb.OCI.Acceptor;
 import org.apache.yoko.orb.PortableInterceptor.IORInfo_impl;
 import org.junit.jupiter.api.Test;
@@ -29,11 +28,13 @@ import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 import org.omg.PortableInterceptor.IORInfo;
 import testify.bus.Bus;
+import testify.bus.StringSpec;
 import testify.iiop.TestIORInterceptor;
 import testify.jupiter.annotation.Tracing;
 import testify.jupiter.annotation.iiop.ConfigureOrb.UseWithOrb;
 import testify.jupiter.annotation.iiop.ConfigureServer;
-import testify.jupiter.annotation.iiop.ConfigureServer.ClientStub;
+import testify.jupiter.annotation.iiop.ConfigureServer.BeforeServer;
+import testify.jupiter.annotation.iiop.ConfigureServer.RemoteImpl;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -54,8 +55,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 @ConfigureServer
 @Tracing
 public class FragmentedMessageTest {
-    @ClientStub(EchoImpl.class)
-    public static Echo stub;
+    interface Echo extends RemoteFunction<String, String> {}
+
+    private enum Keys implements StringSpec{LAST_MSG};
+
+    @RemoteImpl
+    public static final Echo IMPL = s -> {
+        assertThat("String should have been transmitted correctly.", s, equalTo(Constants.PAYLOAD));
+        return s;
+    };
 
     private static Field getField(Class<?> cls, String name) {
         try {
@@ -110,9 +118,8 @@ public class FragmentedMessageTest {
     }
 
     @Test
-    public void testFragmentingBigJavaString(Bus bus) throws Exception {
-        String result = stub.echo(Constants.PAYLOAD);
-        assertThat("String should have been transmitted correctly.", EchoImpl.getLastMessage(bus), equalTo(Constants.PAYLOAD));
+    public void testFragmentingBigJavaString(Bus bus, Echo echo) throws Exception {
+        String result = echo.apply(Constants.PAYLOAD);
         assertThat("String should have been returned correctly.", result, equalTo(Constants.PAYLOAD));
     }
 
