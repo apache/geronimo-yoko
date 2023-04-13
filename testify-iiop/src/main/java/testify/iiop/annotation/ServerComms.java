@@ -26,14 +26,13 @@ import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.Servant;
 import org.opentest4j.TestAbortedException;
+import testify.annotation.logging.TestLogger;
 import testify.bus.Bus;
 import testify.bus.EnumSpec;
 import testify.bus.FieldSpec;
-import testify.bus.LogLevel;
 import testify.bus.MethodSpec;
 import testify.bus.StringSpec;
 import testify.bus.TypeSpec;
-import testify.annotation.logging.TestLogger;
 import testify.parts.PartRunner;
 import testify.util.Optionals;
 import testify.util.Stack;
@@ -49,6 +48,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.rmi.Remote;
+import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -68,7 +68,7 @@ import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static testify.bus.LogLevel.INFO;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newInstance;
@@ -292,7 +292,7 @@ final class ServerComms implements Serializable {
     void instantiate0(Field f) {
         assertServer(IS_STARTED);
         try {
-            bus.log(LogLevel.INFO, "field = " + f);
+            bus.log(INFO, "field = " + f);
             final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
                     AnnotationSupport.findAnnotation(f, ConfigureServer.ClientStub.class).map(ConfigureServer.ClientStub::value),
                     AnnotationSupport.findAnnotation(f, ConfigureServer.CorbanameUrl.class).map(ConfigureServer.CorbanameUrl::value));
@@ -309,7 +309,16 @@ final class ServerComms implements Serializable {
     private <IMPL extends Remote, TIE extends Servant & Tie>
     String getIor(Field f, IMPL o, boolean useNameService) throws Exception {
         // create the tie
-        if (!!!(o instanceof PortableRemoteObject)) PortableRemoteObject.exportObject(o);
+        if (!!!(o instanceof PortableRemoteObject)) try {
+            PortableRemoteObject.exportObject(o);
+        } catch (RemoteException e) {
+            if (e.getMessage().contains("object already exported")) {
+                // this is fine — we don't need to re-export it
+                bus.log(e.getMessage());
+            } else {
+                throw e;
+            }
+        }
         TIE tie = (TIE) Util.getTie(o);
 
         // if that didn't work try creating the tie directly
@@ -345,7 +354,7 @@ final class ServerComms implements Serializable {
     void exportObject0(Field f) {
         assertServer(IS_STARTED);
         try {
-            bus.log(LogLevel.INFO, "field = " + f);
+            bus.log(INFO, "field = " + f);
             IMPL o = (IMPL) f.get(null);
             String result = getIor(f, o, false);
             bus.put(f.getName(), result);

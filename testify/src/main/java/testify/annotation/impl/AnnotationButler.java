@@ -51,6 +51,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -131,12 +132,16 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
             return this;
         }
         public Spec<A> assertFieldTypes(Class<?>... allowedTypes) {
+            assert allowedTypes != null;
+            assert allowedTypes.length > 0;
             assertions = assertions.andThen(member -> {
                 if (!!!(member instanceof Field)) return;
                 Field field = (Field)member;
                 Class<?> fieldType = field.getType();
                 if (Stream.of(allowedTypes).anyMatch(allowed -> allowed.isAssignableFrom(fieldType))) return;
-                fail(annoName + " does not support the declared type " + fieldType.getSimpleName() + " of field " + field);
+                fail(annoName + " does not support the declared type " + fieldType.getSimpleName() + " of field " + field +".\n"
+                        + (allowedTypes.length == 1 ? "Expected field to conform to type: " : "Expected field to conform to one of: ")
+                        + Stream.of(allowedTypes).map(Class::getSimpleName).collect(joining(", ")));
             });
             return this;
         }
