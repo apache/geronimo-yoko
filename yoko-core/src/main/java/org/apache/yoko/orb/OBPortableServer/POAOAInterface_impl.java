@@ -118,8 +118,9 @@ final class POAOAInterface_impl extends LocalObject implements OAInterface {
                     // exception if the POA manager is discarding.
                     //
                     org.omg.PortableServer.POA poa = poaManager_._OB_locatePOA(data);
-                    if (poa != null) {
-                        logger.fine("Unable to locate POA " + data + " using POAManager " + poaManager_.get_id()); 
+                    if (poa == null) {
+                        logger.fine(() -> "Unable to locate POA " + data + " using POAManager " + poaManager_.get_id());
+                    } else {
                         POA_impl poaImpl = (POA_impl) poa;
                         upcall = poaImpl._OB_createUpcall(data.oid, upcallReturn, profileInfo, transportInfo, requestId, op, in, requestContexts);
                         //

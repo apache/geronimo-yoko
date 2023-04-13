@@ -17,11 +17,12 @@
 
 package org.apache.yoko.orb.OBPortableServer;
 
-import java.util.logging.Logger;
-
 import org.apache.yoko.orb.PortableServer.PoaCurrentImpl;
 import org.apache.yoko.util.Assert;
-import org.omg.PortableServer.POAManagerPackage.*;
+import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
+import org.omg.PortableServer.POAManagerPackage.State;
+
+import java.util.logging.Logger;
 
 final public class POAManager_impl extends org.omg.CORBA.LocalObject implements POAManager {
     static final Logger logger = Logger.getLogger(POAManager_impl.class.getName());
@@ -739,7 +740,7 @@ final public class POAManager_impl extends org.omg.CORBA.LocalObject implements 
                 // hence some other end-point) then location forward
                 //
                 if (poa != null) {
-                    logger.fine("Attempting to obtain a local reference to an object activated on a differnt POA"); 
+                    logger.fine("Attempting to obtain a local reference to an object activated on a different POA");
                     org.omg.PortableServer.POAManager manager = poa.the_POAManager();
                     if (manager != this) {
                         Object obj = poa.create_reference_with_id(data.oid, "");
