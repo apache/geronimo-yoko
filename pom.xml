@@ -44,7 +44,7 @@
         <antrun.version>1.1</antrun.version>
         <!--<antlr.version>2.7.5</antlr.version>-->
         <bcel.version>5.2</bcel.version>
-        <junit.version>4.12</junit.version>
+        <junit.version>4.13.1</junit.version>
         <compile.flags>-Xlint:unchecked,deprecation,fallthrough,finally</compile.flags>
         <java.endorsed.dirs>${basedir}/target/classes</java.endorsed.dirs>
         <compile.forked>false</compile.forked>
