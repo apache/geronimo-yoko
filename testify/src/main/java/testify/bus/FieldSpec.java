@@ -37,7 +37,7 @@ import java.lang.reflect.Field;
 public interface FieldSpec extends TypeSpec<Field> {
     @Override
     default String stringify(Field field) {
-        return field.getDeclaringClass().getName() + "#" + field.getName();
+        return fieldToString(field);
     }
 
     @Override
@@ -60,4 +60,7 @@ public interface FieldSpec extends TypeSpec<Field> {
         }
     }
 
+    static String fieldToString(Field field) {
+        return field.getDeclaringClass().getName() + "#" + field.getName();
+    }
 }
