@@ -66,8 +66,8 @@ class ServerInstance {
             Policy[] policies = {
                     rootPoa.create_thread_policy(ThreadPolicyValue.ORB_CTRL_MODEL),
                     rootPoa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT),
-                    rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID),
-                    rootPoa.create_id_uniqueness_policy(IdUniquenessPolicyValue.MULTIPLE_ID),
+                    rootPoa.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID),
+                    rootPoa.create_id_uniqueness_policy(IdUniquenessPolicyValue.UNIQUE_ID),
                     rootPoa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN),
                     rootPoa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY),
                     rootPoa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION),

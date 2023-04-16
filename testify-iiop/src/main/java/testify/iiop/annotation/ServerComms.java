@@ -48,7 +48,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.rmi.Remote;
-import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -64,10 +63,12 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.stream.Collectors.toList;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
+import static testify.bus.FieldSpec.fieldToString;
 import static testify.bus.LogLevel.INFO;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
@@ -283,7 +284,7 @@ final class ServerComms implements Serializable {
         assertClientSide();
         bus.put(FieldRequest.INIT, f);
         waitForCompletion(t -> new FieldInstantiationFailed(f, t));
-        final String ior = bus.get(f.getName());
+        final String ior = bus.get(fieldToString(f));
         bus.log( ior);
         return ior;
     }
@@ -300,43 +301,49 @@ final class ServerComms implements Serializable {
             IMPL o = newInstance(implClass, serverRef.get().paramMap);
             boolean useNameService = f.getType() == String.class;
             String result = getIor(f, o, useNameService);
-            bus.put(f.getName(), result);
+            bus.put(fieldToString(f), result);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
         }
     }
 
-    private <IMPL extends Remote, TIE extends Servant & Tie>
-    String getIor(Field f, IMPL o, boolean useNameService) throws Exception {
-        // create the tie
-        if (!!!(o instanceof PortableRemoteObject)) try {
-            PortableRemoteObject.exportObject(o);
-        } catch (RemoteException e) {
-            if (e.getMessage().contains("object already exported")) {
-                // this is fine — we don't need to re-export it
-                bus.log(e.getMessage());
-            } else {
-                throw e;
-            }
+    private <T extends Tie> T getTie(Remote impl) throws Exception {
+        // get the tie
+        T tie = (T) Util.getTie(impl);
+        if (null != tie) return tie;
+
+        if (!!!(impl instanceof PortableRemoteObject)) {
+            PortableRemoteObject.exportObject(impl);
+            tie = (T) Util.getTie(impl);
+            if (null != tie) return tie;
         }
-        TIE tie = (TIE) Util.getTie(o);
 
-        // if that didn't work try creating the tie directly
-        if (tie == null) tie = newMatchingInstance(o.getClass(), "_*_Tie");
-
+        tie = newMatchingInstance(impl.getClass(), "_*_Tie");
         // do up the tie
-        tie.setTarget(o);
-        // connect the tie to the POA
-        serverRef.get().childPoa.activate_object(tie);
+        tie.setTarget(impl);
+        return tie;
+    }
+
+    private <IMPL extends Remote, TIE extends Servant & Tie>
+    String getIor(Field f, IMPL impl, boolean useNameService) throws Exception {
+        TIE tie = getTie(impl);
+
+        // get a unique ID that is the same even after a restart
+        byte[] oid = fieldToString(f).getBytes(UTF_8);
+        // connect the tie to the POA using the id
+        ServerInstance server = serverRef.get();
+        server.childPoa.activate_object_with_id(oid, tie);
+        // must use the same POA to convert the object to a reference
+        org.omg.CORBA.Object ref = server.childPoa.servant_to_reference(tie);
         // put the result on the bus
         String result;
         if (useNameService) {
-            NamingContext root = NamingContextHelper.narrow(serverRef.get().orb.resolve_initial_references("NameService"));
+            NamingContext root = NamingContextHelper.narrow(server.orb.resolve_initial_references("NameService"));
             NameComponent[] cosName = {new NameComponent(f.getName(), "")};
-            root.bind(cosName, tie.thisObject());
+            root.bind(cosName, ref);
             result = this.nsUrl + "#" + f.getName();
         } else {
-            result = serverRef.get().orb.object_to_string(tie.thisObject());
+            result = serverRef.get().orb.object_to_string(ref);
         }
         return result;
     }
@@ -345,7 +352,7 @@ final class ServerComms implements Serializable {
         assertClientSide();
         bus.put(FieldRequest.EXPORT, f);
         waitForCompletion(t -> new ObjectExportFailed(f, t));
-        final String ior = bus.get(f.getName());
+        final String ior = bus.get(fieldToString(f));
         bus.log(ior);
         return ior;
     }
@@ -357,7 +364,8 @@ final class ServerComms implements Serializable {
             bus.log(INFO, "field = " + f);
             IMPL o = (IMPL) f.get(null);
             String result = getIor(f, o, false);
-            bus.put(f.getName(), result);
+            bus.put(fieldToString(f), result);
+            System.out.println("### exported object " + result);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
         }
