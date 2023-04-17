@@ -23,16 +23,16 @@
 
 package org.apache.yoko.orb.OCI.IIOP;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.ServerSocket;
-import java.net.SocketAddress;
-
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.IOP.IOR;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.SocketAddress;
 
 public class DefaultConnectionHelper implements ConnectionHelper {
     public void init(ORB orb, String parms) {
@@ -63,7 +63,7 @@ public class DefaultConnectionHelper implements ConnectionHelper {
         try {
             final SocketAddress endpoint = new InetSocketAddress(address, port);
             final ServerSocket serverSocket = new ServerSocket();
-            serverSocket.setReuseAddress(port != 0);
+            serverSocket.setReuseAddress(true);
             serverSocket.setPerformancePreferences(0, 2, 1);
             serverSocket.bind(endpoint, backlog);
             return serverSocket;
