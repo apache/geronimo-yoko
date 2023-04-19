@@ -19,6 +19,7 @@ package testify.iiop.annotation;
 import org.apache.yoko.orb.OBPortableServer.POAManager_impl;
 import org.apache.yoko.orb.OCI.IIOP.AcceptorInfo;
 import org.omg.CORBA.BAD_INV_ORDER;
+import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.ORBPackage.InvalidName;
 import org.omg.CORBA.Policy;
@@ -41,6 +42,8 @@ import testify.util.Throw;
 import java.util.Map;
 import java.util.Properties;
 
+import static testify.bus.LogLevel.WARN;
+
 class ServerInstance {
     final Bus bus;
     final ORB orb;
@@ -53,7 +56,7 @@ class ServerInstance {
         this.bus = bus;
         this.orb = ORB.init(args, props);
         try {
-            POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
+            final POA rootPoa = getRootPoa(bus, orb, 7);
             POAManager_impl pm = (POAManager_impl) rootPoa.the_POAManager();
             pm.activate();
             final AcceptorInfo info = (AcceptorInfo) pm.get_acceptors()[0].get_info();
@@ -74,8 +77,22 @@ class ServerInstance {
             };
             childPoa = rootPoa.create_POA(name.toString(), pm, policies);
             this.paramMap = Maps.of(ORB.class, orb, Bus.class, bus, POA.class, childPoa);
-        } catch (InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
+        } catch (InterruptedException | InvalidName | AdapterInactive | AdapterAlreadyExists | InvalidPolicy e) {
             throw Throw.andThrowAgain(e);
+        }
+    }
+
+    static POA getRootPoa(Bus bus, ORB orb, int retries) throws InvalidName, InterruptedException {
+        // This is where yoko tries to start the server socket — allow some retries
+        try {
+            POA rootPoa = (POA) orb.resolve_initial_references("RootPOA");
+            return rootPoa;
+        } catch (COMM_FAILURE e) {
+            if (retries < 1) throw e;
+            bus.log(WARN, "Server start failed. Retrying..");
+            // sleep to allow the port to become available
+            Thread.sleep(200);
+            return getRootPoa(bus, orb, retries - 1);
         }
     }
 
