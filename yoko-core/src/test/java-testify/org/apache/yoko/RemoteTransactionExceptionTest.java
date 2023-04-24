@@ -18,35 +18,24 @@ package org.apache.yoko;
 
 import acme.Loader;
 import acme.Processor;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.INVALID_TRANSACTION;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.SystemException;
 import org.omg.CORBA.TRANSACTION_REQUIRED;
 import org.omg.CORBA.TRANSACTION_ROLLEDBACK;
-import org.omg.CosNaming.NamingContext;
-import org.omg.CosNaming.NamingContextHelper;
-import org.omg.PortableServer.POA;
-import org.omg.PortableServer.Servant;
-import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
-import testify.iiop.annotation.ConfigureServer.BeforeServer;
-import testify.iiop.annotation.ConfigureServer.NameServiceStub;
+import testify.iiop.annotation.ConfigureServer.RemoteImpl;
+import testify.iiop.annotation.ConfigureServer.RemoteStub;
 import testify.iiop.annotation.ConfigureServer.Separation;
 import testify.util.Maps;
 
-import javax.rmi.CORBA.Tie;
-import javax.rmi.CORBA.Util;
-import javax.rmi.PortableRemoteObject;
-import java.lang.reflect.Constructor;
+import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.EnumMap;
 import java.util.Map;
-import java.util.stream.Stream;
 
+import static javax.rmi.PortableRemoteObject.narrow;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.INVALID;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.REQUIRED;
 import static org.apache.yoko.RemoteTransactionExceptionTest.TransactionExceptionType.ROLLBACK;
@@ -57,7 +46,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.fail;
 import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
-import static org.apache.yoko.util.Names.toCosName;
 
 @ConfigureServer(
         separation = Separation.INTER_ORB,
@@ -71,58 +59,26 @@ public class RemoteTransactionExceptionTest {
         public final Class<? extends SystemException> systemExceptionClass;
         public final Map<Loader,String> remoteExceptionNames;
 
-        <E extends SystemException> TransactionExceptionType(Class<E> systemExceptionClass, String simpleName) {
-            this.systemExceptionClass = systemExceptionClass;
+        <E extends SystemException> TransactionExceptionType(Class<E> corbaExceptionClass, String javaExceptionName) {
+            this.systemExceptionClass = corbaExceptionClass;
             this.remoteExceptionNames = Maps.of(
-                    Loader.V1, "javax.transaction." + simpleName,
-                    Loader.V2, "jakarta.transaction." + simpleName);
+                    Loader.V1, "javax.transaction." + javaExceptionName,
+                    Loader.V2, "jakarta.transaction." + javaExceptionName);
         }
 
-        void throwRemoteException(Loader loader) throws Exception {
+        void throwRemoteException(Loader loader) throws RemoteException {
             String exceptionName = remoteExceptionNames.get(loader);
-            throw (RemoteException)loader.getConstructor(exceptionName, String.class).newInstance(exceptionName);
+            throw (RemoteException)loader.newInstance(exceptionName, exceptionName);
         }
     }
 
-    private static final String BIND_NAME = "Processor";
-    @NameServiceStub
-    public static NamingContext nameServiceClient;
-    private static final EnumMap<Loader,Processor> stubs = new EnumMap<>(Loader.class);
-
-    @BeforeServer
-    public static void initServer(ORB orb, POA rootPOA, Bus bus) throws Exception {
-        bus.log("Initializing server");
-        NamingContext nc = NamingContextHelper.narrow(orb.resolve_initial_references("NameService"));
-        bus.log("Retrieved name service");
-        try {
-            Constructor<Processor> constructor = Loader.V2.getConstructor("versioned.VersionedProcessorImpl", Bus.class);
-            Processor proc = constructor.newInstance(bus);
-            PortableRemoteObject.exportObject(proc);
-            bus.log("Exported server target object");
-            Tie tie = Util.getTie(proc);
-            rootPOA.activate_object((Servant) tie);
-            bus.log("Activated object with root POA");
-            nc.bind(toCosName(BIND_NAME), tie.thisObject());
-            bus.log("Bound object");
-        } catch (Exception e) {
-            fail(e);
-        }
+    @RemoteImpl
+    public static Processor impl(Bus bus) throws Exception {
+        return Loader.V2.newInstance("versioned.VersionedProcessorImpl", bus);
     }
 
-    @BeforeAll
-    public static void initClient() {
-        // populate the stubs enum map
-        Stream.of(Loader.values())
-                .forEach(key -> stubs.computeIfAbsent(key, l -> {
-                    Class<? extends Processor> stubInterface = l.loadClass("versioned.VersionedProcessor");
-                    try {
-                        Object resolved = nameServiceClient.resolve(toCosName(BIND_NAME));
-                        return (Processor)PortableRemoteObject.narrow(resolved, stubInterface);
-                    } catch (Exception e) {
-                        throw new AssertionFailedError("Could not retrieve stub", e);
-                    }
-                }));
-    }
+    @RemoteStub
+    public static Processor stub;
 
     @Test
     public void testThrowInvalidTransactionV1V1() { testRemoteExceptionIsTranslatedCorrectly(INVALID, Loader.V1, Loader.V1); }
@@ -152,14 +108,12 @@ public class RemoteTransactionExceptionTest {
     public void testThrowTransactionRolledbackV2V2() { testRemoteExceptionIsTranslatedCorrectly(ROLLBACK, Loader.V2, Loader.V2); }
 
 
+    interface Thrower extends Remote {
+        void throwConfiguredException(TransactionExceptionType eType, Loader serverLoader) throws RemoteException;
+    }
+
     private void testRemoteExceptionIsTranslatedCorrectly(TransactionExceptionType exceptionType, Loader client, Loader server) {
-        Processor p;
-        try {
-            p = (Processor) PortableRemoteObject.narrow(nameServiceClient.resolve(toCosName(BIND_NAME)), client.loadClass("versioned.VersionedProcessor"));
-        } catch (Exception e1) {
-            fail(e1);
-            p = null;
-        }
+        Processor p = (Processor) narrow(stub, client.loadClass("versioned.VersionedProcessor"));
         try {
             p.performRemotely(() -> exceptionType.throwRemoteException(server));
             fail();
