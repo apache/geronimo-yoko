@@ -185,6 +185,15 @@ public class AnnotationButler<A extends Annotation> implements Serializable {
                 .collect(HashMap::new, (m, f) -> m.put(f, null), HashMap::putAll);
     }
 
+    public <V> Map<Method, V> findMethodsAsMap(Class<?> clazz) {
+        return findAnnotatedMethods(clazz, annoType, HierarchyTraversalMode.TOP_DOWN)
+                .stream()
+                .sequential()
+                .filter(this::filter)
+                .peek(this.assertions)
+                .collect(HashMap::new, (map, method) -> map.put(method, null), HashMap::putAll);
+    }
+
     private boolean filter(AnnotatedElement elem) {
         return findAnnotation(elem, annoType)
                 .map(filters::test)
