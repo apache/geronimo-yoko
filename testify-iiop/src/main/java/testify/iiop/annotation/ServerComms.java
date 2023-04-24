@@ -16,7 +16,6 @@
  */
 package testify.iiop.annotation;
 
-import org.junit.platform.commons.support.AnnotationSupport;
 import org.junit.platform.commons.support.ReflectionSupport;
 import org.omg.CORBA.COMM_FAILURE;
 import org.omg.CORBA.INITIALIZE;
@@ -30,10 +29,12 @@ import testify.annotation.logging.TestLogger;
 import testify.bus.Bus;
 import testify.bus.EnumSpec;
 import testify.bus.FieldSpec;
+import testify.bus.MemberSpec;
 import testify.bus.MethodSpec;
 import testify.bus.StringSpec;
 import testify.bus.TypeSpec;
 import testify.parts.PartRunner;
+import testify.util.Assertions;
 import testify.util.Optionals;
 import testify.util.Stack;
 import testify.util.Throw;
@@ -45,13 +46,13 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.net.BindException;
 import java.rmi.Remote;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.UUID;
@@ -64,12 +65,13 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toList;
+import static java.util.Objects.requireNonNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
-import static testify.bus.FieldSpec.fieldToString;
+import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.bus.LogLevel.INFO;
+import static testify.bus.MemberSpec.memberToString;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newInstance;
@@ -85,7 +87,8 @@ final class ServerComms implements Serializable {
     enum ServerInfo implements StringSpec {NAME_SERVICE_URL}
     private enum ServerRequest implements EnumSpec<ServerOp> {SEND}
     private enum MethodRequest implements MethodSpec {SEND}
-    private enum FieldRequest implements FieldSpec {INIT, EXPORT}
+    private enum FieldRequest implements FieldSpec {INIT}
+    private enum ExportRequest implements MemberSpec {EXPORT}
     private enum BeginLogging implements TypeSpec<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
     private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
     private enum Result implements TypeSpec<ServerSideException> {RESULT}
@@ -122,7 +125,7 @@ final class ServerComms implements Serializable {
     }
 
     String getNameServiceUrl() {
-        return Objects.requireNonNull(nsUrl, () -> { throw new IllegalStateException("Name service not available"); });
+        return requireNonNull(nsUrl, () -> { throw new IllegalStateException("Name service not available"); });
     }
 
     private void assertClientSide() { if (!inClient) fail(Stack.getCallingFrame(1) + " must only be used on the client"); }
@@ -163,7 +166,7 @@ final class ServerComms implements Serializable {
         // register the control, method invocation, and field instantiation handlers
         this.bus.onMsg(ServerRequest.SEND, op -> completeRequest("control operation ", this::control0, op));
         this.bus.onMsg(FieldRequest.INIT, field -> completeRequest("instantiation of field " , this::instantiate0, field));
-        this.bus.onMsg(FieldRequest.EXPORT, field -> completeRequest("export of field " , this::exportObject0, field));
+        this.bus.onMsg(ExportRequest.EXPORT, member -> completeRequest("export of target object " , this::exportObject0, member));
         this.bus.onMsg(MethodRequest.SEND, method -> completeRequest("invocation of ", this::invoke0, method));
         this.bus.onMsg(BeginLogging.BEGIN_LOGGING, supplier -> completeRequest("start logging", this::beginLogging0, supplier));
         this.bus.onMsg(EndLogging.END_LOGGING, consumer -> completeRequest("start logging", this::endLogging0, consumer));
@@ -252,8 +255,7 @@ final class ServerComms implements Serializable {
         assertServer(IS_STARTED);
         final Object[] params = Stream.of(m.getParameterTypes())
                 .map(serverRef.get().paramMap::get)
-                .collect(toList())
-                .toArray(new Object[0]);
+                .toArray(Object[]::new);
         return ReflectionSupport.invokeMethod(m, null, params);
     }
 
@@ -284,7 +286,7 @@ final class ServerComms implements Serializable {
         assertClientSide();
         bus.put(FieldRequest.INIT, f);
         waitForCompletion(t -> new FieldInstantiationFailed(f, t));
-        final String ior = bus.get(fieldToString(f));
+        final String ior = bus.get(memberToString(f));
         bus.log( ior);
         return ior;
     }
@@ -294,25 +296,26 @@ final class ServerComms implements Serializable {
         assertServer(IS_STARTED);
         try {
             bus.log(INFO, "field = " + f);
+            @SuppressWarnings("unchecked cast")
             final Class<IMPL> implClass = (Class<IMPL>) Optionals.requireOneOf(
-                    AnnotationSupport.findAnnotation(f, ConfigureServer.ClientStub.class).map(ConfigureServer.ClientStub::value),
-                    AnnotationSupport.findAnnotation(f, ConfigureServer.CorbanameUrl.class).map(ConfigureServer.CorbanameUrl::value));
-
+                    findAnnotation(f, ConfigureServer.ClientStub.class).map(ConfigureServer.ClientStub::value),
+                    findAnnotation(f, ConfigureServer.CorbanameUrl.class).map(ConfigureServer.CorbanameUrl::value));
             IMPL o = newInstance(implClass, serverRef.get().paramMap);
             boolean useNameService = f.getType() == String.class;
             String result = getIor(f, o, useNameService);
-            bus.put(fieldToString(f), result);
+            bus.put(memberToString(f), result);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
         }
     }
 
+    @SuppressWarnings("unchecked cast")
     private <T extends Tie> T getTie(Remote impl) throws Exception {
         // get the tie
         T tie = (T) Util.getTie(impl);
         if (null != tie) return tie;
 
-        if (!!!(impl instanceof PortableRemoteObject)) {
+        if (!(impl instanceof PortableRemoteObject)) {
             PortableRemoteObject.exportObject(impl);
             tie = (T) Util.getTie(impl);
             if (null != tie) return tie;
@@ -325,11 +328,11 @@ final class ServerComms implements Serializable {
     }
 
     private <IMPL extends Remote, TIE extends Servant & Tie>
-    String getIor(Field f, IMPL impl, boolean useNameService) throws Exception {
+    String getIor(Member m, IMPL impl, boolean useNameService) throws Exception {
         TIE tie = getTie(impl);
 
         // get a unique ID that is the same even after a restart
-        byte[] oid = fieldToString(f).getBytes(UTF_8);
+        byte[] oid = memberToString(m).getBytes(UTF_8);
         // connect the tie to the POA using the id
         ServerInstance server = serverRef.get();
         server.childPoa.activate_object_with_id(oid, tie);
@@ -339,33 +342,40 @@ final class ServerComms implements Serializable {
         String result;
         if (useNameService) {
             NamingContext root = NamingContextHelper.narrow(server.orb.resolve_initial_references("NameService"));
-            NameComponent[] cosName = {new NameComponent(f.getName(), "")};
+            NameComponent[] cosName = {new NameComponent(m.getName(), "")};
             root.bind(cosName, ref);
-            result = this.nsUrl + "#" + f.getName();
+            result = this.nsUrl + "#" + m.getName();
         } else {
             result = serverRef.get().orb.object_to_string(ref);
         }
         return result;
     }
 
-    String exportObject(Field f) {
+    String exportObject(Member m) {
         assertClientSide();
-        bus.put(FieldRequest.EXPORT, f);
-        waitForCompletion(t -> new ObjectExportFailed(f, t));
-        final String ior = bus.get(fieldToString(f));
+        bus.put(ExportRequest.EXPORT, m);
+        waitForCompletion(t -> new ObjectExportFailed(m, t));
+        String key = memberToString(m);
+        final String ior = bus.get(key);
         bus.log(ior);
         return ior;
     }
 
     private <IMPL extends Remote, TIE extends Servant & Tie>
-    void exportObject0(Field f) {
+    void exportObject0(Member member) {
         assertServer(IS_STARTED);
         try {
-            bus.log(INFO, "field = " + f);
-            IMPL o = (IMPL) f.get(null);
-            String result = getIor(f, o, false);
-            bus.put(fieldToString(f), result);
-            System.out.println("### exported object " + result);
+            bus.log(INFO, "### exporting object from member: " + member);
+            @SuppressWarnings("unchecked cast")
+            final IMPL o;
+            if (member instanceof Field) o = (IMPL) ((Field)member).get(null);
+            else if (member instanceof Method) o = (IMPL) invoke0((Method) member);
+            else throw Assertions.failf("Member type not supported for object export: %s", member);
+
+            String key = memberToString(member);
+            String ior = getIor(member, o, false);
+            bus.put(key, ior);
+            System.out.println("### exported object " + ior);
         } catch (Throwable throwable) {
             throw Throw.andThrowAgain(throwable);
         }
@@ -441,7 +451,7 @@ final class ServerComms implements Serializable {
     }
 
     static class ObjectExportFailed extends ServerResult {
-        ObjectExportFailed(Field f, Throwable cause) { super("Received exception from server while trying to export object in final field:\n    " + f, cause); }
+        ObjectExportFailed(Member m, Throwable cause) { super("Received exception from server while trying to export object in final field:\n    " + m, cause); }
     }
 
     static class LoggingFailed extends ServerResult {

@@ -22,16 +22,18 @@ import org.omg.CORBA.ORB;
 import org.omg.CORBA.Object;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
-import testify.bus.Bus;
 import testify.annotation.Summoner;
 import testify.annotation.impl.AnnotationButler;
+import testify.bus.Bus;
 import testify.parts.PartRunner;
 
 import javax.rmi.PortableRemoteObject;
 import java.lang.reflect.Field;
+import java.lang.reflect.Member;
 import java.lang.reflect.Method;
 import java.rmi.Remote;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -40,13 +42,13 @@ import java.util.Properties;
 import static java.util.stream.Collectors.joining;
 import static javax.rmi.PortableRemoteObject.narrow;
 import static org.hamcrest.CoreMatchers.anyOf;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
+import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.bus.MemberSpec.getMemberEvaluationType;
 import static testify.iiop.annotation.OrbSteward.args;
 import static testify.iiop.annotation.OrbSteward.props;
-import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
 import static testify.util.Assertions.failf;
 import static testify.util.Reflect.setStaticField;
 
@@ -57,14 +59,14 @@ class ServerSteward {
     private final List<Field> nameServiceUrlFields;
     private final List<Field> corbanameUrlFields;
     private final List<Field> clientStubFields;
-    private final Map<Field, Remote> remoteImplFields;
+    private final List<Field> remoteStubFields;
+    private final Map<Member, Remote> remoteImplMembers;
     private final List<Method> beforeMethods;
     private final List<Method> afterMethods;
     private final ConfigureServer config;
     private final ExtensionContext context;
     private final ServerComms serverComms;
     private final ServerController serverControl;
-
     private ServerSteward(ConfigureServer config, ExtensionContext context) {
         this.config = config;
         this.context = context;
@@ -118,15 +120,33 @@ class ServerSteward {
                 .filter(anno -> anno.serverName().equals(config.serverName()))
                 .recruit()
                 .findFields(testClass);
-        this.remoteImplFields = AnnotationButler.forClass(ConfigureServer.RemoteImpl.class)
+        this.remoteStubFields = AnnotationButler.forClass(ConfigureServer.RemoteStub.class)
+                .requireTestAnnotation(ConfigureServer.class)
+                .assertPublic()
+                .assertStatic()
+                .assertFieldTypes(Remote.class)
+                .filter(anno -> anno.serverName().equals(config.serverName()))
+                .recruit()
+                .findFields(testClass);
+        // Create a map with null values and initialize after server startup
+        this.remoteImplMembers = new HashMap<>();
+        this.remoteImplMembers.putAll(AnnotationButler.forClass(ConfigureServer.RemoteImpl.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
                 .assertStatic()
                 .assertFinal()
                 .assertFieldTypes(Remote.class)
-                .filter(anno -> anno.serverName().equals(config.serverName()))
+                .filter(anno1 -> anno1.serverName().equals(config.serverName()))
                 .recruit()
-                .findFieldsAsMap(testClass); // start with null values and initialize after server startup
+                .findFieldsAsMap(testClass));
+        this.remoteImplMembers.putAll(AnnotationButler.forClass(ConfigureServer.RemoteImpl.class)
+                .requireTestAnnotation(ConfigureServer.class)
+                .assertPublic()
+                .assertStatic()
+                .assertParameterTypes(ServerExtension.ParamType.SUPPORTED_TYPES)
+                .filter(anno1 -> anno1.serverName().equals(config.serverName()))
+                .recruit()
+                .findMethodsAsMap(testClass));
         this.beforeMethods = AnnotationButler.forClass(ConfigureServer.BeforeServer.class)
                 .requireTestAnnotation(ConfigureServer.class)
                 .assertPublic()
@@ -143,7 +163,12 @@ class ServerSteward {
                 .filter(anno -> anno.value().equals(config.serverName()))
                 .recruit()
                 .findMethods(testClass);
-        assertFalse(controlFields.isEmpty() && clientStubFields.isEmpty() && remoteImplFields.isEmpty() && beforeMethods.isEmpty(), () -> ""
+        assertFalse(
+                controlFields.isEmpty() &&
+                        clientStubFields.isEmpty() &&
+                        remoteImplMembers.isEmpty() &&
+                        beforeMethods.isEmpty(),
+                () -> ""
                 + "The @" + ConfigureServer.class.getSimpleName() + " annotation on class " + testClass.getName() + " requires one of the following:"
                 + "\n - EITHER the test must annotate a public static method with @" + ConfigureServer.BeforeServer.class.getSimpleName()
                 + "\n - OR the test must annotate a public static field with @" + ConfigureServer.Control.class.getSimpleName()
@@ -208,12 +233,15 @@ class ServerSteward {
             // instantiate the stub on the client
             setStaticField(f, narrow(clientOrb.string_to_object(ior), f.getType()));
         });
-        remoteImplFields.entrySet().forEach(e -> {
-            Field f = e.getKey();
-            String ior = serverComms.exportObject(f);
+        remoteImplMembers.entrySet().forEach(e -> {
+            Member m = e.getKey();
+            String ior = serverComms.exportObject(m);
             Object object = clientOrb.string_to_object(ior);
-            Remote stub = (Remote)PortableRemoteObject.narrow(object, f.getType());
+            Remote stub = (Remote)PortableRemoteObject.narrow(object, getMemberEvaluationType(m));
             e.setValue(stub);
+        });
+        remoteStubFields.forEach(f -> {
+            setStaticField(f, resolveParameter(getMemberEvaluationType(f)));
         });
     }
 
@@ -256,37 +284,37 @@ class ServerSteward {
     }
 
     public boolean supportsParameter(Class<?> type) {
-        if (false == Remote.class.isAssignableFrom(type)) return false;
-        final List<Field> matches = findMatchingRemoteImplFields(type);
+        if (!Remote.class.isAssignableFrom(type)) return false;
+        final List<Member> matches = findMatchingRemoteImplMembers(type);
         switch (matches.size()) {
-            case 1: return true;
             case 0:
-                throw failf("Cannot find any fields of type %s annotated with @%s", type, ConfigureServer.RemoteImpl.class.getSimpleName());
+                throw failf("Cannot find any members of type %s annotated with @%s", type, ConfigureServer.RemoteImpl.class.getSimpleName());
+            case 1: return true;
             default:
-                throw failf("Found multiple fields matching %s annotated with @%s: %s", type, ConfigureServer.RemoteImpl.class.getSimpleName(),
-                        matches.stream().map(Field::getName).collect(joining(", ")));
+                throw failf("Found multiple members matching %s annotated with @%s: %s", type, ConfigureServer.RemoteImpl.class.getSimpleName(),
+                        matches.stream().map(Member::toString).collect(joining(", ")));
         }
     }
 
     public Remote resolveParameter(Class<?> type) {
-        Field f = findMatchingRemoteImplFields(type)
+        Member m = findMatchingRemoteImplMembers(type)
                 .stream()
                 .findFirst()
                 .orElseThrow(() -> failf("Could not find any fields matching type %s annotated with @%s", type, ConfigureServer.RemoteImpl.class.getSimpleName()));
 
-        return Optional.of(f)
-                .map(remoteImplFields::get)
+        return Optional.of(m)
+                .map(remoteImplMembers::get)
                 .orElseThrow(() -> failf("Could not find stub object for field of type %s", type));
     }
 
-    private List<Field> findMatchingRemoteImplFields(Class<?> type) {
-        final List<Field> exactMatches = new ArrayList<>();
-        final List<Field> inexactMatches = new ArrayList<>();
+    private List<Member> findMatchingRemoteImplMembers(Class<?> type) {
+        final List<Member> exactMatches = new ArrayList<>();
+        final List<Member> inexactMatches = new ArrayList<>();
 
-        remoteImplFields.keySet().stream()
-                .filter(f -> type.isAssignableFrom(f.getType()))
+        remoteImplMembers.keySet().stream()
+                .filter(f -> type.isAssignableFrom(getMemberEvaluationType(f)))
                 .peek(inexactMatches::add)
-                .filter(f -> type.equals(f.getType()))
+                .filter(f -> type.equals(getMemberEvaluationType(f)))
                 .forEach(exactMatches::add);
         return exactMatches.isEmpty() ? inexactMatches : exactMatches;
     }
