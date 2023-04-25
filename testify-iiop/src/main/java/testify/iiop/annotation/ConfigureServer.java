@@ -103,13 +103,40 @@ public @interface ConfigureServer {
     }
 
     /**
-     * Annotate a static field in a test to denote a server-side target object.
+     * Annotate a static field or method in a test to denote a server-side target object.
+     * If the annotated member is a field, the value of the field is used directly as the target object.
+     * If the annotated member is a method, the method is invoked and the return value is used as the target object.
+     * The stub for the target object will be supplied on the client as a test method parameter of the same type.
+     * <p>
+     *     A method might be desirable if parameters are to be supplied to the object constructor.
+     *     The method may have server-side runtime parameters. See @{@link ServerExtension.ParamType} for details.
+     * </p>
+     * <p>
+     *     Note that an annotated method will be re-invoked each time the server starts.
+     *     If any caching of the resulting object is required, the method must do it.
+     * </p>
+     * <p>
+     *     Multiple members may be annotated with this annotation.
+     *     The framework will only distinguish them by field or return type, which must inherit @{@link Remote}.
+     *     If multiple members are annotated with the same type, behaviour is unspecified.
+     * </p>
+     *
      */
-    @Target({ANNOTATION_TYPE, FIELD})
+    @Target({ANNOTATION_TYPE, FIELD, METHOD})
     @Retention(RUNTIME)
     @interface RemoteImpl {
         ServerName serverName() default DEFAULT_SERVER;
     }
+
+    /**
+     * Annotate a static field in a test to inject a stub corresponding to a @RemoteImpl member of the same type.
+     */
+    @Target({ANNOTATION_TYPE, FIELD})
+    @Retention(RUNTIME)
+    @interface RemoteStub {
+        ServerName serverName() default DEFAULT_SERVER;
+    }
+
 
     /**
      * Annotate a static field in a test to inject a corbaname URL for a remote object implementation

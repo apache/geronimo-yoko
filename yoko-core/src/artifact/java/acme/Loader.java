@@ -18,6 +18,7 @@ package acme;
 
 import org.apache.yoko.io.SimplyCloseable;
 import org.apache.yoko.util.AssertionFailed;
+import testify.util.Assertions;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -30,9 +31,12 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.util.stream.Collectors.joining;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.emptyString;
@@ -43,6 +47,7 @@ import static testify.util.Throw.invokeWithImpunity;
  * A simplified mechanism (with a lot of debug) for loading classes from the specialised test class paths.
  * Ensure that the build.gradle for this project sets up the class paths appropriately.
  */
+@SuppressWarnings("unchecked cast")
 public enum Loader {
     V0,
     V1,
@@ -112,6 +117,26 @@ public enum Loader {
 
     public <T> T newInstance(String className) {
         return (T) invokeWithImpunity(getConstructor(className)::newInstance);
+    }
+
+    public <T> T newInstance(String className, Object...params) {
+        Class<T> theClass = (Class<T>) loadClass(className);
+        Constructor<?>[] constructors = theClass.getConstructors();
+        // filter only constructors with the right number of params
+        Stream<Constructor<?>> stream = Stream.of(constructors)
+                .filter(cons -> cons.getParameterTypes().length == params.length);
+        // filter only constructors that will accept each parameter in the right position
+        for (int i = 0; i < params.length; i++) {
+            final int index = i;
+            stream = stream.filter(c -> c.getParameterTypes()[index].isInstance(params[index]));
+        }
+
+        List<Constructor<?>> list = stream.collect(Collectors.toList());
+        switch (list.size()) {
+            case 0: throw Assertions.failf("Could not find constructor suitable for params %s. Available constructors:%n\t%s", Arrays.toString(params), Stream.of(constructors).map(Object::toString).collect(joining("%n\t")));
+            case 1: return (T) invokeWithImpunity(() -> list.get(0).newInstance(params));
+            default: throw Assertions.failf("Ambiguous parameter list for params %s: found too many matching constructors: %n\t%s", Arrays.toString(params), list.stream().map(Object::toString).collect(joining("%n\t")));
+        }
     }
 
     public SimplyCloseable setAsThreadContextClassLoader() {

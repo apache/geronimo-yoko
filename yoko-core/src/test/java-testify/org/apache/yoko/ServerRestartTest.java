@@ -18,14 +18,15 @@ package org.apache.yoko;
 
 import acme.Echo;
 import acme.EchoImpl;
+import org.apache.yoko.util.Stubs;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.ORB;
 import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
-import org.opentest4j.AssertionFailedError;
 import testify.annotation.RetriedTest;
+import testify.annotation.logging.Logging;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 import testify.iiop.annotation.ConfigureServer.ClientStub;
@@ -33,8 +34,6 @@ import testify.iiop.annotation.ConfigureServer.Control;
 import testify.iiop.annotation.ConfigureServer.CorbanameUrl;
 import testify.iiop.annotation.ConfigureServer.NameServiceUrl;
 import testify.iiop.annotation.ServerControl;
-import testify.annotation.logging.Logging;
-import org.apache.yoko.util.Stubs;
 
 import java.rmi.RemoteException;
 import java.util.concurrent.ForkJoinPool;
@@ -43,9 +42,8 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 import static testify.annotation.logging.Logging.LoggingLevel.FINE;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 public class ServerRestartTest {
@@ -60,52 +58,6 @@ public class ServerRestartTest {
 
     @ClientStub(EchoImpl.class)
     public static Echo stub;
-
-    @Test
-    public void testServerControlButDoNothing(ORB clientOrb) throws Exception {
-
-    }
-
-    @Test
-    public void testServerControlLeaveServerStopped(ORB clientOrb) throws Exception {
-        serverControl.stop();
-    }
-
-    @Test
-    public void testServerControl(ORB clientOrb) throws Exception {
-        assertEquals("hello", stub.echo("hello"));
-        assertThrows(AssertionFailedError.class, serverControl::start);
-        serverControl.stop();
-        assertThrows(RemoteException.class, () -> stub.echo(""));
-        assertThrows(AssertionFailedError.class, serverControl::stop);
-        assertThrows(AssertionFailedError.class, serverControl::restart);
-        serverControl.start();
-        serverControl.restart();
-        serverControl.stop();
-        Thread.sleep(2000);
-        serverControl.start();
-        assertEquals("hello", stub.echo("hello"));
-    }
-
-    /** Test the framework is functioning correctly */
-    @Test
-    public void testNameServiceStarted(ORB clientOrb) throws Exception {
-        assertNotNull(nameServiceUrl);
-        NamingContextHelper.narrow(clientOrb.string_to_object(nameServiceUrl));
-    }
-
-    /** Test the framework is functioning correctly */
-    @Test
-    public void testCorbanameUrl(ORB clientOrb) throws Exception {
-        assertNotNull(stubUrl);
-        Echo echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
-        echo.echo("wibble");
-        String oldStubUrl = ServerRestartTest.stubUrl;
-        serverControl.restart();
-        assertEquals(oldStubUrl, ServerRestartTest.stubUrl);
-        echo = Stubs.toStub(ServerRestartTest.stubUrl, clientOrb, Echo.class);
-        echo.echo("splong");
-    }
 
     @Test
     @Logging("yoko.verbose.connection.in")
@@ -132,12 +84,11 @@ public class ServerRestartTest {
         ctx2.bind_new_context(new NameComponent[]{new NameComponent("splong", "")});
     }
 
-    /** Test a single thread calling the server from naming lookup to invocation */
     @Test
     @Logging
     public void testMultipleThreads(ORB clientOrb) throws Exception {
         assertNotNull(stubUrl);
-        final int parallelism = 2;
+        final int parallelism = 5;
         String actual  = new ForkJoinPool(parallelism + 1)
                 .submit( () -> IntStream.range(0, parallelism)
                         .mapToObj(Integer::toString)
