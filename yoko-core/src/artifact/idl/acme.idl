@@ -1,0 +1,7 @@
+module acme {
+    struct Product {
+        string name;
+        float price;
+    };
+
+};
