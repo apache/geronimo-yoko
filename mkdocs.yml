@@ -1,9 +1,18 @@
 site_name: Yoko Documentation
+site_description: Yoko ORB used by OpenLiberty, derived from Apache Geronimo
+repo_name: OpenLiberty/yoko
+repo_url: https://github.com/OpenLiberty/yoko
+
 theme:
-  name: material
+    name: material
 nav:
-  - Introduction: "index.md"
-  - Tutorial:
-    - Tutorial Subsection: "pages/tutorial/tutorial_subsection.md"
-  - About: "pages/about.md"
-  - FAQ: "pages/faq.md"
+  - Yoko: "index.md"
+  - Testify: "pages/testify.md"
+  - Implementing Testify to a RMI Java Application: "pages/testify-guide.md"
+  - Bus:
+    - Bus Concept: "pages/bus/bus-concept.md"
+    - Bus Processes: "pages/bus/bus-processes.md"
+  - Annotations: 
+    - What are Annotations: "pages/annotations/annotations.md"
+    - ConfigurePartRunner: "pages/annotations/part-runner.md"
+  - J.U.L Logging: "pages/jul-logging.md"
