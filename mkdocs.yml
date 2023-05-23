@@ -1,0 +1,9 @@
+site_name: Yoko Documentation
+theme:
+  name: material
+nav:
+  - Introduction: "index.md"
+  - Tutorial:
+    - Tutorial Subsection: "pages/tutorial/tutorial_subsection.md"
+  - About: "pages/about.md"
+  - FAQ: "pages/faq.md"
