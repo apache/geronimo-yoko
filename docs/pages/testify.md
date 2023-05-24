@@ -15,3 +15,6 @@ An ORB is a middleware which allows program calls to be made from one computer t
 Yoko is an open-source project maintained by IBM, and is an implementation of an ORB system to carry out interprocess communication. 
 
 The diagram below displays how Testify works with Yoko:
+
+
+![Yoko Diagram](../images/yoko_architecture.png)
