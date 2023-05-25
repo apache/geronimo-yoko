@@ -20,4 +20,19 @@ module acme {
         float price;
     };
 
+    typedef sequence<Product> ProductList;
+
+    exception PRODUCT_TOO_EXIST {
+        string productName;
+    };
+
+    exception PRODUCT_NOT_EXIST {
+        string productName;
+    };
+
+    interface Catalogue {
+        void addProduct(in Product product) raises(PRODUCT_TOO_EXIST);
+        ProductList getProducts();
+        Product findProduct(in string name) raises(PRODUCT_NOT_EXIST);
+    };
 };
