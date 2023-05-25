@@ -1,6 +1,7 @@
 sourceSets {
   // declare additional source sets, and set their classpaths
   artifact.compileClasspath += main.output.classesDirs
+  artifact.java.srcDir "src/artifact/java-generated" // include java sources generated from artifact IDL
   v0.compileClasspath += main.output + artifact.output
   v1.compileClasspath += main.output + artifact.output + v0.output
   v2.compileClasspath += main.output + artifact.output + v0.output
