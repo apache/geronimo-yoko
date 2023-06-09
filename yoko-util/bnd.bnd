@@ -14,7 +14,6 @@
 
 -include ~../common.bnd
 
-Bundle-SymbolicName: org.apache.yoko.util
 Bundle-Description: Apache Yoko Implementation Utilities
 Export-Package: \
   org.apache.yoko.io, \

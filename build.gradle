@@ -62,9 +62,10 @@ subprojects { sp ->
   // additional configuration for projects that have bnd.bnd files
   if (sp.file("bnd.bnd").exists()) {
     apply plugin: 'biz.aQute.bnd.builder'
-    group = 'org.apache.yoko'
+
+    group = 'io.openliberty.yoko'
     // to extend the project with a new property, use project.ext.<new property name>
-    project.ext.symbolicName = project.name.replaceFirst("^yoko-", project.group.toString() + ".")
+    project.ext.symbolicName = project.name.replaceFirst("^yoko-",  "org.apache.yoko.")
     version = '1.5.0.' + getGitHash(10)
   }
 
@@ -213,7 +214,6 @@ configure([
 
           def depsNode = rootNode.dependencies[0] ?:
                   rootNode.appendNode('dependencies')
-
 
           // declare compile scope dependencies in the pom.xml
           // as compile dependencies
