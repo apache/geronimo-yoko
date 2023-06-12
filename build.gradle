@@ -63,9 +63,8 @@ subprojects { sp ->
   if (sp.file("bnd.bnd").exists()) {
     apply plugin: 'biz.aQute.bnd.builder'
 
-    group = 'io.openliberty.yoko'
     // to extend the project with a new property, use project.ext.<new property name>
-    project.ext.symbolicName = project.name.replaceFirst("^yoko-",  "org.apache.yoko.")
+    project.ext.symbolicName = project.name.replaceFirst("^yoko-", symbolicNamePrefix)
     version = '1.5.0.' + getGitHash(10)
   }
 
