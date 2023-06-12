@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 IBM Corporation and others.
+ * Copyright 2023 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,145 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package test.obv;
+package org.apache.yoko.orb.OB;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.AnyHolder;
+import org.omg.CORBA.BAD_OPERATION;
+import org.omg.CORBA.IntHolder;
+import org.omg.CORBA.MARSHAL;
+import org.omg.CORBA.ORB;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAHelper;
+import org.omg.PortableServer.POAManager;
+import test.obv.TestAbsValue1;
+import test.obv.TestAbsValue2;
+import test.obv.TestAbstract;
+import test.obv.TestAbstractHelper;
+import test.obv.TestAbstractSub;
+import test.obv.TestAbstractSubHelper;
+import test.obv.TestAbstractSub_impl;
+import test.obv.TestCustom;
+import test.obv.TestCustomFactory_impl;
+import test.obv.TestCustomHelper;
+import test.obv.TestCustomValueFactory;
+import test.obv.TestFixStruct;
+import test.obv.TestFixUnion;
+import test.obv.TestInterface;
+import test.obv.TestNode;
+import test.obv.TestNodeFactory_impl;
+import test.obv.TestNodeHolder;
+import test.obv.TestNodeValueFactory;
+import test.obv.TestOBV;
+import test.obv.TestOBVColo;
+import test.obv.TestOBVColoPackage.SV;
+import test.obv.TestOBVColoPackage.SVHolder;
+import test.obv.TestOBVColoPackage.UV;
+import test.obv.TestOBVColoPackage.UVHolder;
+import test.obv.TestOBVColoPackage.VSeqHolder;
+import test.obv.TestOBVColo_impl;
+import test.obv.TestOBVHelper;
+import test.obv.TestOBV_impl;
+import test.obv.TestStringBoxStruct;
+import test.obv.TestStringBoxStructHelper;
+import test.obv.TestTrunc1;
+import test.obv.TestTrunc1Factory_impl;
+import test.obv.TestTrunc1Helper;
+import test.obv.TestTrunc2;
+import test.obv.TestTrunc2Factory_impl;
+import test.obv.TestTrunc2Helper;
+import test.obv.TestTruncBase;
+import test.obv.TestTruncBaseFactory_impl;
+import test.obv.TestTruncBaseHelper;
+import test.obv.TestULongBox;
+import test.obv.TestValue;
+import test.obv.TestValueAI;
+import test.obv.TestValueAIFactory_impl;
+import test.obv.TestValueAIValueFactory;
+import test.obv.TestValueFactory_impl;
+import test.obv.TestValueHelper;
+import test.obv.TestValueHolder;
+import test.obv.TestValueInterface;
+import test.obv.TestValueInterfaceFactory_impl;
+import test.obv.TestValueInterfaceValueFactory;
+import test.obv.TestValueSub;
+import test.obv.TestValueSubFactory_impl;
+import test.obv.TestValueSubHelper;
+import test.obv.TestValueSubValueFactory;
+import test.obv.TestValueValueFactory;
+import test.obv.TestVarStruct;
+import test.obv.TestVarUnion;
+import test.obv.ValueBoxFactories;
+import testify.bus.Bus;
+import testify.bus.StringSpec;
+import testify.iiop.annotation.ConfigureOrb;
+import testify.iiop.annotation.ConfigureServer;
 
 import static org.junit.Assert.assertTrue;
+import static testify.iiop.annotation.ConfigureServer.Separation.COLLOCATED;
 
-import java.util.Properties;
+@ConfigureServer(separation = COLLOCATED)
+public class TestObjectsByValue {
+    @ConfigureServer(serverOrb = @ConfigureOrb(args = "-OAthreaded"), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
+    public static class TestObjectsByValueThreaded extends TestObjectsByValue {}
+    @ConfigureServer(serverOrb = @ConfigureOrb(args = "-OAthread_per_client"), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
+    public static class TestObjectsByValueThreadPerClient extends TestObjectsByValue {}
+    @ConfigureServer(serverOrb = @ConfigureOrb(args = "-OAthread_per_request"), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
+    public static class TestObjectsByValueThreadPerRequest extends TestObjectsByValue {}
+    @ConfigureServer(serverOrb = @ConfigureOrb(args = {"-OAthread_pool", "10"}), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
+    public static class TestObjectsByValueThreadPool extends TestObjectsByValue {}
 
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
+    private static TestOBV stub;
 
-import test.obv.TestOBVColoPackage.*;
+    enum Ior implements StringSpec {TEST_OBV}
 
-public class Client extends test.common.TestBase {
-    static void testValue(ORB orb, TestOBV to) {
+    @ConfigureServer.BeforeServer
+    public static void installValueFactoriesOnServer(ORB orb, Bus bus) {
+        // Install value factories
+        TestValueValueFactory valueFactory = TestValueFactory_impl.install(orb);
+        TestValueSubValueFactory valueSubFactory = TestValueSubFactory_impl.install(orb);
+        TestTruncBaseFactory_impl.install(orb);
+        TestTrunc1Factory_impl.install(orb);
+        TestTrunc2Factory_impl.install(orb);
+        TestCustomValueFactory customFactory = TestCustomFactory_impl.install(orb);
+        TestNodeValueFactory nodeFactory = TestNodeFactory_impl.install(orb);
+        TestValueAIValueFactory valueAIFactory = TestValueAIFactory_impl.install(orb);
+        TestValueInterfaceValueFactory valueInterfaceFactory = TestValueInterfaceFactory_impl.install(orb);
+
+        // Install valuebox factories
+        ValueBoxFactories.install(orb);
+
+        // Create implementation objects
+        TestAbstractSub_impl absSubImpl = new TestAbstractSub_impl();
+        TestAbstract absInterface = absSubImpl._this(orb);
+        TestValueAI absValue = valueAIFactory.create(12345);
+
+        TestOBV_impl i = new TestOBV_impl(orb, valueFactory, valueSubFactory, customFactory, nodeFactory, absInterface, absValue, valueInterfaceFactory);
+        TestOBV p = i._this(orb);
+        String ior = orb.object_to_string(p);
+        bus.put(Ior.TEST_OBV, ior);
+    }
+
+    @BeforeAll
+    public static void getStubAndInstallValueFactoriesOnClient(ORB orb, Bus bus) {
+        String ior = bus.get(Ior.TEST_OBV);
+        stub = TestOBVHelper.narrow(orb.string_to_object(ior));
+        // Install value factories
+        TestValueFactory_impl.install(orb);
+        TestValueSubFactory_impl.install(orb);
+        TestTruncBaseFactory_impl.install(orb);
+        TestCustomFactory_impl.install(orb);
+        TestNodeFactory_impl.install(orb);
+        TestValueAIFactory_impl.install(orb);
+        TestValueInterfaceFactory_impl.install(orb);
+
+        // Install valuebox factories
+        ValueBoxFactories.install(orb);
+    }
+
+    @Test void testValue(ORB orb) {
         java.io.Serializable vb;
         TestValue value, v1, v2;
         TestValueHolder v1H = new TestValueHolder();
@@ -41,56 +167,56 @@ public class Client extends test.common.TestBase {
         TestNode node;
         TestNodeHolder nodeH = new TestNodeHolder();
 
-        vb = to.get_null_valuebase();
+        vb = stub.get_null_valuebase();
         assertTrue(vb == null);
-        to.set_null_valuebase(null);
+        stub.set_null_valuebase(null);
 
-        valueSub = to.get_null_valuesub();
+        valueSub = stub.get_null_valuesub();
         assertTrue(valueSub == null);
-        to.set_null_valuesub(null);
+        stub.set_null_valuesub(null);
 
-        a1 = to.get_abs_value1();
+        a1 = stub.get_abs_value1();
         assertTrue(a1 != null);
         a1.ping1();
-        to.set_abs_value1(a1);
+        stub.set_abs_value1(a1);
 
-        a2 = to.get_abs_value2();
+        a2 = stub.get_abs_value2();
         assertTrue(a2 != null);
         a2.ping2();
-        to.set_abs_value2(a2);
+        stub.set_abs_value2(a2);
 
-        value = to.get_value();
+        value = stub.get_value();
         assertTrue(value != null);
         value.ping1();
         assertTrue(value.count == 500);
-        to.set_value(value);
+        stub.set_value(value);
 
-        valueSub = to.get_valuesub();
+        valueSub = stub.get_valuesub();
         assertTrue(valueSub != null);
         valueSub.ping1();
         valueSub.ping2();
         assertTrue(valueSub.count == 501);
         assertTrue(valueSub.name.equals("ValueSub"));
-        to.set_valuesub(valueSub);
+        stub.set_valuesub(valueSub);
 
-        value = to.get_valuesub_as_value();
+        value = stub.get_valuesub_as_value();
         assertTrue(value != null);
         value.ping1();
         assertTrue(value.count == 501);
         pValueSub = (TestValueSub) value;
         pValueSub.ping2();
         assertTrue(pValueSub.name.equals("ValueSub"));
-        to.set_valuesub_as_value(value);
+        stub.set_valuesub_as_value(value);
 
-        to.get_two_values(v1H, v2H);
+        stub.get_two_values(v1H, v2H);
         assertTrue(v1H.value != null);
         assertTrue(v2H.value != null);
         assertTrue(v1H.value == v2H.value);
         v1H.value.ping1();
         assertTrue(v1H.value.count == 500);
-        to.set_two_values(v1H.value, v2H.value);
+        stub.set_two_values(v1H.value, v2H.value);
 
-        to.get_two_valuesubs_as_values(v1H, v2H);
+        stub.get_two_valuesubs_as_values(v1H, v2H);
         assertTrue(v1H.value != null);
         assertTrue(v2H.value != null);
         v1H.value.ping1();
@@ -101,29 +227,29 @@ public class Client extends test.common.TestBase {
         s1.ping2();
         s2.ping2();
         assertTrue(s1.name.equals(s2.name));
-        to.set_two_valuesubs_as_values(v1H.value, v2H.value);
+        stub.set_two_valuesubs_as_values(v1H.value, v2H.value);
 
         IntHolder count = new IntHolder();
-        to.get_node(nodeH, count);
+        stub.get_node(nodeH, count);
         assertTrue(count.value == nodeH.value.compute_count());
-        to.set_node(nodeH.value);
+        stub.set_node(nodeH.value);
     }
 
-    static void testCustom(ORB orb, TestOBV to) {
+    @Test void testCustom(ORB orb) {
         TestCustom cust;
         TestCustom pCust;
         TestAbsValue1 a1;
 
-        cust = to.get_custom();
+        cust = stub.get_custom();
         assertTrue(cust != null);
         cust.ping1();
         assertTrue(cust.shortVal == -99);
         assertTrue(cust.longVal == -123456);
         assertTrue(cust.stringVal.equals("CustomVal"));
         assertTrue(cust.doubleVal == 100.997);
-        to.set_custom(cust);
+        stub.set_custom(cust);
 
-        a1 = to.get_abs_custom();
+        a1 = stub.get_abs_custom();
         assertTrue(a1 != null);
         a1.ping1();
         pCust = (TestCustom) a1;
@@ -131,91 +257,91 @@ public class Client extends test.common.TestBase {
         assertTrue(pCust.longVal == -123456);
         assertTrue(pCust.stringVal.equals("CustomVal"));
         assertTrue(pCust.doubleVal == 100.997);
-        to.set_abs_custom(a1);
+        stub.set_abs_custom(a1);
     }
 
-    static void testValueBox(ORB orb, TestOBV to) {
+    @Test void testValueBox(ORB orb) {
         int i;
 
         String sb;
-        sb = to.get_string_box("hi there");
+        sb = stub.get_string_box("hi there");
         assertTrue(sb != null);
         assertTrue(sb.equals("hi there"));
         sb = "bye now";
-        to.set_string_box(sb, "bye now");
+        stub.set_string_box(sb, "bye now");
 
         TestULongBox ub;
-        ub = to.get_ulong_box(999);
+        ub = stub.get_ulong_box(999);
         assertTrue(ub != null);
         assertTrue(ub.value == 999);
         ub = new TestULongBox(77777);
-        to.set_ulong_box(ub, 77777);
+        stub.set_ulong_box(ub, 77777);
 
         TestFixStruct fsb;
         TestFixStruct fs = new TestFixStruct();
         fs.x = 111;
         fs.y = 222;
         fs.radius = 3.33;
-        fsb = to.get_fix_struct_box(fs);
+        fsb = stub.get_fix_struct_box(fs);
         assertTrue(fsb != null);
         assertTrue(fsb.x == fs.x);
         assertTrue(fsb.y == fs.y);
         assertTrue(fsb.radius == fs.radius);
         fsb = new TestFixStruct(fs.x, fs.y, fs.radius);
-        to.set_fix_struct_box(fsb, fs);
+        stub.set_fix_struct_box(fsb, fs);
 
         TestVarStruct vsb;
         TestVarStruct vs = new TestVarStruct();
         vs.name = "Joe Bob Briggs";
         vs.email = "jbb@cheese.com";
-        vsb = to.get_var_struct_box(vs);
+        vsb = stub.get_var_struct_box(vs);
         assertTrue(vsb != null);
         assertTrue(vsb.name.equals(vs.name));
         assertTrue(vsb.email.equals(vs.email));
         vsb = new TestVarStruct(vs.name, vs.email);
-        to.set_var_struct_box(vsb, vs);
+        stub.set_var_struct_box(vsb, vs);
 
         TestFixUnion fub;
         TestFixUnion fu = new TestFixUnion();
         fu.o((byte) 55);
-        fub = to.get_fix_union_box(fu);
+        fub = stub.get_fix_union_box(fu);
         assertTrue(fub != null);
         assertTrue(fub.o() == (byte) 55);
         fu.d(99.88);
         fub = new TestFixUnion();
         fub.d(fu.d());
-        to.set_fix_union_box(fub, fu);
+        stub.set_fix_union_box(fub, fu);
 
         TestVarUnion vub;
         TestVarUnion vu = new TestVarUnion();
         vu.s("howdy");
-        vub = to.get_var_union_box(vu);
+        vub = stub.get_var_union_box(vu);
         assertTrue(vub != null);
         assertTrue(vub.s().equals("howdy"));
         vu.fs(fs);
         vub = new TestVarUnion();
         vub.fs(vu.fs());
-        to.set_var_union_box(vub, vu);
+        stub.set_var_union_box(vub, vu);
 
         short[] asb;
-        asb = to.get_anon_seq_box(10);
+        asb = stub.get_anon_seq_box(10);
         assertTrue(asb != null);
         assertTrue(asb.length == 10);
         for (i = 0; i < asb.length; i++)
-			assertTrue(asb[i] == (short) i);
-        to.set_anon_seq_box(asb, 10);
+            assertTrue(asb[i] == (short) i);
+        stub.set_anon_seq_box(asb, 10);
 
         String[] ssb;
         String[] ss = new String[5];
         for (i = 0; i < 5; i++) {
             ss[i] = "s" + i;
         }
-        ssb = to.get_string_seq_box(ss);
+        ssb = stub.get_string_seq_box(ss);
         assertTrue(ssb != null);
         assertTrue(ssb.length == ss.length);
         for (i = 0; i < ssb.length; i++)
-			assertTrue(ssb[i].equals(ss[i]));
-        to.set_string_seq_box(ssb, ss);
+            assertTrue(ssb[i].equals(ss[i]));
+        stub.set_string_seq_box(ssb, ss);
 
         TestStringBoxStruct stringbox_struct = new TestStringBoxStruct();
 
@@ -263,8 +389,7 @@ public class Client extends test.common.TestBase {
         assertTrue(ex_stringbox_struct.b.equals("foo"));
     }
 
-    static void testCollocated(ORB orb, TestOBV to)
-            throws org.omg.CORBA.UserException {
+    @Test void testCollocated(ORB orb) throws org.omg.CORBA.UserException {
         //
         // Resolve Root POA
         //
@@ -281,7 +406,7 @@ public class Client extends test.common.TestBase {
         TestOBVColo_impl coloImpl = new TestOBVColo_impl();
         TestOBVColo colo = coloImpl._this(orb);
 
-        v1 = to.get_value();
+        v1 = stub.get_value();
         assertTrue(v1 != null);
 
         //
@@ -399,7 +524,7 @@ public class Client extends test.common.TestBase {
         assertTrue(v1.count == 111);
         seqr = colo.test_value_seq_attribute();
         for (int i = 0; i < seqr.length; i++)
-			assertTrue(seqr[i] == null);
+            assertTrue(seqr[i] == null);
 
         seq1[0] = null;
         seq1[1] = null;
@@ -407,11 +532,11 @@ public class Client extends test.common.TestBase {
         seq2.value = new TestValue[3];
         seqr = colo.test_value_seq_op(seq1, seq2, seq3);
         for (int i = 0; i < seqr.length; i++)
-			assertTrue(seqr[i] == null);
+            assertTrue(seqr[i] == null);
         for (int i = 0; i < seq2.value.length; i++)
-			assertTrue(seq2.value[i] == null);
+            assertTrue(seq2.value[i] == null);
         for (int i = 0; i < seq3.value.length; i++)
-			assertTrue(seq3.value[i] == null);
+            assertTrue(seq3.value[i] == null);
 
         v1.count = 222;
         seq1[0] = v1;
@@ -436,8 +561,8 @@ public class Client extends test.common.TestBase {
         // Test: abstract interface arguments
         //
 
-        TestAbstract abstractInterface = to.get_ai_interface();
-        TestAbstract abstractValue = to.get_ai_value();
+        TestAbstract abstractInterface = stub.get_ai_interface();
+        TestAbstract abstractValue = stub.get_ai_value();
         TestValueAI vai = (TestValueAI) abstractValue;
         assertTrue(vai != null);
 
@@ -458,7 +583,7 @@ public class Client extends test.common.TestBase {
         assertTrue(vai.count == 444);
     }
 
-    static void testAbstract(ORB orb, TestOBV to) {
+    @Test void testAbstract(ORB orb) {
         org.omg.CORBA.Object obj;
         TestAbstract ai;
         TestAbstractSub sub;
@@ -466,31 +591,31 @@ public class Client extends test.common.TestBase {
         TestValueAI v;
         Any any;
 
-        ai = to.get_ai_interface();
+        ai = stub.get_ai_interface();
         assertTrue(ai != null);
         obj = (org.omg.CORBA.Object) ai;
         ai.abstract_op();
         sub = TestAbstractSubHelper.narrow(ai);
         sub.sub_op();
-        to.set_ai_interface(ai);
+        stub.set_ai_interface(ai);
 
-        any = to.get_ai_interface_any();
+        any = stub.get_ai_interface_any();
         obj = any.extract_Object();
         assertTrue(obj != null);
         sub = TestAbstractSubHelper.narrow(obj);
         sub.abstract_op();
         sub.sub_op();
-        to.set_ai_interface_any(any);
+        stub.set_ai_interface_any(any);
 
-        ai = to.get_ai_value();
+        ai = stub.get_ai_value();
         vb = (java.io.Serializable) ai;
         ai.abstract_op();
         v = (TestValueAI) ai;
         assertTrue(v.count == 12345);
-        to.set_ai_value(ai);
+        stub.set_ai_value(ai);
     }
 
-    static void testTruncated(ORB orb, TestOBV to) {
+    @Test void testTruncated(ORB orb) {
         TestTruncBase truncBase;
         TestTrunc1 trunc1;
         TestTrunc2 trunc2;
@@ -502,7 +627,7 @@ public class Client extends test.common.TestBase {
         // With factory installed, we should be able to downcast to TestTrunc1
         //
         TestTrunc1Factory_impl.install(orb);
-        truncBase = to.get_trunc1();
+        truncBase = stub.get_trunc1();
         trunc1 = (TestTrunc1) truncBase;
         assertTrue(trunc1.cost > 1.99 && trunc1.cost < 2.0);
         assertTrue(trunc1.boolVal == true);
@@ -517,7 +642,7 @@ public class Client extends test.common.TestBase {
         // TestTrunc1
         //
         orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
-        truncBase = to.get_trunc1();
+        truncBase = stub.get_trunc1();
         try {
             trunc1 = (TestTrunc1) truncBase;
             assertTrue(false);
@@ -532,7 +657,7 @@ public class Client extends test.common.TestBase {
         //
         TestTrunc1Factory_impl.install(orb);
         TestTrunc2Factory_impl.install(orb);
-        truncBase = to.get_trunc2();
+        truncBase = stub.get_trunc2();
         trunc2 = (TestTrunc2) truncBase;
         assertTrue(trunc2.cost > 5.99 && trunc2.cost < 6.0);
         trunc1 = (TestTrunc1) trunc2.t;
@@ -555,7 +680,7 @@ public class Client extends test.common.TestBase {
         // will be truncated
         //
         orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
-        truncBase = to.get_trunc2();
+        truncBase = stub.get_trunc2();
         trunc2 = (TestTrunc2) truncBase;
         assertTrue(trunc2.cost > 5.99 && trunc2.cost < 6.0);
         assertTrue(trunc2.t != null);
@@ -580,7 +705,7 @@ public class Client extends test.common.TestBase {
         //
         TestTrunc1Factory_impl.install(orb);
         orb_2_3.unregister_value_factory(TestTrunc2Helper.id());
-        truncBase = to.get_trunc2();
+        truncBase = stub.get_trunc2();
         try {
             trunc2 = (TestTrunc2) truncBase;
             assertTrue(false);
@@ -595,7 +720,7 @@ public class Client extends test.common.TestBase {
         orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
     }
 
-    static void testAny(ORB orb, TestOBV to) {
+    @Test void testAny(ORB orb) {
         TestValue v1;
         TestValue v2;
         TestValueSub sub;
@@ -622,8 +747,8 @@ public class Client extends test.common.TestBase {
         // remarshal the data (again using the TypeCode).
         //
         orb_2_3.unregister_value_factory(TestValueHelper.id());
-        av = to.get_value_any();
-        to.remarshal_any(av);
+        av = stub.get_value_any();
+        stub.remarshal_any(av);
 
         //
         // We cannot extract without a factory installed
@@ -639,7 +764,7 @@ public class Client extends test.common.TestBase {
         // Install the factory, remarshal again, and extract the value
         //
         TestValueFactory_impl.install(orb);
-        to.remarshal_any(av); // uses factory instead of TypeCode
+        stub.remarshal_any(av); // uses factory instead of TypeCode
         v2 = TestValueHelper.extract(av);
         assertTrue(v2 != null);
         assertTrue(v2.count == 500);
@@ -654,14 +779,14 @@ public class Client extends test.common.TestBase {
         // remarshal the data (again using the TypeCode).
         //
         orb_2_3.unregister_value_factory(TestValueSubHelper.id());
-        av = to.get_valuesub_any();
-        to.remarshal_any(av);
+        av = stub.get_valuesub_any();
+        stub.remarshal_any(av);
 
         //
         // Install the factory, remarshal again, and extract the value
         //
         TestValueSubFactory_impl.install(orb);
-        to.remarshal_any(av); // uses factory instead of TypeCode
+        stub.remarshal_any(av); // uses factory instead of TypeCode
         sub = TestValueSubHelper.extract(av);
         assertTrue(sub != null);
         assertTrue(sub.count == 501);
@@ -674,13 +799,13 @@ public class Client extends test.common.TestBase {
         //
         orb_2_3.unregister_value_factory(TestValueSubHelper.id());
         try {
-            av = to.get_valuesub_as_value_any();
+            av = stub.get_valuesub_as_value_any();
             assertTrue(false);
         } catch (MARSHAL ex) {
             // expected
         }
         TestValueSubFactory_impl.install(orb);
-        av = to.get_valuesub_as_value_any();
+        av = stub.get_valuesub_as_value_any();
         v2 = TestValueHelper.extract(av);
         assertTrue(v2 != null);
         sub = (TestValueSub) v2;
@@ -697,14 +822,14 @@ public class Client extends test.common.TestBase {
         //
         orb_2_3.unregister_value_factory(TestCustomHelper.id());
         try {
-            av = to.get_custom_any();
+            av = stub.get_custom_any();
             assertTrue(false);
         } catch (MARSHAL ex) {
             // expected
         }
         TestCustomFactory_impl.install(orb);
-        av = to.get_custom_any();
-        to.remarshal_any(av);
+        av = stub.get_custom_any();
+        stub.remarshal_any(av);
         cust = TestCustomHelper.extract(av);
         assertTrue(cust != null);
         assertTrue(cust.shortVal == (short) -99);
@@ -719,14 +844,14 @@ public class Client extends test.common.TestBase {
         //
         // orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
         // orb_2_3.unregister_value_factory(TestTrunc2Helper.id());
-        av = to.get_trunc1_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc1_any();
+        stub.remarshal_any(av);
         //
         // The TestTrunc2 value returned by the server cannot be unmarshalled
         // without a factory because it uses indirection into a truncated
         // portion of another value
         //
-        av = to.get_trunc2_any();
+        av = stub.get_trunc2_any();
         try {
             t2 = TestTrunc2Helper.extract(av);
             assertTrue(false);
@@ -737,10 +862,10 @@ public class Client extends test.common.TestBase {
         TestTrunc1Factory_impl.install(orb);
         TestTrunc2Factory_impl.install(orb);
 
-        av = to.get_trunc1_any();
-        to.remarshal_any(av);
-        av = to.get_trunc2_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc1_any();
+        stub.remarshal_any(av);
+        av = stub.get_trunc2_any();
+        stub.remarshal_any(av);
 
         //
         // Test truncation
@@ -753,8 +878,8 @@ public class Client extends test.common.TestBase {
         //
         orb_2_3.unregister_value_factory(TestTruncBaseHelper.id());
         orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
-        av = to.get_trunc1_as_base_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc1_as_base_any();
+        stub.remarshal_any(av);
         TestTruncBaseFactory_impl.install(orb);
         TestTrunc1Factory_impl.install(orb);
         base = TestTruncBaseHelper.extract(av);
@@ -771,8 +896,8 @@ public class Client extends test.common.TestBase {
         //
         // Things should work fine with the factories installed
         //
-        av = to.get_trunc1_as_base_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc1_as_base_any();
+        stub.remarshal_any(av);
         base = TestTruncBaseHelper.extract(av);
         assertTrue(base != null);
         t1 = (TestTrunc1) base;
@@ -788,8 +913,8 @@ public class Client extends test.common.TestBase {
         orb_2_3.unregister_value_factory(TestTruncBaseHelper.id());
         orb_2_3.unregister_value_factory(TestTrunc1Helper.id());
         orb_2_3.unregister_value_factory(TestTrunc2Helper.id());
-        av = to.get_trunc2_as_base_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc2_as_base_any();
+        stub.remarshal_any(av);
         TestTruncBaseFactory_impl.install(orb);
         TestTrunc1Factory_impl.install(orb);
         TestTrunc2Factory_impl.install(orb);
@@ -807,8 +932,8 @@ public class Client extends test.common.TestBase {
         //
         // Things should work fine with the factories installed
         //
-        av = to.get_trunc2_as_base_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc2_as_base_any();
+        stub.remarshal_any(av);
         base = TestTruncBaseHelper.extract(av);
         assertTrue(base != null);
         t2 = (TestTrunc2) base;
@@ -821,8 +946,8 @@ public class Client extends test.common.TestBase {
         // when the any is unmarshalled.
         //
         orb_2_3.unregister_value_factory(TestTrunc2Helper.id());
-        av = to.get_trunc2_as_base_any();
-        to.remarshal_any(av);
+        av = stub.get_trunc2_as_base_any();
+        stub.remarshal_any(av);
         base = TestTruncBaseHelper.extract(av);
         assertTrue(base != null);
         assertTrue(base.cost > 5.99 && base.cost < 6.0);
@@ -840,7 +965,7 @@ public class Client extends test.common.TestBase {
         // when the any is unmarshalled. It must be possible to use
         // TestTruncBaseHelper.extract() on this any.
         //
-        av = to.get_trunc2_any();
+        av = stub.get_trunc2_any();
         base = TestTruncBaseHelper.extract(av);
         assertTrue(base != null);
         assertTrue(base.cost > 5.99 && base.cost < 6.0);
@@ -859,145 +984,34 @@ public class Client extends test.common.TestBase {
         //
         // Request an abstract interface representing a valuetype
         //
-        av = to.get_ai_value_any();
+        av = stub.get_ai_value_any();
         tab = TestAbstractHelper.extract(av);
         assertTrue(tab != null);
         tab.abstract_op();
         ai = (TestValueAI) tab;
         ai.value_op();
-        to.set_ai_value_any(av);
+        stub.set_ai_value_any(av);
 
         //
         // Ensure that value sharing works across anys
         //
         AnyHolder a1 = new AnyHolder();
         AnyHolder a2 = new AnyHolder();
-        to.get_two_value_anys(a1, a2);
+        stub.get_two_value_anys(a1, a2);
         v1 = TestValueHelper.extract(a1.value);
         v2 = TestValueHelper.extract(a2.value);
         assertTrue(v1 != null);
         assertTrue(v2 != null);
         assertTrue(v1 == v2);
-        to.set_two_value_anys(a1.value, a2.value);
+        stub.set_two_value_anys(a1.value, a2.value);
     }
 
-    static void testSupported(ORB orb, TestOBV to) {
-        TestValueInterface val = to.get_value_as_value();
+    @Test void testSupported(ORB orb) {
+        TestValueInterface val = stub.get_value_as_value();
         val.value_op();
         assertTrue(val.get_count() == val.count);
 
-        TestInterface i = to.get_value_as_interface();
+        TestInterface i = stub.get_value_as_interface();
         assertTrue(val.count == i.get_count());
-    }
-
-    public static int run(ORB orb, String[] args)
-            throws org.omg.CORBA.UserException {
-        org.omg.CORBA_2_3.ORB orb_2_3 = (org.omg.CORBA_2_3.ORB) orb;
-
-        //
-        // Get TestOBV
-        //
-        org.omg.CORBA.Object obj = orb.string_to_object("relfile:TestOBV.ref");
-        if (obj == null) {
-            System.err.println("cannot read IOR from TestOBV.ref");
-            return 1;
-        }
-
-        TestOBV to = TestOBVHelper.narrow(obj);
-        assertTrue(to != null);
-
-        //
-        // Install value factories
-        //
-        TestValueFactory_impl.install(orb);
-        TestValueSubFactory_impl.install(orb);
-        TestTruncBaseFactory_impl.install(orb);
-        TestCustomFactory_impl.install(orb);
-        TestNodeFactory_impl.install(orb);
-        TestValueAIFactory_impl.install(orb);
-        TestValueInterfaceFactory_impl.install(orb);
-
-        //
-        // Install valuebox factories
-        //
-        ValueBoxFactories.install(orb);
-
-        //
-        // Run tests
-        //
-
-        System.out.print("Testing valuetypes... ");
-        System.out.flush();
-        testValue(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing custom marshalling... ");
-        System.out.flush();
-        testCustom(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing value boxes... ");
-        System.out.flush();
-        testValueBox(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing collocated valuetypes... ");
-        System.out.flush();
-        testCollocated(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing abstract interfaces... ");
-        System.out.flush();
-        testAbstract(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing truncatable valuetypes... ");
-        System.out.flush();
-        testTruncated(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing valuetypes with any... ");
-        System.out.flush();
-        testAny(orb, to);
-        System.out.println("Done!");
-
-        System.out.print("Testing supported interfaces... ");
-        System.out.flush();
-        testSupported(orb, to);
-        System.out.println("Done!");
-
-        to.deactivate();
-
-        return 0;
-    }
-
-    public static void main(String args[]) {
-        java.util.Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
-
-        int status = 0;
-        ORB orb = null;
-
-        try {
-            orb = ORB.init(args, props);
-            status = run(orb, args);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }
