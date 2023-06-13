@@ -27,7 +27,6 @@ import org.omg.PortableInterceptor.ServerRequestInfo;
 import testify.iiop.TestServerRequestInterceptor;
 import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
 import testify.iiop.annotation.ConfigureServer;
-import testify.iiop.annotation.ConfigureServer.ClientStub;
 import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 import testify.util.Stack;
 

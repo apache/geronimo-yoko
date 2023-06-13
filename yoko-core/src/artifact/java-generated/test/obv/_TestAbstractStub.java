@@ -20,8 +20,7 @@ package test.obv;
 //
 // IDL:TestAbstract:1.0
 //
-public class _TestAbstractStub extends org.omg.CORBA.portable.ObjectImpl
-                               implements TestAbstract
+public class _TestAbstractStub extends org.omg.CORBA.portable.ObjectImpl implements TestAbstract
 {
     private static final String[] _ob_ids_ =
     {
