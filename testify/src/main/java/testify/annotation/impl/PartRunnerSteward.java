@@ -32,7 +32,7 @@ public class PartRunnerSteward implements ExtensionContext.Store.CloseableResour
         this.config = config;
         this.testClass = context.getRequiredTestClass();
         this.partRunner = PartRunner.create();
-        TracingSteward.addTraceSettings(partRunner, testClass);
+        TestLoggingSteward.addTestLogSettings(partRunner, testClass);
     }
 
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.

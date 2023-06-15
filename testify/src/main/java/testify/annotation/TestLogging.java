@@ -15,14 +15,23 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.annotation;
 
-import java.util.Set;
+import testify.bus.TestLogLevel;
 
-import static java.util.EnumSet.range;
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 
-public enum LogLevel implements StringSpec {
-    DEBUG, INFO, DEFAULT, WARN, ERROR;
-    public Set<LogLevel> andHigher() { return range(this, ERROR); }
-    public boolean includes(LogLevel level) { return andHigher().contains(level); }
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static testify.bus.TestLogLevel.DEFAULT;
+
+@Target({ANNOTATION_TYPE, TYPE})
+@Retention(RUNTIME)
+public @interface TestLogging {
+    /** A regular expression to match the classes to trace */
+    String value() default ".*";
+    TestLogLevel level() default DEFAULT;
 }
+

@@ -24,11 +24,11 @@ import test.types.TestPortableTypes;
 import test.types.TestTypeCode;
 import test.types.TestUnion;
 import testify.annotation.ConfigurePartRunner;
-import testify.annotation.Tracing;
+import testify.annotation.TestLogging;
 import testify.parts.PartRunner;
 
 @ConfigurePartRunner
-@Tracing
+@TestLogging
 class TypesTest {
     @Test
     void testTypeCode(PartRunner runner) { runner.forkMain(TestTypeCode.class); }

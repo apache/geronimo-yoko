@@ -18,7 +18,7 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.LogLevel;
+import testify.bus.TestLogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
@@ -33,7 +33,7 @@ public interface PartRunner {
      * @param pattern a regular expression to match the classes to trace
      * @return this object for call chaining
      */
-    PartRunner enableLogging(LogLevel level, String pattern);
+    PartRunner enableTestLogging(TestLogLevel level, String pattern);
 
     /**
      * Get the bus specific to the named part.

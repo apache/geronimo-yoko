@@ -43,7 +43,7 @@ import testify.util.Throw;
 import java.util.Map;
 import java.util.Properties;
 
-import static testify.bus.LogLevel.WARN;
+import static testify.bus.TestLogLevel.WARN;
 
 class ServerInstance {
     final Bus bus;

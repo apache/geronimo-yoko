@@ -71,7 +71,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.bus.LogLevel.INFO;
+import static testify.bus.TestLogLevel.INFO;
 import static testify.bus.MemberSpec.memberToString;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;

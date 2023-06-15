@@ -34,7 +34,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static testify.bus.LogLevel.DEFAULT;
+import static testify.bus.TestLogLevel.DEFAULT;
 import static testify.util.ObjectUtil.getNextObjectLabel;
 
 // Although some of the methods here are fluent in design
@@ -69,7 +69,7 @@ class LogBusImpl implements LogBus {
     @Override
     public Bus enableLogging(String... patterns) { enableLogging(DEFAULT, patterns); return null; }
     @Override
-    public Bus enableLogging(LogLevel level, String... patterns) {
+    public Bus enableLogging(TestLogLevel level, String... patterns) {
         String newSpec = Stream.of(patterns.length == 0 ? DEFAULT_PATTERNS : patterns)
                 .filter(this::validateLoggingPattern)
                 .map(s -> s + "=" + level)
@@ -96,10 +96,10 @@ class LogBusImpl implements LogBus {
     @Override
     public Bus log(String message) { log(DEFAULT, message); return null; }
     @Override
-    public Bus log(LogLevel level, String message) { log(level, () -> message); return null; }
+    public Bus log(TestLogLevel level, String message) { log(level, () -> message); return null; }
 
     @Override
-    public Bus log(LogLevel level, Supplier<String> message) {
+    public Bus log(TestLogLevel level, Supplier<String> message) {
         final String context = isLoggingEnabled(level);
         if (context != null) eventBus.put(level, String.format("[%s][%s]%s", timestamp(), context, message.get()));
         return null;
@@ -122,23 +122,23 @@ class LogBusImpl implements LogBus {
     }
 
     @Override
-    public Bus logToSysOut(LogLevel level) { onLog(level, SYS_OUT); return null; }
+    public Bus logToSysOut(TestLogLevel level) { onLog(level, SYS_OUT); return null; }
     @Override
-    public Bus logToSysErr(LogLevel level) { onLog(level, SYS_ERR); return null; }
+    public Bus logToSysErr(TestLogLevel level) { onLog(level, SYS_ERR); return null; }
     @Override
-    public Bus logToSysOut(Set<LogLevel> levels) { onLog(levels, SYS_OUT); return null; }
+    public Bus logToSysOut(Set<TestLogLevel> levels) { onLog(levels, SYS_OUT); return null; }
     @Override
-    public Bus logToSysErr(Set<LogLevel> levels) { onLog(levels, SYS_ERR); return null; }
+    public Bus logToSysErr(Set<TestLogLevel> levels) { onLog(levels, SYS_ERR); return null; }
 
     @Override
     public Bus onLog(Consumer<String> action) { onLog(DEFAULT, action); return null; }
     @Override
-    public Bus onLog(LogLevel level, Consumer<String> action) { eventBus.onMsg(level, action); return null; }
+    public Bus onLog(TestLogLevel level, Consumer<String> action) { eventBus.onMsg(level, action); return null; }
     @Override
-    public Bus onLog(Set<LogLevel> levels, Consumer<String> action) { levels.forEach(l -> onLog(l, action)); return null; }
+    public Bus onLog(Set<TestLogLevel> levels, Consumer<String> action) { levels.forEach(l -> onLog(l, action)); return null; }
 
     @Override
-    public String isLoggingEnabled(LogLevel level) {
+    public String isLoggingEnabled(TestLogLevel level) {
         String spec = eventBus.peek(LogSpec.SPEC);
         if (spec == null) return null;
 
@@ -170,7 +170,7 @@ class LogBusImpl implements LogBus {
             }
             String levelSpec = subparts[1];
             try {
-                LogLevel specifiedLevel = LogLevel.valueOf(levelSpec);
+                TestLogLevel specifiedLevel = TestLogLevel.valueOf(levelSpec);
                 if (specifiedLevel.includes(level)) return answer.get();
             } catch (Throwable t) {
                 System.err.println("Unknown level '" + levelSpec + "' in logging specification '" + spec + "'");

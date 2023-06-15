@@ -72,33 +72,33 @@ class BusImpl implements Bus {
     public <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action) { eventBus.onMsg(key, action); return this; }
 
     @Override
-    public String isLoggingEnabled(LogLevel level) { return logBus.isLoggingEnabled(level); }
+    public String isLoggingEnabled(TestLogLevel level) { return logBus.isLoggingEnabled(level); }
     @Override
     public Bus enableLogging(String... patterns) { logBus.enableLogging(patterns); return this; }
     @Override
-    public Bus enableLogging(LogLevel level, String... patterns) { logBus.enableLogging(level, patterns); return this; }
+    public Bus enableLogging(TestLogLevel level, String... patterns) { logBus.enableLogging(level, patterns); return this; }
     @Override
     public Bus log(Supplier<String> message) { logBus.log(message); return this; }
     @Override
     public Bus log(String message) { logBus.log(message); return this; }
     @Override
-    public Bus log(LogLevel level, String message) { logBus.log(level, message); return this; }
+    public Bus log(TestLogLevel level, String message) { logBus.log(level, message); return this; }
     @Override
-    public Bus log(LogLevel level, Supplier<String> message) { logBus.log(level, message); return this; }
+    public Bus log(TestLogLevel level, Supplier<String> message) { logBus.log(level, message); return this; }
     @Override
-    public Bus logToSysOut(LogLevel level) { logBus.logToSysOut(level); return this; }
+    public Bus logToSysOut(TestLogLevel level) { logBus.logToSysOut(level); return this; }
     @Override
-    public Bus logToSysErr(LogLevel level) { logBus.logToSysErr(level); return this; }
+    public Bus logToSysErr(TestLogLevel level) { logBus.logToSysErr(level); return this; }
     @Override
-    public Bus logToSysOut(Set<LogLevel> levels) { logBus.logToSysOut(levels); return this; }
+    public Bus logToSysOut(Set<TestLogLevel> levels) { logBus.logToSysOut(levels); return this; }
     @Override
-    public Bus logToSysErr(Set<LogLevel> levels) { logBus.logToSysErr(levels); return this; }
+    public Bus logToSysErr(Set<TestLogLevel> levels) { logBus.logToSysErr(levels); return this; }
     @Override
     public Bus onLog(Consumer<String> action) { logBus.onLog(action); return this; }
     @Override
-    public Bus onLog(LogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
+    public Bus onLog(TestLogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
     @Override
-    public Bus onLog(Set<LogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
+    public Bus onLog(Set<TestLogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, user()); }

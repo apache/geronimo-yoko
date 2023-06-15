@@ -20,7 +20,7 @@ package testify.parts;
 import junit.framework.AssertionFailedError;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-import testify.bus.LogLevel;
+import testify.bus.TestLogLevel;
 import testify.io.EasyCloseable;
 import testify.util.ObjectUtil;
 
@@ -37,12 +37,12 @@ import java.util.stream.Collectors;
 
 import static java.util.EnumSet.complementOf;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static testify.bus.LogLevel.DEBUG;
-import static testify.bus.LogLevel.ERROR;
-import static testify.bus.LogLevel.WARN;
+import static testify.bus.TestLogLevel.DEBUG;
+import static testify.bus.TestLogLevel.ERROR;
+import static testify.bus.TestLogLevel.WARN;
 
 class PartRunnerImpl implements PartRunner {
-    private static final EnumSet<LogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
+    private static final EnumSet<TestLogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
     private final String label = ObjectUtil.getNextObjectLabel(PartRunnerImpl.class);
     private final InterProcessBus centralBus = InterProcessBus.createMaster();
     private final Map<String, Bus> knownBuses = new ConcurrentHashMap<>();
@@ -58,7 +58,7 @@ class PartRunnerImpl implements PartRunner {
     private String[] jvmArgs;
 
     @Override
-    public PartRunner enableLogging(LogLevel level, String pattern) {
+    public PartRunner enableTestLogging(TestLogLevel level, String pattern) {
         // decorate the bus factory to enable the requested logging on any new buses
         busFactory = busFactory.andThen(b -> b.enableLogging(level, pattern));
         // Add the new log setting to existing buses.
