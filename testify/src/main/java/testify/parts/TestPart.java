@@ -20,7 +20,20 @@ package testify.parts;
 import testify.bus.Bus;
 
 import java.io.Serializable;
+import java.util.function.Consumer;
 
+/**
+ * A test part is a piece of a test to be performed in another context,
+ * e.g. a separate thread or a new process.
+ * <br>
+ * Logically, this is like a {@link Consumer} of a {@link Bus},
+ * but it enforces an additional requirement on the compiler:
+ * any supplied lambda or method reference will implement {@link Serializable}.
+ * This matters when sending the part to a remote process.
+ * <br>
+ * <em>N.B. for a lambda or method reference to be serialized,
+ * all its explicit and implicit references must be serializable.</em>
+ */
 @FunctionalInterface
 public interface TestPart extends Serializable {
     void run(Bus bus) throws Throwable;
