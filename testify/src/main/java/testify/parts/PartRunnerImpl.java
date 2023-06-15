@@ -17,7 +17,7 @@
  */
 package testify.parts;
 
-import junit.framework.AssertionFailedError;
+import org.opentest4j.AssertionFailedError;
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
 import testify.bus.TestLogLevel;

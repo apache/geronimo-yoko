@@ -17,7 +17,7 @@
  */
 package testify.util;
 
-import junit.framework.AssertionFailedError;
+import org.opentest4j.AssertionFailedError;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
