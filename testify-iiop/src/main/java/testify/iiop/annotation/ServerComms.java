@@ -145,7 +145,7 @@ final class ServerComms implements Serializable {
     public void launch(PartRunner runner) {
         assertClientSide();
         this.bus = runner.bus(serverName);
-        runner.fork(serverName, this::run, bus -> control(ServerOp.KILL_SERVER));
+        runner.fork(serverName, this::run).endWith(bus1 -> control(ServerOp.KILL_SERVER));
         // wait for the server to be ready:
         // server side will respond as request 0
         waitForCompletion(ServerLaunchFailed::new);

@@ -29,9 +29,9 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -40,6 +40,9 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static testify.bus.TestLogLevel.DEBUG;
 import static testify.bus.TestLogLevel.ERROR;
 import static testify.bus.TestLogLevel.WARN;
+import static testify.parts.PartRunnerImpl.HookType.JOIN;
+import static testify.parts.PartRunnerImpl.HookType.POST_JOIN;
+import static testify.parts.PartRunnerImpl.HookType.PRE_JOIN;
 
 class PartRunnerImpl implements PartRunner {
     private static final EnumSet<TestLogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
@@ -47,7 +50,7 @@ class PartRunnerImpl implements PartRunner {
     private final InterProcessBus centralBus = InterProcessBus.createMaster();
     private final Map<String, Bus> knownBuses = new ConcurrentHashMap<>();
 
-    private enum HookType { PRE_JOIN, JOIN, POST_JOIN }
+    enum HookType { PRE_JOIN, JOIN, POST_JOIN; }
     private final EnumMap<HookType, Deque<EasyCloseable>> hooks = new EnumMap<>(HookType.class);
     { for (HookType ht: HookType.values()) hooks.put(ht, new ConcurrentLinkedDeque<>()); }
     private final Map<EasyCloseable, String> hookNames = new HashMap<>();
@@ -90,36 +93,31 @@ class PartRunnerImpl implements PartRunner {
     }
 
     @Override
-    public PartRunner fork(String partName, TestPart part) {
+    public ForkedPart fork(String partName, TestPart part) {
         final Runner<?> runner = useProcesses ? new ProcessRunner(jvmArgs) : ThreadRunner.SINGLETON;
         return fork(runner, partName, part);
     }
 
-    private <J> PartRunner fork(Runner<J> runner, String partName, TestPart part) {
+    private <J> ForkedPart fork(Runner<J> runner, String partName, TestPart part) {
         try {
             final NamedPart namedPart = new NamedPart(partName, part);
             J job = runner.fork(centralBus, namedPart);
             namedPart.waitForStart(bus(partName));
             registerForJoin(runner, job, partName);
-            return this;
+            // need to return a ForkedPart
+            return endAction -> addHook(PRE_JOIN, partName, () -> endAction.accept(bus(partName)));
         } catch (Throwable throwable) {
             throw fatalError(throwable);
         }
     }
 
-    private PartRunner addHook(HookType hookType, String partName, EasyCloseable hook) {
+    private void addHook(HookType hookType, String partName, EasyCloseable hook) {
         hookNames.put(hook, partName);
-        if (hookType == HookType.PRE_JOIN) {
-            hooks.get(hookType).add(hook);
-            return this;
-        }
-        hooks.get(hookType).addFirst(hook);
-        return this;
-    }
-
-    @Override
-    public PartRunner endWith(String partName, Consumer<Bus> endAction) {
-        return addHook(HookType.PRE_JOIN, partName, () -> endAction.accept(bus(partName)));
+        Deque<EasyCloseable> hookQueue = hooks.get(hookType);
+        // PRE_JOIN hooks get run in order of addition;
+        // other hooks are run in reverse order of addition.
+        if (Objects.requireNonNull(hookType) == PRE_JOIN) hookQueue.add(hook);
+        else hookQueue.addFirst(hook);
     }
 
     private Error fatalError(Throwable t) {
@@ -165,7 +163,7 @@ class PartRunnerImpl implements PartRunner {
     }
 
     private <J> void registerForJoin(Runner<J> runner, J job, String name) {
-        addHook(HookType.JOIN, name, () -> {
+        addHook(JOIN, name, () -> {
             try {
                 if (runner.join(job, 5, SECONDS)) return;
                 privateBus().log(ERROR, "The test part '" + name + "' did not complete. Trying to force it to stop.");
@@ -173,7 +171,7 @@ class PartRunnerImpl implements PartRunner {
                 Thread.currentThread().interrupt();
             }
         });
-        addHook(HookType.POST_JOIN, name, () -> {
+        addHook(POST_JOIN, name, () -> {
             try {
                 if (runner.stop(job, 5, SECONDS)) return;
                 privateBus().log(ERROR, "The test part '" + name + "' did not complete when forced. Giving up.");

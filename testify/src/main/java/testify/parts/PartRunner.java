@@ -21,7 +21,6 @@ import testify.bus.Bus;
 import testify.bus.TestLogLevel;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.function.Consumer;
 
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
@@ -45,17 +44,10 @@ public interface PartRunner {
     PartRunner useNewJVMWhenForking(String...jvmArgs);
     PartRunner useNewThreadWhenForking();
 
-    PartRunner fork(String partName, TestPart part);
+    ForkedPart fork(String partName, TestPart part);
+    default ForkedPart fork(Enum<?> partName, TestPart part) { return fork(partName.toString(), part); }
 
-    default PartRunner fork(String partName, TestPart part, Consumer<Bus> endAction) {
-        return fork(partName, part).endWith(partName, endAction);
-    }
-
-    default PartRunner fork(Enum<?> partName, TestPart part, Consumer<Bus> endAction) {
-        return fork(partName.toString(), part, endAction);
-    }
-
-    default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
+    default ForkedPart forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
 
     static TestPart wrapMain(Class<?> mainClass, String[] args) {
         return bus -> {
@@ -66,10 +58,6 @@ public interface PartRunner {
             }
         };
     }
-
-    PartRunner endWith(String partName, Consumer<Bus> endAction);
-
-    default PartRunner endWith(Enum<?> partName, Consumer<Bus> endAction) { return endWith(partName.toString(), endAction); }
 
     void join();
 }
