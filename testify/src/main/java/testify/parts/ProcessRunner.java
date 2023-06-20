@@ -39,6 +39,12 @@ public class ProcessRunner implements Runner<Process>{
     private enum Part implements TypeSpec<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
+    /**
+     * This is run on the remote process.
+     * @param args
+     *             The first argument is the name of the process.
+     *             Other arguments are ignored.
+     */
     public static void main(String[] args) {
         String name = args[0];
         Bus bus = InterProcessBus.createSlave().forUser(name);

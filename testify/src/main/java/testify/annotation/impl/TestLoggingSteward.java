@@ -18,7 +18,7 @@
 package testify.annotation.impl;
 
 import org.junit.platform.commons.support.AnnotationSupport;
-import testify.annotation.TestLogging;
+import testify.annotation.TraceTestify;
 import testify.parts.PartRunner;
 
 import java.lang.reflect.AnnotatedElement;
@@ -26,9 +26,9 @@ import java.lang.reflect.AnnotatedElement;
 public enum TestLoggingSteward {
     ;
     public static void addTestLogSettings(PartRunner runner, AnnotatedElement elem) {
-        AnnotationSupport.findAnnotation(elem, TestLogging.class).ifPresent(trc -> TestLoggingSteward.addTestLogSettings(runner, trc));
+        AnnotationSupport.findAnnotation(elem, TraceTestify.class).ifPresent(trc -> TestLoggingSteward.addTestLogSettings(runner, trc));
     }
-    private static void addTestLogSettings(PartRunner runner, TestLogging config) {
+    private static void addTestLogSettings(PartRunner runner, TraceTestify config) {
         if (config.value().isEmpty()) return;
         runner.enableTestLogging(config.level(), config.value());
     }

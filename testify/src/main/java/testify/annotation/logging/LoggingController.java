@@ -17,8 +17,6 @@
  */
 package testify.annotation.logging;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-
 import java.io.PrintWriter;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -29,9 +27,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
-import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 import static testify.util.Queues.drain;
 import static testify.util.Queues.drainInOrder;
 
@@ -40,7 +36,7 @@ import static testify.util.Queues.drainInOrder;
  * as required by the annotation for that test.
  */
 @Logging
-public class TestLogger {
+public class LoggingController {
     private final Handler handler = new Handler();
     private final PrintWriter out = new PrintWriter(System.out);
     private final Deque<List<LogSetting>> settingsStack = new ArrayDeque<>();
@@ -60,26 +56,12 @@ public class TestLogger {
 
     void registerLogHandler() { Logger.getLogger("").addHandler(handler); }
     void deregisterLogHandler() { Logger.getLogger("").removeHandler(handler); }
+    void pushSettings(List<LogSetting> settings) { settingsStack.push(settings);}
+    void popSettings() { settingsStack.pop().forEach(LogSetting::undo);}
 
-    public void before(ExtensionContext ctx) {
-        List<LogSetting> settings = findRepeatableAnnotations(ctx.getElement(), Logging.class)
-                        .stream()
-                        .map(LogSetting::new)
-                        .collect(Collectors.toList());
-        settingsStack.push(settings);
-        flushLogs("BEFORE: " + ctx.getDisplayName());
-    }
+    void somethingWentWrong(Throwable throwable) { this.badStuffHappened = true; }
 
-    public void after(ExtensionContext ctx) {
-        flushLogs("AFTER: " + ctx.getDisplayName());
-        settingsStack.pop().forEach(LogSetting::undo);
-    }
-
-    public void somethingWentWrong(Throwable throwable) {
-        this.badStuffHappened = true;
-    }
-
-    private void flushLogs(String displayName) {
+    void flushLogs(String displayName) {
         // if there were no log settings, do nothing at all
         if (settingsStack.stream().allMatch(List::isEmpty)) return;
 
@@ -91,7 +73,7 @@ public class TestLogger {
             return;
         }
 
-        char flag = badStuffHappened ? '\u274C' : '\u2714';
+        char flag = badStuffHappened ? '\u274C' : '\u2714'; // cross or tick character
         badStuffHappened = false;
         // PRINT THREAD KEY
         drain(newThreads).forEach(this::introduceThread);
@@ -129,7 +111,7 @@ public class TestLogger {
         public void close() throws SecurityException {}
     }
 
-    private class LogSetting {
+    static class LogSetting {
         private final Logger logger;
         private final Level oldLevel;
 

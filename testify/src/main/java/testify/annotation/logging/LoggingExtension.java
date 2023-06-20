@@ -26,20 +26,39 @@ import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 
-public final class LoggingExtension extends TestLogger implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler {
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
+
+public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler {
+    private final LoggingController controller = new LoggingController();
+
     public void beforeAll(ExtensionContext ctx) {
-        registerLogHandler();
-        this.before(ctx);
-        ctx.getStore(Namespace.create(this)).put(this, this); // ensure close() gets called
+        controller.registerLogHandler();
+        startLogging(ctx);
+        ctx.getStore(Namespace.create(this)).put(this, this); // the namespace will call close() during cleanup
     }
-    public void beforeTestExecution(ExtensionContext ctx) { this.before(ctx); }
-    public void afterTestExecution(ExtensionContext ctx) { this.after(ctx); }
-    public void afterAll(ExtensionContext ctx) { this.after(ctx); }
+    public void beforeTestExecution(ExtensionContext ctx) { startLogging(ctx); }
+    public void afterTestExecution(ExtensionContext ctx) { endLogging(ctx); }
+    public void afterAll(ExtensionContext ctx) { endLogging(ctx); }
     public void handleTestExecutionException(ExtensionContext ctx, Throwable throwable) throws Throwable {
-        this.somethingWentWrong(throwable);
+        controller.somethingWentWrong(throwable);
         throw throwable; // rethrow or tests won't fail
     }
-    public void close() throws Throwable {
-        deregisterLogHandler();
+    public void close() throws Throwable { controller.deregisterLogHandler(); }
+
+    private void startLogging(ExtensionContext ctx) {
+        List<LoggingController.LogSetting> settings = findRepeatableAnnotations(ctx.getElement(), Logging.class)
+                        .stream()
+                        .map(LoggingController.LogSetting::new)
+                        .collect(Collectors.toList());
+        controller.pushSettings(settings);
+        controller.flushLogs("BEFORE: " + ctx.getDisplayName());
+    }
+
+    private void endLogging(ExtensionContext ctx) {
+        controller.flushLogs("AFTER: " + ctx.getDisplayName());
+        controller.popSettings();
     }
 }

@@ -29,7 +29,7 @@ import static testify.bus.TestLogLevel.DEFAULT;
 
 @Target({ANNOTATION_TYPE, TYPE})
 @Retention(RUNTIME)
-public @interface TestLogging {
+public @interface TraceTestify {
     /** A regular expression to match the classes to trace */
     String value() default ".*";
     TestLogLevel level() default DEFAULT;

@@ -25,5 +25,13 @@ import java.util.function.Consumer;
  * Interface to customise the behaviour of a {@link PartRunner} when forking a {@link TestPart}.
  */
 public interface ForkedPart {
+
+    // TODO: add support for JUnit hook points here - at least @Before and @After
+
+
+    /**
+     * Run the provided action to shut down this part.
+     * It will be run locally, by on the thread that calls {@link PartRunner#join()}.
+     */
     void endWith(Consumer<Bus> endAction);
 }

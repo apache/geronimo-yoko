@@ -21,7 +21,12 @@ import testify.bus.Bus;
 import testify.bus.TestLogLevel;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.function.Consumer;
 
+/**
+ * An object that can run a {@link TestPart} in another context.
+ * Methods are provided for configuring what that contet should be.
+ */
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
@@ -59,5 +64,9 @@ public interface PartRunner {
         };
     }
 
+    /**
+     * Calls any actions registered using {@link ForkedPart#endWith(Consumer)}.
+     * Wait for all the running parts to complete.
+     */
     void join();
 }
