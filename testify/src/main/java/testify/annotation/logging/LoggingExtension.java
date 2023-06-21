@@ -32,6 +32,10 @@ import java.util.stream.Collectors;
 
 import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 
+/**
+ * Log each test and print out the log messages
+ * as directed by the annotation for that test.
+ */
 public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler, SimpleParameterResolver<LoggingController> {
     private final LoggingController controller = new LoggingController();
 

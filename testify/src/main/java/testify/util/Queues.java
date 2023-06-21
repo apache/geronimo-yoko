@@ -37,19 +37,15 @@ public enum Queues {
         });
     }
 
+    /** Drain the supplied queues in their natural ordering, assuming the ordering may change after each poll operation. */
+    public static <T, Q extends Queue<T> & Comparable<Q>> Stream<T> drainInOrder(Collection<Q> queues) {
+        return drainInOrder(new PriorityQueue<>(queues), null);
+    }
+
     /** Drain the supplied queues in the ordering specified, assuming the ordering may change after each poll operation. */
     public static <T, Q extends Queue<T>> Stream<T> drainInOrder(Collection<Q> queues, Comparator<Q> ordering) {
         PriorityQueue<Q> pq = new PriorityQueue<>(ordering);
         pq.addAll(queues);
-        return drain0(pq);
-    }
-
-    /** Drain the supplied queues in their natural ordering, assuming the ordering may change after each poll operation. */
-    public static <T, Q extends Queue<T> & Comparable<Q>> Stream<T> drainInOrder(Collection<Q> queues) {
-        return drain0(new PriorityQueue<>(queues));
-    }
-
-    private static <T, Q extends Queue<T>> Stream<T> drain0(PriorityQueue<Q> pq) {
         return Streams.stream(action -> {
             Q q;
             T t;

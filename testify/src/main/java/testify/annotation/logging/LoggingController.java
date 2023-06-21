@@ -17,26 +17,28 @@
  */
 package testify.annotation.logging;
 
+import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
-import java.util.Optional;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 
+import static java.util.stream.Collectors.toList;
 import static testify.util.Queues.drain;
 import static testify.util.Queues.drainInOrder;
 
 /**
- * Log each test and conditionally print out the log messages
- * as required by the annotation for that test.
+ * Responsible for starting logging, capturing logs, and formatting them.
  */
 @Logging
 public class LoggingController {
+    private final String processName = "<junit>";
     private final Handler handler = new Handler();
     private volatile PrintWriter out = new PrintWriter(System.out);
     private final Deque<List<LogSetting>> settingsStack = new ArrayDeque<>();
@@ -83,33 +85,45 @@ public class LoggingController {
         char flag = badStuffHappened ? '\u274C' : '\u2714'; // cross or tick character
         badStuffHappened = false;
         // PRINT THREAD KEY
-        drain(newThreads).forEach(this::introduceThread);
+        List<String> tableOfThreads = drain(newThreads).map(this::describe).collect(toList());
+        tableOfThreads.forEach(out::println);
         out.printf("%c%1$c%1$cBEGIN LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
         // PRINT LOGS
-        drainInOrder(journals).forEachOrdered(this::printLog);
+        List<String> logs = drainInOrder(journals).map(this::format).collect(toList());
+        logs.forEach(out::println);
         out.printf("%c%1$c%1$cEND LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
         out.flush();
     }
 
-    private void introduceThread(Thread t) {
-        out.printf("THREAD KEY:  %8s  id=%08x  state=%-13s  %s%n", threadNames.get(t.getId()), t.getId(), t.getState(), t.getName());
+    private String describe(Thread t) {
+        return String.format("THREAD KEY:  %8s %8s  id=%08x  state=%-13s  %s", this.processName, threadNames.get(t.getId()), t.getId(), t.getState(), t.getName());
     }
 
-    private void printLog(LogRecord rec) {
+    private String format(LogRecord rec) {
         // format: ss.mmm  _____tid  [logger]  message
         long millis = rec.getMillis() - epoch;
-        out.printf("LOG:  %02d.%03d  %8s  [%s]  %s%n",
+        String result = String.format("LOG: %02d.%03d  %8s %8s  [%s]  %s",
                 millis / 1000,
                 millis % 1000,
+                this.processName,
                 threadNames.get((long) rec.getThreadID()),
                 rec.getLoggerName(),
                 rec.getMessage());
-        Optional.ofNullable(rec.getThrown()).ifPresent(this::printThrowable);
+        Throwable throwable = rec.getThrown();
+        if (null != throwable) result = String.format("%s%n%s", result, formatThrowable(throwable));
+        return result;
     }
 
-    private void printThrowable(Throwable t) {
-        out.printf("Exception was %s%n", t);
-        t.printStackTrace(out);
+    private static String formatThrowable(Throwable t) {
+        try (StringWriter sw = new StringWriter()) {
+            try (PrintWriter out = new PrintWriter(sw)) {
+                out.printf("Exception was %s%n", t);
+                t.printStackTrace(out);
+                return sw.toString();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private class Handler extends java.util.logging.Handler {

@@ -86,5 +86,4 @@ public class LoggingTest {
         assertThat(logText, containsString("p1 log msg"));
         assertThat(logText, not(containsString("p2 log msg")));
     }
-
 }

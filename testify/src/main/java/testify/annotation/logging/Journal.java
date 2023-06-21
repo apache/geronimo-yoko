@@ -21,14 +21,15 @@ import java.util.LinkedList;
 import java.util.logging.LogRecord;
 
 /**
- * A linked list of LogRecords with chronological ordering of first element.
+ * A linked list of LogRecords with chronological ordering by first element.
  */
 final class Journal extends LinkedList<LogRecord> implements Comparable<Journal> {
     @Override
     public int compareTo(Journal that) {
         final LogRecord thisRec = this.peek();
         final LogRecord thatRec = that.peek();
-        if (null == thisRec) return (null == thatRec) ? 0 : 1;
+        if (thisRec == thatRec) return 0;
+        if (null == thisRec) return 1;
         if (null == thatRec) return -1;
         return Long.signum(thisRec.getMillis() - thatRec.getMillis());
     }
