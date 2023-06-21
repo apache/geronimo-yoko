@@ -23,11 +23,11 @@ import org.junit.jupiter.api.extension.ParameterResolver;
 
 public interface SimpleParameterResolver<P> extends ParameterResolver {
     @Override
-    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
+    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return pCtx.getParameter().getType() == getSupportedParameterType(); }
 
     @Override
     default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
 
-    boolean supportsParameter(ParameterContext pCtx);
+    Class<P> getSupportedParameterType();
     P resolveParameter(ExtensionContext ctx);
 }

@@ -19,7 +19,6 @@ package testify.annotation;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
 import testify.annotation.impl.SimpleParameterResolver;
 import testify.parts.PartRunner;
 
@@ -39,7 +38,8 @@ public @interface ConfigurePartRunner {}
 
 class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
     @Override
-    public boolean supportsParameter(ParameterContext ctx)  { return ctx.getParameter().getType() == PartRunner.class; }
+    public Class<PartRunner> getSupportedParameterType() { return PartRunner.class; }
+
     @Override
     // get the configured PartRunner for the context,
     // but if the context has a test method, use its parent instead

@@ -38,7 +38,7 @@ import static testify.util.Queues.drainInOrder;
 @Logging
 public class LoggingController {
     private final Handler handler = new Handler();
-    private final PrintWriter out = new PrintWriter(System.out);
+    private volatile PrintWriter out = new PrintWriter(System.out);
     private final Deque<List<LogSetting>> settingsStack = new ArrayDeque<>();
     private final long epoch = System.currentTimeMillis();
     private final Queue<Thread> newThreads = new ConcurrentLinkedQueue<>();
@@ -52,7 +52,14 @@ public class LoggingController {
         return result;
     });
     private final CodeNaming<Long> threadNames = new CodeNaming<>();
+
     private boolean badStuffHappened;
+
+    // Allow output to be redirected, purely to test this class
+    void setOut(PrintWriter newOut) {
+        System.out.println("### redirecting output from " + this.out + " to " + newOut);
+        this.out = newOut;
+    }
 
     void registerLogHandler() { Logger.getLogger("").addHandler(handler); }
     void deregisterLogHandler() { Logger.getLogger("").removeHandler(handler); }

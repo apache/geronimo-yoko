@@ -25,13 +25,14 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
+import testify.annotation.impl.SimpleParameterResolver;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 
-public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler {
+public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler, SimpleParameterResolver<LoggingController> {
     private final LoggingController controller = new LoggingController();
 
     public void beforeAll(ExtensionContext ctx) {
@@ -61,4 +62,9 @@ public final class LoggingExtension implements CloseableResource, BeforeAllCallb
         controller.flushLogs("AFTER: " + ctx.getDisplayName());
         controller.popSettings();
     }
+
+    @Override
+    public Class<LoggingController> getSupportedParameterType() { return LoggingController.class; }
+    @Override
+    public LoggingController resolveParameter(ExtensionContext ctx) { return controller; }
 }
