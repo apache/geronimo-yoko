@@ -47,7 +47,7 @@ import static testify.parts.PartRunnerImpl.HookType.PRE_JOIN;
 class PartRunnerImpl implements PartRunner {
     private static final EnumSet<TestLogLevel> URGENT_LEVELS = EnumSet.of(ERROR, WARN);
     private final String label = ObjectUtil.getNextObjectLabel(PartRunnerImpl.class);
-    private final InterProcessBus centralBus = InterProcessBus.createMaster();
+    private final InterProcessBus centralBus = InterProcessBus.createParent();
     private final Map<String, Bus> knownBuses = new ConcurrentHashMap<>();
 
     enum HookType { PRE_JOIN, JOIN, POST_JOIN; }

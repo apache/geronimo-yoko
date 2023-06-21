@@ -47,7 +47,7 @@ public class ProcessRunner implements Runner<Process>{
      */
     public static void main(String[] args) {
         String name = args[0];
-        Bus bus = InterProcessBus.createSlave().forUser(name);
+        Bus bus = InterProcessBus.createChild().forUser(name);
         bus.log("Started remote process for test part: " + name);
         NamedPart part = bus.get(Part.NAMED_PART);
         bus.log("Running named part: " + part.name);

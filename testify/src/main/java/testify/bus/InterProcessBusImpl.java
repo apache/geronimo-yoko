@@ -52,10 +52,10 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
 
     private final List<IO> ioList;
 
-    InterProcessBusImpl(boolean master) {
-        this.ioList = master
+    InterProcessBusImpl(boolean parent) {
+        this.ioList = parent
                 ? new CopyOnWriteArrayList<>()
-                : Collections.singletonList(new IO("master", System.out).startListening(System.in));
+                : Collections.singletonList(new IO("parent", System.out).startListening(System.in));
     }
 
     private void putLocal(String key, String value) { super.put(key, value); }
