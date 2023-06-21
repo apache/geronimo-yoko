@@ -24,14 +24,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-final class NamedPart implements TestPart {
+final class NamedPart implements Part {
     private enum Event implements TypeSpec<Throwable> {STARTED, ENDED}
     private static final ConcurrentMap<String, AtomicInteger> uids = new ConcurrentHashMap<>();
     final String name;
-    private final TestPart part;
+    private final Part part;
     private final String uid;
 
-    NamedPart(String name, TestPart part) {
+    NamedPart(String name, Part part) {
         this.name = name;
         this.part = part;
         int instance = uids.computeIfAbsent(name, s -> new AtomicInteger()).incrementAndGet();

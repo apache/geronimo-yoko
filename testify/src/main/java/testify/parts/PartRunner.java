@@ -24,12 +24,37 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
 
 /**
- * An object that can run a {@link TestPart} in another context.
+ * An object that can run a {@link Part} in another context.
  * Methods are provided for configuring what that contet should be.
  */
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
+
+    /**
+     * The possible states of a PartRunner.
+     */
+    enum State {
+        /** Some config options on a PartRunner must be set before first use. */
+        CONFIGURING,
+        /** Once a PartRunner is IN_USE, some configuration options may no longer be changed */
+        IN_USE,
+        /** After join() has been called, a PartRunner cannot be used again */
+        COMPLETED;
+    }
+
+    /**
+     *
+     */
+    State getState();
+
+    /**
+     * Add a piece of work to be performed when a new JVM is started.
+     *
+     * @param initializer - the work to be done on new JVM startup
+     * @throws IllegalStateException if the state of this PartRunner is not CONFIGURING
+     */
+    void addJVMStartupHook(Part initializer) throws IllegalStateException;
 
     /**
      * Enable a range of log levels for the specified pattern and partnames.
@@ -49,12 +74,12 @@ public interface PartRunner {
     PartRunner useNewJVMWhenForking(String...jvmArgs);
     PartRunner useNewThreadWhenForking();
 
-    ForkedPart fork(String partName, TestPart part);
-    default ForkedPart fork(Enum<?> partName, TestPart part) { return fork(partName.toString(), part); }
+    ForkedPart fork(String partName, Part part);
+    default ForkedPart fork(Enum<?> partName, Part part) { return fork(partName.toString(), part); }
 
     default ForkedPart forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
 
-    static TestPart wrapMain(Class<?> mainClass, String[] args) {
+    static Part wrapMain(Class<?> mainClass, String[] args) {
         return bus -> {
             try {
                 mainClass.getMethod("main", String[].class).invoke(null, new Object[]{args});

@@ -22,7 +22,7 @@ import testify.bus.Bus;
 import java.util.function.Consumer;
 
 /**
- * Interface to customise the behaviour of a {@link PartRunner} when forking a {@link TestPart}.
+ * Interface to customise the behaviour of a {@link PartRunner} when forking a {@link Part}.
  */
 public interface ForkedPart {
 

@@ -23,8 +23,7 @@ import java.io.Serializable;
 import java.util.function.Consumer;
 
 /**
- * A test part is a piece of a test to be performed in another context,
- * e.g. a separate thread or a new process.
+ * A piece of work to be performed in another context, such as a separate thread or a new process.
  * <br>
  * Logically, this is like a {@link Consumer} of a {@link Bus},
  * but it enforces an additional requirement on the compiler:
@@ -35,6 +34,21 @@ import java.util.function.Consumer;
  * all its explicit and implicit references must be serializable.</em>
  */
 @FunctionalInterface
-public interface TestPart extends Serializable {
+public interface Part extends Serializable {
     void run(Bus bus) throws Throwable;
+
+    default Part andThen(Part that) {
+        if (that == NO_OP) return this;
+        if (this == NO_OP) return that;
+        return bus -> {
+            this.run(bus);
+            that.run(bus);
+        };
+    }
+
+    default Part butFirst(Part that) {
+        return that.andThen(this);
+    }
+
+    Part NO_OP = bus -> {};
 }
