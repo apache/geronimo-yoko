@@ -1,17 +1,20 @@
-# Yoko
+# Testify
 
-The best Orb going
+This documentation has been developed to help you understand what Testify is used for.
 
-## Commands
+## What is Testify?
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+Testify is an open-source generic framework used for the testing of Object Request Brokers (ORBs). It is based on an Apache Yoko fork, originally built for OpenLiberty. 
 
-## Project layout
+## What is an Orb?
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+An ORB is a middleware which allows program calls to be made from one computer to another via a computer network. 
+
+## What is Yoko?
+
+Yoko is an open-source project maintained by IBM, and is an implementation of an ORB system to carry out interprocess communication. 
+
+The diagram below displays how Testify works with Yoko:
+
+
+![Yoko Diagram](../images/yoko_architecture.png)

@@ -6,8 +6,7 @@ repo_url: https://github.com/OpenLiberty/yoko
 theme:
     name: material
 nav:
-  - Yoko: "index.md"
-  - Testify: "pages/testify.md"
+  - Testify: "index.md"
   - Implementing Testify to a RMI Java Application: "pages/testify-guide.md"
   - Bus:
     - Bus Concept: "pages/bus/bus-concept.md"
