@@ -41,6 +41,8 @@ public interface Part extends Serializable {
         if (that == NO_OP) return this;
         if (this == NO_OP) return that;
         return bus -> {
+            // If something goes wrong in the first run(), the second will not be called.
+            // This is ok, because if a part of the test (or test setup) goes wrong, the whole test is broken.
             this.run(bus);
             that.run(bus);
         };

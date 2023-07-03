@@ -36,22 +36,22 @@ import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.Servant;
-import testify.bus.Bus;
 import testify.annotation.TraceTestify;
+import testify.annotation.logging.Logging;
+import testify.bus.Bus;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 import testify.iiop.annotation.ConfigureServer.BeforeServer;
 import testify.iiop.annotation.ConfigureServer.NameServiceStub;
 import testify.iiop.annotation.ConfigureServer.Separation;
-import testify.annotation.logging.Logging;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
 import java.lang.reflect.Constructor;
 
-import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 import static testify.annotation.logging.Logging.LoggingLevel.FINEST;
+import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
 @TraceTestify

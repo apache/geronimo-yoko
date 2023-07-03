@@ -19,6 +19,7 @@ package testify.annotation;
 
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 import testify.annotation.impl.SimpleParameterResolver;
 import testify.parts.PartRunner;
 
@@ -36,7 +37,7 @@ import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
 @Inherited
 public @interface ConfigurePartRunner {}
 
-class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
+class PartRunnerExtension implements SimpleParameterResolver<PartRunner>, TestExecutionExceptionHandler {
     @Override
     public Class<PartRunner> getSupportedParameterType() { return PartRunner.class; }
 
@@ -45,4 +46,11 @@ class PartRunnerExtension implements SimpleParameterResolver<PartRunner> {
     // but if the context has a test method, use its parent instead
     // i.e. get an ORB for the test class, not for each test method
     public PartRunner resolveParameter(ExtensionContext ctx) { return getPartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
+
+    @Override
+    public void handleTestExecutionException(ExtensionContext ctx, Throwable throwable) throws Throwable {
+        System.out.printf("Test failed with %s printing debug info%n", throwable);
+        getPartRunner(ctx).dumpBuses();
+        throw throwable; // rethrow or tests won't fail
+    }
 }

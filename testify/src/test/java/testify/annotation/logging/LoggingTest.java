@@ -37,14 +37,14 @@ public class LoggingTest {
     StringWriter textOut;
 
     @BeforeEach
-    void redirectOutput(LoggingController controller) {
+    void redirectOutput(LogPublisher controller) {
         textOut = new StringWriter();
         controller.setOut(new PrintWriter(textOut));
 
     }
 
     @Test
-    void testLocalLogging(LoggingController controller, TestInfo testInfo) {
+    void testLocalLogging(LogPublisher controller, TestInfo testInfo) {
         log("test.logging", "This message should be logged");
         log("other", "This message should not be logged");
         controller.flushLogs(testInfo.getDisplayName());
@@ -55,29 +55,23 @@ public class LoggingTest {
     }
 
     private static void log(String logger, String msg) {
+        System.out.printf("### about to log \"%s\" to \"%s\"%n", msg, logger);
         Logger.getLogger(logger).finest(msg);
     }
 
     @Test
-    void testForkedThreadLogging(PartRunner runner, LoggingController controller, TestInfo testInfo) {
-        runner.fork("PART_ONE", bus -> log("test.logging", "p1 log msg"));
-        runner.fork("PART_TWO", bus -> log("other", "p2 log msg"));
-        runner.join();
-        controller.flushLogs(testInfo.getDisplayName());
-        String logText = textOut.toString();
-        System.out.println(logText);
-        assertThat(logText, containsString("PART_ONE"));
-        assertThat(logText, not(containsString("PART_TWO")));
-        assertThat(logText, containsString("p1 log msg"));
-        assertThat(logText, not(containsString("p2 log msg")));
-    }
-
-    //@Test
-    void testForkedProcessLogging(PartRunner runner, LoggingController controller, TestInfo testInfo) {
-        runner.useNewJVMWhenForking();
-        runner.fork("PART_ONE", bus -> log("test.logging", "p1 log msg"));
-        runner.fork("PART_TWO", bus -> log("other", "p2 log msg"));
-        runner.join();
+    void testForkedLogging(PartRunner runner, LogPublisher controller, TestInfo testInfo) {
+        runner.fork("PART_ONE", bus -> {
+            log("test.logging", "p1 log msg");
+            bus.put("DONE", "");
+        });
+        runner.fork("PART_TWO", bus -> {
+            log("other", "p2 log msg");
+            bus.put("DONE", "");
+        });
+        // wait for threads to finish
+        runner.bus("PART_ONE").get("DONE");
+        runner.bus("PART_TWO").get("DONE");
         controller.flushLogs(testInfo.getDisplayName());
         String logText = textOut.toString();
         System.out.println(logText);

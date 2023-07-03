@@ -94,4 +94,6 @@ public interface PartRunner {
      * Wait for all the running parts to complete.
      */
     void join();
+
+    void dumpBuses();
 }

@@ -26,7 +26,7 @@ import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.Servant;
 import org.opentest4j.TestAbortedException;
-import testify.annotation.logging.LoggingController;
+import testify.annotation.logging.LogPublisher;
 import testify.bus.Bus;
 import testify.bus.EnumSpec;
 import testify.bus.FieldSpec;
@@ -90,8 +90,8 @@ final class ServerComms implements Serializable {
     private enum MethodRequest implements MethodSpec {SEND}
     private enum FieldRequest implements FieldSpec {INIT}
     private enum ExportRequest implements MemberSpec {EXPORT}
-    private enum BeginLogging implements TypeSpec<Supplier<Optional<LoggingController>>> {BEGIN_LOGGING}
-    private enum EndLogging implements TypeSpec<Consumer<LoggingController>> {END_LOGGING}
+    private enum BeginLogging implements TypeSpec<Supplier<Optional<LogPublisher>>> {BEGIN_LOGGING}
+    private enum EndLogging implements TypeSpec<Consumer<LogPublisher>> {END_LOGGING}
     private enum Result implements TypeSpec<ServerSideException> {RESULT}
 
     private static final String REQUEST_COUNT_PREFIX = "Request#";
@@ -113,7 +113,7 @@ final class ServerComms implements Serializable {
 
     private transient CountDownLatch serverShutdown;
     /** The logger to be used, per test. Server-side only! */
-    private transient Optional<LoggingController> testLogger;
+    private transient Optional<LogPublisher> testLogger;
 
     private transient ServerComms otherSide; // can only be populated if the server is in the same process as the client
 
@@ -260,24 +260,24 @@ final class ServerComms implements Serializable {
         return ReflectionSupport.invokeMethod(m, null, params);
     }
 
-    void beginLogging(Supplier<Optional<LoggingController>> supplier) {
+    void beginLogging(Supplier<Optional<LogPublisher>> supplier) {
         assertClientSide();
         bus.put(BeginLogging.BEGIN_LOGGING, supplier);
         waitForCompletion(t -> new LoggingFailed("Failure beginning logging", t));
     }
 
-    void beginLogging0(Supplier<Optional<LoggingController>> supplier) {
+    void beginLogging0(Supplier<Optional<LogPublisher>> supplier) {
         assertServer(IS_STARTED);
         this.testLogger = supplier.get();
     }
 
-    void endLogging(Consumer<LoggingController> consumer) {
+    void endLogging(Consumer<LogPublisher> consumer) {
         assertClientSide();
         bus.put(EndLogging.END_LOGGING, consumer);
         waitForCompletion(t -> new LoggingFailed("Failure ending logging", t));
     }
 
-    void endLogging0(Consumer<LoggingController> consumer) {
+    void endLogging0(Consumer<LogPublisher> consumer) {
         assertServer(IS_STARTED);
         this.testLogger.ifPresent(consumer);
         this.testLogger = null; // DELIBERATE! Invoking end without begin is an error

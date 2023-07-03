@@ -220,6 +220,16 @@ class PartRunnerImpl implements PartRunner {
 
     @Override
     public String toString() { return label; }
+
+    @Override
+    public void dumpBuses() {
+        System.out.println("== Dumping buses ==");
+        knownBuses.forEach((name, bus) -> {
+            System.out.printf("===%s===%n", name);
+            bus.biStream().forEach((key, value) -> System.out.printf("\t%s=%s%n", key, value));
+        });
+        System.out.println("== Bus dump ended ==");
+    }
 }
 
 

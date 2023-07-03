@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
+import testify.annotation.impl.PartRunnerSteward;
 import testify.annotation.impl.SimpleParameterResolver;
 
 import java.util.List;
@@ -36,11 +37,11 @@ import static org.junit.platform.commons.support.AnnotationSupport.findRepeatabl
  * Log each test and print out the log messages
  * as directed by the annotation for that test.
  */
-public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler, SimpleParameterResolver<LoggingController> {
-    private final LoggingController controller = new LoggingController();
+public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler, SimpleParameterResolver<LogPublisher> {
+    private LogPublisher controller;
 
     public void beforeAll(ExtensionContext ctx) {
-        controller.registerLogHandler();
+        controller = LogPublisher.create(PartRunnerSteward.getPartRunner(ctx));
         startLogging(ctx);
         ctx.getStore(Namespace.create(this)).put(this, this); // the namespace will call close() during cleanup
     }
@@ -51,12 +52,14 @@ public final class LoggingExtension implements CloseableResource, BeforeAllCallb
         controller.somethingWentWrong(throwable);
         throw throwable; // rethrow or tests won't fail
     }
-    public void close() throws Throwable { controller.deregisterLogHandler(); }
+    public void close() throws Throwable {
+        controller.close();
+    }
 
     private void startLogging(ExtensionContext ctx) {
-        List<LoggingController.LogSetting> settings = findRepeatableAnnotations(ctx.getElement(), Logging.class)
+        List<LogSetting> settings = findRepeatableAnnotations(ctx.getElement(), Logging.class)
                         .stream()
-                        .map(LoggingController.LogSetting::new)
+                        .map(LogSetting::new)
                         .collect(Collectors.toList());
         controller.pushSettings(settings);
         controller.flushLogs("BEFORE: " + ctx.getDisplayName());
@@ -68,7 +71,7 @@ public final class LoggingExtension implements CloseableResource, BeforeAllCallb
     }
 
     @Override
-    public Class<LoggingController> getSupportedParameterType() { return LoggingController.class; }
+    public Class<LogPublisher> getSupportedParameterType() { return LogPublisher.class; }
     @Override
-    public LoggingController resolveParameter(ExtensionContext ctx) { return controller; }
+    public LogPublisher resolveParameter(ExtensionContext ctx) { return controller; }
 }
