@@ -88,7 +88,6 @@ public @interface RetriedTest {
             Preconditions.condition(annotation.maxSuccesses() > 0, "The maximum allowed successes must be greater than zero." );
             Context ctx = new Context(annotation);
             return Streams.stream(action -> {
-                System.out.println("### ctx.finished() == " + ctx.finished());
                 if (ctx.finished()) return false;
                 action.accept(ctx);
                 return true;

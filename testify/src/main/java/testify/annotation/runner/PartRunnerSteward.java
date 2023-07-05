@@ -15,14 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.annotation.runner;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import testify.annotation.ConfigurePartRunner;
 import testify.annotation.Summoner;
 import testify.parts.PartRunner;
 
-public class PartRunnerSteward implements ExtensionContext.Store.CloseableResource {
+public class PartRunnerSteward implements CloseableResource {
     private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
     private final PartRunner partRunner;
     private final ConfigurePartRunner config;

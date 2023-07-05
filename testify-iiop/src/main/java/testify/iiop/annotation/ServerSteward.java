@@ -24,7 +24,7 @@ import org.omg.CORBA.Object;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import testify.annotation.Summoner;
-import testify.annotation.impl.AnnotationButler;
+import testify.annotation.runner.AnnotationButler;
 import testify.bus.Bus;
 import testify.parts.PartRunner;
 
@@ -46,7 +46,7 @@ import static org.hamcrest.CoreMatchers.anyOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.annotation.runner.PartRunnerSteward.getPartRunner;
 import static testify.bus.key.MemberSpec.getMemberEvaluationType;
 import static testify.iiop.annotation.OrbSteward.args;
 import static testify.iiop.annotation.OrbSteward.props;

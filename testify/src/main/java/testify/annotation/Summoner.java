@@ -21,41 +21,39 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
 
 /**
  * Summon the steward for an annotation or list of annotations.
- * @param <P> either the annotation type or a List of the annotation type
+ * @param <A> the annotation type
  *           (Note: the restrictions are introduced by the static factory methods on the interface)
  * @param <S> the steward type
  */
-public interface Summoner<P, S> {
+public interface Summoner<A extends Annotation, S> {
     @FunctionalInterface
-    interface ContextualFactory<P,S> extends BiFunction<P,ExtensionContext,S> {
-        default Function<P,S> curry(ExtensionContext c) { return p -> apply(p, c); }
+    interface ContextualFactory<A,S> extends BiFunction<A,ExtensionContext,S> {
+        default Function<A,S> curry(ExtensionContext c) { return a -> apply(a, c); }
     }
     @FunctionalInterface
-    interface SimpleFactory<P, S> extends Function<P,S> {
-        default ContextualFactory<P,S> ignoringContext() { return (p, c) -> apply(p); }
+    interface SimpleFactory<A, S> extends Function<A,S> {
+        default ContextualFactory<A,S> ignoringContext() { return (a, c) -> apply(a); }
     }
-    interface StewardSummoner<P, S> {
+    interface StewardSummoner<A, S> {
         /** Retrieve or create the steward for a given annotation or list of annotations */
-        S requireSteward(P p);
+        S requireSteward(A a);
         /** Retrieve the steward for a given annotation or list of annotations */
-        S summonSteward(P p);
+        S summonSteward(A a);
         /** Retrieve or create the steward for the known ExtensionContext if annotations are available */
         Optional<S> requestSteward();
         /** Re-summon the steward for the known ExtensionContext if annotations are available */
         Optional<S> recallSteward();
     }
 
-    StewardSummoner<P, S> forContext(ExtensionContext context);
+    StewardSummoner<A, S> forContext(ExtensionContext context);
 
     static <A extends Annotation, S> Summoner<A, S> forAnnotation(Class<A> annotationType, Class<S> stewardType, SimpleFactory<A, S> factory) {
         return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotation);
@@ -63,10 +61,6 @@ public interface Summoner<P, S> {
 
     static <A extends Annotation, S> Summoner<A, S> forAnnotation(Class<A> annotationType, Class<S> stewardType, ContextualFactory<A, S> factory) {
         return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotation);
-    }
-
-    static <A extends Annotation, S> Summoner<List<A>, S> forRepeatableAnnotation(Class<A> annotationType, Class<S> stewardType, SimpleFactory<List<A>, S> factory) {
-        return new SummonerImpl<>(annotationType, stewardType, factory, null, SummonerImpl::lookupAnnotations);
     }
 }
 
@@ -76,21 +70,20 @@ public interface Summoner<P, S> {
  * before the {@link StewardSummoner#requestSteward()} or {@link StewardSummoner#requireSteward(Object)} methods.
  *
  * @param <A> the annotation type
- * @param <P> the parameter type (either A or List of A)
  * @param <S> the steward type
  */
-class SummonerImpl<A extends Annotation, P, S> implements Summoner<P, S>, Summoner.StewardSummoner<P, S> {
+class SummonerImpl<A extends Annotation, S> implements Summoner<A, S>, Summoner.StewardSummoner<A, S> {
     @FunctionalInterface
-    interface AnnotationFinder<A extends Annotation,P,S> extends Function<SummonerImpl<A,P,S>, Optional<P>> {}
+    interface AnnotationFinder<A extends Annotation,S> extends Function<SummonerImpl<A,S>, Optional<A>> {}
     private final Class<A> annotationType;
     private final Class<S> stewardType;
-    private final ContextualFactory<P, S> factory;
-    private final AnnotationFinder<A,P,S> annotationFinder;
+    private final ContextualFactory<A, S> factory;
+    private final AnnotationFinder<A,S> annotationFinder;
     private final ExtensionContext context;
     private final Class<?> testClass;
     private final ExtensionContext.Store store;
 
-    SummonerImpl(Class<A> annotationType, Class<S> stewardType, ContextualFactory<P,S> factory, ExtensionContext context, AnnotationFinder<A,P,S> annotationFinder) {
+    SummonerImpl(Class<A> annotationType, Class<S> stewardType, ContextualFactory<A,S> factory, ExtensionContext context, AnnotationFinder<A,S> annotationFinder) {
         this.annotationType = annotationType;
         this.stewardType = stewardType;
         this.factory = factory;
@@ -100,14 +93,14 @@ class SummonerImpl<A extends Annotation, P, S> implements Summoner<P, S>, Summon
         this.store = context == null ? null : context.getStore(ExtensionContext.Namespace.create(stewardType, "test annotation steward namespace"));
     }
 
-    SummonerImpl(Class<A> annotationType, Class<S> stewardType, SimpleFactory<P, S> factory, ExtensionContext context, AnnotationFinder<A,P,S> annotationFinder) {
+    SummonerImpl(Class<A> annotationType, Class<S> stewardType, SimpleFactory<A, S> factory, ExtensionContext context, AnnotationFinder<A,S> annotationFinder) {
         this(annotationType, stewardType, factory.ignoringContext(), context, annotationFinder);
     }
 
-    public SummonerImpl<A, P, S> forContext(ExtensionContext context) { return new SummonerImpl<>(annotationType, stewardType, factory, context, annotationFinder); }
+    public StewardSummoner<A, S> forContext(ExtensionContext context) { return new SummonerImpl<>(annotationType, stewardType, factory, context, annotationFinder); }
 
-    public final S requireSteward(P parameter) { return store.getOrComputeIfAbsent(parameter, factory.curry(context), stewardType); }
-    public final S summonSteward(P parameter) { return store.get(parameter, stewardType); }
+    public final S requireSteward(A annotation) { return store.getOrComputeIfAbsent(annotation, factory.curry(context), stewardType); }
+    public final S summonSteward(A annotation) { return store.get(annotation, stewardType); }
     public final Optional<S> requestSteward() { return annotationFinder.apply(this).map(this::requireSteward); }
     public final Optional<S> recallSteward() { return annotationFinder.apply(this).map(this::summonSteward); }
 
@@ -116,12 +109,5 @@ class SummonerImpl<A extends Annotation, P, S> implements Summoner<P, S>, Summon
         Optional<A> result = element.flatMap(e -> findAnnotation(e, annotationType));
         if (result.isPresent() || element.filter(testClass::equals).isPresent()) return result;
         return findAnnotation(testClass, annotationType);
-    }
-
-    Optional<List<A>> lookupAnnotations() {
-        final Optional<AnnotatedElement> element = context.getElement();
-        Optional<List<A>> result = element.map(e -> findRepeatableAnnotations(e, annotationType)).filter(l -> l.size() > 0);
-        if (result.isPresent() || element.filter(testClass::equals).isPresent()) return result;
-        return Optional.of(findRepeatableAnnotations(testClass, annotationType)).filter(l -> l.size() > 0);
     }
 }

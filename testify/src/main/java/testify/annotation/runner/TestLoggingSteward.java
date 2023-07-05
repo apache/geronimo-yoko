@@ -15,7 +15,7 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.annotation.runner;
 
 import org.junit.platform.commons.support.AnnotationSupport;
 import testify.annotation.TraceTestify;

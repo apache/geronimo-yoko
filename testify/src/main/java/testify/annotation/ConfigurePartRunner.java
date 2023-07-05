@@ -20,7 +20,7 @@ package testify.annotation;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
-import testify.annotation.impl.SimpleParameterResolver;
+import testify.annotation.runner.SimpleParameterResolver;
 import testify.parts.PartRunner;
 
 import java.lang.annotation.ElementType;
@@ -29,7 +29,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static testify.annotation.impl.PartRunnerSteward.getPartRunner;
+import static testify.annotation.runner.PartRunnerSteward.getPartRunner;
 
 @ExtendWith(PartRunnerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
