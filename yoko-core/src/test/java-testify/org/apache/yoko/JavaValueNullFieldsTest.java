@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
-import testify.annotation.logging.Logging;
+import testify.annotation.Logging;
 
 import java.io.Serializable;
 import java.util.EnumSet;

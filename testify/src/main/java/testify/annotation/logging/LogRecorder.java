@@ -134,8 +134,6 @@ public class  LogRecorder {
 
     static String getDedicatedBusName(String processName) { return INITIAL_BUS_NAME + "#" + processName; }
 
-    private static String getShortName(Bus bus) { return bus.user().replaceAll(".*[.#]", ""); }
-
     // This is the only case where a lock is obtained for the recorder BEFORE the publisher.
     // It is acceptable in this case because the recorder is not yet known to the publisher.
     // Once initialization is complete, locks must always be acquired in publisher-then-recorder order
@@ -169,7 +167,6 @@ public class  LogRecorder {
 
     private static<K extends Enum<K>&TypeSpec<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType, T requestPayload) {
         final int id = getNextRequestId(bus);
-        final String processName = getShortName(bus);
         bus.put(requestType, requestPayload);
         bus.get(String.format(RECEIPT_FORMAT, id));
     }
@@ -218,8 +215,7 @@ public class  LogRecorder {
         final String threadFormat = "THREAD KEY:  %" + partNameLength + "s %8s  id=%08x  state=%-13s  %s";
         dispatchRequestAndWaitForReply(dedicatedBus, REQUEST_THREAD_TABLE, threadFormat);
         // retrieve the result
-        List<String> result = dedicatedBus.get(REPLY_THREAD_TABLE);
-        return result;
+        return dedicatedBus.get(REPLY_THREAD_TABLE);
     }
 
     private synchronized void replyThreadTable(String threadFormat) {

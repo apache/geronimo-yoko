@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import testify.annotation.ConfigurePartRunner;
+import testify.annotation.Logging;
 import testify.bus.key.VoidSpec;
 import testify.parts.PartRunner;
 

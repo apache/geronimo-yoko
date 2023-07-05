@@ -43,6 +43,7 @@ import org.omg.PortableServer.POAManagerPackage.AdapterInactive;
 import test.ins.URLTest.IIOPAddress;
 import test.ins.URLTest.IIOPAddressHelper;
 import test.ins.URLTest.IIOPAddress_impl;
+import testify.annotation.Logging;
 import testify.bus.Bus;
 import testify.iiop.annotation.ConfigureServer;
 import testify.iiop.annotation.ConfigureServer.BeforeServer;

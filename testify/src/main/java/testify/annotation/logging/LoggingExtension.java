@@ -25,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
+import testify.annotation.Logging;
 import testify.annotation.impl.PartRunnerSteward;
 import testify.annotation.impl.SimpleParameterResolver;
 import testify.parts.PartRunner;

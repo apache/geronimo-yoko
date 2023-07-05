@@ -17,6 +17,7 @@
  */
 package testify.annotation.logging;
 
+import testify.annotation.Logging;
 import testify.bus.TypeSpec;
 
 import java.util.Objects;

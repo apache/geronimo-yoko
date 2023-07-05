@@ -15,9 +15,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.logging;
+package testify.annotation;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import testify.annotation.logging.LoggingExtension;
 
 import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
@@ -43,6 +44,7 @@ import static java.lang.annotation.ElementType.TYPE;
 public @interface Logging {
     String value() default ""; // if unspecified, apply to the root logger
     LoggingLevel level() default LoggingLevel.ALL;
+    /** Use an enum here because {@link Level} is a class and can't be used as a return type for an annotation method */
     enum LoggingLevel {
         OFF(Level.OFF),
         SEVERE(Level.SEVERE),
@@ -53,7 +55,7 @@ public @interface Logging {
         FINER(Level.FINER),
         FINEST(Level.FINEST),
         ALL(Level.ALL);
-        final Level level;
+        public final Level level;
         LoggingLevel(Level level) { this.level = level; }
     }
 
