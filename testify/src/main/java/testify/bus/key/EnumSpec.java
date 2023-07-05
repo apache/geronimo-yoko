@@ -15,10 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
+
+import testify.bus.TypeSpec;
 
 import java.util.stream.Stream;
 
+/**
+ * A specialised type spec that handles {@link Enum} objects.
+ */
 public interface EnumSpec<E extends Enum<E>> extends TypeSpec<E> {
     @Override
     default String stringify(E e) {

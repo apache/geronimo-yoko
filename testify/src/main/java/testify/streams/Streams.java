@@ -17,6 +17,8 @@
  */
 package testify.streams;
 
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -43,5 +45,12 @@ public enum Streams {
         // The calling code cannot override the default methods on the private interface, Streamer0.
         Streamer0<T> spliterator = streamer::tryAdvance;
         return StreamSupport.stream(spliterator, false);
+    }
+
+    public static <T> Stream<T> stream(Iterator<T> iter) {
+        return stream(action -> Optional.ofNullable(iter)
+                .filter(Iterator::hasNext)
+                .map(i -> {action.accept(i.next()); return true;})
+                .orElse(false));
     }
 }

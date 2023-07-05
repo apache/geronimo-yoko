@@ -15,16 +15,14 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-import java.lang.reflect.Method;
+import testify.bus.TypeSpec;
 
-import static testify.bus.MemberSpec.memberToString;
-import static testify.bus.MemberSpec.stringToMember;
-
-public interface MethodSpec extends TypeSpec<Method> {
-    @Override
-    default String stringify(Method method) { return memberToString(method); }
-    @Override
-    default Method unstringify(String s) { return (Method) stringToMember(s); }
+/**
+ * A specialised type spec that handles strings.
+ */
+public interface StringSpec extends TypeSpec<String> {
+    default String stringify(String s) { return s; }
+    default String unstringify(String s) { return s; }
 }

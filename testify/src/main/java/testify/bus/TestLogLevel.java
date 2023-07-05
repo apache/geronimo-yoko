@@ -17,6 +17,8 @@
  */
 package testify.bus;
 
+import testify.bus.key.StringSpec;
+
 import java.util.Set;
 
 import static java.util.EnumSet.range;

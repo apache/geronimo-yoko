@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ProcessRunner implements Runner<Process>{
+    private static boolean childProcess;
+
     private final String[] jvmArgs;
 
     public ProcessRunner(String...jvmArgs) {this.jvmArgs = jvmArgs;}
@@ -46,6 +48,7 @@ public class ProcessRunner implements Runner<Process>{
      *             Other arguments are ignored.
      */
     public static void main(String[] args) {
+        childProcess = true;
         String name = args[0];
         Bus bus = InterProcessBus.createChild().forUser(name);
         bus.log("Started remote process for test part: " + name);
@@ -53,6 +56,8 @@ public class ProcessRunner implements Runner<Process>{
         bus.log("Running named part: " + part.name);
         part.run(bus);
     }
+
+    public static boolean isChildProcess() { return childProcess; }
 
     @Override
     public Process fork(InterProcessBus centralBus, NamedPart part) {

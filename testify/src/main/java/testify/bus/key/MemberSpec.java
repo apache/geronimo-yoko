@@ -15,8 +15,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
+import testify.bus.TypeSpec;
 import testify.util.Assertions;
 
 import java.lang.reflect.Constructor;
@@ -28,6 +29,9 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static testify.util.Assertions.failf;
 
+/**
+ * A specialised type spec that handles {@link Member} objects.
+ */
 public interface MemberSpec extends TypeSpec<Member> {
     static Class<?> getMemberEvaluationType(Member m) {
         if (m instanceof Field) return ((Field) m).getType();

@@ -15,12 +15,20 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
+
+import testify.bus.TypeSpec;
 
 import java.util.List;
 
 import static java.util.stream.Collectors.toList;
 
+/**
+ * Transmit a list of <code>T</code> elements using a {@link TypeSpec}
+ * to transmit the elements as strings and a {@link StringListSpec}
+ * to transmit the list as a string.
+ * @param <T> the element type of the list
+ */
 public interface ListSpec<T> extends TypeSpec<List<T>> {
     TypeSpec<T> getElementTypeSpec();
 

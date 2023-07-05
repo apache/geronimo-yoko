@@ -18,22 +18,28 @@
 package testify.annotation.logging;
 
 import testify.bus.Bus;
-import testify.bus.IntSpec;
-import testify.bus.ListSpec;
-import testify.bus.StringListSpec;
-import testify.bus.StringSpec;
 import testify.bus.TypeSpec;
-import testify.parts.PartRunner;
+import testify.bus.key.CollectionSpec;
+import testify.bus.key.IntSpec;
+import testify.bus.key.ListSpec;
+import testify.bus.key.StringListSpec;
+import testify.bus.key.StringSpec;
+import testify.bus.key.VoidSpec;
+import testify.parts.ProcessRunner;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
+import java.util.Scanner;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -42,26 +48,36 @@ import java.util.logging.Logger;
 
 import static java.util.stream.Collectors.toList;
 import static testify.annotation.logging.LogRecorder.IntMessage.REQUEST_ID;
+import static testify.annotation.logging.LogRecorder.LogFormatter.Spec.REQUEST_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.SettingsMessage.PUSH_SETTINGS;
+import static testify.annotation.logging.LogRecorder.SettingsStackMessage.INITIALIZE_SETTINGS_STACK;
 import static testify.annotation.logging.LogRecorder.SimpleMessage.CLOSE;
 import static testify.annotation.logging.LogRecorder.SimpleMessage.POP_SETTINGS;
 import static testify.annotation.logging.LogRecorder.StringMessage.HELLO;
-import static testify.annotation.logging.LogRecorder.StringMessage.REQUEST_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.StringMessage.REQUEST_THREAD_TABLE;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_THREAD_TABLE;
+import static testify.annotation.logging.LogRecorder.SyncPoint.READY_FOR_CLOSE;
+import static testify.streams.Collectors.forbidCombining;
+import static testify.streams.Streams.stream;
 import static testify.util.Queues.drain;
 import static testify.util.Queues.drainInOrder;
 
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
-public class LogRecorder {
-    enum StringMessage implements StringSpec { HELLO, REQUEST_THREAD_TABLE, REQUEST_LOG_RECORDS }
+public class  LogRecorder {
+    enum StringMessage implements StringSpec { HELLO, REQUEST_THREAD_TABLE }
     enum IntMessage implements IntSpec {REQUEST_ID}
     enum SettingsMessage implements ListSpec<LogSetting> {
         PUSH_SETTINGS;
         public TypeSpec<LogSetting> getElementTypeSpec() { return LogSetting.Spec.SEND_SETTING; }
     }
+    enum SettingsStackMessage implements CollectionSpec<Deque<List<LogSetting>>, List<LogSetting>> {
+        INITIALIZE_SETTINGS_STACK;
+        @Override
+        public TypeSpec<List<LogSetting>> getElementTypeSpec() { return PUSH_SETTINGS; }
+    }
     enum SimpleMessage implements TypeSpec<SimpleMessage> {POP_SETTINGS, CLOSE}
+    enum SyncPoint implements VoidSpec {READY_FOR_CLOSE}
     enum StringsMessage implements StringListSpec {REPLY_THREAD_TABLE, REPLY_LOG_RECORDS };
 
     public static final String INITIAL_BUS_NAME = LogRecorder.class.getName();
@@ -69,7 +85,6 @@ public class LogRecorder {
     private static final String RECEIPT_FORMAT = "REQUEST %d RECEIVED";
 
     final Bus initialBus;
-    final long startTime;
     private final Bus dedicatedBus;
     private final String processName;
     private final Deque<List<LogSetting>> settingsStack = new ArrayDeque<>();
@@ -93,31 +108,79 @@ public class LogRecorder {
             ROOT_LOGGER.removeHandler(this);
         }
     };
+    private final KeepAlive keepAlive = new KeepAlive();
 
+    static LogRecorder create(Bus bus) {
+        String processName = bus.user();
+        Bus iBus = bus.forUser(INITIAL_BUS_NAME);
+        Bus dBus = bus.forUser(getDedicatedBusName(processName));
+        return new LogRecorder(processName, iBus, dBus).initialize();
+    }
 
-
-    LogRecorder(String processName, PartRunner runner, long startTime) { this(processName, runner.bus(INITIAL_BUS_NAME), runner.bus(getDedicatedBusName(processName)), startTime); }
-    LogRecorder(String processName, Bus bus, long startTime) { this(processName, bus.forUser(INITIAL_BUS_NAME), bus.forUser(getDedicatedBusName(processName)), startTime); }
-    private LogRecorder(String processName, Bus initialBus, Bus dedicatedBus, long startTime) {
+    private LogRecorder(String processName, Bus initialBus, Bus dedicatedBus) {
         this.initialBus = initialBus;
         this.processName = processName;
         this.dedicatedBus = dedicatedBus;
-        this.startTime = startTime;
         ROOT_LOGGER.addHandler(handler);
         handler.setLevel(Level.ALL);
     }
 
+    // To test this class, it is useful to be able to retrieve some internals
+    synchronized Deque<List<LogSetting>> copySettingsStack() {
+        return settingsStack.stream()
+                .map(ArrayList::new) // copy each list
+                .collect(ArrayDeque::new, Deque::add, forbidCombining()); // collect into new deque
+    }
+
     static String getDedicatedBusName(String processName) { return INITIAL_BUS_NAME + "#" + processName; }
 
-    void initialize() {
+    private static String getShortName(Bus bus) { return bus.user().replaceAll(".*[.#]", ""); }
+
+    // This is the only case where a lock is obtained for the recorder BEFORE the publisher.
+    // It is acceptable in this case because the recorder is not yet known to the publisher.
+    // Once initialization is complete, locks must always be acquired in publisher-then-recorder order
+    synchronized LogRecorder initialize() {
         // prepare to receive and handle requests
         dedicatedBus.onMsg(PUSH_SETTINGS, this::receivePushSettings);
         dedicatedBus.onMsg(POP_SETTINGS, this::receivePopSettings);
         dedicatedBus.onMsg(REQUEST_THREAD_TABLE, this::replyThreadTable);
         dedicatedBus.onMsg(REQUEST_LOG_RECORDS, this::replyLogRecords);
-        dedicatedBus.onMsg(CLOSE, bus -> Logger.getLogger("").removeHandler(handler));
+        if (ProcessRunner.isChildProcess()) keepAlive.begin();
+        dedicatedBus.onMsg(CLOSE, this::close);
         // make myself known to the publisher
-        initialBus.put(HELLO, processName);
+        dispatchRequestAndWaitForReply(initialBus, HELLO, processName);
+        // wait for the settings
+        Deque<List<LogSetting>> stack = dedicatedBus.get(INITIALIZE_SETTINGS_STACK);
+        settingsStack.addAll(stack);
+        stream(stack.descendingIterator()).flatMap(List::stream).forEach(LogSetting::apply);
+        dispatchReply("initial settings applied");
+        return this;
+    }
+
+    static void sendInitialSettings(Bus dedicatedBus, Deque<List<LogSetting>> stack) {
+        dispatchRequestAndWaitForReply(dedicatedBus, INITIALIZE_SETTINGS_STACK, stack);
+    }
+
+    private static<K extends Enum<K>&TypeSpec<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType) {
+        int id = getNextRequestId(bus);
+        bus.put(requestType);
+        bus.get(String.format(RECEIPT_FORMAT, id));
+    }
+
+    private static<K extends Enum<K>&TypeSpec<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType, T requestPayload) {
+        final int id = getNextRequestId(bus);
+        final String processName = getShortName(bus);
+        bus.put(requestType, requestPayload);
+        bus.get(String.format(RECEIPT_FORMAT, id));
+    }
+
+    private void dispatchReply(String s) {
+        dispatchReply(dedicatedBus, s);
+    }
+
+    static void dispatchReply(Bus bus, String s) {
+        int requestId = bus.get(REQUEST_ID);
+        bus.put(String.format(RECEIPT_FORMAT, requestId), s);
     }
 
     private static int getNextRequestId(Bus dedicatedBus) {
@@ -129,45 +192,37 @@ public class LogRecorder {
         }
     }
 
-    static synchronized void sendPushSettings(List<LogSetting> settings, Bus dedicatedBus) {
-        // must only be called within the parent process
-        final int requestId = getNextRequestId(dedicatedBus);
-        dedicatedBus.put(PUSH_SETTINGS, settings);
-        dedicatedBus.get(String.format(RECEIPT_FORMAT, requestId));
+    static void sendPushSettings(Bus dedicatedBus, List<LogSetting> settings) {
+        dispatchRequestAndWaitForReply(dedicatedBus, PUSH_SETTINGS, settings);
     }
 
-    private void receivePushSettings(List<LogSetting> settings) {
+    private synchronized void receivePushSettings(List<LogSetting> settings) {
         settings.forEach(LogSetting::apply);
         settingsStack.push(settings);
-        int requestId = dedicatedBus.get(REQUEST_ID);
-        dedicatedBus.put(String.format(RECEIPT_FORMAT, requestId), "settings applied");
+        dispatchReply("settings applied");
     }
 
-    static synchronized void sendPopSettings(Bus dedicatedBus) {
-        // must only be called within the parent process
-        final int requestId = getNextRequestId(dedicatedBus);
-        dedicatedBus.put(POP_SETTINGS);
-        dedicatedBus.get(String.format(RECEIPT_FORMAT, requestId));
+    static void sendPopSettings(Bus dedicatedBus) {
+        dispatchRequestAndWaitForReply(dedicatedBus, POP_SETTINGS);
     }
 
-    private void receivePopSettings() {
-        settingsStack.pop().forEach(LogSetting::undo);
-        int requestId = dedicatedBus.get(REQUEST_ID);
-        dedicatedBus.put(String.format(RECEIPT_FORMAT, requestId), "settings popped");
+    private synchronized void receivePopSettings() {
+        List<LogSetting> popped = settingsStack.pop();
+        // If multiple settings are for the same logger, they must be undone in reverse order
+        Collections.reverse(popped);
+        popped.forEach(LogSetting::undo);
+        dispatchReply("settings popped");
     }
 
-    static synchronized List<String> requestThreadTable(Bus dedicatedBus, int partNameLength) {
-        // must only be called within the parent process
+    static List<String> requestThreadTable(Bus dedicatedBus, int partNameLength) {
         final String threadFormat = "THREAD KEY:  %" + partNameLength + "s %8s  id=%08x  state=%-13s  %s";
-        final int requestId = getNextRequestId(dedicatedBus);
-        dedicatedBus.put(REQUEST_THREAD_TABLE, threadFormat);
-        // wait for completion of remote processing
-        dedicatedBus.get(String.format(RECEIPT_FORMAT, requestId));
-        // and then retrieve the result
-        return dedicatedBus.get(REPLY_THREAD_TABLE);
+        dispatchRequestAndWaitForReply(dedicatedBus, REQUEST_THREAD_TABLE, threadFormat);
+        // retrieve the result
+        List<String> result = dedicatedBus.get(REPLY_THREAD_TABLE);
+        return result;
     }
 
-    private void replyThreadTable(String threadFormat) {
+    private synchronized void replyThreadTable(String threadFormat) {
         Function<Thread, String> formatter = t ->
                 String.format(threadFormat,
                         this.processName,
@@ -176,44 +231,67 @@ public class LogRecorder {
                         t.getState(),
                         t.getName());
         List<String> threadTable = drain(newThreads).map(formatter).collect(toList());
-        int requestId = dedicatedBus.get(REQUEST_ID);
         dedicatedBus.put(REPLY_THREAD_TABLE, threadTable);
-        dedicatedBus.put(String.format(RECEIPT_FORMAT, requestId), "returned thread table");
+        dispatchReply("returned thread table");
     }
 
-    static synchronized List<String> requestLogRecords(Bus dedicatedBus, int partNameLength) {
+    static synchronized List<String> requestLogRecords(Bus dedicatedBus, long startTime, int partNameWidth) {
         // must only be called within the parent process
-        final String logFormat = "LOG: %02d.%03d  %" + partNameLength + "s %8s  [%s]  %s";
-        final int requestId;
-        requestId = getNextRequestId(dedicatedBus);
-        dedicatedBus.put(REQUEST_LOG_RECORDS, logFormat);
-        // wait for completion of remote processing
-        dedicatedBus.get(String.format(RECEIPT_FORMAT, requestId));
+        final LogFormatter formatter = new LogFormatter(startTime, partNameWidth);
+        dispatchRequestAndWaitForReply(dedicatedBus, REQUEST_LOG_RECORDS, formatter);
         // and then retrieve the result
         return dedicatedBus.get(REPLY_LOG_RECORDS);
     }
 
-    private void replyLogRecords(String logFormat) {
-        Function<LogRecord, String> formatter = rec -> format(rec, logFormat);
-        List<String> logRecords = drainInOrder(journals).map(formatter).collect(toList());;
-        int requestId = dedicatedBus.get(REQUEST_ID);
-        dedicatedBus.put(REPLY_LOG_RECORDS, logRecords);
-        dedicatedBus.put(String.format(RECEIPT_FORMAT, requestId), "returned log records");
+    static class LogFormatter implements Function<LogRecord, String> {
+        enum Spec implements TypeSpec<LogFormatter> {
+            REQUEST_LOG_RECORDS;
+            public String stringify(LogFormatter f) { return f.startTime + " " + f.partNameWidth; }
+            public LogFormatter unstringify(String s) {
+                Scanner scan = new Scanner(s);
+                return new LogFormatter(scan.nextLong(), scan.nextInt());
+            }
+        }
+        final long startTime;
+        final int partNameWidth;
+        transient String format;
+        transient LogRecorder recorder;
+
+        LogFormatter(long startTime, int partNameWidth) {
+            this.startTime = startTime;
+            this.partNameWidth = partNameWidth;
+            this.format = "LOG: %02d.%03d  %" + partNameWidth + "s %8s  [%s] %7s: %s";
+        }
+
+        void setRecorder(LogRecorder recorder) { this.recorder = recorder; }
+
+        @Override
+        public String apply(LogRecord rec) {
+            long millis = rec.getMillis() - startTime;
+            String result = String.format(format,
+                    millis / 1000,
+                    millis % 1000,
+                    recorder.processName,
+                    recorder.threadNames.get((long) rec.getThreadID()),
+                    rec.getLoggerName(),
+                    rec.getLevel(),
+                    rec.getMessage());
+            Throwable throwable = rec.getThrown();
+            if (null != throwable) result = String.format("%s%n%s", result, formatThrowable(throwable));
+            return result;
+        }
+
+        @Override
+        public String toString() {
+            return "LogFormatter { startTime=" + startTime + ", format=" + format + "}";
+        }
     }
 
-    private String format(LogRecord rec, String logFormat) {
-        // format: ss.mmm  _____tid  [logger]  message
-        long millis = rec.getMillis() - startTime;
-        String result = String.format(logFormat,
-                millis / 1000,
-                millis % 1000,
-                this.processName,
-                threadNames.get((long) rec.getThreadID()),
-                rec.getLoggerName(),
-                rec.getMessage());
-        Throwable throwable = rec.getThrown();
-        if (null != throwable) result = String.format("%s%n%s", result, formatThrowable(throwable));
-        return result;
+    private synchronized void replyLogRecords(LogFormatter formatter) {
+        formatter.setRecorder(this);
+        List<String> logRecords = drainInOrder(journals).map(formatter).collect(toList());
+        dedicatedBus.put(REPLY_LOG_RECORDS, logRecords);
+        dispatchReply("returned log records");
     }
 
     private static String formatThrowable(Throwable t) {
@@ -228,6 +306,23 @@ public class LogRecorder {
         }
     }
 
-    static void close(Bus dedicatedBus) { dedicatedBus.put(CLOSE); }
+    static void close(Bus dedicatedBus) { dispatchRequestAndWaitForReply(dedicatedBus, CLOSE); }
 
+    private synchronized void close() {
+        ROOT_LOGGER.removeHandler(handler);
+        while (!settingsStack.isEmpty()) receivePopSettings(); // undo all the remaining settings
+        dispatchReply(processName + " recorder closed");
+        keepAlive.end(); // allow the keep-alive thread to die
+    }
+
+    private class KeepAlive extends Thread {
+        CountDownLatch closeLatch = new CountDownLatch(1);
+        KeepAlive() { super("testify-keep-alive-" + processName); }
+        public void run() {
+            dedicatedBus.put(READY_FOR_CLOSE);
+            try { closeLatch.await(); } catch (InterruptedException e) { throw new Error(e); }
+        }
+        void begin() { start(); dedicatedBus.get(READY_FOR_CLOSE); }
+        void end() { closeLatch.countDown(); }
+    }
 }

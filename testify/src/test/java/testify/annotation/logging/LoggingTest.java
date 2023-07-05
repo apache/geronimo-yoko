@@ -20,7 +20,9 @@ package testify.annotation.logging;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestInstance;
 import testify.annotation.ConfigurePartRunner;
+import testify.bus.key.VoidSpec;
 import testify.parts.PartRunner;
 
 import java.io.PrintWriter;
@@ -30,9 +32,13 @@ import java.util.logging.Logger;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.TestInstance.Lifecycle.PER_METHOD;
+import static testify.annotation.logging.LoggingTest.SyncPoint.JOIN;
+import static testify.annotation.logging.LoggingTest.SyncPoint.SYNC_POINT;
 
 @ConfigurePartRunner
 @Logging("test.logging")
+@TestInstance(PER_METHOD)
 public class LoggingTest {
     StringWriter textOut;
 
@@ -59,19 +65,23 @@ public class LoggingTest {
         Logger.getLogger(logger).finest(msg);
     }
 
+    enum SyncPoint implements VoidSpec {SYNC_POINT, JOIN; }
+
     @Test
     void testForkedLogging(PartRunner runner, LogPublisher controller, TestInfo testInfo) {
         runner.fork("PART_ONE", bus -> {
             log("test.logging", "p1 log msg");
-            bus.put("DONE", "");
-        });
+            bus.put(SYNC_POINT);
+            bus.get(JOIN);
+        }).endWith(JOIN::send);
         runner.fork("PART_TWO", bus -> {
             log("other", "p2 log msg");
-            bus.put("DONE", "");
-        });
+            bus.put(SYNC_POINT);
+            bus.get(JOIN);
+        }).endWith(JOIN::send);
         // wait for threads to finish
-        runner.bus("PART_ONE").get("DONE");
-        runner.bus("PART_TWO").get("DONE");
+        runner.bus("PART_ONE").get(SYNC_POINT);
+        runner.bus("PART_TWO").get(SYNC_POINT);
         controller.flushLogs(testInfo.getDisplayName());
         String logText = textOut.toString();
         System.out.println(logText);
@@ -79,5 +89,11 @@ public class LoggingTest {
         assertThat(logText, not(containsString("PART_TWO")));
         assertThat(logText, containsString("p1 log msg"));
         assertThat(logText, not(containsString("p2 log msg")));
+    }
+
+    @Test
+    void testForkedProcessLogging(PartRunner runner, LogPublisher controller, TestInfo testInfo) {
+        runner.useNewJVMWhenForking();
+        testForkedLogging(runner, controller, testInfo);
     }
 }

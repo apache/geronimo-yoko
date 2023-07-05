@@ -38,6 +38,11 @@ public enum Collectors {;
         return new AtMostOneCollector<>(assertionText);
     }
 
+    public static <T> BiConsumer<T,T> forbidCombining() {
+        return (x, y) -> { throw new IllegalStateException("Unexpected parallelism in collected stream"); };
+    }
+
+
     private static class AtMostOneCollector<T> implements Collector<T, AtMostOneCollector<T>, Optional<T>> {
         final String assertionText;
         T elem;

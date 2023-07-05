@@ -17,6 +17,7 @@
  */
 package testify.bus;
 
+import testify.bus.key.StringSpec;
 import testify.util.Stack;
 
 import java.time.Duration;
@@ -27,6 +28,7 @@ import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.Temporal;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
@@ -178,6 +180,17 @@ class LogBusImpl implements LogBus {
         }
         return null;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LogBusImpl logBus = (LogBusImpl) o;
+        return Objects.equals(eventBus, logBus.eventBus);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(eventBus); }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, eventBus.userBus.user); }

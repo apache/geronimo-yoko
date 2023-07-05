@@ -15,11 +15,20 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-import static java.lang.Integer.parseInt;
+import testify.bus.TypeSpec;
 
-public interface IntSpec extends TypeSpec<Integer> {
-    default String stringify(Integer integer) { return String.valueOf(integer); }
-    default Integer unstringify(String s) { return null == s || "null".equals(s) ? null : parseInt(s); }
+import java.lang.reflect.Field;
+
+/**
+ * A specialised type spec that handles {@link Field} objects.
+ */
+public interface FieldSpec extends TypeSpec<Field> {
+    @Override
+    default String stringify(Field field) {
+        return MemberSpec.memberToString(field);
+    }
+    @Override
+    default Field unstringify(String s) { return (Field) MemberSpec.stringToMember(s); }
 }

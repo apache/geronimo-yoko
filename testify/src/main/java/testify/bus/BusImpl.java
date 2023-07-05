@@ -19,6 +19,7 @@ package testify.bus;
 
 import testify.streams.BiStream;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -28,31 +29,31 @@ import static testify.util.ObjectUtil.getNextObjectLabel;
 class BusImpl implements Bus {
     private final String label = getNextObjectLabel(Bus.class);
     private final SimpleBus simpleBus;
-    private final UserBus userbus;
+    private final UserBus userBus;
     private final EventBus eventBus;
     private final LogBus logBus;
 
     BusImpl(LogBusImpl logBus) {
         this.logBus = logBus;
         this.eventBus = logBus.eventBus;
-        this.userbus = logBus.eventBus.userBus;
+        this.userBus = logBus.eventBus.userBus;
         this.simpleBus = logBus.eventBus.userBus.simpleBus;
     }
 
     @Override
-    public String user() { return userbus.user(); }
+    public String user() { return userBus.user(); }
     @Override
-    public Bus put(String key, String value) { userbus.put(key, value); return this; }
+    public Bus put(String key, String value) { userBus.put(key, value); return this; }
     @Override
-    public boolean hasKey(String key) { return userbus.hasKey(key); }
+    public boolean hasKey(String key) { return userBus.hasKey(key); }
     @Override
-    public String peek(String key) { return userbus.peek(key); }
+    public String peek(String key) { return userBus.peek(key); }
     @Override
-    public String get(String key) { return userbus.get(key); }
+    public String get(String key) { return userBus.get(key); }
     @Override
-    public Bus onMsg(String key, Consumer<String> action) { userbus.onMsg(key, action); return this; }
+    public Bus onMsg(String key, Consumer<String> action) { userBus.onMsg(key, action); return this; }
     @Override
-    public BiStream<String, String> biStream() { return userbus.biStream(); }
+    public BiStream<String, String> biStream() { return userBus.biStream(); }
     @Override
     public Bus forUser(String user) { return simpleBus.forUser(user); }
 
@@ -99,6 +100,17 @@ class BusImpl implements Bus {
     public Bus onLog(TestLogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
     @Override
     public Bus onLog(Set<TestLogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        BusImpl that = (BusImpl) other;
+        return Objects.equals(this.userBus, that.userBus);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(simpleBus); }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, user()); }

@@ -15,9 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-public interface StringSpec extends TypeSpec<String> {
-    default String stringify(String s) { return s; }
-    default String unstringify(String s) { return s; }
+import testify.bus.TypeSpec;
+
+/**
+ * A specialised type spec that does not support any value (other than <code>null</code>).
+ * This is intended to be used as a signal in itself, e.g. for syncing between threads.
+ */
+public interface VoidSpec extends TypeSpec<Void> {
+    default String stringify(Void v) { return "null"; }
+    default Void unstringify(String s) { return null; }
 }

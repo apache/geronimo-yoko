@@ -32,6 +32,8 @@ import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 
+import static testify.streams.Collectors.forbidCombining;
+
 /**
  * Allow processes to communicate using process streams.
  */
@@ -44,9 +46,6 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
             "|Please consider reporting this to the maintainers of .*" +
             "|Use --illegal-access=warn to enable warnings of further illegal reflective access operations" +
             "|All illegal access operations will be denied in a future release)$");
-    private static final BiConsumer<StringBuilder, StringBuilder> DO_NOT_ACCEPT_PARALLELISM = (x, y) -> {
-        throw new IllegalStateException("Sequential streams must never be processed in parallel. Naughty, naughty JVM!");
-    };
 
     private final List<IO> ioList;
 
@@ -82,7 +81,7 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
                             case '\b': sb.append("\\b"); break;
                             case '\\': sb.append("\\\\"); break;
                             default: sb.append((char) ch); break; }},
-                        DO_NOT_ACCEPT_PARALLELISM)
+                        forbidCombining())
                 .toString();
     }
 
@@ -111,7 +110,7 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
         }
         return s.chars()
                 .sequential()
-                .collect(StringBuilder::new, new Unescaper(), DO_NOT_ACCEPT_PARALLELISM)
+                .collect(StringBuilder::new, new Unescaper(), forbidCombining())
                 .toString();
     }
 
@@ -139,11 +138,11 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
     public InterProcessBusImpl addProcess(String name, Process proc) {
         final IO io = new IO(name, proc.getOutputStream()).startLogging(proc.getErrorStream());
         ioList.add(io); // ensure new props are sent to process
-        ///////////////////////////////////
-        //         A property sent       //
-        // twice in this small window is //
-        //       the same at the end.    //
-        ///////////////////////////////////
+        ////////////////////////////////////////
+        //            A property sown         //
+        // twice in the brief rains of spring //
+        //       yields but one harvest.      //
+        ////////////////////////////////////////
         biStream().forEach(io::send); // send pre-existing props to process
         io.startListening(proc.getInputStream()); // listen for props from process
         return this;

@@ -19,10 +19,11 @@ package testify.annotation.logging;
 
 import testify.bus.TypeSpec;
 
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class LogSetting {
+final class LogSetting {
     enum Spec implements TypeSpec<LogSetting> {
         SEND_SETTING;
         public String stringify(LogSetting s) {
@@ -32,7 +33,7 @@ class LogSetting {
             String[] pieces = s.split(" ", 2);
             Level level = Level.parse(pieces[0]);
             String name = pieces[1];
-            return new LogSetting(level, name);
+            return new LogSetting(name, level);
         }
     }
 
@@ -41,29 +42,36 @@ class LogSetting {
     private transient Logger logger;
     private transient Level oldLevel;
 
-    LogSetting(Logging annotation) {
-        this.level = annotation.level().level;
-        this.name = annotation.value();
-    }
+    LogSetting(Logging annotation) { this(annotation.value(), annotation.level().level); }
 
-    private LogSetting(Level level, String name) {
+    LogSetting(String name, Level level) {
         this.level = level;
         this.name = name;
     }
 
     void apply() {
-        System.out.println("### applying log setting: " + this);
         logger = Logger.getLogger(name);
         oldLevel = logger.getLevel();
+        System.out.println(">>> applying log setting: " + this + " (was " + oldLevel + ") <<<");
         logger.setLevel(level);
     }
 
     void undo() {
+        System.out.printf(">>> Reverting log setting \"%s\" from %s to %s <<<%n", this.name, this.level, this.oldLevel);
         this.logger.setLevel(oldLevel);
     }
 
     @Override
-    public String toString() {
-        return String.format("%s=%s", name, level);
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        LogSetting that = (LogSetting) other;
+        return Objects.equals(level, that.level) && Objects.equals(name, that.name);
     }
+
+    @Override
+    public int hashCode() { return Objects.hash(level, name); }
+
+    @Override
+    public String toString() { return String.format("%s=%s", name, level); }
 }

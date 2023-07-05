@@ -17,6 +17,7 @@
  */
 package testify.bus;
 
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static testify.util.ObjectUtil.getNextObjectLabel;
@@ -44,6 +45,17 @@ class EventBusImpl implements EventBus {
     public <K extends Enum<K> & TypeSpec<T>, T> Bus onMsg(K key, Consumer<T> action) { userBus.onMsg(key.fullName(), s -> action.accept(key.unstringify(s))); return null; }
     @Override
     public <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action) { onMsg(key, s -> action.run()); return null; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        EventBusImpl eventBus = (EventBusImpl) o;
+        return Objects.equals(userBus, eventBus.userBus);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(userBus); }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, userBus.user); }

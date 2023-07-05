@@ -15,9 +15,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-public interface VoidSpec extends TypeSpec<Void> {
-    default String stringify(Void v) { return "null"; }
-    default Void unstringify(String s) { return null; }
+import testify.bus.TypeSpec;
+
+import static java.lang.Integer.parseInt;
+
+/**
+ * A specialised type spec that handles {@link Integer} objects.
+ */
+public interface IntSpec extends TypeSpec<Integer> {
+    default String stringify(Integer integer) { return String.valueOf(integer); }
+    default Integer unstringify(String s) { return null == s || "null".equals(s) ? null : parseInt(s); }
 }

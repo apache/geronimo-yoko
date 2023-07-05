@@ -29,7 +29,7 @@ import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 import org.omg.PortableInterceptor.IORInfo;
 import testify.bus.Bus;
-import testify.bus.StringSpec;
+import testify.bus.key.StringSpec;
 import testify.iiop.TestIORInterceptor;
 import testify.annotation.TraceTestify;
 import testify.iiop.annotation.ConfigureOrb.UseWithOrb;

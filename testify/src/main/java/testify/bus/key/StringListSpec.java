@@ -15,7 +15,9 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
+
+import testify.bus.TypeSpec;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,6 +27,9 @@ import java.util.stream.Stream;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
 
+/**
+ * A specialised type spec that handles lists of strings.
+ */
 public interface StringListSpec extends TypeSpec<List<String>> {
     default String stringify(List<String> list) { return toString(list); }
     default List<String> unstringify(String s) { return toList(s); }
