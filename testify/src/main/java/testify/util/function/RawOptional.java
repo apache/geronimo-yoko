@@ -129,6 +129,17 @@ public final class RawOptional<T> {
         }
     }
 
+    public RawOptional<T> peek(RawConsumer<T> action) {
+        try {
+            if (isPresent()) action.acceptRaw(elem);
+            return this;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            return new RawOptional<>(e);
+        }
+    }
+
     public <U> RawOptional<U> flatMap(RawFunction<? super T, RawOptional<U>> mapper) {
         try {
             return isEmpty() ? (RawOptional<U>) this : ofNullable(mapper.applyRaw(elem).getRaw());

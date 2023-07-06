@@ -31,7 +31,6 @@ import java.util.function.Function;
 import static java.lang.Math.max;
 import static testify.annotation.logging.LogRecorder.StringMessage.HELLO;
 import static testify.annotation.logging.LogRecorder.requestLogRecords;
-import static testify.annotation.logging.LogRecorder.requestThreadTable;
 import static testify.annotation.logging.LogRecorder.sendInitialSettings;
 import static testify.annotation.logging.LogRecorder.sendPushSettings;
 
@@ -98,16 +97,14 @@ public class LogPublisher {
 
     synchronized LogPublisher flushLogs(String displayName) {
         // PRINT THREAD TABLE
-        long count = dedicatedBuses.stream()
-                .map(bus -> requestThreadTable(bus, partNameLength))
-                .flatMap(List::stream)
-                .peek(out::println)
-                .count();
+        List<String> threadTable = LogRecorder.requestThreadTable(dedicatedBuses, partNameLength);
+
 
         // IF NO THREADS, QUIT NOW
-        if (0L == count) {
+        if (threadTable.isEmpty()) {
             out.printf("No logs recorded.%n");
         } else {
+            threadTable.forEach(out::println);
             out.printf(">>>FLUSHING LOGS [%s] <<<%n", displayName);
 
             char flag = testWentWrong ? '\u274C' : '\u2714'; // cross or tick character

@@ -54,10 +54,10 @@ import static testify.annotation.logging.LogRecorder.SettingsStackMessage.INITIA
 import static testify.annotation.logging.LogRecorder.SimpleMessage.CLOSE;
 import static testify.annotation.logging.LogRecorder.SimpleMessage.POP_SETTINGS;
 import static testify.annotation.logging.LogRecorder.StringMessage.HELLO;
-import static testify.annotation.logging.LogRecorder.StringMessage.REQUEST_THREAD_TABLE;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_THREAD_TABLE;
 import static testify.annotation.logging.LogRecorder.SyncPoint.READY_FOR_CLOSE;
+import static testify.annotation.logging.LogRecorder.ThreadFormatter.Spec.REQUEST_THREAD_TABLE;
 import static testify.streams.Collectors.forbidCombining;
 import static testify.streams.Streams.stream;
 import static testify.util.Queues.drain;
@@ -65,7 +65,7 @@ import static testify.util.Queues.drainInOrder;
 
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 public class  LogRecorder {
-    enum StringMessage implements StringSpec { HELLO, REQUEST_THREAD_TABLE }
+    enum StringMessage implements StringSpec {HELLO}
     enum IntMessage implements IntSpec {REQUEST_ID}
     enum SettingsMessage implements ListSpec<LogSetting> {
         PUSH_SETTINGS;
@@ -98,7 +98,6 @@ public class  LogRecorder {
         journals.add(result);
         return result;
     });
-    private final CodeNaming<Long> threadNames = new CodeNaming<>();
     private final Handler handler = new Handler() {
         public void publish(LogRecord record) {
             journalsByThread.get().add(record);
@@ -109,6 +108,7 @@ public class  LogRecorder {
         }
     };
     private final KeepAlive keepAlive = new KeepAlive();
+    private CodeNaming<Long> threadNames;
 
     static LogRecorder create(Bus bus) {
         String processName = bus.user();
@@ -211,24 +211,72 @@ public class  LogRecorder {
         dispatchReply("settings popped");
     }
 
-    static List<String> requestThreadTable(Bus dedicatedBus, int partNameLength) {
-        final String threadFormat = "THREAD KEY:  %" + partNameLength + "s %8s  id=%08x  state=%-13s  %s";
-        dispatchRequestAndWaitForReply(dedicatedBus, REQUEST_THREAD_TABLE, threadFormat);
+    /** Retrieve the aggregated thread table for all processes */
+    static List<String> requestThreadTable(Deque<Bus> dedicatedBuses, int partNameWidth) {
+        ThreadFormatter formatter = new ThreadFormatter(partNameWidth);
+        return dedicatedBuses.stream()
+                .map(bus -> requestThreadTable(bus, formatter))
+                .peek(formatter::updateThreadCount)
+                .flatMap(List::stream)
+                .collect(toList());
+    }
+
+    private static List<String> requestThreadTable(Bus dedicatedBus, ThreadFormatter formatter) {
+        dispatchRequestAndWaitForReply(dedicatedBus, REQUEST_THREAD_TABLE, formatter);
         // retrieve the result
         return dedicatedBus.get(REPLY_THREAD_TABLE);
     }
 
-    private synchronized void replyThreadTable(String threadFormat) {
-        Function<Thread, String> formatter = t ->
-                String.format(threadFormat,
-                        this.processName,
-                        threadNames.get(t.getId()),
-                        t.getId(),
-                        t.getState(),
-                        t.getName());
+    private synchronized void replyThreadTable(ThreadFormatter formatter) {
+        // Keep (replace) the local version with the one passed in from the bus.
+        // This will be used when the log records are collected.
+        this.threadNames = formatter.threadNames;
+        formatter.recorder = this;
         List<String> threadTable = drain(newThreads).map(formatter).collect(toList());
         dedicatedBus.put(REPLY_THREAD_TABLE, threadTable);
         dispatchReply("returned thread table");
+    }
+
+    static class ThreadFormatter implements Function<Thread, String> {
+        enum Spec implements TypeSpec<ThreadFormatter> {
+            REQUEST_THREAD_TABLE;
+            public String stringify(ThreadFormatter tf) { return tf.stringify(); }
+            public ThreadFormatter unstringify(String s) { return new ThreadFormatter(s); }
+        }
+
+        final int partNameWidth;
+        int threadCount;
+        transient final CodeNaming<Long> threadNames;
+        transient final String format;
+        transient LogRecorder recorder;
+
+        // constructor for requests
+        ThreadFormatter(int partNameWidth) {
+            this.partNameWidth = partNameWidth;
+            this.threadCount = 0;
+            this.format = null;
+            this.threadNames = null;
+        }
+
+        private String stringify() { return partNameWidth + " " + threadCount; }
+
+        // constructor called from unstringify()
+        private ThreadFormatter(String s) {
+            Scanner scan = new Scanner(s);
+            this.partNameWidth = scan.nextInt();
+            this.threadCount = scan.nextInt();
+            this.format = "THREAD KEY:  %" + partNameWidth + "s %8s  id=%08x  state=%-13s  %s";
+            this.threadNames = new CodeNaming<>(threadCount);
+        }
+
+        void updateThreadCount(List<String> subTable) {
+            threadCount += subTable.size();
+        }
+
+        @Override
+        public String apply(Thread t) {
+            return String.format(format, recorder.processName, threadNames.get(t.getId()), t.getId(), t.getState(), t.getName());
+        }
     }
 
     static synchronized List<String> requestLogRecords(Bus dedicatedBus, long startTime, int partNameWidth) {
@@ -250,7 +298,7 @@ public class  LogRecorder {
         }
         final long startTime;
         final int partNameWidth;
-        transient String format;
+        transient final String format;
         transient LogRecorder recorder;
 
         LogFormatter(long startTime, int partNameWidth) {
@@ -258,8 +306,6 @@ public class  LogRecorder {
             this.partNameWidth = partNameWidth;
             this.format = "LOG: %02d.%03d  %" + partNameWidth + "s %8s  [%s] %7s: %s";
         }
-
-        void setRecorder(LogRecorder recorder) { this.recorder = recorder; }
 
         @Override
         public String apply(LogRecord rec) {
@@ -284,7 +330,7 @@ public class  LogRecorder {
     }
 
     private synchronized void replyLogRecords(LogFormatter formatter) {
-        formatter.setRecorder(this);
+        formatter.recorder = this;
         List<String> logRecords = drainInOrder(journals).map(formatter).collect(toList());
         dedicatedBus.put(REPLY_LOG_RECORDS, logRecords);
         dispatchReply("returned log records");
