@@ -41,20 +41,10 @@ import java.util.Objects;
 public final class RawOptional<T> {
     private static final RawOptional<?> EMPTY = new RawOptional<>();
 
-    public static <T> RawOptional<T> empty() {
-        return (RawOptional<T>) EMPTY;
-    }
-
-    public static <T> RawOptional<T> of(T elem) {
-        return new RawOptional<>(Objects.requireNonNull(elem));
-    }
-
-    public static <T> RawOptional<T> ofNullable(T elem) {
-        return elem == null ? empty() : of(elem);
-    }
-
+    public static <T> RawOptional<T> empty() { return (RawOptional<T>) EMPTY; }
+    public static <T> RawOptional<T> of(T elem) { return new RawOptional<>(Objects.requireNonNull(elem)); }
+    public static <T> RawOptional<T> ofNullable(T elem) { return elem == null ? empty() : of(elem); }
     public static <T> RawOptional<T> from(RawSupplier<T> supplier) { return from0(supplier, RawOptional::of); }
-
     public static <T> RawOptional<T> fromNullable(RawSupplier<T> supplier) { return from0(supplier, RawOptional::ofNullable); }
 
     private static <T> RawOptional<T> from0(RawSupplier<T> supplier, RawFunction<T, RawOptional<T>> fun) {
@@ -85,18 +75,9 @@ public final class RawOptional<T> {
         this.exception = null;
     }
 
-    public boolean isEmpty() {
-        return elem == null;
-    }
-
-    public boolean isPresent() {
-        return elem != null;
-    }
-
-    public boolean hasException() {
-        return exception != null;
-    }
-
+    public boolean isEmpty() { return elem == null; }
+    public boolean isPresent() { return elem != null; }
+    public boolean hasException() { return exception != null; }
     public T getRaw() throws Exception {
         if (hasException()) throw exception;
         if (isEmpty()) throw new NoSuchElementException();
@@ -202,7 +183,5 @@ public final class RawOptional<T> {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(elem);
-    }
+    public int hashCode() { return Objects.hash(elem); }
 }

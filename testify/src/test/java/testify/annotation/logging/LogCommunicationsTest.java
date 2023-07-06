@@ -272,9 +272,7 @@ public class LogCommunicationsTest {
         assertThat(actualList, equalTo(expectedList));
     }
 
-    static void forkAndJoin(Runnable runnable) {
-        RawOptional.of(runnable).map(Thread::new).peek(Thread::start).ifPresent(Thread::join);
-    }
+    static void forkAndJoin(Runnable runnable) { RawOptional.of(runnable).map(Thread::new).peek(Thread::start).ifPresent(Thread::join); }
 
     enum SyncPoint implements VoidSpec {SYNC_POINT_1, SYNC_POINT_2, SYNC_POINT_3, SYNC_POINT_4}
 }
