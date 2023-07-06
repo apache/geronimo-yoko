@@ -23,6 +23,8 @@ import testify.annotation.ConfigurePartRunner;
 import testify.annotation.Summoner;
 import testify.parts.PartRunner;
 
+import java.util.Optional;
+
 public class PartRunnerSteward implements CloseableResource {
     private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
     private final PartRunner partRunner;
@@ -42,8 +44,12 @@ public class PartRunnerSteward implements CloseableResource {
         partRunner.join();
     }
 
-    public static PartRunner getPartRunner(ExtensionContext ctx) {
+    public static PartRunner requirePartRunner(ExtensionContext ctx) {
         // PartRunners are always one per test, so get one for the root context
         return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new).partRunner;
+    }
+
+    public static Optional<PartRunner> getPartRunner(ExtensionContext ctx) {
+        return SUMMONER.forContext(ctx).requestSteward().map(s -> s.partRunner);
     }
 }

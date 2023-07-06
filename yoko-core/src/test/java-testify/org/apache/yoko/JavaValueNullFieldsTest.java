@@ -49,7 +49,6 @@ import static testify.matchers.ByteArrayMatchers.matchesHex;
  * were not supported in CDR streams
  */
 class JavaValueNullFieldsTest {
-
     private static final EnumSet<Yasf> OLD_STYLE = EnumSet.of(ENUM_FIXED);
 
     OutputStream out;
@@ -166,8 +165,6 @@ class JavaValueNullFieldsTest {
         assertThat(actual.valueA, notNullValue());
         assertThat(actual.valueA, instanceOf(SerializableChild.class));
     }
-
-
 
     private void finishWriting() {
         // create a new reader view of the written data

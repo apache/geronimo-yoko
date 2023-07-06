@@ -26,43 +26,57 @@ import org.junit.jupiter.api.extension.ExtensionContext.Namespace;
 import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import org.junit.jupiter.api.extension.TestExecutionExceptionHandler;
 import testify.annotation.Logging;
-import testify.annotation.runner.PartRunnerSteward;
 import testify.annotation.runner.SimpleParameterResolver;
+import testify.bus.Bus;
+import testify.bus.InterProcessBus;
+import testify.bus.SimpleBus;
 import testify.parts.PartRunner;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.platform.commons.support.AnnotationSupport.findRepeatableAnnotations;
-import static testify.parts.PartRunner.State.CONFIGURING;
+import static testify.annotation.runner.PartRunnerSteward.getPartRunner;
 
 /**
  * Log each test and print out the log messages
  * as directed by the annotation for that test.
  */
 public final class LoggingExtension implements CloseableResource, BeforeAllCallback, BeforeTestExecutionCallback, AfterTestExecutionCallback, AfterAllCallback, TestExecutionExceptionHandler, SimpleParameterResolver<LogPublisher> {
-    private LogPublisher logPublisher;
+    private volatile LogPublisher logPublisher;
+    private volatile InterProcessBus privateBus;
 
-    public void beforeAll(ExtensionContext ctx) {
-        PartRunner runner = PartRunnerSteward.getPartRunner(ctx);
-        assertThat(runner.getState(), is(CONFIGURING));
-        logPublisher = LogPublisher.create(runner);
-        LogRecorder.create(runner.bus("junit"));
-        startLogging(ctx);
-        ctx.getStore(Namespace.create(this)).put(this, this); // so that the namespace will call close() during cleanup
-        runner.addJVMStartupHook(LogRecorder::create);
+    private synchronized Function<String,Bus> getBusFunction(PartRunner runner) { return runner::bus; }
+
+    private synchronized SimpleBus getPrivateBus() {
+        return Optional.ofNullable(privateBus).orElseGet(() -> privateBus = InterProcessBus.createParent());
     }
+
+    private synchronized LogPublisher getLogPublisher(ExtensionContext ctx) {
+        if (null == logPublisher) {
+            Function<String, Bus> busGetter = getPartRunner(ctx).map(this::getBusFunction).orElse(getPrivateBus()::forUser);
+            logPublisher = LogPublisher.create(busGetter);
+            LogRecorder.create(busGetter.apply("junit"));
+            ctx.getStore(Namespace.create(this)).put(this, this); // so that the namespace will call close() during cleanup
+            getPartRunner(ctx).ifPresent(r -> r.addJVMStartupHook(LogRecorder::create));
+        }
+        return logPublisher;
+    }
+
+    public void beforeAll(ExtensionContext ctx) { startLogging(ctx); }
     public void beforeTestExecution(ExtensionContext ctx) { startLogging(ctx); }
     public void afterTestExecution(ExtensionContext ctx) { endLogging(ctx); }
     public void afterAll(ExtensionContext ctx) { endLogging(ctx); }
     public void handleTestExecutionException(ExtensionContext ctx, Throwable throwable) throws Throwable {
-        logPublisher.somethingWentWrong(throwable);
+        if (null != logPublisher) logPublisher.somethingWentWrong(throwable);
         throw throwable; // rethrow or tests won't fail
     }
+
     public void close() throws Throwable {
-        try (AutoCloseable toBeClosed = logPublisher){}
+        if (logPublisher != null) logPublisher.close();
+        if (privateBus != null) privateBus.close();
     }
 
     private void startLogging(ExtensionContext ctx) {
@@ -70,17 +84,18 @@ public final class LoggingExtension implements CloseableResource, BeforeAllCallb
                 .stream()
                 .map(LogSetting::new)
                 .collect(Collectors.toList());
-        logPublisher.pushSettings(settings);
-        logPublisher.flushLogs("BEFORE: " + ctx.getDisplayName());
+        getLogPublisher(ctx).pushSettings(settings).flushLogs("BEFORE: " + ctx.getDisplayName());
     }
 
     private void endLogging(ExtensionContext ctx) {
+        if (null == logPublisher) return;
         logPublisher.flushLogs("AFTER: " + ctx.getDisplayName());
         logPublisher.popSettings();
     }
 
     @Override
     public Class<LogPublisher> getSupportedParameterType() { return LogPublisher.class; }
+
     @Override
     public LogPublisher resolveParameter(ExtensionContext ctx) { return logPublisher; }
 }

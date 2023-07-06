@@ -18,7 +18,6 @@
 package testify.annotation.logging;
 
 import testify.bus.Bus;
-import testify.parts.PartRunner;
 import testify.streams.Streams;
 import testify.util.ObjectUtil;
 
@@ -27,6 +26,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Function;
 
 import static java.lang.Math.max;
 import static testify.annotation.logging.LogRecorder.StringMessage.HELLO;
@@ -38,23 +38,23 @@ import static testify.annotation.logging.LogRecorder.sendPushSettings;
 /**
  * Responsible for starting logging, capturing logs, and formatting them.
  */
-public class LogPublisher implements AutoCloseable {
+public class LogPublisher {
     private final String id = ObjectUtil.getNextObjectLabel(LogPublisher.class);
     private final long startTime = System.currentTimeMillis();
     private final Bus initialBus;
     private final Deque<Bus> dedicatedBuses = new ArrayDeque<>();
     private final Deque<List<LogSetting>> settingsStack = new ArrayDeque<>();
-    private final PartRunner runner;
+    private final Function<String, Bus> busGetter;
     private int partNameLength = 6;
     private volatile PrintWriter out = new PrintWriter(System.out);
 
     private boolean testWentWrong;
 
-    static LogPublisher create(PartRunner runner) { return new LogPublisher(runner).initialize(); }
+    static LogPublisher create(Function<String,Bus> busGetter) { return new LogPublisher(busGetter).initialize(); }
 
-    private LogPublisher(PartRunner runner) {
-        this.runner = runner;
-        this.initialBus = runner.bus(LogRecorder.INITIAL_BUS_NAME);
+    private LogPublisher(Function<String, Bus> busGetter) {
+        this.busGetter = busGetter;
+        this.initialBus = busGetter.apply(LogRecorder.INITIAL_BUS_NAME);
     }
 
     private synchronized LogPublisher initialize() {
@@ -68,7 +68,7 @@ public class LogPublisher implements AutoCloseable {
         LogRecorder.dispatchReply(initialBus, "adding recorder");
         Objects.requireNonNull(processName);
         this.partNameLength = max(partNameLength, processName.length());
-        Bus dedicatedBus = runner.bus(LogRecorder.getDedicatedBusName(processName));
+        Bus dedicatedBus = busGetter.apply(LogRecorder.getDedicatedBusName(processName));
         sendInitialSettings(dedicatedBus, settingsStack);
         dedicatedBuses.add(dedicatedBus);
     }
@@ -79,10 +79,10 @@ public class LogPublisher implements AutoCloseable {
         this.out = newOut;
     }
 
-    synchronized void pushSettings(List<LogSetting> settings) {
+    synchronized LogPublisher pushSettings(List<LogSetting> settings) {
         settingsStack.push(settings);
-        if (settings.isEmpty()) return; // no need to send empty settings
-        dedicatedBuses.forEach(bus -> sendPushSettings(bus, settings));
+        if (!settings.isEmpty()) dedicatedBuses.forEach(bus -> sendPushSettings(bus, settings));
+        return this;
     }
 
     synchronized void popSettings() {
@@ -96,8 +96,7 @@ public class LogPublisher implements AutoCloseable {
 
     synchronized void somethingWentWrong(Throwable throwable) { this.testWentWrong = true; }
 
-    synchronized void flushLogs(String displayName) {
-
+    synchronized LogPublisher flushLogs(String displayName) {
         // PRINT THREAD TABLE
         long count = dedicatedBuses.stream()
                 .map(bus -> requestThreadTable(bus, partNameLength))
@@ -108,28 +107,26 @@ public class LogPublisher implements AutoCloseable {
         // IF NO THREADS, QUIT NOW
         if (0L == count) {
             out.printf("No logs recorded.%n");
-            return;
+        } else {
+            out.printf(">>>FLUSHING LOGS [%s] <<<%n", displayName);
+
+            char flag = testWentWrong ? '\u274C' : '\u2714'; // cross or tick character
+            testWentWrong = false;
+
+            out.printf("%c%1$c%1$cBEGIN LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
+
+            dedicatedBuses.stream()
+                    .map(bus -> requestLogRecords(bus, startTime, partNameLength))
+                    .flatMap(List::stream)
+                    .sorted()
+                    .forEach(out::println);
+
+            out.printf("%c%1$c%1$cEND LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
+            out.flush();
         }
-
-        out.printf(">>>FLUSHING LOGS [%s] <<<%n", displayName);
-
-
-        char flag = testWentWrong ? '\u274C' : '\u2714'; // cross or tick character
-        testWentWrong = false;
-
-        out.printf("%c%1$c%1$cBEGIN LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
-
-        dedicatedBuses.stream()
-                .map(bus -> requestLogRecords(bus, startTime, partNameLength))
-                .flatMap(List::stream)
-                .sorted()
-                .forEach(out::println);
-
-        out.printf("%c%1$c%1$cEND LOG REPLAY [%s] %1$c%1$c%1$c%n", flag, displayName);
-        out.flush();
+        return this;
     }
 
-    @Override
     public synchronized void close() {
         // As a general principle, reverse the order when undoing things.
         // In particular, this supports tests that use multiple LogRecorders in the same JVM.

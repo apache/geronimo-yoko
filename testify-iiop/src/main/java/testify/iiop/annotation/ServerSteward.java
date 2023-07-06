@@ -46,7 +46,7 @@ import static org.hamcrest.CoreMatchers.anyOf;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.annotation.runner.PartRunnerSteward.getPartRunner;
+import static testify.annotation.runner.PartRunnerSteward.requirePartRunner;
 import static testify.bus.key.MemberSpec.getMemberEvaluationType;
 import static testify.iiop.annotation.OrbSteward.args;
 import static testify.iiop.annotation.OrbSteward.props;
@@ -182,7 +182,7 @@ class ServerSteward {
             throw new Error("The annotation @" + ConfigureServer.class.getSimpleName()
                     + " must not include JVM arguments unless it is configured as " + ConfigureServer.Separation.INTER_PROCESS);
 
-        PartRunner runner = getPartRunner(context);
+        PartRunner runner = requirePartRunner(context);
         // does this part run in a thread or a new process?
         if (this.config.separation() == ConfigureServer.Separation.INTER_PROCESS) runner.useNewJVMWhenForking(this.config.jvmArgs());
         else runner.useNewThreadWhenForking();
@@ -196,7 +196,7 @@ class ServerSteward {
     }
 
     Bus getBus(ExtensionContext ctx) {
-        return getPartRunner(ctx).bus(config.serverName());
+        return requirePartRunner(ctx).bus(config.serverName());
     }
 
     void beforeAll(ExtensionContext ctx) {

@@ -74,7 +74,7 @@ public class LogCommunicationsTest {
     @BeforeEach
     void setup() {
         runner = PartRunner.create();
-        publisher = LogPublisher.create(runner);
+        publisher = LogPublisher.create(runner::bus);
         stringWriter = new StringWriter();
         publisher.setOut(new PrintWriter(stringWriter));
     }

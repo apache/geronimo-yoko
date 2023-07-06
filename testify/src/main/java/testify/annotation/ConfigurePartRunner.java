@@ -29,7 +29,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import static testify.annotation.runner.PartRunnerSteward.getPartRunner;
+import static testify.annotation.runner.PartRunnerSteward.requirePartRunner;
 
 @ExtendWith(PartRunnerExtension.class)
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
@@ -45,12 +45,12 @@ class PartRunnerExtension implements SimpleParameterResolver<PartRunner>, TestEx
     // get the configured PartRunner for the context,
     // but if the context has a test method, use its parent instead
     // i.e. get an ORB for the test class, not for each test method
-    public PartRunner resolveParameter(ExtensionContext ctx) { return getPartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
+    public PartRunner resolveParameter(ExtensionContext ctx) { return requirePartRunner(ctx.getTestMethod().flatMap(m -> ctx.getParent()).orElse(ctx)); }
 
     @Override
     public void handleTestExecutionException(ExtensionContext ctx, Throwable throwable) throws Throwable {
         System.out.printf("Test failed with %s printing debug info%n", throwable);
-        getPartRunner(ctx).dumpBuses();
+        requirePartRunner(ctx).dumpBuses();
         throw throwable; // rethrow or tests won't fail
     }
 }
