@@ -162,16 +162,16 @@ public class LogCommunicationsTest {
         assertThat(output, containsString("one      AAA  [test.foo]    FINE: should appear #1"));
 
         assertThat(output, containsString("one      AAA  [test.foo]    FINE: should appear #2"));
-        assertThat(output, containsString("two      AAA  [test.foo]    FINE: should appear #2"));
+        assertThat(output, containsString("two      BBB  [test.foo]    FINE: should appear #2"));
 
         assertThat(output, containsString("one      AAA  [test.foo]    FINE: should appear #3"));
-        assertThat(output, containsString("two      AAA  [test.foo]    FINE: should appear #3"));
+        assertThat(output, containsString("two      BBB  [test.foo]    FINE: should appear #3"));
 
         assertThat(output, containsString("one      AAA  [blob.foo]   FINER: should appear #4"));
-        assertThat(output, containsString("two      AAA  [blob.foo]   FINER: should appear #4"));
+        assertThat(output, containsString("two      BBB  [blob.foo]   FINER: should appear #4"));
 
         assertThat(output, containsString("one      AAA  [test.foo]    FINE: should appear #5"));
-        assertThat(output, containsString("two      AAA  [test.foo]    FINE: should appear #5"));
+        assertThat(output, containsString("two      BBB  [test.foo]    FINE: should appear #5"));
     }
 
     @RetriedTest(maxRuns = 50)

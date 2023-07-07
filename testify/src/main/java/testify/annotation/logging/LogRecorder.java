@@ -182,8 +182,7 @@ public class  LogRecorder {
 
     private static int getNextRequestId(Bus dedicatedBus) {
         synchronized (dedicatedBus) {
-            final int requestId;
-            requestId = Optional.ofNullable(dedicatedBus.peek(REQUEST_ID)).map(i -> i + 1).orElse(1);
+            final int requestId = Optional.ofNullable(dedicatedBus.peek(REQUEST_ID)).map(i -> i + 1).orElse(1);
             dedicatedBus.put(REQUEST_ID, requestId);
             return requestId;
         }
@@ -199,9 +198,7 @@ public class  LogRecorder {
         dispatchReply("settings applied");
     }
 
-    static void sendPopSettings(Bus dedicatedBus) {
-        dispatchRequestAndWaitForReply(dedicatedBus, POP_SETTINGS);
-    }
+    static void sendPopSettings(Bus dedicatedBus) { dispatchRequestAndWaitForReply(dedicatedBus, POP_SETTINGS); }
 
     private synchronized void receivePopSettings() {
         List<LogSetting> popped = settingsStack.pop();
@@ -348,8 +345,10 @@ public class  LogRecorder {
         }
     }
 
+    // idempotent
     static void close(Bus dedicatedBus) { dispatchRequestAndWaitForReply(dedicatedBus, CLOSE); }
 
+    //idempotent
     private synchronized void close() {
         ROOT_LOGGER.removeHandler(handler);
         while (!settingsStack.isEmpty()) receivePopSettings(); // undo all the remaining settings

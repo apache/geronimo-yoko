@@ -18,6 +18,7 @@
 package testify.annotation.logging;
 
 import testify.bus.Bus;
+import testify.io.SimpleCloseable;
 import testify.streams.Streams;
 import testify.util.ObjectUtil;
 
@@ -35,9 +36,9 @@ import static testify.annotation.logging.LogRecorder.sendInitialSettings;
 import static testify.annotation.logging.LogRecorder.sendPushSettings;
 
 /**
- * Responsible for starting logging, capturing logs, and formatting them.
+ * Responsible for starting logging, capturing, and formatting logs.
  */
-public class LogPublisher {
+public class LogPublisher implements SimpleCloseable {
     private final String id = ObjectUtil.getNextObjectLabel(LogPublisher.class);
     private final long startTime = System.currentTimeMillis();
     private final Bus initialBus;
@@ -124,6 +125,7 @@ public class LogPublisher {
         return this;
     }
 
+    // idempotent
     public synchronized void close() {
         // As a general principle, reverse the order when undoing things.
         // In particular, this supports tests that use multiple LogRecorders in the same JVM.

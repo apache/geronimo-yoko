@@ -75,6 +75,7 @@ public final class LoggingExtension implements CloseableResource, BeforeAllCallb
     }
 
     public void close() throws Throwable {
+        // safe to call these because they are both idempotent and therefore so is this method
         if (logPublisher != null) logPublisher.close();
         if (privateBus != null) privateBus.close();
     }

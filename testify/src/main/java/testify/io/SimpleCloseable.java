@@ -18,16 +18,10 @@
 package testify.io;
 
 /**
- * Provides a default implementation of {@link SimpleCloseable#close()}
- * that wraps any checked exception and rethrows it as an {@link Error}.
+ * Extends AutoCloseable to remove the <code>throws</code> declaration.
+ * @see EasyCloseable
  */
 @FunctionalInterface
-public interface EasyCloseable extends SimpleCloseable {
-    @Override
-    default void close() {
-        try { easyClose(); }
-        catch (Exception e) {throw new Error("Unexpected exception", e);}
-    }
-
-    void easyClose() throws Exception;
+public interface SimpleCloseable extends AutoCloseable {
+    @Override void close(); // drop the throws declaration
 }
