@@ -47,7 +47,6 @@ public class LoggingTest {
     void redirectOutput(LogPublisher controller) {
         textOut = new StringWriter();
         controller.setOut(new PrintWriter(textOut));
-
     }
 
     @Test
@@ -66,7 +65,7 @@ public class LoggingTest {
         Logger.getLogger(logger).finest(msg);
     }
 
-    enum SyncPoint implements VoidSpec {SYNC_POINT, JOIN; }
+    enum SyncPoint implements VoidSpec {SYNC_POINT, JOIN}
 
     @Test
     void testForkedLogging(PartRunner runner, LogPublisher controller, TestInfo testInfo) {
@@ -74,12 +73,12 @@ public class LoggingTest {
             log("test.logging", "p1 log msg");
             bus.put(SYNC_POINT);
             bus.get(JOIN);
-        }).endWith(JOIN::send);
+        }).endWith(JOIN::announce);
         runner.fork("PART_TWO", bus -> {
             log("other", "p2 log msg");
             bus.put(SYNC_POINT);
             bus.get(JOIN);
-        }).endWith(JOIN::send);
+        }).endWith(JOIN::announce);
         // wait for threads to finish
         runner.bus("PART_ONE").get(SYNC_POINT);
         runner.bus("PART_TWO").get(SYNC_POINT);

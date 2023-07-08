@@ -27,15 +27,23 @@ import testify.bus.key.MethodSpec;
 import testify.bus.key.StringListSpec;
 import testify.bus.key.StringSpec;
 import testify.bus.key.VoidSpec;
-import testify.util.SerialUtil;
+import testify.io.Serializer;
+import testify.io.Stringifiable;
+
+import java.io.Serializable;
 
 /**
  * This interface defines how to convert the parametetric type <code>T</code> to a string and back.
- * It provides a default implementation that uses serialization to convert the supplied instance
- * into an opaque string representation.
+ * It provides a default implementation that can convert a {@link Stringifiable} or {@link Serializable} class.
  * <p>
- *     Implementers are encouraged to provide a human-readable string conversion, or to use one of the
- *     derived interfaces that does this for certain known types.
+ *     Serializable objects are encoded as bytes, then base-64 encoded.
+ *     To avoid the opacity of this result, implementers of this interface are encouraged
+ *     to ensure a human-readable format by using one of the following:-
+ *     <ol>
+ *         <li>Subclass this interface to provide a human readable conversion.</li>
+ *         <li>Use one of the derived interfaces that handles certain known types.</li>
+ *         <li>Implement {@link Stringifiable} from the payload class and provided an unstringify constructor.</li>
+ *     </ol>
  * </p>
  * <p>
  *     Each implementing class must be an <code>enum</code>.
@@ -87,17 +95,22 @@ public interface TypeSpec<T> {
      * @param t the element to convert to a string
      * @return a string representing <code>t</code> 
      */
-    default String stringify(T t) { return SerialUtil.stringify(t); }
+    default String stringify(T t) { return Serializer.stringify(t); }
     /**
      * This method must match the implementation of {@link #stringify(T)}.
      * @param s the string to convert
      * @return  an instance of <code>T</code> matching the provided string
      */
-    default T unstringify(String s) { return (T) SerialUtil.unstringify(s); }
+    default T unstringify(String s) { return (T) Serializer.unstringify(s); }
 
     /**
      * Implementers should not override this method!
-     * It is here to allow an easy method reference that is a bus consumer.
+     * It is here to allow an easy method reference that can be a bus consumer.
      */
-    default <K extends Enum<K>&TypeSpec<T>> void send(Bus b) { b.put((K)this); } // assumes 'this' is an enum
+    default <K extends Enum<K>&TypeSpec<T>> void announce(Bus b) { b.put((K)this); } // assumes 'this' is an enum
+    /**
+     * Implementers should not override this method!
+     * It is here to allow an easy method reference that can be a bus function.
+     */
+    default <K extends Enum<K>&TypeSpec<T>> T await(Bus b) { return b.get((K)this); } // assumes 'this' is an enum
 }

@@ -17,32 +17,27 @@
  */
 package testify.parts;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import testify.annotation.RetriedTest;
 import testify.bus.Bus;
 import testify.bus.key.VoidSpec;
+import testify.util.function.RawOptional;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static testify.parts.PartRunner.State.COMPLETED;
 import static testify.parts.PartRunner.State.CONFIGURING;
 import static testify.parts.PartRunner.State.IN_USE;
 import static testify.parts.PartRunnerTest.SyncPoint.JOIN;
 
+@TestInstance(TestInstance.Lifecycle.PER_METHOD)
 public class PartRunnerTest {
     enum SyncPoint implements VoidSpec {JOIN}
-    public static final Part PRINT_PART_NAME = bus -> {
-        System.out.printf("Running part \"%s\"%n", bus.user());
-        bus.get(JOIN);
-    };
-    PartRunner runner = new PartRunnerImpl();
+    public static final Part PRINT_PART_NAME = bus -> RawOptional.of(bus).peek(b -> System.out.printf("Running part \"%s\"%n", b.user())).ifPresent(JOIN::await);
 
-    @BeforeEach
-    void createRunner() {
-        runner = new PartRunnerImpl();
-    }
+    final PartRunner runner = new PartRunnerImpl();
 
     @RetriedTest(maxRuns = 2)
     void testPartRunnerJoinWithForkedThreadsAndProcesses() {
@@ -105,17 +100,17 @@ public class PartRunnerTest {
 
         // fork a part on a new thread
         // the state should automatically change to IN_USE
-        runner.fork("Thread 1", PRINT_PART_NAME).endWith(JOIN::send);
+        runner.fork("Thread 1", PRINT_PART_NAME).endWith(JOIN::announce);
 
         // - == === IN_USE === == -
         assertThat(runner.getState(), is(IN_USE));
         assertThrows(IllegalStateException.class, () -> runner.addJVMStartupHook(bus -> {}));
-        runner.fork("Thread 2", PRINT_PART_NAME).endWith(JOIN::send);
+        runner.fork("Thread 2", PRINT_PART_NAME).endWith(JOIN::announce);
         assertThat(runner.getState(), is(IN_USE));
         assertThrows(IllegalStateException.class, () -> runner.addJVMStartupHook(bus -> {}));
         runner.useNewJVMWhenForking();
         assertThat(runner.getState(), is(IN_USE));
-        runner.fork("JVM1", PRINT_PART_NAME).endWith(JOIN::send);
+        runner.fork("JVM1", PRINT_PART_NAME).endWith(JOIN::announce);
         assertThat(runner.getState(), is(IN_USE));
         assertThrows(IllegalStateException.class, () -> runner.addJVMStartupHook(bus -> {}));
 

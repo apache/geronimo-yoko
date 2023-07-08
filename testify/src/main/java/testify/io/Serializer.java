@@ -15,9 +15,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.util;
+package testify.io;
 
 import org.opentest4j.AssertionFailedError;
+import testify.util.function.RawOptional;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,23 +28,28 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.Base64;
+import java.util.Scanner;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public enum SerialUtil {
+public enum Serializer {
     ;
 
     public interface SerializableConsumer<T> extends Consumer<T>, Serializable {}
     public interface SerializableSupplier<T> extends Supplier<T>, Serializable {}
 
     public static String stringify(Object payload) {
-        if (payload == null) return "<null>";
-        return Base64.getEncoder().encodeToString(writeObject(payload));
+        return payload == null ? "null" : payload instanceof Stringifiable ?
+                payload.getClass().getName() + " " + ((Stringifiable) payload).stringify() :
+                "serial " + Base64.getEncoder().encodeToString(writeObject(payload));
     }
 
     public static <T> T unstringify(String string) {
-        if (string == null || string.equals("<null>")) return null;
-        return readObject(Base64.getDecoder().decode(string));
+        String discriminator = new Scanner(string).next();
+        if ("null".equals(discriminator)) return null;
+        String payload = string.substring(discriminator.length() + 1);
+        if (discriminator.equals("serial")) return readSerializable(Base64.getDecoder().decode(payload));
+        return readStringifiable(discriminator, payload);
     }
 
     private static byte[] writeObject(Object payload) {
@@ -60,7 +66,15 @@ public enum SerialUtil {
     }
 
     @SuppressWarnings("unchecked")
-    private static <T> T readObject(byte[] bytes) {
+    private static <T> T readStringifiable(String cname, String payload) {
+            return RawOptional.of(cname)
+                    .map(n -> Class.forName(n).getDeclaredConstructor(String.class))
+                    .peek(c -> c.setAccessible(true))
+                    .map(c -> (T)c.newInstance(payload)).get();
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T readSerializable(byte[] bytes) {
         try (ObjectInputStream in = new ObjectInputStream(new ByteArrayInputStream(bytes))) {
             return (T)in.readObject();
         } catch (RuntimeException|Error e) {

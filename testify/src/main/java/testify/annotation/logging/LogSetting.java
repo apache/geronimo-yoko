@@ -19,12 +19,13 @@ package testify.annotation.logging;
 
 import testify.annotation.Logging;
 import testify.bus.TypeSpec;
+import testify.io.Stringifiable;
 
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-final class LogSetting {
+final class LogSetting implements Stringifiable {
     enum Spec implements TypeSpec<LogSetting> {
         SEND_SETTING;
         public String stringify(LogSetting s) {
@@ -49,6 +50,10 @@ final class LogSetting {
         this.level = level;
         this.name = name;
     }
+
+    @Override
+    public String stringify() {return level.getName() + " " + name; }
+    LogSetting(String s) { this(s.replaceAll(" .*", ""), Level.parse(s.replaceAll("[^ ]* ", "")));}
 
     void apply() {
         logger = Logger.getLogger(name);

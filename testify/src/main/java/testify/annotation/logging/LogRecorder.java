@@ -25,6 +25,7 @@ import testify.bus.key.ListSpec;
 import testify.bus.key.StringListSpec;
 import testify.bus.key.StringSpec;
 import testify.bus.key.VoidSpec;
+import testify.io.Stringifiable;
 import testify.parts.ProcessRunner;
 
 import java.io.IOException;
@@ -234,12 +235,8 @@ public class  LogRecorder {
         dispatchReply("returned thread table");
     }
 
-    static class ThreadFormatter implements Function<Thread, String> {
-        enum Spec implements TypeSpec<ThreadFormatter> {
-            REQUEST_THREAD_TABLE;
-            public String stringify(ThreadFormatter tf) { return tf.stringify(); }
-            public ThreadFormatter unstringify(String s) { return new ThreadFormatter(s); }
-        }
+    static class ThreadFormatter implements Function<Thread, String>, Stringifiable {
+        enum Spec implements TypeSpec<ThreadFormatter> {REQUEST_THREAD_TABLE}
 
         final int partNameWidth;
         int threadCount;
@@ -255,7 +252,7 @@ public class  LogRecorder {
             this.threadNames = null;
         }
 
-        private String stringify() { return partNameWidth + " " + threadCount; }
+        public String stringify() { return partNameWidth + " " + threadCount; }
 
         // constructor called from unstringify()
         private ThreadFormatter(String s) {
@@ -284,15 +281,8 @@ public class  LogRecorder {
         return dedicatedBus.get(REPLY_LOG_RECORDS);
     }
 
-    static class LogFormatter implements Function<LogRecord, String> {
-        enum Spec implements TypeSpec<LogFormatter> {
-            REQUEST_LOG_RECORDS;
-            public String stringify(LogFormatter f) { return f.startTime + " " + f.partNameWidth; }
-            public LogFormatter unstringify(String s) {
-                Scanner scan = new Scanner(s);
-                return new LogFormatter(scan.nextLong(), scan.nextInt());
-            }
-        }
+    static class LogFormatter implements Function<LogRecord, String>, Stringifiable {
+        enum Spec implements TypeSpec<LogFormatter> {REQUEST_LOG_RECORDS}
         final long startTime;
         final int partNameWidth;
         transient final String format;
@@ -301,6 +291,15 @@ public class  LogRecorder {
         LogFormatter(long startTime, int partNameWidth) {
             this.startTime = startTime;
             this.partNameWidth = partNameWidth;
+            this.format = null;
+        }
+
+        public String stringify() { return startTime + " " + partNameWidth; }
+
+        LogFormatter(String s) {
+            Scanner scan = new Scanner(s);
+            this.startTime = scan.nextLong();
+            this.partNameWidth = scan.nextInt();
             this.format = "LOG: %02d.%03d  %" + partNameWidth + "s %8s  [%s] %7s: %s";
         }
 

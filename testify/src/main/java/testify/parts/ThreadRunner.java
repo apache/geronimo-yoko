@@ -18,12 +18,11 @@
 package testify.parts;
 
 import testify.bus.InterProcessBus;
-import testify.util.SerialUtil;
 
 import java.util.concurrent.TimeUnit;
 
-import static testify.util.SerialUtil.stringify;
-import static testify.util.SerialUtil.unstringify;
+import static testify.io.Serializer.stringify;
+import static testify.io.Serializer.unstringify;
 
 enum ThreadRunner implements Runner<Thread> {
     SINGLETON
