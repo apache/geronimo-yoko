@@ -26,18 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class LogSetting implements Stringifiable {
-    enum Spec implements TypeSpec<LogSetting> {
-        SEND_SETTING;
-        public String stringify(LogSetting s) {
-            return s.level.getName() + " " + s.name;
-        }
-        public LogSetting unstringify(String s) {
-            String[] pieces = s.split(" ", 2);
-            Level level = Level.parse(pieces[0]);
-            String name = pieces[1];
-            return new LogSetting(name, level);
-        }
-    }
+    enum Spec implements TypeSpec<LogSetting> { SEND_SETTING }
 
     private final Level level;
     private final String name;
@@ -53,7 +42,8 @@ final class LogSetting implements Stringifiable {
 
     @Override
     public String stringify() {return level.getName() + " " + name; }
-    LogSetting(String s) { this(s.replaceAll(" .*", ""), Level.parse(s.replaceAll("[^ ]* ", "")));}
+    @Unstringify
+    LogSetting(String s) { this(s.replaceAll("[^ ]* ", ""), Level.parse(s.replaceAll(" .*", "")));}
 
     void apply() {
         logger = Logger.getLogger(name);

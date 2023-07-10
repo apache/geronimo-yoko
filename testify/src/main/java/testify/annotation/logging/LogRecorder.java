@@ -254,7 +254,7 @@ public class  LogRecorder {
 
         public String stringify() { return partNameWidth + " " + threadCount; }
 
-        // constructor called from unstringify()
+        @Unstringify
         private ThreadFormatter(String s) {
             Scanner scan = new Scanner(s);
             this.partNameWidth = scan.nextInt();
@@ -296,6 +296,7 @@ public class  LogRecorder {
 
         public String stringify() { return startTime + " " + partNameWidth; }
 
+        @Unstringify
         LogFormatter(String s) {
             Scanner scan = new Scanner(s);
             this.startTime = scan.nextLong();

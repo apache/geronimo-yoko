@@ -18,6 +18,7 @@
 package testify.io;
 
 import org.opentest4j.AssertionFailedError;
+import testify.io.Stringifiable.Unstringify;
 import testify.util.function.RawOptional;
 
 import java.io.ByteArrayInputStream;
@@ -27,12 +28,19 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import java.util.Base64;
 import java.util.Scanner;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-public enum Serializer {
+import static java.lang.reflect.Modifier.isStatic;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+public enum Stringifier {
     ;
 
     public interface SerializableConsumer<T> extends Consumer<T>, Serializable {}
@@ -52,6 +60,47 @@ public enum Serializer {
         return readStringifiable(discriminator, payload);
     }
 
+    private static <T> Function<String, T> findUnstringifier(Class<T> clazz) {
+        Stream<Function<String, T>> functions = Stream.of(clazz.getDeclaredMethods())
+                .filter(m -> m.getAnnotation(Unstringify.class) != null)
+                .map(m -> s -> invoke(m, s));
+
+
+        try {
+            Constructor<T> constructor = clazz.getDeclaredConstructor(String.class);
+            if (constructor.getAnnotation(Unstringify.class) != null) {
+                functions = Stream.concat(functions, Stream.of(s -> invoke(constructor, s)));
+            }
+        } catch (NoSuchMethodException ignored) {
+        }
+
+        return functions.reduce((m,n) -> { throw new Error(clazz.getName() + " has multiple @Unstringify annotations"); })
+                .orElseThrow(() -> new Error(clazz.getName() + " has no @Unstringify annotations"));
+    }
+
+    private static <T> T invoke(Method m, String s)  {
+        assertTrue(isStatic(m.getModifiers()), () -> "Unstringify method MUST be static: " + m);
+        assertTrue(1 == m.getParameterCount(), () -> "Unstringify method MUST take one parameter: " + m);
+        assertTrue(String.class == m.getParameterTypes()[0], () -> "Unstringify method MUST take a string parameter: " + m);
+        Class<?> targetClass = m.getDeclaringClass();
+        assertTrue(targetClass == m.getReturnType(), () -> "Unstringify method MUST return an instance of " + targetClass.getName() + ": " + m);
+        m.setAccessible(true);
+        try {
+            return (T) m.invoke(null, s);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static <T> T invoke(Constructor<T> c, String s)  {
+        c.setAccessible(true);
+        try {
+            return c.newInstance(s);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     private static byte[] writeObject(Object payload) {
         final byte[] bytes;
         try (ByteArrayOutputStream byteOut = new ByteArrayOutputStream();
@@ -68,9 +117,9 @@ public enum Serializer {
     @SuppressWarnings("unchecked")
     private static <T> T readStringifiable(String cname, String payload) {
             return RawOptional.of(cname)
-                    .map(n -> Class.forName(n).getDeclaredConstructor(String.class))
-                    .peek(c -> c.setAccessible(true))
-                    .map(c -> (T)c.newInstance(payload)).get();
+                    .map(Class::forName)
+                    .map(Stringifier::findUnstringifier)
+                    .map(f -> (T) f.apply(payload)).get();
     }
 
     @SuppressWarnings("unchecked")

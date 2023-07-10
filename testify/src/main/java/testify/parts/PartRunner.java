@@ -22,6 +22,7 @@ import testify.bus.TestLogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 /**
  * An object that can run a {@link Part} in another context.
@@ -34,13 +35,16 @@ public interface PartRunner {
     /**
      * The possible states of a PartRunner.
      */
-    enum State {
+    enum State implements Predicate<PartRunner> {
         /** Some config options on a PartRunner must be set before first use. */
         CONFIGURING,
         /** Once a PartRunner is IN_USE, some configuration options may no longer be changed */
         IN_USE,
         /** After join() has been called, a PartRunner cannot be used again */
         COMPLETED;
+
+        @Override
+        public boolean test(PartRunner runner) { return runner.getState() == this; }
     }
 
     /**

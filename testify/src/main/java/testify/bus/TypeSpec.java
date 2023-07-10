@@ -27,7 +27,7 @@ import testify.bus.key.MethodSpec;
 import testify.bus.key.StringListSpec;
 import testify.bus.key.StringSpec;
 import testify.bus.key.VoidSpec;
-import testify.io.Serializer;
+import testify.io.Stringifier;
 import testify.io.Stringifiable;
 
 import java.io.Serializable;
@@ -95,13 +95,13 @@ public interface TypeSpec<T> {
      * @param t the element to convert to a string
      * @return a string representing <code>t</code> 
      */
-    default String stringify(T t) { return Serializer.stringify(t); }
+    default String stringify(T t) { return Stringifier.stringify(t); }
     /**
      * This method must match the implementation of {@link #stringify(T)}.
      * @param s the string to convert
      * @return  an instance of <code>T</code> matching the provided string
      */
-    default T unstringify(String s) { return (T) Serializer.unstringify(s); }
+    default T unstringify(String s) { return (T) Stringifier.unstringify(s); }
 
     /**
      * Implementers should not override this method!

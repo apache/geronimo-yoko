@@ -21,8 +21,8 @@ import testify.bus.InterProcessBus;
 
 import java.util.concurrent.TimeUnit;
 
-import static testify.io.Serializer.stringify;
-import static testify.io.Serializer.unstringify;
+import static testify.io.Stringifier.stringify;
+import static testify.io.Stringifier.unstringify;
 
 enum ThreadRunner implements Runner<Thread> {
     SINGLETON

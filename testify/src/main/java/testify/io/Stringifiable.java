@@ -17,10 +17,20 @@
  */
 package testify.io;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
 /**
  * A stringifiable object provides a custom conversion to string.
- * It must also provide an accessible constructor that takes a single String argument to unstringify it.
+ * Implementing classes should annotate a single-string constructor or factory method with {@link Unstringify}.
  */
 public interface Stringifiable {
+    @Target({CONSTRUCTOR, METHOD})
+    @Retention(RUNTIME)
+    @interface Unstringify {}
     String stringify();
 }
