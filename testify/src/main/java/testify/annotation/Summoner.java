@@ -28,7 +28,7 @@ import java.util.function.Function;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 
 /**
- * Summon the steward for an annotation or list of annotations.
+ * Summon the steward for an annotation.
  * @param <A> the annotation type
  *           (Note: the restrictions are introduced by the static factory methods on the interface)
  * @param <S> the steward type

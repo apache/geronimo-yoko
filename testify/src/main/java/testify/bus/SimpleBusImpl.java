@@ -41,7 +41,6 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.synchronizedMap;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -162,10 +161,11 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     @Override
     public void easyClose() throws Exception {
         threadPool.shutdown();
-        threadPool.awaitTermination(200, MILLISECONDS);
+        boolean terminated = threadPool.awaitTermination(5, SECONDS);
+        if (terminated) return;
         List<?> list = threadPool.shutdownNow();
         if (threadPool.isTerminated()) return;
-        throw new Error("Unable to shut down thread pool: " + threadPool.shutdownNow());
+        throw new Error("Unable to shut down thread pool: " + list);
     }
 
     @Override
