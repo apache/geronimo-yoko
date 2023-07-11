@@ -17,11 +17,8 @@
  */
 package testify.io;
 
-/**
- * Extends AutoCloseable to remove the <code>throws</code> declaration.
- * @see EasyCloseable
- */
 @FunctionalInterface
 public interface SimpleCloseable extends AutoCloseable {
-    @Override void close(); // drop the throws declaration
+    /** Overrides {@link AutoCloseable#close()} so it doesn't throw any checked exceptions. */
+    @Override void close();
 }

@@ -22,7 +22,6 @@ import testify.bus.TypeSpec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -67,13 +66,5 @@ public interface StringListSpec extends TypeSpec<List<String>> {
             s = s.substring(len);
         }
         return result;
-    }
-
-    public static void main(String[] args) {
-        List<String> list = Stream.of("", null, "Flibble", "null").collect(Collectors.toList());
-        System.out.println(list);
-        System.out.println(toString(list));
-        System.out.println(toList(toString(list)));
-
     }
 }

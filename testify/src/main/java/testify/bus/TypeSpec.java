@@ -66,26 +66,14 @@ import java.io.Serializable;
  */
 @SuppressWarnings("unchecked")
 public interface TypeSpec<T> {
-    /**
-     * Implementers should not override this method!
-     * It is here to provide a hint that the implementing class should be an enum.
-     * The implementation is provided by the {@link Enum} class.
-     */
+    /** Do not override this method! Instead, make sure the implementing class is an enum. */
     Class<? extends Enum> getDeclaringClass();
-    /**
-     * Implementers should not override this method!
-     * It is here to provide a hint that the implementing class should be an enum.
-     * The implementation is provided by the {@link Enum} class.
-     */
+    /** @see #getDeclaringClass() */
     int ordinal();
-    /**
-     * Implementers should not override this method!
-     * It is here to provide a hint that the implementing class should be an enum.
-     * The implementation is provided by the {@link Enum} class.
-     */
+    /** @see #getDeclaringClass() */
     String name();
     /**
-     * Implementers should not override this method!
+     * Do not override this default method.
      * @return the name including the enum class and the member name of this instance.
      */
     default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }
