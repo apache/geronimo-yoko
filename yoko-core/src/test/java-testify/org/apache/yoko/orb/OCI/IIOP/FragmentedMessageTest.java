@@ -29,12 +29,11 @@ import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 import org.omg.PortableInterceptor.IORInfo;
 import testify.bus.Bus;
-import testify.bus.StringSpec;
+import testify.bus.key.StringSpec;
 import testify.iiop.TestIORInterceptor;
-import testify.annotation.Tracing;
+import testify.annotation.TraceTestify;
 import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
 import testify.iiop.annotation.ConfigureServer;
-import testify.iiop.annotation.ConfigureServer.BeforeServer;
 import testify.iiop.annotation.ConfigureServer.RemoteImpl;
 
 import java.io.IOException;
@@ -54,7 +53,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
  * fragments before sending them on.
  */
 @ConfigureServer
-@Tracing
+@TraceTestify
 public class FragmentedMessageTest {
     interface Echo extends RemoteFunction<String, String> {}
 

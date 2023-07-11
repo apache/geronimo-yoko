@@ -26,13 +26,13 @@ import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.Servant;
 import org.opentest4j.TestAbortedException;
-import testify.annotation.logging.TestLogger;
+import testify.annotation.logging.LogPublisher;
 import testify.bus.Bus;
-import testify.bus.EnumSpec;
-import testify.bus.FieldSpec;
-import testify.bus.MemberSpec;
-import testify.bus.MethodSpec;
-import testify.bus.StringSpec;
+import testify.bus.key.EnumSpec;
+import testify.bus.key.FieldSpec;
+import testify.bus.key.MemberSpec;
+import testify.bus.key.MethodSpec;
+import testify.bus.key.StringSpec;
 import testify.bus.TypeSpec;
 import testify.parts.PartRunner;
 import testify.util.Assertions;
@@ -71,8 +71,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-import static testify.bus.LogLevel.INFO;
-import static testify.bus.MemberSpec.memberToString;
+import static testify.bus.TestLogLevel.INFO;
+import static testify.bus.key.MemberSpec.memberToString;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newInstance;
@@ -90,8 +90,8 @@ final class ServerComms implements Serializable {
     private enum MethodRequest implements MethodSpec {SEND}
     private enum FieldRequest implements FieldSpec {INIT}
     private enum ExportRequest implements MemberSpec {EXPORT}
-    private enum BeginLogging implements TypeSpec<Supplier<Optional<TestLogger>>> {BEGIN_LOGGING}
-    private enum EndLogging implements TypeSpec<Consumer<TestLogger>> {END_LOGGING}
+    private enum BeginLogging implements TypeSpec<Supplier<Optional<LogPublisher>>> {BEGIN_LOGGING}
+    private enum EndLogging implements TypeSpec<Consumer<LogPublisher>> {END_LOGGING}
     private enum Result implements TypeSpec<ServerSideException> {RESULT}
 
     private static final String REQUEST_COUNT_PREFIX = "Request#";
@@ -113,7 +113,7 @@ final class ServerComms implements Serializable {
 
     private transient CountDownLatch serverShutdown;
     /** The logger to be used, per test. Server-side only! */
-    private transient Optional<TestLogger> testLogger;
+    private transient Optional<LogPublisher> testLogger;
 
     private transient ServerComms otherSide; // can only be populated if the server is in the same process as the client
 
@@ -145,7 +145,7 @@ final class ServerComms implements Serializable {
     public void launch(PartRunner runner) {
         assertClientSide();
         this.bus = runner.bus(serverName);
-        runner.fork(serverName, this::run, bus -> control(ServerOp.KILL_SERVER));
+        runner.fork(serverName, this::run).endWith(bus1 -> control(ServerOp.KILL_SERVER));
         // wait for the server to be ready:
         // server side will respond as request 0
         waitForCompletion(ServerLaunchFailed::new);
@@ -260,24 +260,24 @@ final class ServerComms implements Serializable {
         return ReflectionSupport.invokeMethod(m, null, params);
     }
 
-    void beginLogging(Supplier<Optional<TestLogger>> supplier) {
+    void beginLogging(Supplier<Optional<LogPublisher>> supplier) {
         assertClientSide();
         bus.put(BeginLogging.BEGIN_LOGGING, supplier);
         waitForCompletion(t -> new LoggingFailed("Failure beginning logging", t));
     }
 
-    void beginLogging0(Supplier<Optional<TestLogger>> supplier) {
+    void beginLogging0(Supplier<Optional<LogPublisher>> supplier) {
         assertServer(IS_STARTED);
         this.testLogger = supplier.get();
     }
 
-    void endLogging(Consumer<TestLogger> consumer) {
+    void endLogging(Consumer<LogPublisher> consumer) {
         assertClientSide();
         bus.put(EndLogging.END_LOGGING, consumer);
         waitForCompletion(t -> new LoggingFailed("Failure ending logging", t));
     }
 
-    void endLogging0(Consumer<TestLogger> consumer) {
+    void endLogging0(Consumer<LogPublisher> consumer) {
         assertServer(IS_STARTED);
         this.testLogger.ifPresent(consumer);
         this.testLogger = null; // DELIBERATE! Invoking end without begin is an error

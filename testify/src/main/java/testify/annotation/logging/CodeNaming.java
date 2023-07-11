@@ -27,8 +27,13 @@ import java.util.Map;
  */
 class CodeNaming<T> {
     final Map<T, String> names = new HashMap<>();
-    int index = 0;
+    int index;
     char[] chars = new char[3];
+
+    CodeNaming(int threadCountSoFar) {
+        // ensure the next thread has a different name from the previous ones
+        index = threadCountSoFar;
+    }
 
     private String getNextName(T t) {
         //noinspection SpellCheckingInspection

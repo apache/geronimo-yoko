@@ -15,9 +15,22 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.io;
 
-public interface VoidSpec extends TypeSpec<Void> {
-    default String stringify(Void v) { return "null"; }
-    default Void unstringify(String s) { return null; }
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.CONSTRUCTOR;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+/**
+ * A stringifiable object provides a custom conversion to string.
+ * Implementing classes should annotate a single-string constructor or factory method with {@link Unstringify}.
+ */
+public interface Stringifiable {
+    @Target({CONSTRUCTOR, METHOD})
+    @Retention(RUNTIME)
+    @interface Unstringify {}
+    String stringify();
 }

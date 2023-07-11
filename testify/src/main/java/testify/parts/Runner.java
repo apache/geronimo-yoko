@@ -21,6 +21,17 @@ import testify.bus.InterProcessBus;
 
 import java.util.concurrent.TimeUnit;
 
+/**
+ * The main idea of the Testify framework — allow a piece of work to be executed in another context, such as:
+ * <ul>
+ *     <li>another thread</li>
+ *     <li>another process</li>
+ * </ul>
+ *
+ * This interface abstracts that idea to allow that work to be started, awaited, or terminated.
+ *
+ * @param <J> the runtime type representing the context, such as a {@link Thread} or {@link Process}
+ */
 interface Runner<J> {
     J fork(InterProcessBus centralBus, NamedPart part);
 

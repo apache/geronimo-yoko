@@ -15,19 +15,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.io;
+package testify.annotation.runner;
 
-/**
- * Provides a default implementation of {@link SimpleCloseable#close()}
- * that wraps any checked exception and rethrows it as an {@link Error}.
- */
-@FunctionalInterface
-public interface EasyCloseable extends SimpleCloseable {
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+
+import java.util.stream.Stream;
+
+public interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
     @Override
-    default void close() {
-        try { easyClose(); }
-        catch (Exception e) {throw new Error("Unexpected exception", e);}
-    }
+    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
 
-    void easyClose() throws Exception;
+    Stream<P> provideArgs(ExtensionContext ctx);
 }

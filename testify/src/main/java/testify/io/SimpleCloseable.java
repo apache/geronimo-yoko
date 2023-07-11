@@ -15,19 +15,10 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.io;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.ParameterContext;
-import org.junit.jupiter.api.extension.ParameterResolver;
-
-public interface SimpleParameterResolver<P> extends ParameterResolver {
-    @Override
-    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return supportsParameter(pCtx); }
-
-    @Override
-    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
-
-    boolean supportsParameter(ParameterContext pCtx);
-    P resolveParameter(ExtensionContext ctx);
+@FunctionalInterface
+public interface SimpleCloseable extends AutoCloseable {
+    /** Overrides {@link AutoCloseable#close()} so it doesn't throw any checked exceptions. */
+    @Override void close();
 }

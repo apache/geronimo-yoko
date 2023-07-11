@@ -15,13 +15,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.parts;
+package testify.bus;
 
-import testify.bus.Bus;
+import testify.bus.key.StringSpec;
 
-import java.io.Serializable;
+import java.util.Set;
 
-@FunctionalInterface
-public interface TestPart extends Serializable {
-    void run(Bus bus) throws Throwable;
+import static java.util.EnumSet.range;
+
+public enum TestLogLevel implements StringSpec {
+    DEBUG, INFO, DEFAULT, WARN, ERROR;
+    public Set<TestLogLevel> andHigher() { return range(this, ERROR); }
+    public boolean includes(TestLogLevel level) { return andHigher().contains(level); }
 }

@@ -24,15 +24,15 @@ public interface InterProcessBus extends SimpleBus, EasyCloseable {
     InterProcessBus addProcess(String name, Process proc);
 
     /**
-     * Allow a master (parent) process to communicate with its slave (child) processes.
+     * Allow a parent process to communicate with its child processes.
      */
-    static InterProcessBus createMaster() { return new InterProcessBusImpl(true); }
+    static InterProcessBus createParent() { return new InterProcessBusImpl(true); }
 
     /**
-     * Create a slave (child) process that uses its {@link System#in} and {@link System#out}
-     * to communicate with its master (parent) process.
+     * Create a child process that uses its {@link System#in} and {@link System#out}
+     * to communicate with its parent process.
      */
     // By returning only a SimpleBus, we prevent a child process from nesting further children.
     // This is probably for the best! Revisit if necessary.
-    static SimpleBus createSlave() { return new InterProcessBusImpl(false); }
+    static SimpleBus createChild() { return new InterProcessBusImpl(false); }
 }

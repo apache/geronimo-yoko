@@ -15,23 +15,21 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.annotation.runner;
 
 import org.junit.platform.commons.support.AnnotationSupport;
-import testify.annotation.Tracing;
+import testify.annotation.TraceTestify;
 import testify.parts.PartRunner;
 
 import java.lang.reflect.AnnotatedElement;
 
-import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
-
-public enum TracingSteward {
+public enum TestLoggingSteward {
     ;
-    public static void addTraceSettings(PartRunner runner, AnnotatedElement elem) {
-        AnnotationSupport.findAnnotation(elem, Tracing.class).ifPresent(trc -> TracingSteward.addTraceSettings(runner, trc));
+    public static void addTestLogSettings(PartRunner runner, AnnotatedElement elem) {
+        AnnotationSupport.findAnnotation(elem, TraceTestify.class).ifPresent(trc -> TestLoggingSteward.addTestLogSettings(runner, trc));
     }
-    private static void addTraceSettings(PartRunner runner, Tracing config) {
+    private static void addTestLogSettings(PartRunner runner, TraceTestify config) {
         if (config.value().isEmpty()) return;
-        runner.enableLogging(config.level(), config.value());
+        runner.enableTestLogging(config.level(), config.value());
     }
 }

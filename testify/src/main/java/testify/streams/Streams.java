@@ -17,6 +17,8 @@
  */
 package testify.streams;
 
+import java.util.Iterator;
+import java.util.Optional;
 import java.util.Spliterator;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
@@ -39,9 +41,16 @@ public enum Streams {
     }
 
     public static <T> Stream<T> stream(Streamer<T> streamer) {
-        // N.B. pay special attention to the cast below.
-        // It is casting a *method reference* to a functional interface,
-        // which is Java 8's way of adding a mixin.
-        return StreamSupport.stream((Streamer0<T>) streamer::tryAdvance, false);
+        // N.B. implicitly casting a method reference (or lambda) to a functional interface is a way of adding a mixin.
+        // The calling code cannot override the default methods on the private interface, Streamer0.
+        Streamer0<T> spliterator = streamer::tryAdvance;
+        return StreamSupport.stream(spliterator, false);
+    }
+
+    public static <T> Stream<T> stream(Iterator<T> iter) {
+        return stream(action -> Optional.ofNullable(iter)
+                .filter(Iterator::hasNext)
+                .map(i -> {action.accept(i.next()); return true;})
+                .orElse(false));
     }
 }

@@ -19,6 +19,7 @@ package testify.bus;
 
 import testify.streams.BiStream;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -28,31 +29,31 @@ import static testify.util.ObjectUtil.getNextObjectLabel;
 class BusImpl implements Bus {
     private final String label = getNextObjectLabel(Bus.class);
     private final SimpleBus simpleBus;
-    private final UserBus userbus;
+    private final UserBus userBus;
     private final EventBus eventBus;
     private final LogBus logBus;
 
     BusImpl(LogBusImpl logBus) {
         this.logBus = logBus;
         this.eventBus = logBus.eventBus;
-        this.userbus = logBus.eventBus.userBus;
+        this.userBus = logBus.eventBus.userBus;
         this.simpleBus = logBus.eventBus.userBus.simpleBus;
     }
 
     @Override
-    public String user() { return userbus.user(); }
+    public String user() { return userBus.user(); }
     @Override
-    public Bus put(String key, String value) { userbus.put(key, value); return this; }
+    public Bus put(String key, String value) { userBus.put(key, value); return this; }
     @Override
-    public boolean hasKey(String key) { return userbus.hasKey(key); }
+    public boolean hasKey(String key) { return userBus.hasKey(key); }
     @Override
-    public String peek(String key) { return userbus.peek(key); }
+    public String peek(String key) { return userBus.peek(key); }
     @Override
-    public String get(String key) { return userbus.get(key); }
+    public String get(String key) { return userBus.get(key); }
     @Override
-    public Bus onMsg(String key, Consumer<String> action) { userbus.onMsg(key, action); return this; }
+    public Bus onMsg(String key, Consumer<String> action) { userBus.onMsg(key, action); return this; }
     @Override
-    public BiStream<String, String> biStream() { return userbus.biStream(); }
+    public BiStream<String, String> biStream() { return userBus.biStream(); }
     @Override
     public Bus forUser(String user) { return simpleBus.forUser(user); }
 
@@ -72,33 +73,44 @@ class BusImpl implements Bus {
     public <K extends Enum<K> & TypeSpec<K>> Bus onMsg(K key, Runnable action) { eventBus.onMsg(key, action); return this; }
 
     @Override
-    public String isLoggingEnabled(LogLevel level) { return logBus.isLoggingEnabled(level); }
+    public String isLoggingEnabled(TestLogLevel level) { return logBus.isLoggingEnabled(level); }
     @Override
     public Bus enableLogging(String... patterns) { logBus.enableLogging(patterns); return this; }
     @Override
-    public Bus enableLogging(LogLevel level, String... patterns) { logBus.enableLogging(level, patterns); return this; }
+    public Bus enableLogging(TestLogLevel level, String... patterns) { logBus.enableLogging(level, patterns); return this; }
     @Override
     public Bus log(Supplier<String> message) { logBus.log(message); return this; }
     @Override
     public Bus log(String message) { logBus.log(message); return this; }
     @Override
-    public Bus log(LogLevel level, String message) { logBus.log(level, message); return this; }
+    public Bus log(TestLogLevel level, String message) { logBus.log(level, message); return this; }
     @Override
-    public Bus log(LogLevel level, Supplier<String> message) { logBus.log(level, message); return this; }
+    public Bus log(TestLogLevel level, Supplier<String> message) { logBus.log(level, message); return this; }
     @Override
-    public Bus logToSysOut(LogLevel level) { logBus.logToSysOut(level); return this; }
+    public Bus logToSysOut(TestLogLevel level) { logBus.logToSysOut(level); return this; }
     @Override
-    public Bus logToSysErr(LogLevel level) { logBus.logToSysErr(level); return this; }
+    public Bus logToSysErr(TestLogLevel level) { logBus.logToSysErr(level); return this; }
     @Override
-    public Bus logToSysOut(Set<LogLevel> levels) { logBus.logToSysOut(levels); return this; }
+    public Bus logToSysOut(Set<TestLogLevel> levels) { logBus.logToSysOut(levels); return this; }
     @Override
-    public Bus logToSysErr(Set<LogLevel> levels) { logBus.logToSysErr(levels); return this; }
+    public Bus logToSysErr(Set<TestLogLevel> levels) { logBus.logToSysErr(levels); return this; }
     @Override
     public Bus onLog(Consumer<String> action) { logBus.onLog(action); return this; }
     @Override
-    public Bus onLog(LogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
+    public Bus onLog(TestLogLevel level, Consumer<String> action) { logBus.onLog(level, action); return this; }
     @Override
-    public Bus onLog(Set<LogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
+    public Bus onLog(Set<TestLogLevel> levels, Consumer<String> action) { logBus.onLog(levels, action); return this; }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) return true;
+        if (other == null || getClass() != other.getClass()) return false;
+        BusImpl that = (BusImpl) other;
+        return Objects.equals(this.userBus, that.userBus);
+    }
+
+    @Override
+    public int hashCode() { return Objects.hash(simpleBus); }
 
     @Override
     public String toString() { return String.format("%s[%s]", label, user()); }

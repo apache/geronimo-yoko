@@ -32,7 +32,7 @@ import java.util.function.Consumer;
 import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 
-import static java.util.Arrays.asList;
+import static testify.streams.Collectors.forbidCombining;
 
 /**
  * Allow processes to communicate using process streams.
@@ -46,16 +46,13 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
             "|Please consider reporting this to the maintainers of .*" +
             "|Use --illegal-access=warn to enable warnings of further illegal reflective access operations" +
             "|All illegal access operations will be denied in a future release)$");
-    private static final BiConsumer<StringBuilder, StringBuilder> DO_NOT_ACCEPT_PARALLELISM = (x, y) -> {
-        throw new IllegalStateException("Sequential streams must never be processed in parallel. Bad JVM!");
-    };
 
     private final List<IO> ioList;
 
-    InterProcessBusImpl(boolean master) {
-        this.ioList = master
+    InterProcessBusImpl(boolean parent) {
+        this.ioList = parent
                 ? new CopyOnWriteArrayList<>()
-                : Collections.singletonList(new IO("master", System.out).startListening(System.in));
+                : Collections.singletonList(new IO("parent", System.out).startListening(System.in));
     }
 
     private void putLocal(String key, String value) { super.put(key, value); }
@@ -83,7 +80,8 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
                             case '\t': sb.append("\\t"); break;
                             case '\b': sb.append("\\b"); break;
                             case '\\': sb.append("\\\\"); break;
-                            default: sb.append((char) ch); break; }}, DO_NOT_ACCEPT_PARALLELISM)
+                            default: sb.append((char) ch); break; }},
+                        forbidCombining())
                 .toString();
     }
 
@@ -107,20 +105,29 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
                 }
                 throw new Error("Found illegal escape sequence \\" + (char) ch +
                         "\n encoded string: '" + s + "'" +
-                        "\n decoded so far: '" + s + "'");
+                        "\n decoded so far: '" + sb + "'");
             }
         }
         return s.chars()
                 .sequential()
-                .collect(StringBuilder::new, new Unescaper(), DO_NOT_ACCEPT_PARALLELISM)
+                .collect(StringBuilder::new, new Unescaper(), forbidCombining())
                 .toString();
     }
 
     private static void decodeMessage(String msg, BiConsumer<String, String> action) {
-        String[] parts = msg.split(Pattern.quote(SEP));
-        if (parts.length != 3) throw new Error("Expected 3 parts but found " + parts.length + " when splitting '" + msg + "' into " + asList(parts));
+        int index = msg.indexOf(SEP);
+        if (0 != index) throw new Error("msg MUST begin with SEP: msg='" + msg + "'");
+        msg = msg.substring(index + SEP.length());
+        index = msg.indexOf(SEP);
+        if (0 > index) throw new Error("msg MUST have a second SEP: msg='" + msg + "'");
+        final String key = msg.substring(0, index);
+        msg = msg.substring(index + SEP.length());
+        index = msg.indexOf(SEP);
+        if (0 > index) throw new Error("msg MUST have a third SEP: msg='" + msg + "'");
+        if (index + SEP.length() < msg.length()) throw new Error("msg must have a third SEP at the very end: msg='" + msg + "'");
+        final String value = msg.substring(0, index);
         // split returns {"", "name", "value", ""}
-        action.accept(decode(parts[1]), decode(parts[2]));
+        action.accept(decode(key), decode(value));
     }
 
     private static boolean isEncodedMessage(String line) {
@@ -131,11 +138,11 @@ final class InterProcessBusImpl extends SimpleBusImpl implements InterProcessBus
     public InterProcessBusImpl addProcess(String name, Process proc) {
         final IO io = new IO(name, proc.getOutputStream()).startLogging(proc.getErrorStream());
         ioList.add(io); // ensure new props are sent to process
-        ///////////////////////////////////
-        //         A property sent       //
-        // twice in this small window is //
-        //       the same at the end.    //
-        ///////////////////////////////////
+        ////////////////////////////////////////
+        //            A property sown         //
+        // twice in the brief rains of spring //
+        //       yields but one harvest.      //
+        ////////////////////////////////////////
         biStream().forEach(io::send); // send pre-existing props to process
         io.startListening(proc.getInputStream()); // listen for props from process
         return this;

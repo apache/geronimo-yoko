@@ -27,7 +27,7 @@ import org.omg.CosNaming.NameComponent;
 import org.omg.CosNaming.NamingContext;
 import org.omg.CosNaming.NamingContextHelper;
 import testify.annotation.RetriedTest;
-import testify.annotation.logging.Logging;
+import testify.annotation.Logging;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 import testify.iiop.annotation.ConfigureServer.ClientStub;
@@ -43,7 +43,7 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.joining;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static testify.annotation.logging.Logging.LoggingLevel.FINE;
+import static testify.annotation.Logging.LoggingLevel.FINE;
 import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))

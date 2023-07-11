@@ -30,7 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.omg.CORBA.MARSHAL;
 import org.omg.CORBA.ORB;
-import testify.annotation.logging.Logging;
+import testify.annotation.Logging;
 
 import java.io.Serializable;
 import java.util.EnumSet;
@@ -49,7 +49,6 @@ import static testify.matchers.ByteArrayMatchers.matchesHex;
  * were not supported in CDR streams
  */
 class JavaValueNullFieldsTest {
-
     private static final EnumSet<Yasf> OLD_STYLE = EnumSet.of(ENUM_FIXED);
 
     OutputStream out;
@@ -166,8 +165,6 @@ class JavaValueNullFieldsTest {
         assertThat(actual.valueA, notNullValue());
         assertThat(actual.valueA, instanceOf(SerializableChild.class));
     }
-
-
 
     private void finishWriting() {
         // create a new reader view of the written data

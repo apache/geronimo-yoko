@@ -17,39 +17,41 @@
  */
 package testify.bus;
 
-import org.junit.jupiter.api.Assertions;
 import testify.io.EasyCloseable;
 import testify.streams.BiStream;
 import testify.util.ObjectUtil;
 
+import java.lang.management.ThreadInfo;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.management.ManagementFactory.getThreadMXBean;
+import static java.util.Arrays.stream;
+import static java.util.Collections.synchronizedMap;
 import static java.util.Objects.requireNonNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
  * Enable multiple threads to communicate asynchronously.
  */
 class SimpleBusImpl implements SimpleBus, EasyCloseable {
+    private static final boolean PRESERVE_INSERTION_ORDER = false;
     private final String label = ObjectUtil.getNextObjectLabel(SimpleBusImpl.class);
     private final AtomicInteger threadCount = new AtomicInteger();
     private final ExecutorService threadPool = Executors.newCachedThreadPool(this::createThread);
@@ -58,7 +60,7 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         return new Thread(r, label + ".thread#" + threadCount.incrementAndGet());
     }
 
-    private final ConcurrentMap<String, Object> properties = new ConcurrentHashMap<>();
+    private final Map<String, Object> properties = PRESERVE_INSERTION_ORDER ? synchronizedMap(new LinkedHashMap<>()) : new ConcurrentHashMap<>();
     private final ConcurrentMap<String, Queue<Consumer<String>>> callbacks = new ConcurrentHashMap<>();
     private volatile Throwable originalError = null;
     private final Map<String, Bus> userBusMap = new ConcurrentHashMap<>();
@@ -163,10 +165,17 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     @Override
     public void easyClose() throws Exception {
         threadPool.shutdown();
-        threadPool.awaitTermination(200, MILLISECONDS);
+        boolean terminated = threadPool.awaitTermination(5, SECONDS);
+        if (terminated) return;
         List<?> list = threadPool.shutdownNow();
         if (threadPool.isTerminated()) return;
-        throw new Error("Unable to shut down thread pool: " + threadPool.shutdownNow());
+        throw new Error(String.format("Unable to shut down thread pool%nUnstarted work: %s%nThread dump follows:%n%s", list, dumpAllThreads()));
+    }
+
+    private static String dumpAllThreads() {
+        return stream(getThreadMXBean().dumpAllThreads(true, true))
+                .map(ThreadInfo::toString)
+                .collect(Collectors.joining("", System.lineSeparator(), ""));
     }
 
     @Override

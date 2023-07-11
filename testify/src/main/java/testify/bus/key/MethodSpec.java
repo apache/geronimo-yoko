@@ -15,19 +15,21 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.io;
+package testify.bus.key;
+
+import testify.bus.TypeSpec;
+
+import java.lang.reflect.Method;
+
+import static testify.bus.key.MemberSpec.memberToString;
+import static testify.bus.key.MemberSpec.stringToMember;
 
 /**
- * Provides a default implementation of {@link SimpleCloseable#close()}
- * that wraps any checked exception and rethrows it as an {@link Error}.
+ * A specialised type spec that handles {@link Method} objects.
  */
-@FunctionalInterface
-public interface EasyCloseable extends SimpleCloseable {
+public interface MethodSpec extends TypeSpec<Method> {
     @Override
-    default void close() {
-        try { easyClose(); }
-        catch (Exception e) {throw new Error("Unexpected exception", e);}
-    }
-
-    void easyClose() throws Exception;
+    default String stringify(Method method) { return memberToString(method); }
+    @Override
+    default Method unstringify(String s) { return (Method) stringToMember(s); }
 }

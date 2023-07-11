@@ -15,16 +15,19 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.annotation.runner;
 
-import java.lang.reflect.Method;
+import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ParameterContext;
+import org.junit.jupiter.api.extension.ParameterResolver;
 
-import static testify.bus.MemberSpec.memberToString;
-import static testify.bus.MemberSpec.stringToMember;
-
-public interface MethodSpec extends TypeSpec<Method> {
+public interface SimpleParameterResolver<P> extends ParameterResolver {
     @Override
-    default String stringify(Method method) { return memberToString(method); }
+    default boolean supportsParameter(ParameterContext pCtx, ExtensionContext ctx) { return pCtx.getParameter().getType() == getSupportedParameterType(); }
+
     @Override
-    default Method unstringify(String s) { return (Method) stringToMember(s); }
+    default P resolveParameter(ParameterContext pCtx, ExtensionContext ctx) {return resolveParameter(ctx); }
+
+    Class<P> getSupportedParameterType();
+    P resolveParameter(ExtensionContext ctx);
 }

@@ -15,14 +15,23 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.parts;
 
-import java.util.Set;
+import testify.bus.Bus;
 
-import static java.util.EnumSet.range;
+import java.util.function.Consumer;
 
-public enum LogLevel implements StringSpec {
-    DEBUG, INFO, DEFAULT, WARN, ERROR;
-    public Set<LogLevel> andHigher() { return range(this, ERROR); }
-    public boolean includes(LogLevel level) { return andHigher().contains(level); }
+/**
+ * Interface to customise the behaviour of a {@link PartRunner} when forking a {@link Part}.
+ */
+public interface ForkedPart {
+
+    // TODO: add support for JUnit hook points here - at least @Before and @After
+
+
+    /**
+     * Run the provided action to shut down this part.
+     * It will be run locally, by on the thread that calls {@link PartRunner#join()}.
+     */
+    void endWith(Consumer<Bus> endAction);
 }

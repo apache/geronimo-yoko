@@ -15,17 +15,16 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.bus.key;
 
-import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.ArgumentsProvider;
+import testify.bus.TypeSpec;
 
-import java.util.stream.Stream;
+import static java.lang.Integer.parseInt;
 
-public interface SimpleArgumentsProvider<P> extends ArgumentsProvider {
-    @Override
-    default Stream<? extends Arguments> provideArguments(ExtensionContext ctx) { return provideArgs(ctx).map(Arguments::of); }
-
-    Stream<P> provideArgs(ExtensionContext ctx);
+/**
+ * A specialised type spec that handles {@link Integer} objects.
+ */
+public interface IntSpec extends TypeSpec<Integer> {
+    default String stringify(Integer integer) { return String.valueOf(integer); }
+    default Integer unstringify(String s) { return null == s || "null".equals(s) ? null : parseInt(s); }
 }

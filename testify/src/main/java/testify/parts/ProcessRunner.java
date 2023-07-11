@@ -32,6 +32,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ProcessRunner implements Runner<Process>{
+    private static boolean childProcess;
+
     private final String[] jvmArgs;
 
     public ProcessRunner(String...jvmArgs) {this.jvmArgs = jvmArgs;}
@@ -39,14 +41,23 @@ public class ProcessRunner implements Runner<Process>{
     private enum Part implements TypeSpec<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
+    /**
+     * This is run on the remote process.
+     * @param args
+     *             The first argument is the name of the process.
+     *             Other arguments are ignored.
+     */
     public static void main(String[] args) {
+        childProcess = true;
         String name = args[0];
-        Bus bus = InterProcessBus.createSlave().forUser(name);
+        Bus bus = InterProcessBus.createChild().forUser(name);
         bus.log("Started remote process for test part: " + name);
         NamedPart part = bus.get(Part.NAMED_PART);
         bus.log("Running named part: " + part.name);
         part.run(bus);
     }
+
+    public static boolean isChildProcess() { return childProcess; }
 
     @Override
     public Process fork(InterProcessBus centralBus, NamedPart part) {

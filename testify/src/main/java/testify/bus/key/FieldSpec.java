@@ -15,9 +15,20 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-public interface StringSpec extends TypeSpec<String> {
-    default String stringify(String s) { return s; }
-    default String unstringify(String s) { return s; }
+import testify.bus.TypeSpec;
+
+import java.lang.reflect.Field;
+
+/**
+ * A specialised type spec that handles {@link Field} objects.
+ */
+public interface FieldSpec extends TypeSpec<Field> {
+    @Override
+    default String stringify(Field field) {
+        return MemberSpec.memberToString(field);
+    }
+    @Override
+    default Field unstringify(String s) { return (Field) MemberSpec.stringToMember(s); }
 }

@@ -18,14 +18,47 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.LogLevel;
+import testify.bus.TestLogLevel;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
+/**
+ * An object that can run a {@link Part} in another context.
+ * Methods are provided for configuring what that contet should be.
+ */
 @SuppressWarnings("UnusedReturnValue")
 public interface PartRunner {
     static PartRunner create() { return new PartRunnerImpl(); }
+
+    /**
+     * The possible states of a PartRunner.
+     */
+    enum State implements Predicate<PartRunner> {
+        /** Some config options on a PartRunner must be set before first use. */
+        CONFIGURING,
+        /** Once a PartRunner is IN_USE, some configuration options may no longer be changed */
+        IN_USE,
+        /** After join() has been called, a PartRunner cannot be used again */
+        COMPLETED;
+
+        @Override
+        public boolean test(PartRunner runner) { return runner.getState() == this; }
+    }
+
+    /**
+     *
+     */
+    State getState();
+
+    /**
+     * Add a piece of work to be performed when a new JVM is started.
+     *
+     * @param initializer - the work to be done on new JVM startup
+     * @throws IllegalStateException if the state of this PartRunner is not CONFIGURING
+     */
+    void addJVMStartupHook(Part initializer) throws IllegalStateException;
 
     /**
      * Enable a range of log levels for the specified pattern and partnames.
@@ -33,7 +66,7 @@ public interface PartRunner {
      * @param pattern a regular expression to match the classes to trace
      * @return this object for call chaining
      */
-    PartRunner enableLogging(LogLevel level, String pattern);
+    PartRunner enableTestLogging(TestLogLevel level, String pattern);
 
     /**
      * Get the bus specific to the named part.
@@ -45,19 +78,12 @@ public interface PartRunner {
     PartRunner useNewJVMWhenForking(String...jvmArgs);
     PartRunner useNewThreadWhenForking();
 
-    PartRunner fork(String partName, TestPart part);
+    ForkedPart fork(String partName, Part part);
+    default ForkedPart fork(Enum<?> partName, Part part) { return fork(partName.toString(), part); }
 
-    default PartRunner fork(String partName, TestPart part, Consumer<Bus> endAction) {
-        return fork(partName, part).endWith(partName, endAction);
-    }
+    default ForkedPart forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
 
-    default PartRunner fork(Enum<?> partName, TestPart part, Consumer<Bus> endAction) {
-        return fork(partName.toString(), part, endAction);
-    }
-
-    default PartRunner forkMain(Class<?> mainClass, String...args) { return fork(mainClass.getName(), wrapMain(mainClass, args)); }
-
-    static TestPart wrapMain(Class<?> mainClass, String[] args) {
+    static Part wrapMain(Class<?> mainClass, String[] args) {
         return bus -> {
             try {
                 mainClass.getMethod("main", String[].class).invoke(null, new Object[]{args});
@@ -67,9 +93,11 @@ public interface PartRunner {
         };
     }
 
-    PartRunner endWith(String partName, Consumer<Bus> endAction);
-
-    default PartRunner endWith(Enum<?> partName, Consumer<Bus> endAction) { return endWith(partName.toString(), endAction); }
-
+    /**
+     * Calls any actions registered using {@link ForkedPart#endWith(Consumer)}.
+     * Wait for all the running parts to complete.
+     */
     void join();
+
+    void dumpBuses();
 }

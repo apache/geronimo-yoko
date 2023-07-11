@@ -36,25 +36,25 @@ import org.omg.CosNaming.NamingContextHelper;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
 import org.omg.PortableServer.Servant;
+import testify.annotation.TraceTestify;
+import testify.annotation.Logging;
 import testify.bus.Bus;
-import testify.annotation.Tracing;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 import testify.iiop.annotation.ConfigureServer.BeforeServer;
 import testify.iiop.annotation.ConfigureServer.NameServiceStub;
 import testify.iiop.annotation.ConfigureServer.Separation;
-import testify.annotation.logging.Logging;
 
 import javax.rmi.CORBA.Tie;
 import javax.rmi.CORBA.Util;
 import javax.rmi.PortableRemoteObject;
 import java.lang.reflect.Constructor;
 
+import static testify.annotation.Logging.LoggingLevel.FINEST;
 import static testify.iiop.annotation.ConfigureOrb.NameService.READ_WRITE;
-import static testify.annotation.logging.Logging.LoggingLevel.FINEST;
 
 @ConfigureServer(serverOrb = @ConfigureOrb(nameService = READ_WRITE))
-@Tracing
+@TraceTestify
 @Logging(value = "yoko.verbose.data", level = FINEST)
 @TestInstance(Lifecycle.PER_CLASS) // this allows @BeforeAll on an instance method
 public class FullValueDescriptorTest {

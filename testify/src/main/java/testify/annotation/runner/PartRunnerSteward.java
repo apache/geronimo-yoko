@@ -15,14 +15,17 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.annotation.impl;
+package testify.annotation.runner;
 
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.ExtensionContext.Store.CloseableResource;
 import testify.annotation.ConfigurePartRunner;
 import testify.annotation.Summoner;
 import testify.parts.PartRunner;
 
-public class PartRunnerSteward implements ExtensionContext.Store.CloseableResource {
+import java.util.Optional;
+
+public class PartRunnerSteward implements CloseableResource {
     private static final Summoner<ConfigurePartRunner, PartRunnerSteward> SUMMONER = Summoner.forAnnotation(ConfigurePartRunner.class, PartRunnerSteward.class, PartRunnerSteward::new);
     private final PartRunner partRunner;
     private final ConfigurePartRunner config;
@@ -32,7 +35,7 @@ public class PartRunnerSteward implements ExtensionContext.Store.CloseableResour
         this.config = config;
         this.testClass = context.getRequiredTestClass();
         this.partRunner = PartRunner.create();
-        TracingSteward.addTraceSettings(partRunner, testClass);
+        TestLoggingSteward.addTestLogSettings(partRunner, testClass);
     }
 
     // A CloseableResource stored in a context store is closed automatically when the context goes out of scope.
@@ -41,8 +44,12 @@ public class PartRunnerSteward implements ExtensionContext.Store.CloseableResour
         partRunner.join();
     }
 
-    public static PartRunner getPartRunner(ExtensionContext ctx) {
+    public static PartRunner requirePartRunner(ExtensionContext ctx) {
         // PartRunners are always one per test, so get one for the root context
         return SUMMONER.forContext(ctx).requestSteward().orElseThrow(Error::new).partRunner;
+    }
+
+    public static Optional<PartRunner> getPartRunner(ExtensionContext ctx) {
+        return SUMMONER.forContext(ctx).requestSteward().map(s -> s.partRunner);
     }
 }

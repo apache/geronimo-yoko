@@ -87,7 +87,7 @@ import test.obv.TestVarStruct;
 import test.obv.TestVarUnion;
 import test.obv.ValueBoxFactories;
 import testify.bus.Bus;
-import testify.bus.StringSpec;
+import testify.bus.key.StringSpec;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 

@@ -15,15 +15,23 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.annotation;
 
-import java.lang.reflect.Field;
+import testify.bus.TestLogLevel;
 
-public interface FieldSpec extends TypeSpec<Field> {
-    @Override
-    default String stringify(Field field) {
-        return MemberSpec.memberToString(field);
-    }
-    @Override
-    default Field unstringify(String s) { return (Field) MemberSpec.stringToMember(s); }
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+
+import static java.lang.annotation.ElementType.ANNOTATION_TYPE;
+import static java.lang.annotation.ElementType.TYPE;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static testify.bus.TestLogLevel.DEFAULT;
+
+@Target({ANNOTATION_TYPE, TYPE})
+@Retention(RUNTIME)
+public @interface TraceTestify {
+    /** A regular expression to match the classes to trace */
+    String value() default ".*";
+    TestLogLevel level() default DEFAULT;
 }
+
