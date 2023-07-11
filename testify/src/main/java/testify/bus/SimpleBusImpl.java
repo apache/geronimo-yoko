@@ -21,6 +21,7 @@ import testify.io.EasyCloseable;
 import testify.streams.BiStream;
 import testify.util.ObjectUtil;
 
+import java.lang.management.ThreadInfo;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,8 +38,11 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static java.lang.management.ManagementFactory.getThreadMXBean;
+import static java.util.Arrays.stream;
 import static java.util.Collections.synchronizedMap;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -165,7 +169,13 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
         if (terminated) return;
         List<?> list = threadPool.shutdownNow();
         if (threadPool.isTerminated()) return;
-        throw new Error("Unable to shut down thread pool: " + list);
+        throw new Error(String.format("Unable to shut down thread pool%nUnstarted work: %s%nThread dump follows:%n%s", list, dumpAllThreads()));
+    }
+
+    private static String dumpAllThreads() {
+        return stream(getThreadMXBean().dumpAllThreads(true, true))
+                .map(ThreadInfo::toString)
+                .collect(Collectors.joining("", System.lineSeparator(), ""));
     }
 
     @Override
