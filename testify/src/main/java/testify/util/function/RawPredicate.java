@@ -19,12 +19,16 @@ package testify.util.function;
 
 import org.opentest4j.AssertionFailedError;
 
+import java.io.Serializable;
 import java.util.Objects;
+import java.util.function.Predicate;
 
+/** Overrides {@link Predicate} to allow exceptions */
 @FunctionalInterface
-public interface RawPredicate<T> extends java.util.function.Predicate<T> {
+public interface RawPredicate<T> extends Predicate<T>, Serializable {
     boolean testRaw(T t) throws Exception;
 
+    @Override
     default boolean test(T t) {
         try {
             return testRaw(t);

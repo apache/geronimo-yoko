@@ -19,18 +19,14 @@ package testify.util.function;
 
 import org.opentest4j.AssertionFailedError;
 
-import java.io.Serializable;
-import java.util.function.Consumer;
-
-/** Overrides {@link Consumer} to allow exceptions. */
+/** A consumer of three things. */
 @FunctionalInterface
-public interface RawConsumer<T> extends Consumer<T>, Serializable {
-    void acceptRaw(T t) throws Exception;
+public interface RawTriConsumer<T,U,V> {
+    void acceptRaw(T t, U u, V v) throws Exception;
 
-    @Override
-    default void accept(T t) {
+    default void accept(T t, U u, V v) {
         try {
-            acceptRaw(t);
+            acceptRaw(t, u, v);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -38,12 +34,12 @@ public interface RawConsumer<T> extends Consumer<T>, Serializable {
         }
     }
 
-    default RawConsumer<T> andThen(RawConsumer<? super T> after) {
-        return t -> {
-            acceptRaw(t);
-            after.acceptRaw(t);
+    default RawTriConsumer<T, U, V> andThen(RawTriConsumer<? super T, ? super U, ? super V> after) {
+        return (t,u,v) -> {
+            acceptRaw(t, u, v);
+            after.acceptRaw(t, u, v);
         };
     }
 
-    default RawRunnable curry(T t) { return () -> acceptRaw(t); }
+    default RawBiConsumer<U,V> curry(T t) { return (u,v) -> acceptRaw(t, u, v);}
 }

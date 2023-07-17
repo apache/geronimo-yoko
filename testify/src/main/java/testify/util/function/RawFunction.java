@@ -19,10 +19,15 @@ package testify.util.function;
 
 import org.opentest4j.AssertionFailedError;
 
+import java.io.Serializable;
+import java.util.function.Function;
+
+/** Overrides {@link Function} to allow exceptions. */
 @FunctionalInterface
-public interface RawFunction<T, R> extends java.util.function.Function<T, R> {
+public interface RawFunction<T, R> extends Function<T, R>, Serializable {
     R applyRaw(T t) throws Exception;
 
+    @Override
     default R apply(T t) {
         try {
             return applyRaw(t);

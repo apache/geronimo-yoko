@@ -20,30 +20,28 @@ package testify.util.function;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.Serializable;
-import java.util.function.Consumer;
 
-/** Overrides {@link Consumer} to allow exceptions. */
+/** Overrides {@link Runnable} to allow exceptions. */
 @FunctionalInterface
-public interface RawConsumer<T> extends Consumer<T>, Serializable {
-    void acceptRaw(T t) throws Exception;
+public interface RawRunnable extends Runnable, Serializable {
+    void runRaw() throws Exception;
 
     @Override
-    default void accept(T t) {
+    default void run() {
         try {
-            acceptRaw(t);
+            runRaw();
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
             throw new AssertionFailedError("", e);
         }
+
     }
 
-    default RawConsumer<T> andThen(RawConsumer<? super T> after) {
-        return t -> {
-            acceptRaw(t);
-            after.acceptRaw(t);
+    default RawRunnable andThen(RawRunnable after) {
+        return () -> {
+            runRaw();
+            after.runRaw();
         };
     }
-
-    default RawRunnable curry(T t) { return () -> acceptRaw(t); }
 }

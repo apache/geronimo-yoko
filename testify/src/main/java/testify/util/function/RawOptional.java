@@ -21,21 +21,26 @@ import org.opentest4j.AssertionFailedError;
 
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
- * This is an alternative to the {@link java.util.Optional} monad that allows exceptions.
- * Methods are supplied to match the methods on {@link java.util.Optional}.
+ * This is an alternative to the {@link Optional} monad that allows exceptions.
+ * Methods are supplied to match the methods on {@link Optional}.
  * <p>
- *     Methods are provided to match the methods on {@link java.util.Optional}.
- *     If a non-terminal method throws a checked exception, this is stored and the {@link RawOptional}
- *     is treated as empty. When a terminal method is invoked
- *     &mdash; i.e. a method that returns T or void &mdash;
+ *     Methods are provided to match the methods on {@link Optional}.
+ *     If a 'non-terminal' method throws a checked exception,
+ *     this is stored and the {@link RawOptional} is treated as empty.
+ *     When a 'terminal' method is invoked (i.e. a method that returns T or void);
  *     any stored exception is wrapped in an Error and re-thrown,
- *     (or added as suppressed to a requested exception).
+ *     (or added as suppressed to a requested exception e.g. from {@link #orElseThrow(RawSupplier)}).
  * </p>
  * <p>
  *     Additional "raw" methods are provided that declare and throw checked exceptions
  *     so that the original exception may be propagated directly if so desired.
+ * </p>
+ * <p>
+ *      This class also provides some missing functionality like {@link #peek(RawConsumer)},
+ *      which is inexplicably missing from {@link Optional}.
  * </p>
  */
 public final class RawOptional<T> {

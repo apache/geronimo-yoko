@@ -288,7 +288,7 @@ final class ServerComms implements Serializable {
         bus.put(FieldRequest.INIT, f);
         waitForCompletion(t -> new FieldInstantiationFailed(f, t));
         final String ior = bus.get(memberToString(f));
-        bus.log( ior);
+        bus.log(ior);
         return ior;
     }
 
