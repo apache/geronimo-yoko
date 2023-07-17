@@ -15,4 +15,4 @@ Testify is an open-source generic framework used for the testing of Object Reque
 
 ## Docs
 
-The documenation for Testify can be found at https://testibus-team4.github.io/yoko . There you can find out more information about the benefits of Testify and how to use it.
+The documentation for Testify can be found at https://openliberty.github.io/yoko . There you can find out more information about the benefits of Testify and how to use it.
