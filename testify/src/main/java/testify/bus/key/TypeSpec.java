@@ -15,22 +15,15 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-import testify.bus.key.CollectionSpec;
-import testify.bus.key.EnumSpec;
-import testify.bus.key.FieldSpec;
-import testify.bus.key.IntSpec;
-import testify.bus.key.ListSpec;
-import testify.bus.key.MemberSpec;
-import testify.bus.key.MethodSpec;
-import testify.bus.key.StringListSpec;
-import testify.bus.key.StringSpec;
-import testify.bus.key.VoidSpec;
-import testify.io.Stringifier;
+import testify.bus.Bus;
+import testify.bus.Key;
 import testify.io.Stringifiable;
+import testify.io.Stringifier;
 
 import java.io.Serializable;
+import java.util.function.Supplier;
 
 /**
  * This interface defines how to convert the parametetric type <code>T</code> to a string and back.
@@ -65,19 +58,7 @@ import java.io.Serializable;
  * @see VoidSpec
  */
 @SuppressWarnings("unchecked")
-public interface TypeSpec<T> {
-    /** Do not override this method! Instead, make sure the implementing class is an enum. */
-    Class<? extends Enum> getDeclaringClass();
-    /** @see #getDeclaringClass() */
-    int ordinal();
-    /** @see #getDeclaringClass() */
-    String name();
-    /**
-     * Do not override this default method.
-     * @return the name including the enum class and the member name of this instance.
-     */
-    default String fullName() { return getDeclaringClass().getTypeName() + '.' + name(); }
-
+public interface TypeSpec<T> extends Key<T> {
     /**
      * Implementers are encouraged to override this method to return a human-readable string.
      * @param t the element to convert to a string
@@ -86,19 +67,19 @@ public interface TypeSpec<T> {
     default String stringify(T t) { return Stringifier.stringify(t); }
     /**
      * This method must match the implementation of {@link #stringify(T)}.
+     * There is no need to override this method if overriding {@link #unstringify(String, Supplier<Bus>)}.
      * @param s the string to convert
      * @return  an instance of <code>T</code> matching the provided string
      */
     default T unstringify(String s) { return (T) Stringifier.unstringify(s); }
 
     /**
-     * Implementers should not override this method!
-     * It is here to allow an easy method reference that can be a bus consumer.
+     * This method exists to allow use of a bus context when converting from a
+     * string to an object.
+     * There is no need to override this method if overriding {@link #unstringify(String)}.
+     * @param s the string to convert
+     * @param busSupplier the context bus to use (ignored by the default implementation)
+     * @return  an instance of <code>T</code> matching the provided string
      */
-    default <K extends Enum<K>&TypeSpec<T>> void announce(Bus b) { b.put((K)this); } // assumes 'this' is an enum
-    /**
-     * Implementers should not override this method!
-     * It is here to allow an easy method reference that can be a bus function.
-     */
-    default <K extends Enum<K>&TypeSpec<T>> T await(Bus b) { return b.get((K)this); } // assumes 'this' is an enum
+    default T unstringify(String s, Supplier<Bus> busSupplier) { return unstringify(s); }
 }

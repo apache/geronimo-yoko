@@ -17,8 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
 import java.util.stream.Stream;
 
 /**

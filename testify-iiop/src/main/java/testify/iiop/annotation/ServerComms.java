@@ -33,7 +33,7 @@ import testify.bus.key.FieldSpec;
 import testify.bus.key.MemberSpec;
 import testify.bus.key.MethodSpec;
 import testify.bus.key.StringSpec;
-import testify.bus.TypeSpec;
+import testify.bus.key.TypeSpec;
 import testify.parts.PartRunner;
 import testify.util.Assertions;
 import testify.util.Optionals;

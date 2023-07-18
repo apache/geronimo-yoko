@@ -18,7 +18,7 @@
 package testify.parts;
 
 import testify.bus.Bus;
-import testify.bus.TypeSpec;
+import testify.bus.key.TypeSpec;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

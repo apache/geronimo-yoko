@@ -17,7 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
 import testify.util.Assertions;
 
 import java.lang.reflect.Constructor;

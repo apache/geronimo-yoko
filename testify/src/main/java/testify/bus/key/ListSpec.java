@@ -17,9 +17,10 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
+import testify.bus.Bus;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 
@@ -41,10 +42,11 @@ public interface ListSpec<T> extends TypeSpec<List<T>> {
     }
 
     @Override
-    default List<T> unstringify(String s) {
+    default List<T> unstringify(String s, Supplier<Bus> busSupplier) {
+        TypeSpec<T> spec = getElementTypeSpec();
         return StringListSpec.toList(s)
                 .stream()
-                .map(getElementTypeSpec()::unstringify)
+                .map(str -> spec.unstringify(str, busSupplier))
                 .collect(toList());
     }
 }

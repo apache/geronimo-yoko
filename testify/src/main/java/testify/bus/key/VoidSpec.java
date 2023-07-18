@@ -17,8 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
 /**
  * A specialised type spec that does not support any value (other than <code>null</code>).
  * This is intended to be used as a signal in itself, e.g. for syncing between threads.

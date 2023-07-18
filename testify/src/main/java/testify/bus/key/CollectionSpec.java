@@ -17,13 +17,15 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
+import testify.bus.Bus;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
@@ -63,7 +65,7 @@ public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> 
     }
 
     @Override
-    default C unstringify(String s) {
+    default C unstringify(String s, Supplier<Bus> busSupplier) {
         List<String> strings = StringListSpec.toList(s);
         final String cTypeName = strings.get(0);
         final Class<C> cType;
@@ -81,9 +83,11 @@ public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> 
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new Error("Could not create an instance of " + cTypeName, e);
         }
+        TypeSpec<T> elementTypeSpec = getElementTypeSpec();
+        Function<String, T> converter = str -> elementTypeSpec.unstringify(str, busSupplier);
         strings.stream()
                 .skip(1) // ignore the type name
-                .map(getElementTypeSpec()::unstringify)
+                .map(converter)
                 .forEach(result::add);
         return result;
     }

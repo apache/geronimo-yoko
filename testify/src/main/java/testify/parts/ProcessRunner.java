@@ -19,7 +19,7 @@ package testify.parts;
 
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-import testify.bus.TypeSpec;
+import testify.bus.key.TypeSpec;
 import testify.streams.BiStream;
 
 import java.io.IOError;

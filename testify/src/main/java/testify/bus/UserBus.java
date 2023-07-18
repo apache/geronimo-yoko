@@ -29,7 +29,6 @@ import java.util.function.Consumer;
 @SuppressWarnings("UnusedReturnValue")
 interface UserBus {
     String user();
-    Bus forUser(String user);
     Bus put(String key, String value);
     boolean hasKey(String key);
     String peek(String key);

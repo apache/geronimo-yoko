@@ -17,8 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
 /**
  * A specialised type spec that handles strings.
  */

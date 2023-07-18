@@ -17,8 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
 import java.lang.reflect.Method;
 
 import static testify.bus.key.MemberSpec.memberToString;

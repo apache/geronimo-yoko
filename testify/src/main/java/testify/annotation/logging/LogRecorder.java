@@ -18,7 +18,7 @@
 package testify.annotation.logging;
 
 import testify.bus.Bus;
-import testify.bus.TypeSpec;
+import testify.bus.key.TypeSpec;
 import testify.bus.key.CollectionSpec;
 import testify.bus.key.IntSpec;
 import testify.bus.key.ListSpec;
