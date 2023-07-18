@@ -37,7 +37,7 @@ This guide will explain and allow you to implement Testify to a Remote Method In
 6. Add the following imports into `IntitialTest.java`:
 
         import testify.bus.Bus;
-        import testify.bus.key.TypeSpec;
+        import testify.bus.key.TypeKey;
         import testify.jupiter.annotation.ConfigurePartRunner;
         import testify.parts.PartRunner;
 
@@ -110,7 +110,7 @@ This guide will explain and allow you to implement Testify to a Remote Method In
 ## How Testify works in InitialTest.java
 
         import testify.bus.Bus;
-        import testify.bus.key.TypeSpec;
+        import testify.bus.key.TypeKey;
         import testify.jupiter.annotation.ConfigurePartRunner;
         import testify.parts.PartRunner;
 

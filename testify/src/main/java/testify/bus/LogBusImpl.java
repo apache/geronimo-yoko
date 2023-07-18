@@ -17,7 +17,7 @@
  */
 package testify.bus;
 
-import testify.bus.key.StringSpec;
+import testify.bus.key.StringKey;
 import testify.util.Stack;
 
 import java.time.Duration;
@@ -64,7 +64,7 @@ class LogBusImpl implements LogBus {
 
     private static final String[] DEFAULT_PATTERNS = {".*"};
 
-    enum LogSpec implements StringSpec {SPEC}
+    enum LogKey implements StringKey {SPEC}
 
     private static final Package MY_PKG = LogBusImpl.class.getPackage();
 
@@ -77,10 +77,10 @@ class LogBusImpl implements LogBus {
                 .map(s -> s + "=" + level)
                 .collect(Collectors.joining(":"));
         // add this new pattern to the existing spec if any
-        String spec = Optional.ofNullable(eventBus.peek(LogSpec.SPEC))
+        String spec = Optional.ofNullable(eventBus.peek(LogKey.SPEC))
                 .map(s -> s + ":" + newSpec)
                 .orElse(newSpec);
-        eventBus.put(LogSpec.SPEC, spec);
+        eventBus.put(LogKey.SPEC, spec);
         System.out.println("### new log spec is " + spec);
         System.out.println();
         System.out.flush();
@@ -141,7 +141,7 @@ class LogBusImpl implements LogBus {
 
     @Override
     public String isLoggingEnabled(TestLogLevel level) {
-        String spec = eventBus.peek(LogSpec.SPEC);
+        String spec = eventBus.peek(LogKey.SPEC);
         if (spec == null) return null;
 
         Class<?> caller = Stack.getCallingClassOutsidePackage(MY_PKG);

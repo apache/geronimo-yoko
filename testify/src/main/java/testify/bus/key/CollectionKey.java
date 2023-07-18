@@ -24,23 +24,22 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.List;
-import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
 /**
- * Transmit a collection of <code>T</code> elements using a {@link TypeSpec}
- * to transmit the elements as strings and a {@link StringListSpec}
+ * Transmit a collection of <code>T</code> elements using a {@link TypeKey}
+ * to transmit the elements as strings and a {@link StringListKey}
  * to transmit the collection as a string.
  * <br>
  * <em>N.B. the runtime collection type must have a public, no-args constructor</em>
  *
  * @param <T> the element type of the collection
  */
-public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> {
-    TypeSpec<T> getElementTypeSpec();
+public interface CollectionKey<C extends Collection<T>, T> extends TypeKey<C> {
+    testify.bus.Key<T> getElementKey();
 
     @Override
     default String stringify(C c) {
@@ -48,9 +47,9 @@ public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> 
         String cTypeName = cType.getName();
         getConstructor(cType); // check there is a suitable constructor
         Stream<String> typeStream = Stream.of(cTypeName);
-        Stream<String> elemStream = c.stream().map(getElementTypeSpec()::stringify);
+        Stream<String> elemStream = c.stream().map(getElementKey()::stringify);
         List<String> stringList = Stream.concat(typeStream, elemStream).collect(toList());
-        return StringListSpec.toString(stringList);
+        return StringListKey.toString(stringList);
     }
 
     static <C> Constructor<C> getConstructor(Class<C> cType) {
@@ -66,7 +65,7 @@ public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> 
 
     @Override
     default C unstringify(String s, Supplier<Bus> busSupplier) {
-        List<String> strings = StringListSpec.toList(s);
+        List<String> strings = StringListKey.toList(s);
         final String cTypeName = strings.get(0);
         final Class<C> cType;
         try {
@@ -83,11 +82,9 @@ public interface CollectionSpec<C extends Collection<T>, T> extends TypeSpec<C> 
         } catch (InstantiationException | IllegalAccessException | InvocationTargetException e) {
             throw new Error("Could not create an instance of " + cTypeName, e);
         }
-        TypeSpec<T> elementTypeSpec = getElementTypeSpec();
-        Function<String, T> converter = str -> elementTypeSpec.unstringify(str, busSupplier);
         strings.stream()
                 .skip(1) // ignore the type name
-                .map(converter)
+                .map(str -> getElementKey().unstringify(str, busSupplier))
                 .forEach(result::add);
         return result;
     }

@@ -17,13 +17,13 @@
  */
 package testify.bus;
 
-import testify.bus.key.StringSpec;
+import testify.bus.key.StringKey;
 
 import java.util.Set;
 
 import static java.util.EnumSet.range;
 
-public enum TestLogLevel implements StringSpec {
+public enum TestLogLevel implements StringKey {
     DEBUG, INFO, DEFAULT, WARN, ERROR;
     public Set<TestLogLevel> andHigher() { return range(this, ERROR); }
     public boolean includes(TestLogLevel level) { return andHigher().contains(level); }

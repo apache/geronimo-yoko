@@ -19,4 +19,3 @@ package testify.bus;
 
 public interface Bus extends SimpleBus, UserBus, EventBus, LogBus {
 }
-

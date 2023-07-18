@@ -17,7 +17,7 @@
  */
 package testify.bus;
 
-import testify.bus.key.TypeSpec;
+import testify.bus.key.TypeKey;
 
 import java.util.function.Supplier;
 
@@ -57,10 +57,10 @@ public interface Key<T> {
      * Implementers should not override this method!
      * It is here to allow an easy method reference that can be a bus consumer.
      */
-    default <K extends Enum<K>& TypeSpec<T>> void announce(Bus b) { b.put((K)this); } // assumes 'this' is an enum
+    default <K extends Enum<K>& TypeKey<T>> void announce(Bus b) { b.put((K)this); } // assumes 'this' is an enum
     /**
      * Implementers should not override this method!
      * It is here to allow an easy method reference that can be a bus function.
      */
-    default <K extends Enum<K>&TypeSpec<T>> T await(Bus b) { return b.get((K)this); } // assumes 'this' is an enum
+    default <K extends Enum<K>& TypeKey<T>> T await(Bus b) { return b.get((K)this); } // assumes 'this' is an enum
 }

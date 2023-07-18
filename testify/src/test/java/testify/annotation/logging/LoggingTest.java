@@ -23,7 +23,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestInstance;
 import testify.annotation.ConfigurePartRunner;
 import testify.annotation.Logging;
-import testify.bus.key.VoidSpec;
+import testify.bus.key.VoidKey;
 import testify.parts.PartRunner;
 
 import java.io.PrintWriter;
@@ -65,7 +65,7 @@ public class LoggingTest {
         Logger.getLogger(logger).finest(msg);
     }
 
-    enum SyncPoint implements VoidSpec {SYNC_POINT, JOIN}
+    enum SyncPoint implements VoidKey {SYNC_POINT, JOIN}
 
     @Test
     void testForkedLogging(PartRunner runner, LogPublisher controller, TestInfo testInfo) {

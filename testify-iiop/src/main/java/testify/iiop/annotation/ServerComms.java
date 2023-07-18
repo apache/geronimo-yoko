@@ -28,12 +28,12 @@ import org.omg.PortableServer.Servant;
 import org.opentest4j.TestAbortedException;
 import testify.annotation.logging.LogPublisher;
 import testify.bus.Bus;
-import testify.bus.key.EnumSpec;
-import testify.bus.key.FieldSpec;
-import testify.bus.key.MemberSpec;
-import testify.bus.key.MethodSpec;
-import testify.bus.key.StringSpec;
-import testify.bus.key.TypeSpec;
+import testify.bus.key.EnumKey;
+import testify.bus.key.FieldKey;
+import testify.bus.key.TypeKey;
+import testify.bus.key.MemberKey;
+import testify.bus.key.MethodKey;
+import testify.bus.key.StringKey;
 import testify.parts.PartRunner;
 import testify.util.Assertions;
 import testify.util.Optionals;
@@ -72,7 +72,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.bus.TestLogLevel.INFO;
-import static testify.bus.key.MemberSpec.memberToString;
+import static testify.bus.key.MemberKey.memberToString;
 import static testify.iiop.annotation.ServerComms.ServerInfo.NAME_SERVICE_URL;
 import static testify.util.FormatUtil.escapeHostForUseInUrl;
 import static testify.util.Reflect.newInstance;
@@ -85,14 +85,14 @@ final class ServerComms implements Serializable {
      * After the initial object copy, all further communications are via the Bus.
      */
     enum ServerOp {START_SERVER, STOP_SERVER, KILL_SERVER}
-    enum ServerInfo implements StringSpec {NAME_SERVICE_URL}
-    private enum ServerRequest implements EnumSpec<ServerOp> {SEND}
-    private enum MethodRequest implements MethodSpec {SEND}
-    private enum FieldRequest implements FieldSpec {INIT}
-    private enum ExportRequest implements MemberSpec {EXPORT}
-    private enum BeginLogging implements TypeSpec<Supplier<Optional<LogPublisher>>> {BEGIN_LOGGING}
-    private enum EndLogging implements TypeSpec<Consumer<LogPublisher>> {END_LOGGING}
-    private enum Result implements TypeSpec<ServerSideException> {RESULT}
+    enum ServerInfo implements StringKey {NAME_SERVICE_URL}
+    private enum ServerRequest implements EnumKey<ServerOp> {SEND}
+    private enum MethodRequest implements MethodKey {SEND}
+    private enum FieldRequest implements FieldKey {INIT}
+    private enum ExportRequest implements MemberKey {EXPORT}
+    private enum BeginLogging implements TypeKey<Supplier<Optional<LogPublisher>>> {BEGIN_LOGGING}
+    private enum EndLogging implements TypeKey<Consumer<LogPublisher>> {END_LOGGING}
+    private enum Result implements TypeKey<ServerSideException> {RESULT}
 
     private static final String REQUEST_COUNT_PREFIX = "Request#";
     private static final Map<UUID, ORB> ORB_MAP = new ConcurrentHashMap<>();

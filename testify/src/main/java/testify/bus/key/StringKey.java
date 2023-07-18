@@ -17,17 +17,10 @@
  */
 package testify.bus.key;
 
-import java.lang.reflect.Method;
-
-import static testify.bus.key.MemberSpec.memberToString;
-import static testify.bus.key.MemberSpec.stringToMember;
-
 /**
- * A specialised type spec that handles {@link Method} objects.
+ * A specialised type spec that handles strings.
  */
-public interface MethodSpec extends TypeSpec<Method> {
-    @Override
-    default String stringify(Method method) { return memberToString(method); }
-    @Override
-    default Method unstringify(String s) { return (Method) stringToMember(s); }
+public interface StringKey extends TypeKey<String> {
+    default String stringify(String s) { return s; }
+    default String unstringify(String s) { return s; }
 }

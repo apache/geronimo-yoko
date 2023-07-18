@@ -18,7 +18,7 @@
 package testify.annotation.logging;
 
 import testify.annotation.Logging;
-import testify.bus.key.TypeSpec;
+import testify.bus.key.TypeKey;
 import testify.io.Stringifiable;
 
 import java.util.Objects;
@@ -26,7 +26,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 final class LogSetting implements Stringifiable {
-    enum Spec implements TypeSpec<LogSetting> { SEND_SETTING }
+    enum Key implements TypeKey<LogSetting> { SEND_SETTING }
 
     private final Level level;
     private final String name;

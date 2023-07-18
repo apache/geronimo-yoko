@@ -46,19 +46,19 @@ import java.util.function.Supplier;
  *
  * @param <T> the type to be converted to and from a string representation
  *
- * @see IntSpec ,
- * @see StringSpec
- * @see EnumSpec
- * @see StringListSpec
- * @see ListSpec
- * @see CollectionSpec
- * @see FieldSpec
- * @see MemberSpec
- * @see MethodSpec
- * @see VoidSpec
+ * @see IntKey ,
+ * @see StringKey
+ * @see EnumKey
+ * @see StringListKey
+ * @see ListKey
+ * @see CollectionKey
+ * @see FieldKey
+ * @see MemberKey
+ * @see MethodKey
+ * @see VoidKey
  */
 @SuppressWarnings("unchecked")
-public interface TypeSpec<T> extends Key<T> {
+public interface TypeKey<T> extends Key<T> {
     /**
      * Implementers are encouraged to override this method to return a human-readable string.
      * @param t the element to convert to a string

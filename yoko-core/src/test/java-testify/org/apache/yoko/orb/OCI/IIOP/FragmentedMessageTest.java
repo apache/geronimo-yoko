@@ -29,7 +29,7 @@ import org.omg.CSIIOP.TransportAddress;
 import org.omg.IOP.TaggedComponent;
 import org.omg.PortableInterceptor.IORInfo;
 import testify.bus.Bus;
-import testify.bus.key.StringSpec;
+import testify.bus.key.StringKey;
 import testify.iiop.TestIORInterceptor;
 import testify.annotation.TraceTestify;
 import testify.iiop.annotation.ConfigureOrb.UseWithOrb;
@@ -57,7 +57,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 public class FragmentedMessageTest {
     interface Echo extends RemoteFunction<String, String> {}
 
-    private enum Keys implements StringSpec{LAST_MSG};
+    private enum Keys implements StringKey {LAST_MSG};
 
     @RemoteImpl
     public static final Echo IMPL = s -> {

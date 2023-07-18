@@ -27,7 +27,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 /**
  * A specialised type spec that handles lists of strings.
  */
-public interface StringListSpec extends TypeSpec<List<String>> {
+public interface StringListKey extends TypeKey<List<String>> {
     default String stringify(List<String> list) { return toString(list); }
     default List<String> unstringify(String s) { return toList(s); }
 

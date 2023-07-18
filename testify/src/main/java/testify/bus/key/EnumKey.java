@@ -22,7 +22,7 @@ import java.util.stream.Stream;
 /**
  * A specialised type spec that handles {@link Enum} objects.
  */
-public interface EnumSpec<E extends Enum<E>> extends TypeSpec<E> {
+public interface EnumKey<E extends Enum<E>> extends TypeKey<E> {
     @Override
     default String stringify(E e) {
         return e.getDeclaringClass().getName() + "#" + e.name();

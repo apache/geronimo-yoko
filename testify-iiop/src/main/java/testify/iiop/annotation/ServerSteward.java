@@ -47,7 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.platform.commons.support.AnnotationSupport.findAnnotation;
 import static testify.annotation.runner.PartRunnerSteward.requirePartRunner;
-import static testify.bus.key.MemberSpec.getMemberEvaluationType;
+import static testify.bus.key.MemberKey.getMemberEvaluationType;
 import static testify.iiop.annotation.OrbSteward.args;
 import static testify.iiop.annotation.OrbSteward.props;
 import static testify.util.Assertions.failf;

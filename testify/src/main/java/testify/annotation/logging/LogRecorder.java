@@ -18,13 +18,13 @@
 package testify.annotation.logging;
 
 import testify.bus.Bus;
-import testify.bus.key.TypeSpec;
-import testify.bus.key.CollectionSpec;
-import testify.bus.key.IntSpec;
-import testify.bus.key.ListSpec;
-import testify.bus.key.StringListSpec;
-import testify.bus.key.StringSpec;
-import testify.bus.key.VoidSpec;
+import testify.bus.key.CollectionKey;
+import testify.bus.key.IntKey;
+import testify.bus.key.TypeKey;
+import testify.bus.key.StringKey;
+import testify.bus.key.ListKey;
+import testify.bus.key.StringListKey;
+import testify.bus.key.VoidKey;
 import testify.io.Stringifiable;
 import testify.parts.ProcessRunner;
 
@@ -49,7 +49,7 @@ import java.util.logging.Logger;
 
 import static java.util.stream.Collectors.toList;
 import static testify.annotation.logging.LogRecorder.IntMessage.REQUEST_ID;
-import static testify.annotation.logging.LogRecorder.LogFormatter.Spec.REQUEST_LOG_RECORDS;
+import static testify.annotation.logging.LogRecorder.LogFormatter.Key.REQUEST_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.SettingsMessage.PUSH_SETTINGS;
 import static testify.annotation.logging.LogRecorder.SettingsStackMessage.INITIALIZE_SETTINGS_STACK;
 import static testify.annotation.logging.LogRecorder.SimpleMessage.CLOSE;
@@ -58,7 +58,7 @@ import static testify.annotation.logging.LogRecorder.StringMessage.HELLO;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_LOG_RECORDS;
 import static testify.annotation.logging.LogRecorder.StringsMessage.REPLY_THREAD_TABLE;
 import static testify.annotation.logging.LogRecorder.SyncPoint.READY_FOR_CLOSE;
-import static testify.annotation.logging.LogRecorder.ThreadFormatter.Spec.REQUEST_THREAD_TABLE;
+import static testify.annotation.logging.LogRecorder.ThreadFormatter.Key.REQUEST_THREAD_TABLE;
 import static testify.streams.Collectors.forbidCombining;
 import static testify.streams.Streams.stream;
 import static testify.util.Queues.drain;
@@ -66,20 +66,20 @@ import static testify.util.Queues.drainInOrder;
 
 @SuppressWarnings("SynchronizationOnLocalVariableOrMethodParameter")
 public class  LogRecorder {
-    enum StringMessage implements StringSpec {HELLO}
-    enum IntMessage implements IntSpec {REQUEST_ID}
-    enum SettingsMessage implements ListSpec<LogSetting> {
+    enum StringMessage implements StringKey {HELLO}
+    enum IntMessage implements IntKey {REQUEST_ID}
+    enum SettingsMessage implements ListKey<LogSetting> {
         PUSH_SETTINGS;
-        public TypeSpec<LogSetting> getElementTypeSpec() { return LogSetting.Spec.SEND_SETTING; }
+        public TypeKey<LogSetting> getElementKey() { return LogSetting.Key.SEND_SETTING; }
     }
-    enum SettingsStackMessage implements CollectionSpec<Deque<List<LogSetting>>, List<LogSetting>> {
+    enum SettingsStackMessage implements CollectionKey<Deque<List<LogSetting>>, List<LogSetting>> {
         INITIALIZE_SETTINGS_STACK;
         @Override
-        public TypeSpec<List<LogSetting>> getElementTypeSpec() { return PUSH_SETTINGS; }
+        public TypeKey<List<LogSetting>> getElementKey() { return PUSH_SETTINGS; }
     }
-    enum SimpleMessage implements TypeSpec<SimpleMessage> {POP_SETTINGS, CLOSE}
-    enum SyncPoint implements VoidSpec {READY_FOR_CLOSE}
-    enum StringsMessage implements StringListSpec {REPLY_THREAD_TABLE, REPLY_LOG_RECORDS };
+    enum SimpleMessage implements TypeKey<SimpleMessage> {POP_SETTINGS, CLOSE}
+    enum SyncPoint implements VoidKey {READY_FOR_CLOSE}
+    enum StringsMessage implements StringListKey {REPLY_THREAD_TABLE, REPLY_LOG_RECORDS };
 
     public static final String INITIAL_BUS_NAME = LogRecorder.class.getName();
     private static final Logger ROOT_LOGGER = Logger.getLogger("");
@@ -160,13 +160,13 @@ public class  LogRecorder {
         dispatchRequestAndWaitForReply(dedicatedBus, INITIALIZE_SETTINGS_STACK, stack);
     }
 
-    private static<K extends Enum<K>&TypeSpec<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType) {
+    private static<K extends Enum<K>& TypeKey<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType) {
         int id = getNextRequestId(bus);
         bus.put(requestType);
         bus.get(String.format(RECEIPT_FORMAT, id));
     }
 
-    private static<K extends Enum<K>&TypeSpec<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType, T requestPayload) {
+    private static<K extends Enum<K>& TypeKey<T>, T> void dispatchRequestAndWaitForReply(Bus bus, K requestType, T requestPayload) {
         final int id = getNextRequestId(bus);
         bus.put(requestType, requestPayload);
         bus.get(String.format(RECEIPT_FORMAT, id));
@@ -236,7 +236,7 @@ public class  LogRecorder {
     }
 
     static class ThreadFormatter implements Function<Thread, String>, Stringifiable {
-        enum Spec implements TypeSpec<ThreadFormatter> {REQUEST_THREAD_TABLE}
+        enum Key implements TypeKey<ThreadFormatter> {REQUEST_THREAD_TABLE}
 
         final int partNameWidth;
         int threadCount;
@@ -282,7 +282,7 @@ public class  LogRecorder {
     }
 
     static class LogFormatter implements Function<LogRecord, String>, Stringifiable {
-        enum Spec implements TypeSpec<LogFormatter> {REQUEST_LOG_RECORDS}
+        enum Key implements TypeKey<LogFormatter> {REQUEST_LOG_RECORDS}
         final long startTime;
         final int partNameWidth;
         transient final String format;

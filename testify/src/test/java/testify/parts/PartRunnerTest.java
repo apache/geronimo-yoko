@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import testify.annotation.RetriedTest;
 import testify.bus.Bus;
-import testify.bus.key.VoidSpec;
+import testify.bus.key.VoidKey;
 import testify.util.function.RawOptional;
 
 import static org.hamcrest.Matchers.is;
@@ -34,7 +34,7 @@ import static testify.parts.PartRunnerTest.SyncPoint.JOIN;
 
 @TestInstance(TestInstance.Lifecycle.PER_METHOD)
 public class PartRunnerTest {
-    enum SyncPoint implements VoidSpec {JOIN}
+    enum SyncPoint implements VoidKey {JOIN}
     public static final Part PRINT_PART_NAME = bus -> RawOptional.of(bus).peek(b -> System.out.printf("Running part \"%s\"%n", b.user())).ifPresent(JOIN::await);
 
     final PartRunner runner = new PartRunnerImpl();

@@ -22,11 +22,11 @@ import java.lang.reflect.Field;
 /**
  * A specialised type spec that handles {@link Field} objects.
  */
-public interface FieldSpec extends TypeSpec<Field> {
+public interface FieldKey extends TypeKey<Field> {
     @Override
     default String stringify(Field field) {
-        return MemberSpec.memberToString(field);
+        return MemberKey.memberToString(field);
     }
     @Override
-    default Field unstringify(String s) { return (Field) MemberSpec.stringToMember(s); }
+    default Field unstringify(String s) { return (Field) MemberKey.stringToMember(s); }
 }
