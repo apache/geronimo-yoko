@@ -23,6 +23,28 @@ jobs:
         distribution: 'adopt'
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
+    - name: Get changed yoko files
+      id: changed-files
+      uses: tj-actions/changed-files@v37
+      with:
+        files: yoko*/
+        files_ignore: yoko*/**/*generated*/**
+    - name: Check for correct copyright in changed Yoko files
+      run: |
+        RC=0
+        echo "Checking copyright in Yoko src files..."
+        for filePath in ${{ steps.changed-files.outputs.all_changed_files }}; do
+          author=$(git log -1 --format="%an" $path)
+          if [[ $author != *"Alan"* ]]; then
+            if grep -Eq "Copyright ([[:digit:]]{4}?) IBM Corporation and | Licensed under the Apache License, Version 2\.0" $filePath; then
+              echo "✅ Copyright OK: $filePath"
+            else
+              echo "❌ Copyright not found in $filePath"
+              RC=1
+            fi
+          fi
+        done
+        exit $RC
     - name: Check copyright Tag in Testify source files
       run: |
         SRC=$(find testify/ -name '*.java')
