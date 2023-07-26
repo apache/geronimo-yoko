@@ -15,21 +15,33 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus.key;
+package testify.util.function;
 
-import testify.bus.TypeSpec;
+import org.opentest4j.AssertionFailedError;
 
-import java.lang.reflect.Method;
+import java.io.Serializable;
 
-import static testify.bus.key.MemberSpec.memberToString;
-import static testify.bus.key.MemberSpec.stringToMember;
+/** Overrides {@link Runnable} to allow exceptions. */
+@FunctionalInterface
+public interface RawRunnable extends Runnable, Serializable {
+    void runRaw() throws Exception;
 
-/**
- * A specialised type spec that handles {@link Method} objects.
- */
-public interface MethodSpec extends TypeSpec<Method> {
     @Override
-    default String stringify(Method method) { return memberToString(method); }
-    @Override
-    default Method unstringify(String s) { return (Method) stringToMember(s); }
+    default void run() {
+        try {
+            runRaw();
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AssertionFailedError("", e);
+        }
+
+    }
+
+    default RawRunnable andThen(RawRunnable after) {
+        return () -> {
+            runRaw();
+            after.runRaw();
+        };
+    }
 }

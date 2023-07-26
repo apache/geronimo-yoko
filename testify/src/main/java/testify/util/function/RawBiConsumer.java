@@ -20,17 +20,17 @@ package testify.util.function;
 import org.opentest4j.AssertionFailedError;
 
 import java.io.Serializable;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
-/** Overrides {@link Consumer} to allow exceptions. */
+/** Overrides {@link BiConsumer} to allow exceptions. */
 @FunctionalInterface
-public interface RawConsumer<T> extends Consumer<T>, Serializable {
-    void acceptRaw(T t) throws Exception;
+public interface RawBiConsumer<T,U> extends BiConsumer<T, U>, Serializable {
+    void acceptRaw(T t, U u) throws Exception;
 
     @Override
-    default void accept(T t) {
+    default void accept(T t, U u) {
         try {
-            acceptRaw(t);
+            acceptRaw(t, u);
         } catch (RuntimeException e) {
             throw e;
         } catch (Exception e) {
@@ -38,12 +38,12 @@ public interface RawConsumer<T> extends Consumer<T>, Serializable {
         }
     }
 
-    default RawConsumer<T> andThen(RawConsumer<? super T> after) {
-        return t -> {
-            acceptRaw(t);
-            after.acceptRaw(t);
+    default RawBiConsumer<T, U> andThen(RawBiConsumer<? super T, ? super U> after) {
+        return (t,u) -> {
+            acceptRaw(t, u);
+            after.acceptRaw(t, u);
         };
     }
 
-    default RawRunnable curry(T t) { return () -> acceptRaw(t); }
+    default RawConsumer<U> curry(T t) { return u -> acceptRaw(t, u); }
 }

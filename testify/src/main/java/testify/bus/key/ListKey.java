@@ -17,34 +17,36 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
+import testify.bus.Bus;
+import testify.bus.Key;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 import static java.util.stream.Collectors.toList;
 
 /**
- * Transmit a list of <code>T</code> elements using a {@link TypeSpec}
- * to transmit the elements as strings and a {@link StringListSpec}
+ * Transmit a list of <code>T</code> elements using a {@link TypeKey}
+ * to transmit the elements as strings and a {@link StringListKey}
  * to transmit the list as a string.
  * @param <T> the element type of the list
  */
-public interface ListSpec<T> extends TypeSpec<List<T>> {
-    TypeSpec<T> getElementTypeSpec();
+public interface ListKey<T> extends TypeKey<List<T>> {
+    Key<T> getElementKey();
 
     @Override
     default String stringify(List<T> list) {
-        return StringListSpec.toString(list
+        return StringListKey.toString(list
                 .stream()
-                .map(getElementTypeSpec()::stringify)
+                .map(getElementKey()::stringify)
                 .collect(toList()));
     }
 
     @Override
-    default List<T> unstringify(String s) {
-        return StringListSpec.toList(s)
+    default List<T> unstringify(String s, Supplier<Bus> busSupplier) {
+        return StringListKey.toList(s)
                 .stream()
-                .map(getElementTypeSpec()::unstringify)
+                .map(str -> getElementKey().unstringify(str, busSupplier))
                 .collect(toList());
     }
 }

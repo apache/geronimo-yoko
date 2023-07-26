@@ -19,7 +19,7 @@ package testify.parts;
 
 import testify.bus.Bus;
 import testify.bus.InterProcessBus;
-import testify.bus.TypeSpec;
+import testify.bus.key.TypeKey;
 import testify.streams.BiStream;
 
 import java.io.IOError;
@@ -38,7 +38,7 @@ public class ProcessRunner implements Runner<Process>{
 
     public ProcessRunner(String...jvmArgs) {this.jvmArgs = jvmArgs;}
 
-    private enum Part implements TypeSpec<NamedPart> {NAMED_PART}
+    private enum Part implements TypeKey<NamedPart> {NAMED_PART}
     private static final List<String> PROPERTIES_TO_COPY = Collections.singletonList("java.endorsed.dirs");
 
     /**

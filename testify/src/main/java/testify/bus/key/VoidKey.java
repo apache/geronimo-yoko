@@ -17,18 +17,11 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
-import java.lang.reflect.Field;
-
 /**
- * A specialised type spec that handles {@link Field} objects.
+ * A specialised type spec that does not support any value (other than <code>null</code>).
+ * This is intended to be used as a signal in itself, e.g. for syncing between threads.
  */
-public interface FieldSpec extends TypeSpec<Field> {
-    @Override
-    default String stringify(Field field) {
-        return MemberSpec.memberToString(field);
-    }
-    @Override
-    default Field unstringify(String s) { return (Field) MemberSpec.stringToMember(s); }
+public interface VoidKey extends TypeKey<Void> {
+    default String stringify(Void v) { return "null"; }
+    default Void unstringify(String s) { return null; }
 }

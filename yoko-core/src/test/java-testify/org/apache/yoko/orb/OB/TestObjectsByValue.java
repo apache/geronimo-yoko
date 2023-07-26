@@ -87,14 +87,14 @@ import test.obv.TestVarStruct;
 import test.obv.TestVarUnion;
 import test.obv.ValueBoxFactories;
 import testify.bus.Bus;
-import testify.bus.key.StringSpec;
+import testify.bus.key.StringKey;
 import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 
 import static org.junit.Assert.assertTrue;
-import static testify.iiop.annotation.ConfigureServer.Separation.COLLOCATED;
+import static testify.iiop.annotation.ConfigureServer.Separation.INTER_PROCESS;
 
-@ConfigureServer(separation = COLLOCATED)
+@ConfigureServer(separation = INTER_PROCESS)
 public class TestObjectsByValue {
     @ConfigureServer(serverOrb = @ConfigureOrb(args = "-OAthreaded"), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
     public static class TestObjectsByValueThreaded extends TestObjectsByValue {}
@@ -107,7 +107,7 @@ public class TestObjectsByValue {
 
     private static TestOBV stub;
 
-    enum Ior implements StringSpec {TEST_OBV}
+    enum Ior implements StringKey {TEST_OBV}
 
     @ConfigureServer.BeforeServer
     public static void installValueFactoriesOnServer(ORB orb, Bus bus) {

@@ -15,7 +15,12 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-public interface Bus extends SimpleBus, UserBus, EventBus, LogBus {
+/**
+ * A specialised type spec that handles strings.
+ */
+public interface StringKey extends TypeKey<String> {
+    default String stringify(String s) { return s; }
+    default String unstringify(String s) { return s; }
 }

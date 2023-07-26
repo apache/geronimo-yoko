@@ -18,10 +18,10 @@
 package acme;
 
 import testify.bus.Bus;
-import testify.bus.key.StringSpec;
+import testify.bus.key.StringKey;
 
 public class EchoImpl implements Echo {
-    private enum BusKey implements StringSpec {MESSAGE}
+    private enum BusKey implements StringKey {MESSAGE}
     final Bus bus;
 
     public EchoImpl(Bus bus) {this.bus = bus;}

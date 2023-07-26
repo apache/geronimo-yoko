@@ -24,7 +24,7 @@ This guide will explain and allow you to implement Testify to a Remote Method In
             testRuntimeOnly 'org.junit.platform:junit-platform-runner:1.8.2'
             testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
         }
-    
+
     The dependency will be added to the project and the Testify library will be available for use.
 
 
@@ -37,7 +37,7 @@ This guide will explain and allow you to implement Testify to a Remote Method In
 6. Add the following imports into `IntitialTest.java`:
 
         import testify.bus.Bus;
-        import testify.bus.TypeSpec;
+        import testify.bus.key.TypeKey;
         import testify.jupiter.annotation.ConfigurePartRunner;
         import testify.parts.PartRunner;
 
@@ -98,7 +98,7 @@ This guide will explain and allow you to implement Testify to a Remote Method In
             static int port;
 
 11. You are now ready to build your application using gradle and see how Testify has helped testing. In the start` repository, run either of following commands:
-    
+
     - To build with tests use:
 
             ./gradlew build
@@ -110,11 +110,11 @@ This guide will explain and allow you to implement Testify to a Remote Method In
 ## How Testify works in InitialTest.java
 
         import testify.bus.Bus;
-        import testify.bus.TypeSpec;
+        import testify.bus.key.TypeKey;
         import testify.jupiter.annotation.ConfigurePartRunner;
         import testify.parts.PartRunner;
 
-These imports enable Testify in your testing. The annotation you are using from Testify is `@ConfigurePartRunner`. This annoation allows us to make use of runner.`useNewJVMWhenForking()` and `runner.fork()`. These runners allow you to run methods from your app/project within the testing. The `@ConfigurePartRunner `annotation is further explained in the [ConfigurePartRunner](/pages/annotations/part-runner) section.
+These imports enable Testify in your testing. The annotation you are using from Testify is `@ConfigurePartRunner`. This annotation allows us to make use of `runner.useNewJVMWhenForking()` and `runner.fork()`. These runners allow you to run methods from your app/project within the testing. The `@ConfigurePartRunner `annotation is further explained in the [ConfigurePartRunner](/pages/annotations/part-runner) section.
 
 In `IntitialTest.java` the tests are sending and getting events from methods using the [bus](/pages/bus/bus-concept). Thanks to these events you are making sure that a new instruction is not run until the previous one complete and the correct values are shared across processes/threads. This is done using TypeSpecs which are Testify specific. TypeSpecs are enums that you can call. In this case these are the events. Thanks to these TypeSpecs you are able to know:
 

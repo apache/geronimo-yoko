@@ -17,7 +17,6 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
 import testify.util.Assertions;
 
 import java.lang.reflect.Constructor;
@@ -32,7 +31,7 @@ import static testify.util.Assertions.failf;
 /**
  * A specialised type spec that handles {@link Member} objects.
  */
-public interface MemberSpec extends TypeSpec<Member> {
+public interface MemberKey extends TypeKey<Member> {
     static Class<?> getMemberEvaluationType(Member m) {
         if (m instanceof Field) return ((Field) m).getType();
         if (m instanceof Method) return ((Method) m).getReturnType();
@@ -71,7 +70,7 @@ public interface MemberSpec extends TypeSpec<Member> {
         if (parts[1].equals("<init>")) {
             Class<?>[] parameterTypes = Stream.of(parts)
                     .skip(2) // ignore class name and method name
-                    .map(MemberSpec::findClass)
+                    .map(MemberKey::findClass)
                     .toArray(Class[]::new);
             try {
                 return declaringClass.getDeclaredConstructor(parameterTypes);
@@ -84,7 +83,7 @@ public interface MemberSpec extends TypeSpec<Member> {
         String methodName = parts[1];
         Class<?>[] parameterTypes = Stream.of(parts)
                 .skip(2) // ignore class name and method name
-                .map(MemberSpec::findClass)
+                .map(MemberKey::findClass)
                 .toArray(Class[]::new);
         try {
             return declaringClass.getDeclaredMethod(methodName, parameterTypes);

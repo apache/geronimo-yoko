@@ -17,14 +17,12 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
-
 import static java.lang.Integer.parseInt;
 
 /**
  * A specialised type spec that handles {@link Integer} objects.
  */
-public interface IntSpec extends TypeSpec<Integer> {
+public interface IntKey extends TypeKey<Integer> {
     default String stringify(Integer integer) { return String.valueOf(integer); }
     default Integer unstringify(String s) { return null == s || "null".equals(s) ? null : parseInt(s); }
 }

@@ -23,7 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import testify.annotation.RetriedTest;
 import testify.bus.Bus;
-import testify.bus.key.VoidSpec;
+import testify.bus.key.VoidKey;
 import testify.parts.PartRunner;
 import testify.util.function.RawOptional;
 
@@ -274,5 +274,5 @@ public class LogCommunicationsTest {
 
     static void forkAndJoin(Runnable runnable) { RawOptional.of(runnable).map(Thread::new).peek(Thread::start).ifPresent(Thread::join); }
 
-    enum SyncPoint implements VoidSpec {SYNC_POINT_1, SYNC_POINT_2, SYNC_POINT_3, SYNC_POINT_4}
+    enum SyncPoint implements VoidKey {SYNC_POINT_1, SYNC_POINT_2, SYNC_POINT_3, SYNC_POINT_4}
 }

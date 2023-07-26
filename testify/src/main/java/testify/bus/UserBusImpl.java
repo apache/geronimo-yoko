@@ -47,8 +47,7 @@ class UserBusImpl implements UserBus {
     @Override
     public String user() { return user; }
 
-    @Override
-    public Bus forUser(String user) { return simpleBus.forUser(this.user); }
+    Bus getTheBus() { return simpleBus.forUser(user); }
 
     private String transform(String key) { return key == null ? null : (user + DELIMITER + validate(key)); }
 

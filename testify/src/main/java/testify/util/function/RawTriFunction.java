@@ -15,14 +15,29 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus.key;
+package testify.util.function;
 
-import testify.bus.TypeSpec;
+import org.opentest4j.AssertionFailedError;
 
-/**
- * A specialised type spec that handles strings.
- */
-public interface StringSpec extends TypeSpec<String> {
-    default String stringify(String s) { return s; }
-    default String unstringify(String s) { return s; }
+import java.io.Serializable;
+
+/** A three-argument function. */
+@FunctionalInterface
+public interface RawTriFunction<T,U,V,R> extends Serializable {
+    R applyRaw(T t, U u, V v) throws Exception;
+
+    default R apply(T t, U u, V v) {
+        try {
+            return applyRaw(t, u, v);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new AssertionFailedError("", e);
+        }
+
+    }
+
+    default RawBiFunction<U,V,R> curry(T t) {
+        return (u,v) -> applyRaw(t, u, v);
+    }
 }

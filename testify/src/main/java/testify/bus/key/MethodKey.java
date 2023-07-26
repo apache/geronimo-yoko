@@ -17,13 +17,17 @@
  */
 package testify.bus.key;
 
-import testify.bus.TypeSpec;
+import java.lang.reflect.Method;
+
+import static testify.bus.key.MemberKey.memberToString;
+import static testify.bus.key.MemberKey.stringToMember;
 
 /**
- * A specialised type spec that does not support any value (other than <code>null</code>).
- * This is intended to be used as a signal in itself, e.g. for syncing between threads.
+ * A specialised type spec that handles {@link Method} objects.
  */
-public interface VoidSpec extends TypeSpec<Void> {
-    default String stringify(Void v) { return "null"; }
-    default Void unstringify(String s) { return null; }
+public interface MethodKey extends TypeKey<Method> {
+    @Override
+    default String stringify(Method method) { return memberToString(method); }
+    @Override
+    default Method unstringify(String s) { return (Method) stringToMember(s); }
 }

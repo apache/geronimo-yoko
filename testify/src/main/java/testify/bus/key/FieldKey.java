@@ -15,7 +15,18 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package testify.bus;
+package testify.bus.key;
 
-public interface Bus extends SimpleBus, UserBus, EventBus, LogBus {
+import java.lang.reflect.Field;
+
+/**
+ * A specialised type spec that handles {@link Field} objects.
+ */
+public interface FieldKey extends TypeKey<Field> {
+    @Override
+    default String stringify(Field field) {
+        return MemberKey.memberToString(field);
+    }
+    @Override
+    default Field unstringify(String s) { return (Field) MemberKey.stringToMember(s); }
 }
