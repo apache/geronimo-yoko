@@ -34,16 +34,20 @@ jobs:
         RC=0
         echo "Checking copyright in Yoko src files..."
         for filePath in ${{ steps.changed-files.outputs.all_changed_files }}; do
-          author=$(git log -1 --format="%an" $path)
-          if [[ $author != *"Alan"* ]]; then
-            if grep -Eq "Copyright ([[:digit:]]{4}?) IBM Corporation and | Licensed under the Apache License, Version 2\.0" $filePath; then
+          export yearModified=`git log -1 --pretty=format:%cd --date=format:%Y -- "$filePath"`
+          if grep -Eq "Licensed under the Apache License, Version 2\.0" $filePath; then
+            if grep -Eq "Copyright $yearModified IBM Corporation and" $filePath; then
               echo "✅ Copyright OK: $filePath"
             else
-              echo "❌ Copyright not found in $filePath"
+              existingModifiedYear=$(awk '/Copyright ([[:digit:]]{4}?) IBM Corporation and/ {print $3}' $filePath)
+              echo "🔴 Existing copyright year $existingModifiedYear does not match last modification year $yearModified: $filePath"
               RC=1
             fi
+          else
+            echo "❌ Copyright not found: $filePath"
+            RC=1
           fi
-        done
+          done
         exit $RC
     - name: Check copyright Tag in Testify source files
       run: |
