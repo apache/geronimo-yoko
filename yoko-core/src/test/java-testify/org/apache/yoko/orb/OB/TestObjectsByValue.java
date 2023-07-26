@@ -92,9 +92,9 @@ import testify.iiop.annotation.ConfigureOrb;
 import testify.iiop.annotation.ConfigureServer;
 
 import static org.junit.Assert.assertTrue;
-import static testify.iiop.annotation.ConfigureServer.Separation.COLLOCATED;
+import static testify.iiop.annotation.ConfigureServer.Separation.INTER_PROCESS;
 
-@ConfigureServer(separation = COLLOCATED)
+@ConfigureServer(separation = INTER_PROCESS)
 public class TestObjectsByValue {
     @ConfigureServer(serverOrb = @ConfigureOrb(args = "-OAthreaded"), clientOrb = @ConfigureOrb(args = "-ORBThreaded"))
     public static class TestObjectsByValueThreaded extends TestObjectsByValue {}
