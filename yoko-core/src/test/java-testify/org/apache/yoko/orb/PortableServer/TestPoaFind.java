@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 IBM Corporation and others.
+ * Copyright 2023 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,32 +15,38 @@
  *
  * SPDX-License-Identifier: Apache-2.0
  */
-package test.poa;
+package org.apache.yoko.orb.PortableServer;
+
+import org.junit.jupiter.api.Test;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.Policy;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAManager;
+import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
+import org.omg.PortableServer.POAPackage.AdapterNonExistent;
+import org.omg.PortableServer.POAPackage.InvalidPolicy;
+import testify.iiop.annotation.ConfigureOrb;
 
 import static org.junit.Assert.assertTrue;
 
-import java.util.Properties;
-
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
-import org.omg.PortableServer.POAPackage.*;
-
-public final class TestFind extends test.common.TestBase {
-    static void run(ORB orb, POA root) {
+@ConfigureOrb
+public class TestPoaFind {
+    @Test
+    public void testFind(ORB orb, POA rootPoa) {
         org.omg.CORBA.Object obj;
         Policy[] policies = new Policy[0];
         POA poa, parent, poa2, poa3;
         POAManager mgr;
         String str;
 
-        POAManager rootMgr = root.the_POAManager();
+        POAManager rootMgr = rootPoa.the_POAManager();
         assertTrue(rootMgr != null);
 
         //
         // Create child POA
         //
         try {
-            poa = root.create_POA("poa1", rootMgr, policies);
+            poa = rootPoa.create_POA("poa1", rootMgr, policies);
         } catch (InvalidPolicy ex) {
             throw new RuntimeException();
         } catch (AdapterAlreadyExists ex) {
@@ -51,7 +57,7 @@ public final class TestFind extends test.common.TestBase {
         // Test: find_POA
         //
         try {
-            poa2 = root.find_POA("poa1", false);
+            poa2 = rootPoa.find_POA("poa1", false);
         } catch (AdapterNonExistent ex) {
             throw new RuntimeException();
         }
@@ -62,7 +68,7 @@ public final class TestFind extends test.common.TestBase {
         // Test: AdapterNonExistent exception
         //
         try {
-            poa2 = root.find_POA("poaX", false);
+            poa2 = rootPoa.find_POA("poaX", false);
             assertTrue(false); // find_POA should not have succeeded
         } catch (AdapterNonExistent ex) {
             // expected
@@ -72,7 +78,7 @@ public final class TestFind extends test.common.TestBase {
         // Create child POA
         //
         try {
-            poa2 = root.create_POA("poa2", rootMgr, policies);
+            poa2 = rootPoa.create_POA("poa2", rootMgr, policies);
         } catch (InvalidPolicy ex) {
             throw new RuntimeException();
         } catch (AdapterAlreadyExists ex) {
@@ -83,54 +89,12 @@ public final class TestFind extends test.common.TestBase {
         // Test: Confirm parent knows about child
         //
         try {
-            poa3 = root.find_POA("poa2", false);
+            poa3 = rootPoa.find_POA("poa2", false);
         } catch (AdapterNonExistent ex) {
             throw new RuntimeException();
         }
 
         assertTrue(poa3 != null);
         assertTrue(poa3._is_equivalent(poa2));
-    }
-
-    public static void main(String[] args) {
-        java.util.Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
-
-        int status = 0;
-        ORB orb = null;
-
-        try {
-            //
-            // Create ORB
-            //
-            orb = ORB.init(args, props);
-
-            POA root = TestUtil.GetRootPOA(orb);
-
-            //
-            // Run the test
-            //
-            System.out.print("Testing POA::find_POA... ");
-            System.out.flush();
-            run(orb, root);
-            System.out.println("Done!");
-        } catch (SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
     }
 }

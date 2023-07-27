@@ -52,7 +52,7 @@ public class TestPoaActivate {
     private static Test_impl servant2;
 
     @BeforeAll
-    private static void setup(ORB orb, POA rootPoa) throws Exception {
+    static void setup(ORB orb, POA rootPoa) throws Exception {
         rootPoa.the_POAManager().activate();
         servant1 = new Test_impl(orb, "obj1", false);
         servant2 = new Test_impl(orb, "obj2", false);

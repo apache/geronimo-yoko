@@ -20,7 +20,6 @@ package test.poa;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
-import java.util.Properties;
 
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
@@ -1052,7 +1051,7 @@ public final class TestMisc extends test.common.TestBase {
         poa.destroy(true, true);
     }
 
-    static void runtests(ORB orb, POA root) {
+    public static void runtests(ORB orb, POA root) {
         TestCreateReference(orb, root);
         TestServantToId(orb, root);
         TestIdToServant(orb, root);
@@ -1062,63 +1061,4 @@ public final class TestMisc extends test.common.TestBase {
         TestReferenceToId(orb, root);
     }
 
-    public static void main(String[] args) {
-        java.util.Properties props = new Properties();
-        props.putAll(System.getProperties());
-        props.put("org.omg.CORBA.ORBClass", "org.apache.yoko.orb.CORBA.ORB");
-        props.put("org.omg.CORBA.ORBSingletonClass",
-                "org.apache.yoko.orb.CORBA.ORBSingleton");
-
-        int status = 0;
-        ORB orb = null;
-
-        try {
-            //
-            // Create ORB
-            //
-            orb = ORB.init(args, props);
-
-            POA root = TestUtil.GetRootPOA(orb);
-
-            System.out.print("Testing miscellaneous POA functions... ");
-            System.out.flush();
-
-            //
-            // Run the tests using the root POA
-            //
-            runtests(orb, root);
-
-            //
-            // Create a child POA and run the tests again using the
-            // child as the root
-            //
-            Policy[] policies = new Policy[0];
-            POAManager manager = root.the_POAManager();
-            POA child = null;
-            try {
-                child = root.create_POA("child", manager, policies);
-            } catch (AdapterAlreadyExists ex) {
-                throw new RuntimeException();
-            } catch (InvalidPolicy ex) {
-                throw new RuntimeException();
-            }
-            runtests(orb, child);
-
-            System.out.println("Done!");
-        } catch (SystemException ex) {
-            ex.printStackTrace();
-            status = 1;
-        }
-
-        if (orb != null) {
-            try {
-                orb.destroy();
-            } catch (SystemException ex) {
-                ex.printStackTrace();
-                status = 1;
-            }
-        }
-
-        System.exit(status);
-    }
 }

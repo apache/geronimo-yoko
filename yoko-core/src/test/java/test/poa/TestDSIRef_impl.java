@@ -22,7 +22,7 @@ import org.omg.PortableServer.*;
 import org.omg.PortableServer.POAPackage.*;
 import org.omg.PortableServer.ServantLocatorPackage.*;
 
-final class TestDSIRef_impl extends
+public final class TestDSIRef_impl extends
         org.omg.PortableServer.DynamicImplementation {
     private ORB orb_;
 
@@ -40,7 +40,7 @@ final class TestDSIRef_impl extends
             throw new test.common.TestException();
     }
 
-    TestDSIRef_impl(ORB orb, String name, boolean compare) {
+    public TestDSIRef_impl(ORB orb, String name, boolean compare) {
         orb_ = orb;
         name_ = name;
         compare_ = compare;
