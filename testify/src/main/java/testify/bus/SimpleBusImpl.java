@@ -45,6 +45,7 @@ import static java.lang.management.ManagementFactory.getThreadMXBean;
 import static java.util.Arrays.stream;
 import static java.util.Collections.synchronizedMap;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 /**
@@ -165,11 +166,14 @@ class SimpleBusImpl implements SimpleBus, EasyCloseable {
     @Override
     public void easyClose() throws Exception {
         threadPool.shutdown();
-        boolean terminated = threadPool.awaitTermination(5, SECONDS);
-        if (terminated) return;
+        if (threadPool.awaitTermination(5, SECONDS)) return;
         List<?> list = threadPool.shutdownNow();
+        if (threadPool.awaitTermination(200, MILLISECONDS)) return;
+        String threadDump = dumpAllThreads();
+        // Check whether it terminated while dumping threads...
         if (threadPool.isTerminated()) return;
-        throw new Error(String.format("Unable to shut down thread pool%nUnstarted work: %s%nThread dump follows:%n%s", list, dumpAllThreads()));
+        // No, it really wouldn't shut down, so the thread dump we collected earlier MUST have offending thread info
+        throw new Error(String.format("Unable to shut down thread pool%nUnstarted work: %s%nThread dump follows:%n%s", list, threadDump));
     }
 
     private static String dumpAllThreads() {
