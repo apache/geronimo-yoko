@@ -19,6 +19,7 @@ package test.poa;
 
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.Properties;
 
 import org.omg.CORBA.*;
@@ -96,7 +97,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(!TestUtil.Compare(id1, id2));
+        assertTrue(!Arrays.equals(id1, id2));
 
         //
         // Test: create_reference_with_id using a system-generated ID
@@ -132,7 +133,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id1, tmpid));
+        assertTrue(Arrays.equals(id1, tmpid));
         id2 = ("id2").getBytes();
         obj = user.create_reference_with_id(id2, "IDL:Test:1.0");
         assertTrue(obj != null);
@@ -143,7 +144,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id2, tmpid));
+        assertTrue(Arrays.equals(id2, tmpid));
 
         user.destroy(true, true);
         system.destroy(true, true);
@@ -251,7 +252,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id1, tmpid));
+        assertTrue(Arrays.equals(id1, tmpid));
 
         //
         // Test: servant_to_id (IMPLICIT_ACTIVATION) - servant1 should
@@ -276,7 +277,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id1, tmpid));
+        assertTrue(Arrays.equals(id1, tmpid));
 
         //
         // Test: Implicitly activating servant2 should produce a new ID
@@ -288,7 +289,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        assertTrue(!TestUtil.Compare(id1, id2));
+        assertTrue(!Arrays.equals(id1, id2));
 
         //
         // Test: servant_to_id (IMPLICIT_ACTIVATION, MULTIPLE_ID) - servant1
@@ -312,7 +313,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (ServantNotActive ex) {
             throw new RuntimeException();
         }
-        assertTrue(!TestUtil.Compare(id1, tmpid));
+        assertTrue(!Arrays.equals(id1, tmpid));
 
         unique.destroy(true, true);
         implicit.destroy(true, true);
@@ -586,7 +587,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id1, tmpid1));
+        assertTrue(Arrays.equals(id1, tmpid1));
 
         //
         // Test: servant_to_reference (IMPLICIT_ACTIVATION) - servant1 should
@@ -627,7 +628,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(Arrays.equals(tmpid1, tmpid2));
 
         //
         // Test: Implicitly activating servant2 should produce a new ID
@@ -647,7 +648,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        assertTrue(!TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(!Arrays.equals(tmpid1, tmpid2));
 
         //
         // Test: servant_to_reference (IMPLICIT_ACTIVATION, MULTIPLE_ID) -
@@ -687,7 +688,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongAdapter ex) {
             throw new RuntimeException();
         }
-        assertTrue(!TestUtil.Compare(tmpid1, tmpid2));
+        assertTrue(!Arrays.equals(tmpid1, tmpid2));
 
         unique.destroy(true, true);
         implicit.destroy(true, true);
@@ -769,7 +770,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id1, tmpid));
+        assertTrue(Arrays.equals(id1, tmpid));
 
         //
         // Test: servant_to_reference
@@ -789,7 +790,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(id2, tmpid));
+        assertTrue(Arrays.equals(id2, tmpid));
 
         retain.destroy(true, true);
     }
@@ -1024,7 +1025,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(tmpid, id1));
+        assertTrue(Arrays.equals(tmpid, id1));
         obj = poa.create_reference_with_id(id2, "IDL:Test:1.0");
         try {
             tmpid = poa.reference_to_id(obj);
@@ -1033,7 +1034,7 @@ public final class TestMisc extends test.common.TestBase {
         } catch (WrongPolicy ex) {
             throw new RuntimeException();
         }
-        assertTrue(TestUtil.Compare(tmpid, id2));
+        assertTrue(Arrays.equals(tmpid, id2));
 
         //
         // Test: WrongAdapter exception

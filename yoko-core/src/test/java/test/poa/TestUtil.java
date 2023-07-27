@@ -47,17 +47,4 @@ final class TestUtil {
 
         return root;
     }
-
-    static boolean Compare(byte[] id1, byte[] id2) {
-        //
-        // TODO: efficient method to doing this?
-        //
-        if (id1.length != id2.length)
-            return false;
-        for (int i = 0; i < id1.length; i++)
-            if (id1[i] != id2[i])
-                return false;
-        return true;
-        // return id1.equals(id2);
-    }
 }

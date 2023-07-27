@@ -20,7 +20,7 @@ package test.poa;
 import org.omg.CORBA.*;
 import org.omg.PortableServer.*;
 
-final class Test_impl extends TestPOA {
+public final class Test_impl extends TestPOA {
     //
     // From TestBase (no multiple inheritance)
     //
@@ -37,7 +37,7 @@ final class Test_impl extends TestPOA {
 
     private boolean compare_;
 
-    Test_impl(ORB orb, String name, boolean compare) {
+    public Test_impl(ORB orb, String name, boolean compare) {
         name_ = name;
         compare_ = compare;
 
