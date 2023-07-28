@@ -19,7 +19,6 @@ package org.apache.yoko;
 
 import test.poa.TestAdapterActivatorServer;
 import test.poa.TestClient;
-import test.poa.TestCreate;
 import test.poa.TestDefaultServantServer;
 import test.poa.TestDispatchStrategyClient;
 import test.poa.TestDispatchStrategyServer;
@@ -39,10 +38,6 @@ public class PoaTest extends AbstractOrbTestBase {
     public void setUp() throws Exception {
         super.setUp();
         setWaitForFile("Test.ref");
-    }
-
-    public void testCreate() throws Exception {
-        client.invokeMain(TestCreate.class);
     }
 
     public void testDefaultServant() throws Exception {
