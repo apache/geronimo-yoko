@@ -18,83 +18,31 @@
 package org.apache.yoko.orb.PortableServer;
 
 import org.junit.jupiter.api.Test;
-import org.omg.CORBA.ORB;
 import org.omg.CORBA.Policy;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManager;
-import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
 import org.omg.PortableServer.POAPackage.AdapterNonExistent;
-import org.omg.PortableServer.POAPackage.InvalidPolicy;
 import testify.iiop.annotation.ConfigureOrb;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @ConfigureOrb
 public class TestPoaFind {
     @Test
-    public void testFind(ORB orb, POA rootPoa) {
-        org.omg.CORBA.Object obj;
-        Policy[] policies = new Policy[0];
-        POA poa, parent, poa2, poa3;
-        POAManager mgr;
-        String str;
-
+    void testFind(POA rootPoa) throws Exception {
         POAManager rootMgr = rootPoa.the_POAManager();
         assertTrue(rootMgr != null);
 
-        //
         // Create child POA
-        //
-        try {
-            poa = rootPoa.create_POA("poa1", rootMgr, policies);
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        }
+        POA poa = rootPoa.create_POA("poa1", rootMgr, new Policy[]{});
 
-        //
         // Test: find_POA
-        //
-        try {
-            poa2 = rootPoa.find_POA("poa1", false);
-        } catch (AdapterNonExistent ex) {
-            throw new RuntimeException();
-        }
+        POA poa2 = rootPoa.find_POA("poa1", false);
         assertTrue(poa2 != null);
         assertTrue(poa2._is_equivalent(poa));
 
-        //
         // Test: AdapterNonExistent exception
-        //
-        try {
-            poa2 = rootPoa.find_POA("poaX", false);
-            assertTrue(false); // find_POA should not have succeeded
-        } catch (AdapterNonExistent ex) {
-            // expected
-        }
-
-        //
-        // Create child POA
-        //
-        try {
-            poa2 = rootPoa.create_POA("poa2", rootMgr, policies);
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        }
-
-        //
-        // Test: Confirm parent knows about child
-        //
-        try {
-            poa3 = rootPoa.find_POA("poa2", false);
-        } catch (AdapterNonExistent ex) {
-            throw new RuntimeException();
-        }
-
-        assertTrue(poa3 != null);
-        assertTrue(poa3._is_equivalent(poa2));
+        assertThrows(AdapterNonExistent.class, () -> rootPoa.find_POA("poaX", false));
     }
 }
