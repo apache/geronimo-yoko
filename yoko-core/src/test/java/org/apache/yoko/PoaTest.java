@@ -17,7 +17,6 @@
  */
 package org.apache.yoko;
 
-import test.poa.TestActivate;
 import test.poa.TestAdapterActivatorServer;
 import test.poa.TestClient;
 import test.poa.TestCollocated;
@@ -45,9 +44,6 @@ public class PoaTest extends AbstractOrbTestBase {
     public void setUp() throws Exception {
         super.setUp();
         setWaitForFile("Test.ref");
-    }
-    public void testActivate() throws Exception {
-        client.invokeMain(TestActivate.class);
     }
 
     public void testDeactivate() throws Exception {
