@@ -46,8 +46,8 @@ public class TestPoaDeactivate {
     // should not complete for some time, since it should wait for all
     // outstanding method calls to complete.
     @Test
-    public void testDeactivateWaitsForMethodCompletion(ORB orb, POA rootPoa) throws Exception {
-        Test_impl impl = new Test_impl(rootPoa);
+    public void testDeactivateWaitsForMethodCallCompletion(ORB orb, POA rootPoa) throws Exception {
+        Test_impl1 impl = new Test_impl1(rootPoa);
         test.poa.Test t = impl._this(orb);
         byte[] oid = rootPoa.servant_to_id(impl);
         Thread thr = new LongCaller(t);
@@ -70,11 +70,11 @@ public class TestPoaDeactivate {
         rootPoa.deactivate_object(oid);
     }
 
-    final static class Test_impl extends TestPOA {
+    final static class Test_impl1 extends TestPOA {
         private final POA poa;
         private boolean called = false;
         private boolean finished = false;
-        Test_impl(POA poa) {
+        Test_impl1(POA poa) {
             this.poa = poa;
         }
 
