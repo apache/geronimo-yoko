@@ -75,7 +75,7 @@ public class TestPoaCreate {
     @Test
     void testCreateChildOfChildPoa(POA rootPoa) throws Exception{
         // Create another child of root POA
-        POA poa = rootPoa.create_POA("poa", rootMgr, new Policy[]{});
+        POA poa = rootPoa.create_POA("rootPoa", rootMgr, new Policy[]{});
 
         // Test: POAManager should be the same as the root's manager
         POAManager mgr = poa.the_POAManager();
