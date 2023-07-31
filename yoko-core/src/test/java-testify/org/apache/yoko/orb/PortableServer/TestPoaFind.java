@@ -24,6 +24,7 @@ import org.omg.PortableServer.POAManager;
 import org.omg.PortableServer.POAPackage.AdapterNonExistent;
 import testify.iiop.annotation.ConfigureOrb;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -32,14 +33,14 @@ public class TestPoaFind {
     @Test
     void testFind(POA rootPoa) throws Exception {
         POAManager rootMgr = rootPoa.the_POAManager();
-        assertTrue(rootMgr != null);
+        assertNotNull(rootMgr);
 
         // Create child POA
         POA poa = rootPoa.create_POA("poa1", rootMgr, new Policy[]{});
 
         // Test: find_POA
         POA poa2 = rootPoa.find_POA("poa1", false);
-        assertTrue(poa2 != null);
+        assertNotNull(poa2);
         assertTrue(poa2._is_equivalent(poa));
 
         // Test: AdapterNonExistent exception

@@ -27,8 +27,12 @@ import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
 import org.omg.PortableServer.POAPackage.InvalidPolicy;
 import testify.iiop.annotation.ConfigureOrb;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
+import static org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN;
 
 @ConfigureOrb
 public class TestPoaCreate {
@@ -41,35 +45,28 @@ public class TestPoaCreate {
 
     @Test
     public void testCreatePOA(POA rootPoa) throws Exception {
-        assertTrue(rootMgr != null);
-
-        // Test: POAManager should be in HOLDING state
-//      ***  assertTrue(rootMgr.get_state() == State.HOLDING);
-
         // Create child POA
         POA poa = rootPoa.create_POA("poa1", null, new Policy[]{});
 
         // Test: POAManager should NOT be the same as the root's manager
         POAManager mgr = poa.the_POAManager();
-        assertTrue(!mgr._is_equivalent(rootMgr));
+        assertFalse(mgr._is_equivalent(rootMgr));
 
         // Test: POAManager should be in HOLDING state
-        assertTrue(mgr.get_state() == State.HOLDING);
+        assertSame(mgr.get_state(), State.HOLDING);
 
         // Test: Confirm name
         String poaName = poa.the_name();
-        assertTrue(poaName.equals("poa1"));
+        assertEquals("poa1", poaName);
 
         // Test: Confirm parent
         POA parent = poa.the_parent();
         assertTrue(parent._is_equivalent(rootPoa));
 
-        // Test: AdapterAlreadyExists exception
         assertThrows(AdapterAlreadyExists.class, () -> rootPoa.create_POA("poa1", null, new Policy[]{}));
 
-        // Test: InvalidPolicy exception
-        Policy[] invalidPolicies = new Policy[] {
-                rootPoa.create_servant_retention_policy(org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN)};
+        //In order to use the NON_RETAIN policy, you must first have a servant manager
+        Policy[] invalidPolicies = { rootPoa.create_servant_retention_policy(NON_RETAIN) };
         assertThrows(InvalidPolicy.class, () -> rootPoa.create_POA("invalid", null, invalidPolicies));
 
         poa.destroy(true, true);

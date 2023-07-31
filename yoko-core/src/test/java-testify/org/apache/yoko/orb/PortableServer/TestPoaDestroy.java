@@ -28,6 +28,7 @@ import org.omg.PortableServer.POAPackage.AdapterNonExistent;
 import test.poa.TestPOA;
 import testify.iiop.annotation.ConfigureOrb;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -43,7 +44,7 @@ public class TestPoaDestroy {
 
     @Test
     void testDestroyPoa(POA rootPoa) throws Exception {
-        assertTrue(rootMgr != null);
+        assertNotNull(rootMgr);
         POA poa = rootPoa.create_POA("poa1", rootMgr, new Policy[]{});
         poa.destroy(true, true);
         // Ensure parent no longer knows about child
@@ -52,7 +53,7 @@ public class TestPoaDestroy {
 
     @Test
     void testDestroyPoaWithChild(ORB orb, POA rootPoa) throws Exception {
-        assertTrue(rootMgr != null);
+        assertNotNull(rootMgr);
         POA poa = rootPoa.create_POA("poa1", rootMgr, new Policy[]{});
         // Create child of child POA
         poa.create_POA("child1", rootMgr, new Policy[]{});
@@ -64,7 +65,7 @@ public class TestPoaDestroy {
 
     @Test
     void testDestroyWaitsForMethodCallCompletion(ORB orb, POA rootPoa) throws Exception {
-        assertTrue(rootMgr != null);
+        assertNotNull(rootMgr);
 
         // Create child POA
         POA poa1 = rootPoa.create_POA("poa1", rootMgr, new Policy[] {
@@ -83,12 +84,12 @@ public class TestPoaDestroy {
         assertTrue(impl.callComplete());
 
         while (thr.isAlive()) {
-            try { thr.join(); } catch (InterruptedException ex) {}
+            try { thr.join(); } catch (InterruptedException ignored) {}
         }
     }
 
     final static class Test_impl1 extends TestPOA {
-        private POA poa;
+        private final POA poa;
         private boolean called = false;
         private boolean finished = false;
         Test_impl1(POA poa) {
