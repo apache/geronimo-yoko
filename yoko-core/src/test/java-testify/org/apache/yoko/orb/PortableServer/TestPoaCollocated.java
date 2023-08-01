@@ -17,11 +17,11 @@
  */
 package org.apache.yoko.orb.PortableServer;
 
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.api.BeforeEach;
+import org.junitpioneer.jupiter.cartesian.CartesianTest;
+import org.junitpioneer.jupiter.cartesian.CartesianTest.Enum;
+import org.omg.CORBA.LocalObject;
 import org.omg.CORBA.ORB;
 import org.omg.CORBA.Request;
 import org.omg.PortableServer.ForwardRequest;
@@ -29,15 +29,12 @@ import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManager;
 import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantActivator;
-import org.omg.PortableServer.ServantActivatorPOA;
 import org.omg.PortableServer.ServantLocator;
-import org.omg.PortableServer.ServantLocatorPOA;
 import org.omg.PortableServer.ServantLocatorPackage.CookieHolder;
 import test.poa.TestDSIRef_impl;
 import test.poa.TestHelper;
 import test.poa.Test_impl;
 import testify.iiop.annotation.ConfigureOrb;
-import testify.util.function.RawConsumer;
 
 import static org.apache.yoko.orb.PortableServer.PolicyValue.MULTIPLE_ID;
 import static org.apache.yoko.orb.PortableServer.PolicyValue.NON_RETAIN;
@@ -51,94 +48,70 @@ import static org.apache.yoko.orb.PortableServer.PolicyValue.USE_SERVANT_MANAGER
 import static org.apache.yoko.orb.PortableServer.PolicyValue.create_POA;
 
 @ConfigureOrb
-class TestPoaCollocated {
-    enum InvokeAction {
-        STATIC_INVOKE_STATIC_SERVANT(poa -> invokeStatic(poa, "test")),
-        STATIC_INVOKE_DYNAMIC_SERVANT(poa -> invokeStatic(poa, "testDSI")),
-        DYNAMIC_INVOKE_STATIC_SERVANT(poa -> invokeDynamic(poa, "test")),
-        DYNAMIC_INVOKE_DYNAMIC_SERVANT(poa -> invokeDynamic(poa, "testDSI"));
-        final RawConsumer<POA> invokeAction;
-        InvokeAction(RawConsumer<POA> invokeAction) { this.invokeAction = invokeAction; }
-        final void run(POA poa) throws Exception { invokeAction.acceptRaw(poa); }
-        private static void invokeStatic(POA poa, String id) {
-            TestHelper.narrow(poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0")).aMethod();
-        }
-        private static void invokeDynamic(POA poa, String id) throws Exception {
-            org.omg.CORBA.Object object = poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0");
-            Request request = object._request("aMethod");
-            request.invoke(); // dynamic invocation
-            if (null != request.env().exception()) throw request.env().exception();
+public class TestPoaCollocated {
+    enum ConfigurePoa {
+        STATIC_DEFAULT_SERVANT (PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT),
+        DYNAMIC_DEFAULT_SERVANT(PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT),
+        SERVANT_LOCATOR        (PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION,   UNIQUE_ID, USE_SERVANT_MANAGER),
+        SERVANT_ACTIVATOR      (PERSISTENT, USER_ID,     RETAIN, NO_IMPLICIT_ACTIVATION,   UNIQUE_ID, USE_SERVANT_MANAGER);
+        final PolicyValue[] policyValues;
+        ConfigurePoa(PolicyValue... policyValues) { this.policyValues = policyValues; }
+
+        void configurePoa(TestPoaCollocated t) throws Exception {
+            t.poa = create_POA(name(), t.rootPoa, t.rootPoaManager, policyValues);
+            switch (this) {
+            case STATIC_DEFAULT_SERVANT:  t.poa.set_servant(new Test_impl(t.orb, "defaultStaticServant", false)); return;
+            case DYNAMIC_DEFAULT_SERVANT: t.poa.set_servant(new TestDSIRef_impl(t.orb, "defaultDSIServant", false)); return;
+            case SERVANT_LOCATOR:         t.poa.set_servant_manager(t.new TestLocator()); return;
+            case SERVANT_ACTIVATOR:       t.poa.set_servant_manager(t.new TestActivator()); return;
+            }
         }
     }
+    enum ChooseTarget { STATIC_SERVANT, DYNAMIC_SERVANT }
+    enum InvokeMethod {
+        STATIC_INVOKE {
+            void invoke(POA poa, String id) {
+                TestHelper.narrow(poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0")).aMethod();
+            }
+        },
+        DYNAMIC_INVOKE {
+            void invoke(POA poa, String id) throws Exception {
+                org.omg.CORBA.Object object = poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0");
+                Request request = object._request("aMethod");
+                request.invoke(); // dynamic invocation
+                if (null != request.env().exception()) throw request.env().exception();
+            }
+        };
+        abstract void invoke(POA poa, String id) throws Exception ;
+    }
 
-    static ORB orb;
-    static POA rootPoa;
-    static POAManager rootPoaManager;
-    static Test_impl defaultStaticServant;
-    static Test_impl locatorSSI;
+    ORB orb;
+    POA rootPoa;
+    POAManager rootPoaManager;
     POA poa;
 
-    @BeforeAll
-    static void setup(ORB orb, POA rootPoa) {
-        TestPoaCollocated.orb = orb;
-        TestPoaCollocated.rootPoa = rootPoa;
-        TestPoaCollocated.rootPoaManager = rootPoa.the_POAManager();
-        TestPoaCollocated.defaultStaticServant = new Test_impl(orb, "defaultStaticServant", false);
-        TestPoaCollocated.locatorSSI = new Test_impl(orb, "locator_SSI", false);
+    @BeforeEach
+    void setup(ORB orb, POA rootPoa) {
+        this.orb = orb;
+        this.rootPoa = rootPoa;
+        this.rootPoaManager = rootPoa.the_POAManager();
+        // this.poa is configured during each test
     }
 
     @AfterEach
-    void destroyPoa() {
-        if (poa == null) return;
-        poa.destroy(true, true);
-        poa = null;
+    void destroyPoa() { poa.destroy(true, true); }
+
+    @CartesianTest // runs every combination of the three enums
+    void test(@Enum ConfigurePoa poaConfig, @Enum ChooseTarget target, @Enum InvokeMethod invoker) throws Exception {
+        poaConfig.configurePoa(this);
+        invoker.invoke(this.poa, target.name());
     }
 
-    @AfterAll
-    static void teardown() throws Exception {
-        byte[] id = rootPoa.servant_to_id(defaultStaticServant);
-        rootPoa.deactivate_object(id);
-    }
-
-    @ParameterizedTest @EnumSource(InvokeAction.class)
-    public void testStaticDefaultServant(InvokeAction action) throws Exception {
-        poa = create_POA("defaultSSI", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT);
-        poa.set_servant(defaultStaticServant);
-        action.run(poa);
-    }
-
-    @ParameterizedTest @EnumSource(InvokeAction.class)
-    void testDynamicDefaultServant(InvokeAction action) throws Exception {
-        poa = create_POA("defaultDSI", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT);
-        poa.set_servant(new TestDSIRef_impl(orb, "defaultDSIServant", false));
-        action.run(poa);
-    }
-
-    @ParameterizedTest @EnumSource(InvokeAction.class)
-    void testServantLocator(InvokeAction action) throws Exception {
-        poa = create_POA("servloc", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, UNIQUE_ID, USE_SERVANT_MANAGER);
-        TestLocator locatorImpl = new TestLocator();
-        ServantLocator locator = locatorImpl._this(orb);
-        poa.set_servant_manager(locator);
-        action.run(poa);
-        rootPoa.deactivate_object(rootPoa.servant_to_id(locatorImpl));
-    }
-
-    @ParameterizedTest @EnumSource(InvokeAction.class)
-    void testServantActivator(InvokeAction action) throws Exception {
-        poa = create_POA("servant", rootPoa, rootPoaManager, PERSISTENT, USER_ID, RETAIN, NO_IMPLICIT_ACTIVATION, UNIQUE_ID, USE_SERVANT_MANAGER);
-        TestActivator activatorImpl = new TestActivator();
-        ServantActivator activator = activatorImpl._this(orb);
-        poa.set_servant_manager(activator);
-        action.run(poa);
-        rootPoa.deactivate_object(rootPoa.servant_to_id(activatorImpl));
-    }
-
-    final static class TestActivator extends ServantActivatorPOA {
+    final class TestActivator extends LocalObject implements ServantActivator {
         public Servant incarnate(byte[] oid, POA poa) throws ForwardRequest {
-            switch (new String(oid)) {
-                case "test": return new Test_impl(orb, "locator_SSI", false);
-                case "testDSI": return new TestDSIRef_impl(orb, "locator_DSI", false);
+            switch (ChooseTarget.valueOf(new String(oid))) {
+                case STATIC_SERVANT: return new Test_impl(orb, "locator_SSI", false);
+                case DYNAMIC_SERVANT: return new TestDSIRef_impl(orb, "locator_DSI", false);
                 default: return null; // fail
             }
         }
@@ -146,19 +119,14 @@ class TestPoaCollocated {
         public void etherealize(byte[] oid, POA poa, Servant servant, boolean cleanup, boolean remaining) {}
     }
 
-    final static class TestLocator extends ServantLocatorPOA {
-        private final Test_impl test;
-        private final TestDSIRef_impl testDSI;
-
-        TestLocator() {
-            test = new Test_impl(orb, "locator_SSI", false);
-            testDSI = new TestDSIRef_impl(orb, "locator_DSI", false);
-        }
+    final class TestLocator extends LocalObject implements ServantLocator {
+        private final Test_impl test = new Test_impl(orb, "locator_SSI", false);
+        private final TestDSIRef_impl testDSI = new TestDSIRef_impl(orb, "locator_DSI", false);
 
         public Servant preinvoke(byte[] oid, POA poa, String operation, CookieHolder the_cookie) {
-            switch (new String(oid)) {
-                case "test": return test;
-                case "testDSI": return testDSI;
+            switch (ChooseTarget.valueOf(new String(oid))) {
+                case STATIC_SERVANT: return test;
+                case DYNAMIC_SERVANT: return testDSI;
                 default: return null;
             }
         }
