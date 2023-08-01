@@ -17,18 +17,16 @@
  */
 package org.apache.yoko.orb.PortableServer;
 
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.omg.CORBA.ORB;
-import org.omg.CORBA.Policy;
 import org.omg.CORBA.Request;
 import org.omg.PortableServer.ForwardRequest;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAManager;
-import org.omg.PortableServer.POAPackage.AdapterAlreadyExists;
-import org.omg.PortableServer.POAPackage.InvalidPolicy;
-import org.omg.PortableServer.POAPackage.ObjectNotActive;
-import org.omg.PortableServer.POAPackage.ServantNotActive;
-import org.omg.PortableServer.POAPackage.WrongPolicy;
 import org.omg.PortableServer.Servant;
 import org.omg.PortableServer.ServantActivator;
 import org.omg.PortableServer.ServantActivatorPOA;
@@ -39,331 +37,132 @@ import test.poa.TestDSIRef_impl;
 import test.poa.TestHelper;
 import test.poa.Test_impl;
 import testify.iiop.annotation.ConfigureOrb;
+import testify.util.function.RawConsumer;
 
-import static org.junit.Assert.assertTrue;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.MULTIPLE_ID;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.NON_RETAIN;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.NO_IMPLICIT_ACTIVATION;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.PERSISTENT;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.RETAIN;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.UNIQUE_ID;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.USER_ID;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.USE_DEFAULT_SERVANT;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.USE_SERVANT_MANAGER;
+import static org.apache.yoko.orb.PortableServer.PolicyValue.create_POA;
 
 @ConfigureOrb
-public class TestPoaCollocated {
-    static void TestPOA(POA poa) {
-        byte[] id;
-        org.omg.CORBA.Object obj;
-        Request request;
-        test.poa.Test test;
-
-        //
-        // Invoke twice on each object - statically & DII
-        //
-        id = ("test").getBytes();
-        obj = poa.create_reference_with_id(id, "IDL:Test:1.0");
-        test = TestHelper.narrow(obj);
-        test.aMethod();
-        request = obj._request("aMethod");
-        request.invoke();
-        assertTrue(request.env().exception() == null);
-
-        id = ("testDSI").getBytes();
-        obj = poa.create_reference_with_id(id, "IDL:Test:1.0");
-        test = TestHelper.narrow(obj);
-        test.aMethod();
-        request = obj._request("aMethod");
-        request.invoke();
-        assertTrue(request.env().exception() == null);
+class TestPoaCollocated {
+    enum InvokeAction {
+        STATIC_INVOKE_STATIC_SERVANT(poa -> invokeStatic(poa, "test")),
+        STATIC_INVOKE_DYNAMIC_SERVANT(poa -> invokeStatic(poa, "testDSI")),
+        DYNAMIC_INVOKE_STATIC_SERVANT(poa -> invokeDynamic(poa, "test")),
+        DYNAMIC_INVOKE_DYNAMIC_SERVANT(poa -> invokeDynamic(poa, "testDSI"));
+        final RawConsumer<POA> invokeAction;
+        InvokeAction(RawConsumer<POA> invokeAction) { this.invokeAction = invokeAction; }
+        final void run(POA poa) throws Exception { invokeAction.acceptRaw(poa); }
+        private static void invokeStatic(POA poa, String id) {
+            TestHelper.narrow(poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0")).aMethod();
+        }
+        private static void invokeDynamic(POA poa, String id) throws Exception {
+            org.omg.CORBA.Object object = poa.create_reference_with_id(id.getBytes(), "IDL:Test:1.0");
+            Request request = object._request("aMethod");
+            request.invoke(); // dynamic invocation
+            if (null != request.env().exception()) throw request.env().exception();
+        }
     }
 
-    @Test
-    public void testCollocated(ORB orb, POA rootPoa) throws Exception {
-        POAManager manager = rootPoa.the_POAManager();
-        manager.activate();
-        POA poa;
-        Servant servant;
-        Policy[] policies;
+    static ORB orb;
+    static POA rootPoa;
+    static POAManager rootPoaManager;
+    static Test_impl defaultStaticServant;
+    static Test_impl locatorSSI;
+    POA poa;
 
-        //
-        // Setup policies for default servant
-        //
-        policies = new Policy[6];
-        policies[0] = rootPoa
-                .create_lifespan_policy(org.omg.PortableServer.LifespanPolicyValue.PERSISTENT);
-        policies[1] = rootPoa
-                .create_id_assignment_policy(org.omg.PortableServer.IdAssignmentPolicyValue.USER_ID);
-        policies[2] = rootPoa
-                .create_servant_retention_policy(org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN);
-        policies[3] = rootPoa
-                .create_implicit_activation_policy(org.omg.PortableServer.ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION);
-        policies[4] = rootPoa
-                .create_id_uniqueness_policy(org.omg.PortableServer.IdUniquenessPolicyValue.MULTIPLE_ID);
-        policies[5] = rootPoa
-                .create_request_processing_policy(org.omg.PortableServer.RequestProcessingPolicyValue.USE_DEFAULT_SERVANT);
+    @BeforeAll
+    static void setup(ORB orb, POA rootPoa) {
+        TestPoaCollocated.orb = orb;
+        TestPoaCollocated.rootPoa = rootPoa;
+        TestPoaCollocated.rootPoaManager = rootPoa.the_POAManager();
+        TestPoaCollocated.defaultStaticServant = new Test_impl(orb, "defaultStaticServant", false);
+        TestPoaCollocated.locatorSSI = new Test_impl(orb, "locator_SSI", false);
+    }
 
-        //
-        // Create POA w/ static Default Servant
-        //
-        try {
-            poa = rootPoa.create_POA("defaultSSI", manager, policies);
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        }
-        Test_impl staticServant = new Test_impl(orb, "defaultStaticServant",
-                false);
-        try {
-            poa.set_servant(staticServant);
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestPOA(poa);
+    @AfterEach
+    void destroyPoa() {
+        if (poa == null) return;
         poa.destroy(true, true);
+        poa = null;
+    }
 
-        //
-        // Since staticServant is a stack-based servant, we need to deactivate
-        // it before it goes out of scope
-        //
-        byte[] id = null;
-        try {
-            id = rootPoa.servant_to_id(staticServant);
-        } catch (ServantNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        try {
-            rootPoa.deactivate_object(id);
-        } catch (ObjectNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
+    @AfterAll
+    static void teardown() throws Exception {
+        byte[] id = rootPoa.servant_to_id(defaultStaticServant);
+        rootPoa.deactivate_object(id);
+    }
 
-        //
-        // Create POA w/ DSI Default Servant
-        //
-        try {
-            poa = rootPoa.create_POA("defaultDSI", manager, policies);
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        }
-        servant = new TestDSIRef_impl(orb, "defaultDSIServant", false);
-        try {
-            poa.set_servant(servant);
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestPOA(poa);
-        poa.destroy(true, true);
-        servant = null;
+    @ParameterizedTest @EnumSource(InvokeAction.class)
+    public void testStaticDefaultServant(InvokeAction action) throws Exception {
+        poa = create_POA("defaultSSI", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT);
+        poa.set_servant(defaultStaticServant);
+        action.run(poa);
+    }
 
-        //
-        // Clean up policies
-        //
-        for (int i = 0; i < policies.length; i++)
-            policies[i].destroy();
-        POA poa1;
-        Servant servant1;
-        Policy[] policies1;
+    @ParameterizedTest @EnumSource(InvokeAction.class)
+    void testDynamicDefaultServant(InvokeAction action) throws Exception {
+        poa = create_POA("defaultDSI", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT);
+        poa.set_servant(new TestDSIRef_impl(orb, "defaultDSIServant", false));
+        action.run(poa);
+    }
 
-        //
-        // Setup policies for servant locator
-        //
-        policies1 = new Policy[6];
-        policies1[0] = rootPoa
-                .create_lifespan_policy(org.omg.PortableServer.LifespanPolicyValue.PERSISTENT);
-        policies1[1] = rootPoa
-                .create_id_assignment_policy(org.omg.PortableServer.IdAssignmentPolicyValue.USER_ID);
-        policies1[2] = rootPoa
-                .create_servant_retention_policy(org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN);
-        policies1[3] = rootPoa
-                .create_implicit_activation_policy(org.omg.PortableServer.ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION);
-        policies1[4] = rootPoa
-                .create_id_uniqueness_policy(org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID);
-        policies1[5] = rootPoa
-                .create_request_processing_policy(org.omg.PortableServer.RequestProcessingPolicyValue.USE_SERVANT_MANAGER);
-
-        //
-        // Create POA w/ Servant Locator
-        //
-        try {
-            poa1 = rootPoa.create_POA("servloc", manager, policies1);
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestLocator_impl locatorImpl = new TestLocator_impl(orb);
+    @ParameterizedTest @EnumSource(InvokeAction.class)
+    void testServantLocator(InvokeAction action) throws Exception {
+        poa = create_POA("servloc", rootPoa, rootPoaManager, PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, UNIQUE_ID, USE_SERVANT_MANAGER);
+        TestLocator locatorImpl = new TestLocator();
         ServantLocator locator = locatorImpl._this(orb);
-        try {
-            poa1.set_servant_manager(locator);
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestPOA(poa1);
-        poa1.destroy(true, true);
-
-        //
-        // Clean up policies
-        //
-        for (int i = 0; i < policies1.length; i++)
-            policies1[i].destroy();
-
-        //
-        // Since locatorImpl is a stack-based servant, we need to deactivate
-        // it before it goes out of scope
-        //
-        byte[] id1 = null;
-        try {
-            id1 = rootPoa.servant_to_id(locatorImpl);
-        } catch (ServantNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        try {
-            rootPoa.deactivate_object(id1);
-        } catch (ObjectNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        POA poa2;
-        Servant servant2;
-        Policy[] policies2;
-
-        //
-        // Setup policies for servant activator
-        //
-        policies2 = new Policy[6];
-        policies2[0] = rootPoa
-                .create_lifespan_policy(org.omg.PortableServer.LifespanPolicyValue.PERSISTENT);
-        policies2[1] = rootPoa
-                .create_id_assignment_policy(org.omg.PortableServer.IdAssignmentPolicyValue.USER_ID);
-        policies2[2] = rootPoa
-                .create_servant_retention_policy(org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN);
-        policies2[3] = rootPoa
-                .create_implicit_activation_policy(org.omg.PortableServer.ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION);
-        policies2[4] = rootPoa
-                .create_id_uniqueness_policy(org.omg.PortableServer.IdUniquenessPolicyValue.UNIQUE_ID);
-        policies2[5] = rootPoa
-                .create_request_processing_policy(org.omg.PortableServer.RequestProcessingPolicyValue.USE_SERVANT_MANAGER);
-
-        //
-        // Create POA w/ Servant Activator
-        //
-        try {
-            poa2 = rootPoa.create_POA("servant", manager, policies2);
-        } catch (AdapterAlreadyExists ex) {
-            throw new RuntimeException();
-        } catch (InvalidPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestActivator_impl activatorImpl = new TestActivator_impl(orb);
-        ServantActivator activator = activatorImpl._this(orb);
-        try {
-            poa2.set_servant_manager(activator);
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        TestPOA(poa2);
-        poa2.destroy(true, true);
-
-        //
-        // Clean up policies
-        //
-        for (int i = 0; i < policies2.length; i++)
-            policies2[i].destroy();
-
-        //
-        // Since activatorImpl is a stack-based servant, we need to deactivate
-        // it before it goes out of scope
-        //
-        byte[] id2 = null;
-        try {
-            id2 = rootPoa.servant_to_id(activatorImpl);
-        } catch (ServantNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
-        try {
-            rootPoa.deactivate_object(id2);
-        } catch (ObjectNotActive ex) {
-            throw new RuntimeException();
-        } catch (WrongPolicy ex) {
-            throw new RuntimeException();
-        }
+        poa.set_servant_manager(locator);
+        action.run(poa);
+        rootPoa.deactivate_object(rootPoa.servant_to_id(locatorImpl));
     }
 
-    final static class TestActivator_impl extends ServantActivatorPOA {
-        private ORB orb_;
+    @ParameterizedTest @EnumSource(InvokeAction.class)
+    void testServantActivator(InvokeAction action) throws Exception {
+        poa = create_POA("servant", rootPoa, rootPoaManager, PERSISTENT, USER_ID, RETAIN, NO_IMPLICIT_ACTIVATION, UNIQUE_ID, USE_SERVANT_MANAGER);
+        TestActivator activatorImpl = new TestActivator();
+        ServantActivator activator = activatorImpl._this(orb);
+        poa.set_servant_manager(activator);
+        action.run(poa);
+        rootPoa.deactivate_object(rootPoa.servant_to_id(activatorImpl));
+    }
 
-        private Test_impl test_;
-
-        private TestDSIRef_impl testDSI_;
-
-        TestActivator_impl(ORB orb) {
-            orb_ = orb;
-
-            test_ = new Test_impl(orb, "locator_SSI", false);
-            testDSI_ = new TestDSIRef_impl(orb, "locator_DSI", false);
-        }
-
+    final static class TestActivator extends ServantActivatorPOA {
         public Servant incarnate(byte[] oid, POA poa) throws ForwardRequest {
-            String oidString = new String(oid);
-
-            if (oidString.equals("test"))
-                return test_;
-            else if (oidString.equals("testDSI"))
-                return testDSI_;
-
-            //
-            // Fail
-            //
-            return null;
-        }
-
-        public void etherealize(byte[] oid, POA poa, Servant servant,
-                boolean cleanup, boolean remaining) {
-            String oidString = new String(oid);
-
-            if (!remaining) {
-                if (oidString.equals("test")) {
-                    servant = null;
-                    test_ = null;
-                } else if (oidString.equals("testDSI")) {
-                    testDSI_ = null;
-                }
+            switch (new String(oid)) {
+                case "test": return new Test_impl(orb, "locator_SSI", false);
+                case "testDSI": return new TestDSIRef_impl(orb, "locator_DSI", false);
+                default: return null; // fail
             }
         }
+
+        public void etherealize(byte[] oid, POA poa, Servant servant, boolean cleanup, boolean remaining) {}
     }
 
-    final static class TestLocator_impl extends ServantLocatorPOA {
-        private ORB orb_;
+    final static class TestLocator extends ServantLocatorPOA {
+        private final Test_impl test;
+        private final TestDSIRef_impl testDSI;
 
-        private Test_impl test_;
-
-        private TestDSIRef_impl testDSI_;
-
-        TestLocator_impl(ORB orb) {
-            orb_ = orb;
-
-            test_ = new Test_impl(orb, "locator_SSI", false);
-            testDSI_ = new TestDSIRef_impl(orb, "locator_DSI", false);
+        TestLocator() {
+            test = new Test_impl(orb, "locator_SSI", false);
+            testDSI = new TestDSIRef_impl(orb, "locator_DSI", false);
         }
 
-        public Servant preinvoke(byte[] oid, POA poa, String operation,
-                CookieHolder the_cookie) throws ForwardRequest {
-            String oidString = new String(oid);
-
-            if (oidString.equals("test"))
-                return test_;
-            else if (oidString.equals("testDSI"))
-                return testDSI_;
-            return null;
+        public Servant preinvoke(byte[] oid, POA poa, String operation, CookieHolder the_cookie) {
+            switch (new String(oid)) {
+                case "test": return test;
+                case "testDSI": return testDSI;
+                default: return null;
+            }
         }
 
-        public void postinvoke(byte[] oid, POA poa, String operation,
-                Object the_cookie, Servant the_servant) {
-        }
+        public void postinvoke(byte[] oid, POA poa, String operation, Object the_cookie, Servant the_servant) {}
     }
 }

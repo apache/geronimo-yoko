@@ -36,12 +36,15 @@ public enum PolicyValue {
     UNIQUE_ID(poa -> poa.create_id_uniqueness_policy(IdUniquenessPolicyValue.UNIQUE_ID)),
     MULTIPLE_ID(poa -> poa.create_id_uniqueness_policy(IdUniquenessPolicyValue.MULTIPLE_ID)),
     RETAIN(poa -> poa.create_servant_retention_policy(ServantRetentionPolicyValue.RETAIN)),
+    NON_RETAIN(poa -> poa.create_servant_retention_policy(ServantRetentionPolicyValue.NON_RETAIN)),
     NO_IMPLICIT_ACTIVATION(poa -> poa.create_implicit_activation_policy(ImplicitActivationPolicyValue.NO_IMPLICIT_ACTIVATION)),
     IMPLICIT_ACTIVATION(poa -> poa.create_implicit_activation_policy(ImplicitActivationPolicyValue.IMPLICIT_ACTIVATION)),
     USER_ID(poa -> poa.create_id_assignment_policy(IdAssignmentPolicyValue.USER_ID)),
     SYSTEM_ID(poa -> poa.create_id_assignment_policy(IdAssignmentPolicyValue.SYSTEM_ID)),
     PERSISTENT(poa -> poa.create_lifespan_policy(LifespanPolicyValue.PERSISTENT)),
-    USE_DEFAULT_SERVANT(poa -> poa.create_request_processing_policy(RequestProcessingPolicyValue.USE_DEFAULT_SERVANT));
+    USE_DEFAULT_SERVANT(poa -> poa.create_request_processing_policy(RequestProcessingPolicyValue.USE_DEFAULT_SERVANT)),
+    USE_SERVANT_MANAGER(poa -> poa.create_request_processing_policy(RequestProcessingPolicyValue.USE_SERVANT_MANAGER)),
+    USE_ACTIVE_OBJECT_MAP_ONLY(poa -> poa.create_request_processing_policy(RequestProcessingPolicyValue.USE_ACTIVE_OBJECT_MAP_ONLY));
 
     final Function<POA, Policy> factory;
 
