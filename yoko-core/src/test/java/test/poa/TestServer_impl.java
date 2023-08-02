@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 IBM Corporation and others.
+ * Copyright 2023 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package test.poa;
 
 import org.omg.CORBA.*;
 
-final class TestServer_impl extends TestServerPOA {
+public final class TestServer_impl extends TestServerPOA {
     private ORB orb_;
 
     private TestInfo[] info_;
 
-    TestServer_impl(ORB orb, TestInfo[] info) {
+    public TestServer_impl(ORB orb, TestInfo[] info) {
         orb_ = orb;
         info_ = info;
     }
