@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 IBM Corporation and others.
+ * Copyright 2023 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package org.apache.yoko;
 
 import test.poa.TestAdapterActivatorServer;
 import test.poa.TestClient;
-import test.poa.TestDefaultServantServer;
 import test.poa.TestDispatchStrategyClient;
 import test.poa.TestDispatchStrategyServer;
 import test.poa.TestLocationForwardClient;
@@ -40,16 +39,12 @@ public class PoaTest extends AbstractOrbTestBase {
         setWaitForFile("Test.ref");
     }
 
-    public void testDefaultServant() throws Exception {
-        runServerClientTest(TestDefaultServantServer.class);
-    }
-
     public void testServantActivatorServer() throws Exception {
-        runServerClientTest(TestServantActivatorServer.class);
+        runServerClientTest(TestServantActivatorServer.class, TestClient.class);
     }
 
     public void testServantLocatorServer() throws Exception {
-        runServerClientTest(TestServantLocatorServer.class);
+        runServerClientTest(TestServantLocatorServer.class, TestClient.class);
     }
 
     public void testLocationForwardServer() throws Exception {
@@ -57,7 +52,7 @@ public class PoaTest extends AbstractOrbTestBase {
     }
 
     public void testAdapterActivatorServer() throws Exception {
-        runServerClientTest(TestAdapterActivatorServer.class);
+        runServerClientTest(TestAdapterActivatorServer.class, TestClient.class);
     }
 
     public void testPoaManagerServer() throws Exception {
@@ -74,9 +69,5 @@ public class PoaTest extends AbstractOrbTestBase {
 
     public void testMultipleOrbsThreadedServer() throws Exception {
         runServerClientTest(TestMultipleOrbsThreadedServer.class, TestMultipleOrbsThreadedClient.class);
-    }
-
-    private void runServerClientTest(Class<?> serverClass) throws Exception {
-        runServerClientTest(serverClass, TestClient.class);
     }
 }

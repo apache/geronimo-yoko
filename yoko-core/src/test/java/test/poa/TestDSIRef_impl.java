@@ -1,5 +1,5 @@
 /*
- * Copyright 2010 IBM Corporation and others.
+ * Copyright 2023 IBM Corporation and others.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +17,16 @@
  */
 package test.poa;
 
-import org.omg.CORBA.*;
-import org.omg.PortableServer.*;
-import org.omg.PortableServer.POAPackage.*;
-import org.omg.PortableServer.ServantLocatorPackage.*;
+import org.omg.CORBA.Any;
+import org.omg.CORBA.BAD_OPERATION;
+import org.omg.CORBA.BAD_OPERATIONHelper;
+import org.omg.CORBA.NVList;
+import org.omg.CORBA.ORB;
+import org.omg.CORBA.ServerRequest;
+import org.omg.CORBA.UserException;
+import org.omg.PortableServer.POA;
+import org.omg.PortableServer.POAPackage.ServantNotActive;
+import org.omg.PortableServer.POAPackage.WrongPolicy;
 
 public final class TestDSIRef_impl extends
         org.omg.PortableServer.DynamicImplementation {
@@ -46,7 +52,7 @@ public final class TestDSIRef_impl extends
         compare_ = compare;
     }
 
-    void setDefaultServant(boolean b) {
+    public void setDefaultServant(boolean b) {
         defaultServant_ = b;
     }
 
