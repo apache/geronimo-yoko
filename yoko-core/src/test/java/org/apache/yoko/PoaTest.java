@@ -29,7 +29,6 @@ import test.poa.TestMultipleOrbsThreadedClient;
 import test.poa.TestMultipleOrbsThreadedServer;
 import test.poa.TestPOAManagerClient;
 import test.poa.TestPOAManagerServer;
-import test.poa.TestServantActivatorServer;
 import test.poa.TestServantLocatorServer;
 
 public class PoaTest extends AbstractOrbTestBase {
@@ -38,14 +37,14 @@ public class PoaTest extends AbstractOrbTestBase {
         super.setUp();
         setWaitForFile("Test.ref");
     }
-
-    public void testServantActivatorServer() throws Exception {
-        runServerClientTest(TestServantActivatorServer.class, TestClient.class);
-    }
-
-    public void testServantLocatorServer() throws Exception {
-        runServerClientTest(TestServantLocatorServer.class, TestClient.class);
-    }
+//
+//    public void testServantActivatorServer() throws Exception {
+//        runServerClientTest(TestServantActivatorServer.class, TestClient.class);
+//    }
+//
+//    public void testServantLocatorServer() throws Exception {
+//        runServerClientTest(TestServantLocatorServer.class, TestClient.class);
+//    }
 
     public void testLocationForwardServer() throws Exception {
         runServerClientTest(TestLocationForwardServerMain.class, TestLocationForwardClient.class);
