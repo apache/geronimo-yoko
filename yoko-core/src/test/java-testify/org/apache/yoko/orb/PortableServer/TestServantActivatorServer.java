@@ -43,13 +43,11 @@ import static org.junit.Assert.assertThrows;
 @ConfigureServer
 public class TestServantActivatorServer {
 
-    private static TestActivator_impl activatorImpl;
-
     @ConfigureServer.BeforeServer
     public static void setup(ORB orb, POA root, Bus bus) throws Exception {
         POAManager rootMgr = root.the_POAManager();
         POA poa = create_POA("persistent", root, rootMgr, PERSISTENT, USER_ID, PolicyValue.USE_SERVANT_MANAGER);
-        activatorImpl = new TestActivator_impl(orb);
+        TestActivator_impl activatorImpl = new TestActivator_impl(orb);
         poa.set_servant_manager(activatorImpl);
 
         // Create three references, two good and one bad
