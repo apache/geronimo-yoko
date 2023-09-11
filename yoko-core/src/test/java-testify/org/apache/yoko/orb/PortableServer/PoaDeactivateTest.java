@@ -29,7 +29,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @ConfigureOrb
-public class TestPoaDeactivate {
+public class PoaDeactivateTest {
     @Test
     void testDeactivate(ORB orb, POA rootPoa) throws Exception {
         test.poa.Test_impl impl = new test.poa.Test_impl(orb, "", false);

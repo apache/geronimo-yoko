@@ -47,7 +47,7 @@ import static org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN;
 import static org.omg.PortableServer.ServantRetentionPolicyValue.RETAIN;
 
 @ConfigureOrb
-public class TestPoaActivate {
+public class PoaActivateTest {
     private static Test_impl servant1;
     private static Test_impl servant2;
 

@@ -43,7 +43,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 
 @ConfigureServer
-public class TestServantLocatorServer {
+public class ServantLocatorServerTest {
 
     @ConfigureServer.BeforeServer
     public static void setup(ORB orb, POA root, Bus bus) throws Exception {

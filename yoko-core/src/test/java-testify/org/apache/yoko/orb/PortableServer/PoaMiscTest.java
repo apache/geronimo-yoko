@@ -52,7 +52,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @ConfigureOrb
-public class TestPoaMisc {
+public class PoaMiscTest {
     static ORB orb;
     static POA rootPoa;
     static POA childPoa;
@@ -69,12 +69,12 @@ public class TestPoaMisc {
 
     @BeforeAll
     static void setup(ORB orb, POA rootPoa) throws Exception {
-        TestPoaMisc.orb = orb;
-        TestPoaMisc.rootPoa = rootPoa;
-        TestPoaMisc.childPoa = create_POA("child", rootPoa, rootPoa.the_POAManager());
-        TestPoaMisc.servant1 = new Test_impl(orb, "test1", false);
-        TestPoaMisc.servant2 = new Test_impl(orb, "test2", false);
-        TestPoaMisc.defaultServant = new Test_impl(orb, "default", false);
+        PoaMiscTest.orb = orb;
+        PoaMiscTest.rootPoa = rootPoa;
+        PoaMiscTest.childPoa = create_POA("child", rootPoa, rootPoa.the_POAManager());
+        PoaMiscTest.servant1 = new Test_impl(orb, "test1", false);
+        PoaMiscTest.servant2 = new Test_impl(orb, "test2", false);
+        PoaMiscTest.defaultServant = new Test_impl(orb, "default", false);
 
     }
 

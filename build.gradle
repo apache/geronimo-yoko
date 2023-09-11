@@ -87,6 +87,8 @@ subprojects { sp ->
 
   // ensure tests run under $buildDir somewhere
   test {
+    jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    jvmArgs '--add-opens=java.base/java.util=ALL-UNNAMED'
     useJUnitPlatform()
     workingDir = "$buildDir/testWorkingDir"
     doFirst {workingDir.mkdirs()}

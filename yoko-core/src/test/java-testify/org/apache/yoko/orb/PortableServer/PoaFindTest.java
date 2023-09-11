@@ -29,7 +29,7 @@ import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
 @ConfigureOrb
-public class TestPoaFind {
+public class PoaFindTest {
     @Test
     void testFind(POA rootPoa) throws Exception {
         POAManager rootMgr = rootPoa.the_POAManager();

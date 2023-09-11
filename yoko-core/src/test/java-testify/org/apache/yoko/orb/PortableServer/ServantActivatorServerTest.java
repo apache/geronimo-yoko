@@ -41,7 +41,7 @@ import static org.apache.yoko.orb.PortableServer.PolicyValue.create_POA;
 import static org.junit.Assert.assertThrows;
 
 @ConfigureServer
-public class TestServantActivatorServer {
+public class ServantActivatorServerTest {
 
     @ConfigureServer.BeforeServer
     public static void setup(ORB orb, POA root, Bus bus) throws Exception {

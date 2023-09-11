@@ -48,7 +48,7 @@ import static org.apache.yoko.orb.PortableServer.PolicyValue.USE_SERVANT_MANAGER
 import static org.apache.yoko.orb.PortableServer.PolicyValue.create_POA;
 
 @ConfigureOrb
-public class TestPoaCollocated {
+public class PoaCollocatedTest {
     enum ConfigurePoa {
         STATIC_DEFAULT_SERVANT (PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT),
         DYNAMIC_DEFAULT_SERVANT(PERSISTENT, USER_ID, NON_RETAIN, NO_IMPLICIT_ACTIVATION, MULTIPLE_ID, USE_DEFAULT_SERVANT),
@@ -57,7 +57,7 @@ public class TestPoaCollocated {
         final PolicyValue[] policyValues;
         ConfigurePoa(PolicyValue... policyValues) { this.policyValues = policyValues; }
 
-        void configurePoa(TestPoaCollocated t) throws Exception {
+        void configurePoa(PoaCollocatedTest t) throws Exception {
             t.poa = create_POA(name(), t.rootPoa, t.rootPoaManager, policyValues);
             switch (this) {
             case STATIC_DEFAULT_SERVANT:  t.poa.set_servant(new Test_impl(t.orb, "defaultStaticServant", false)); return;

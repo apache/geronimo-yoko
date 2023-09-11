@@ -34,7 +34,7 @@ import static org.junit.Assert.assertTrue;
 
 
 @ConfigureOrb
-public class TestPoaDestroy {
+public class PoaDestroyTest {
     private static POAManager rootMgr;
 
     @BeforeAll

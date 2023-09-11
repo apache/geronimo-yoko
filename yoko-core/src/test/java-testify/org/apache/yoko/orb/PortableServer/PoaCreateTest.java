@@ -35,7 +35,7 @@ import static org.junit.Assert.assertTrue;
 import static org.omg.PortableServer.ServantRetentionPolicyValue.NON_RETAIN;
 
 @ConfigureOrb
-public class TestPoaCreate {
+public class PoaCreateTest {
     private static POAManager rootMgr;
 
     @BeforeAll

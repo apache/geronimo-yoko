@@ -36,7 +36,7 @@ import static org.apache.yoko.orb.PortableServer.PolicyValue.USE_DEFAULT_SERVANT
 import static org.apache.yoko.orb.PortableServer.PolicyValue.create_POA;
 
 @ConfigureServer
-public class TestDefaultServant {
+public class DefaultServantTest {
     @ConfigureServer.BeforeServer
     public static void setup(ORB orb, POA root, Bus bus) throws Exception {
         POAManager mgr = root.the_POAManager();
